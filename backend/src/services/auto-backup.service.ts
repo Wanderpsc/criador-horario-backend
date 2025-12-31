@@ -4,15 +4,11 @@
  * Serviço de Backup Automático
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 import Backup from '../models/Backup';
 import User from '../models/User';
 import mongoose from 'mongoose';
-
-const execAsync = promisify(exec);
 
 export class AutoBackupService {
   private static backupDir = path.join(__dirname, '../../backups');
@@ -71,24 +67,71 @@ export class AutoBackupService {
   }
 
   /**
-   * Executa o backup usando mongodump
+   * Executa o backup usando MongoDB driver (JSON export)
+   * Compatível com ambientes cloud sem mongodump instalado
    */
   private static async performBackup(backupId: string, backupPath: string): Promise<void> {
     try {
-      console.log(`[AutoBackup] Executando mongodump para ${backupPath}`);
+      console.log(`[AutoBackup] Executando backup JSON para ${backupPath}`);
 
-      // Criar comando mongodump
-      const command = `mongodump --uri="${this.mongoUri}" --out="${backupPath}" --quiet`;
+      // Criar diretório do backup
+      await fs.mkdir(backupPath, { recursive: true });
 
-      // Executar backup
-      await execAsync(command);
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Conexão com MongoDB não disponível');
+      }
+
+      // Buscar usuário dono do backup
+      const backup = await Backup.findById(backupId);
+      if (!backup) {
+        throw new Error('Backup não encontrado');
+      }
+
+      const userId = backup.userId.toString();
+
+      // Lista de coleções a serem backupeadas
+      const collectionsToBackup = [
+        'users', 'classes', 'grades', 'subjects', 'teachers', 
+        'schedules', 'timetables', 'generatedtimetables', 
+        'makeupsaturdays', 'teachersubjects', 'schooldays',
+        'saturdaymakeups', 'emergencyschedules', 'teacherdebtrecords'
+      ];
+
+      let totalDocs = 0;
+      const collections: string[] = [];
+
+      // Exportar cada coleção para JSON
+      for (const collectionName of collectionsToBackup) {
+        try {
+          const collection = db.collection(collectionName);
+          const exists = await db.listCollections({ name: collectionName }).hasNext();
+          
+          if (!exists) continue;
+
+          // Filtrar dados apenas do usuário (exceto users)
+          const query = collectionName === 'users' 
+            ? { _id: new mongoose.Types.ObjectId(userId) }
+            : { userId: userId };
+
+          const documents = await collection.find(query).toArray();
+          
+          if (documents.length > 0) {
+            const filePath = path.join(backupPath, `${collectionName}.json`);
+            await fs.writeFile(filePath, JSON.stringify(documents, null, 2), 'utf-8');
+            
+            totalDocs += documents.length;
+            collections.push(collectionName);
+            console.log(`[AutoBackup] ✅ ${collectionName}: ${documents.length} documento(s)`);
+          }
+        } catch (colError) {
+          console.warn(`[AutoBackup] Erro ao exportar ${collectionName}:`, colError);
+        }
+      }
 
       // Calcular tamanho do backup
       const size = await this.calculateDirectorySize(backupPath);
       const sizeFormatted = this.formatBytes(size);
-
-      // Coletar metadados
-      const collections = await this.getCollections(backupPath);
 
       // Atualizar registro
       await Backup.findByIdAndUpdate(backupId, {
@@ -96,16 +139,16 @@ export class AutoBackupService {
         size,
         sizeFormatted,
         'metadata.collections': collections,
-        'metadata.documentsCount': await this.countDocuments(),
+        'metadata.documentsCount': totalDocs,
       });
 
-      console.log(`[AutoBackup] Backup concluído: ${sizeFormatted}`);
+      console.log(`[AutoBackup] ✅ Backup concluído: ${sizeFormatted} (${totalDocs} documentos)`);
 
       // Limpar backups antigos (manter últimos 5 por usuário)
       await this.cleanOldBackups(backupId);
 
     } catch (error: any) {
-      console.error('[AutoBackup] Erro ao executar mongodump:', error);
+      console.error('[AutoBackup] ❌ Erro ao executar backup:', error);
 
       // Atualizar registro com erro
       await Backup.findByIdAndUpdate(backupId, {
@@ -116,7 +159,7 @@ export class AutoBackupService {
   }
 
   /**
-   * Restaura um backup específico
+   * Restaura um backup específico (JSON format)
    */
   static async restoreBackup(backupId: string, adminUserId: string): Promise<void> {
     try {
@@ -137,11 +180,45 @@ export class AutoBackupService {
         throw new Error('Arquivo de backup não encontrado no sistema');
       }
 
-      // Criar comando mongorestore
-      const command = `mongorestore --uri="${this.mongoUri}" --drop "${backup.filePath}" --quiet`;
+      const db = mongoose.connection.db;
+      if (!db) {
+        throw new Error('Conexão com MongoDB não disponível');
+      }
 
-      // Executar restauração
-      await execAsync(command);
+      // Ler arquivos JSON do backup
+      const files = await fs.readdir(backup.filePath);
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
+
+      console.log(`[AutoBackup] Restaurando ${jsonFiles.length} coleções...`);
+
+      for (const file of jsonFiles) {
+        try {
+          const collectionName = file.replace('.json', '');
+          const filePath = path.join(backup.filePath, file);
+          const content = await fs.readFile(filePath, 'utf-8');
+          const documents = JSON.parse(content);
+
+          if (documents.length === 0) continue;
+
+          // Limpar coleção atual do usuário
+          const collection = db.collection(collectionName);
+          
+          if (collectionName === 'users') {
+            // Para users, deletar apenas o documento do usuário
+            await collection.deleteOne({ _id: new mongoose.Types.ObjectId(backup.userId.toString()) });
+          } else {
+            // Para outras coleções, deletar todos os documentos do usuário
+            await collection.deleteMany({ userId: backup.userId.toString() });
+          }
+
+          // Inserir documentos do backup
+          await collection.insertMany(documents);
+          console.log(`[AutoBackup] ✅ ${collectionName}: ${documents.length} documento(s) restaurado(s)`);
+
+        } catch (colError) {
+          console.warn(`[AutoBackup] Erro ao restaurar ${file}:`, colError);
+        }
+      }
 
       // Atualizar registro
       await Backup.findByIdAndUpdate(backupId, {
@@ -150,10 +227,10 @@ export class AutoBackupService {
         restoredBy: adminUserId,
       });
 
-      console.log(`[AutoBackup] Restauração concluída com sucesso`);
+      console.log(`[AutoBackup] ✅ Restauração concluída com sucesso`);
 
     } catch (error: any) {
-      console.error('[AutoBackup] Erro ao restaurar backup:', error);
+      console.error('[AutoBackup] ❌ Erro ao restaurar backup:', error);
       throw new Error(`Falha na restauração: ${error.message}`);
     }
   }
@@ -190,26 +267,36 @@ export class AutoBackupService {
    */
   static async deleteBackup(backupId: string): Promise<void> {
     try {
+      console.log(`[AutoBackup] Iniciando deleção do backup: ${backupId}`);
+      
       const backup = await Backup.findById(backupId);
+      console.log(`[AutoBackup] Backup encontrado:`, backup ? 'Sim' : 'Não');
+      
       if (!backup) {
         throw new Error('Backup não encontrado');
       }
+
+      console.log(`[AutoBackup] Caminho do arquivo: ${backup.filePath}`);
 
       // Deletar arquivos físicos
       try {
         await fs.rm(backup.filePath, { recursive: true, force: true });
         console.log(`[AutoBackup] Arquivos deletados: ${backup.filePath}`);
-      } catch (error) {
-        console.warn('[AutoBackup] Arquivos já foram deletados ou não existem');
+      } catch (error: any) {
+        console.warn(`[AutoBackup] Aviso ao deletar arquivos: ${error.message}`);
+        console.warn('[AutoBackup] Continuando com a deleção do registro...');
       }
 
       // Deletar registro
+      console.log('[AutoBackup] Deletando registro do banco...');
       await Backup.findByIdAndDelete(backupId);
+      console.log('[AutoBackup] Registro deletado do banco');
 
       console.log(`[AutoBackup] Backup ${backupId} deletado com sucesso`);
 
     } catch (error: any) {
       console.error('[AutoBackup] Erro ao deletar backup:', error);
+      console.error('[AutoBackup] Stack trace:', error.stack);
       throw new Error(`Falha ao deletar backup: ${error.message}`);
     }
   }
@@ -250,19 +337,6 @@ export class AutoBackupService {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  }
-
-  private static async getCollections(backupPath: string): Promise<string[]> {
-    try {
-      const dbDir = await fs.readdir(backupPath);
-      const dbPath = path.join(backupPath, dbDir[0]); // Primeiro diretório (nome do banco)
-      const files = await fs.readdir(dbPath);
-      return files
-        .filter(f => f.endsWith('.bson'))
-        .map(f => f.replace('.bson', ''));
-    } catch (error) {
-      return [];
-    }
   }
 
   private static async countDocuments(): Promise<number> {
