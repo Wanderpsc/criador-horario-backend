@@ -34,6 +34,8 @@ export interface IUser extends Document {
   educationLevels?: string[]; // Ensino Fundamental, Médio, etc
   
   // Licenciamento
+  school?: mongoose.Types.ObjectId; // ID da escola (para relacionamento)
+  isActive?: boolean; // Status ativo/inativo
   licenseKey?: string;
   selectedPlan?: string; // ID do plano selecionado
   paymentStatus: 'pending' | 'paid' | 'expired' | 'cancelled';
@@ -97,6 +99,8 @@ const userSchema = new Schema<IUser>(
     educationLevels: [{ type: String }],
     
     // Licenciamento
+    school: { type: Schema.Types.ObjectId, ref: 'User' },
+    isActive: { type: Boolean, default: true },
     licenseKey: { type: String },
     selectedPlan: { type: String },
     paymentStatus: { type: String, enum: ['pending', 'paid', 'expired', 'cancelled'], default: 'pending' },

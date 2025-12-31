@@ -21,6 +21,7 @@ import timetableRoutes from './routes/timetable.routes';
 import scheduleRoutes from './routes/schedule.routes';
 import licenseRoutes from './routes/license.routes';
 import adminRoutes from './routes/admin.routes';
+import adminSchoolsRoutes from './routes/admin-schools.routes';
 import creditsRoutes from './routes/credits.routes';
 import planRoutes from './routes/plan.routes';
 import gradeRoutes from './routes/grade.routes';
@@ -73,6 +74,7 @@ app.use(express.urlencoded({ extended: true }));
 // Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/schools', adminSchoolsRoutes);
 app.use('/api/credits', creditsRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/teachers', teacherRoutes);
