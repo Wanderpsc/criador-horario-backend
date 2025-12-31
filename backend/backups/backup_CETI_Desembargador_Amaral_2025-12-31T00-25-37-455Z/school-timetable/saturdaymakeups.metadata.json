@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"date":{"$numberInt":"1"}},"name":"date_1","background":true}],"uuid":"4ea6735a4e2a4248b2f32fa9030c5b8d","collectionName":"saturdaymakeups","type":"collection"}

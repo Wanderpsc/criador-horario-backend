@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+coverage/
+
+# NÃO ignorar backups (importante para segurança dos dados)
+# backups/ - Comentado para manter backups versionados como referência

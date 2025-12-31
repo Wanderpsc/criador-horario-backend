@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"scheduleId":{"$numberInt":"1"},"classId":{"$numberInt":"1"},"createdAt":{"$numberInt":"-1"}},"name":"scheduleId_1_classId_1_createdAt_-1","background":true}],"uuid":"13b9a573ef6e4e2aaef13e3672b95e24","collectionName":"generatedtimetables","type":"collection"}
