@@ -142,10 +142,18 @@ router.post('/restore/:id', requireAuth, async (req: any, res: any) => {
 /**
  * POST /backups/manual
  * Cria um backup manual (admin ou cliente)
+ * Body (opcional para admin): { clientId: string }
  */
 router.post('/manual', requireAuth, async (req: any, res: any) => {
   try {
-    await AutoBackupService.createLoginBackup(req.user.id);
+    let targetUserId = req.user.id;
+    
+    // Se admin forneceu clientId, criar backup do cliente
+    if (req.user.role === 'admin' && req.body.clientId) {
+      targetUserId = req.body.clientId;
+    }
+
+    await AutoBackupService.createLoginBackup(targetUserId);
 
     res.json({
       success: true,
@@ -162,19 +170,64 @@ router.post('/manual', requireAuth, async (req: any, res: any) => {
 });
 
 /**
+ * POST /backups/client/:clientId
+ * Admin cria backup de um cliente específico
+ */
+router.post('/client/:clientId', requireAuth, async (req: any, res: any) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado. Apenas administradores podem criar backups de clientes.',
+      });
+    }
+
+    await AutoBackupService.createLoginBackup(req.params.clientId);
+
+    res.json({
+      success: true,
+      message: 'Backup do cliente iniciado com sucesso',
+    });
+  } catch (error: any) {
+    console.error('[Backup Routes] Erro ao criar backup do cliente:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao criar backup do cliente',
+      error: error.message,
+    });
+  }
+});
+
+/**
  * DELETE /backups/:id
  * Deleta um backup (apenas admin)
  */
 router.delete('/:id', requireAuth, async (req: any, res: any) => {
   try {
+    console.log('[Backup Routes] DELETE /backups/:id chamado');
+    console.log('[Backup Routes] User:', req.user);
+    console.log('[Backup Routes] Backup ID:', req.params.id);
+    
     if (req.user.role !== 'admin') {
+      console.log('[Backup Routes] Acesso negado - usuário não é admin');
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas administradores podem deletar backups.',
       });
     }
 
+    // Validar ObjectId
+    if (!req.params.id || req.params.id.length !== 24) {
+      console.log('[Backup Routes] ID inválido:', req.params.id);
+      return res.status(400).json({
+        success: false,
+        message: 'ID de backup inválido',
+      });
+    }
+
+    console.log('[Backup Routes] Chamando deleteBackup...');
     await AutoBackupService.deleteBackup(req.params.id);
+    console.log('[Backup Routes] Backup deletado com sucesso');
 
     res.json({
       success: true,
@@ -182,6 +235,7 @@ router.delete('/:id', requireAuth, async (req: any, res: any) => {
     });
   } catch (error: any) {
     console.error('[Backup Routes] Erro ao deletar backup:', error);
+    console.error('[Backup Routes] Stack trace:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Erro ao deletar backup',
