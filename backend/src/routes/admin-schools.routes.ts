@@ -16,7 +16,7 @@ router.use(requireAdmin);
 /**
  * GET /api/admin/schools - Listar todas as escolas
  */
-router.get('/schools', async (req: any, res: Response) => {
+router.get('/', async (req: any, res: Response) => {
   try {
     const schools = await User.find({ 
       role: { $in: ['user', 'school'] },
@@ -50,9 +50,56 @@ router.get('/schools', async (req: any, res: Response) => {
 });
 
 /**
+ * GET /api/admin/schools/stats - Estatísticas gerais
+ */
+router.get('/stats', async (req: any, res: Response) => {
+  try {
+    const totalSchools = await User.countDocuments({ 
+      role: { $in: ['user', 'school'] },
+      schoolName: { $exists: true }
+    });
+    
+    const activeSchools = await User.countDocuments({ 
+      role: { $in: ['user', 'school'] },
+      schoolName: { $exists: true },
+      isActive: true 
+    });
+
+    const pendingApproval = await User.countDocuments({
+      role: { $in: ['user', 'school'] },
+      schoolName: { $exists: true },
+      approvedByAdmin: false
+    });
+
+    const expiredLicenses = await User.countDocuments({
+      role: { $in: ['user', 'school'] },
+      schoolName: { $exists: true },
+      licenseExpiryDate: { $lt: new Date() }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalSchools,
+        activeSchools,
+        inactiveSchools: totalSchools - activeSchools,
+        pendingApproval,
+        expiredLicenses
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao obter estatísticas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao obter estatísticas'
+    });
+  }
+});
+
+/**
  * GET /api/admin/schools/:id - Obter detalhes de uma escola
  */
-router.get('/schools/:id', async (req: any, res: Response) => {
+router.get('/:id', async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -92,7 +139,7 @@ router.get('/schools/:id', async (req: any, res: Response) => {
 /**
  * PUT /api/admin/schools/:id/approve - Aprovar escola e configurar licença
  */
-router.put('/schools/:id/approve', async (req: any, res: Response) => {
+router.put('/:id/approve', async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { licenseExpiryDate, maxUsers } = req.body;
@@ -148,7 +195,7 @@ router.put('/schools/:id/approve', async (req: any, res: Response) => {
 /**
  * PUT /api/admin/schools/:id/toggle - Ativar/Desativar escola
  */
-router.put('/schools/:id/toggle', async (req: any, res: Response) => {
+router.put('/:id/toggle', async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -184,7 +231,7 @@ router.put('/schools/:id/toggle', async (req: any, res: Response) => {
 /**
  * PUT /api/admin/schools/:id/license - Atualizar licença
  */
-router.put('/schools/:id/license', async (req: any, res: Response) => {
+router.put('/:id/license', async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { licenseExpiryDate, maxUsers, paymentStatus } = req.body;
@@ -232,7 +279,7 @@ router.put('/schools/:id/license', async (req: any, res: Response) => {
 /**
  * DELETE /api/admin/schools/:id - Deletar escola
  */
-router.delete('/schools/:id', async (req: any, res: Response) => {
+router.delete('/:id', async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -256,53 +303,6 @@ router.delete('/schools/:id', async (req: any, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Erro ao deletar escola'
-    });
-  }
-});
-
-/**
- * GET /api/admin/stats - Estatísticas gerais
- */
-router.get('/stats', async (req: any, res: Response) => {
-  try {
-    const totalSchools = await User.countDocuments({ 
-      role: { $in: ['user', 'school'] },
-      schoolName: { $exists: true }
-    });
-    
-    const activeSchools = await User.countDocuments({ 
-      role: { $in: ['user', 'school'] },
-      schoolName: { $exists: true },
-      isActive: true 
-    });
-
-    const pendingApproval = await User.countDocuments({
-      role: { $in: ['user', 'school'] },
-      schoolName: { $exists: true },
-      approvedByAdmin: false
-    });
-
-    const expiredLicenses = await User.countDocuments({
-      role: { $in: ['user', 'school'] },
-      schoolName: { $exists: true },
-      licenseExpiryDate: { $lt: new Date() }
-    });
-
-    res.json({
-      success: true,
-      data: {
-        totalSchools,
-        activeSchools,
-        inactiveSchools: totalSchools - activeSchools,
-        pendingApproval,
-        expiredLicenses
-      }
-    });
-  } catch (error) {
-    console.error('Erro ao obter estatísticas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao obter estatísticas'
     });
   }
 });
