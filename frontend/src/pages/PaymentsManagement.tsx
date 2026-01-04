@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { DollarSign, CheckCircle, XCircle, Clock, RefreshCw, Search, Filter, Check } from 'lucide-react';
+import { DollarSign, CheckCircle, XCircle, Clock, RefreshCw, Search, Filter, Check, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -58,6 +58,21 @@ export default function PaymentsManagement() {
     } catch (error: any) {
       console.error('Erro ao aprovar pagamento:', error);
       toast.error(error.response?.data?.message || 'Erro ao aprovar pagamento');
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string, schoolName: string) => {
+    if (!confirm(`⚠️ ATENÇÃO!\n\nDeseja EXCLUIR PERMANENTEMENTE este pagamento?\n\nEscola: ${schoolName}\n\nEsta ação NÃO pode ser desfeita!`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/payments/${paymentId}`);
+      toast.success('Pagamento excluído com sucesso!');
+      fetchPayments(); // Recarregar lista
+    } catch (error: any) {
+      console.error('Erro ao excluir pagamento:', error);
+      toast.error(error.response?.data?.message || 'Erro ao excluir pagamento');
     }
   };
 
@@ -287,19 +302,28 @@ export default function PaymentsManagement() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {payment.status === 'pending' && (
+                      <div className="flex items-center gap-2">
+                        {payment.status === 'pending' && (
+                          <button
+                            onClick={() => handleApprovePayment(payment._id)}
+                            className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                            title="Aprovar pagamento e ativar licença"
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            Aprovar
+                          </button>
+                        )}
+                        {payment.status === 'approved' && (
+                          <span className="text-xs text-green-600 font-medium">✓ Aprovado</span>
+                        )}
                         <button
-                          onClick={() => handleApprovePayment(payment._id)}
-                          className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
-                          title="Aprovar pagamento e ativar licença"
+                          onClick={() => handleDeletePayment(payment._id, payment.schoolName)}
+                          className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+                          title="Excluir pagamento permanentemente"
                         >
-                          <Check className="w-4 h-4 mr-2" />
-                          Aprovar
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                      )}
-                      {payment.status === 'approved' && (
-                        <span className="text-xs text-green-600 font-medium">✓ Aprovado</span>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))

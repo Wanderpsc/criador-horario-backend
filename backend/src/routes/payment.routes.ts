@@ -658,4 +658,48 @@ router.put('/:id/approve', auth, async (req: AuthRequest, res: Response) => {
   }
 });
 
+/**
+ * DELETE /api/payments/:id
+ * Excluir pagamento (admin)
+ */
+router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar se é admin
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
+      return res.status(403).json({ 
+        message: 'Acesso negado. Apenas administradores podem excluir pagamentos.' 
+      });
+    }
+
+    const payment = await Payment.findById(id);
+    
+    if (!payment) {
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+
+    await Payment.findByIdAndDelete(id);
+    
+    console.log('🗑️  Pagamento excluído:', {
+      id,
+      schoolName: payment.schoolName,
+      amount: payment.amount,
+      status: payment.status
+    });
+
+    res.json({ 
+      success: true,
+      message: 'Pagamento excluído com sucesso' 
+    });
+
+  } catch (error: any) {
+    console.error('Erro ao excluir pagamento:', error);
+    res.status(500).json({ 
+      message: 'Erro ao excluir pagamento',
+      error: error.message 
+    });
+  }
+});
+
 export default router;
