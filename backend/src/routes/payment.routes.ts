@@ -1,24 +1,212 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import Payment from '../models/Payment';
 import User from '../models/User';
 import mercadoPagoService from '../services/mercadoPago.service';
 import { auth, AuthRequest } from '../middleware/auth';
+import { sendPaymentConfirmationEmail, sendPaymentNotificationToAdmin } from '../services/email.service';
 
 const router = Router();
 
 // Preços dos planos
 const PLAN_PRICES: Record<string, number> = {
-  trial: 0,
-  micro: 49.90,
-  basico: 99.00,
-  profissional: 199.00,
-  personalizado: 450.00, // Taxa base + R$150 por horário (calculado depois)
-  enterprise: 0 // Sob consulta
+  basico: 119.90,
+  profissional: 249.90
 };
 
 /**
+ * POST /api/payments/create-public
+ * Cria pagamento SEM autenticação (para cadastro inicial)
+ */
+router.post('/create-public', async (req: any, res: Response) => {
+  try {
+    const { plan, durationMonths, paymentMethod, email, schoolName } = req.body;
+
+    if (!email || !schoolName) {
+      return res.status(400).json({ 
+        message: 'Email e nome da escola são obrigatórios' 
+      });
+    }
+
+    // Buscar usuário pelo email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'Escola não encontrada. Faça o cadastro primeiro.' 
+      });
+    }
+
+    // Calcular valor total com descontos
+    let basePrice = PLAN_PRICES[plan] || 0;
+    let subtotal = basePrice * durationMonths;
+    
+    // Aplicar descontos por duração
+    let discount = 0;
+    if (durationMonths === 3) discount = 0.05; // 5%
+    else if (durationMonths === 6) discount = 0.10; // 10%
+    else if (durationMonths === 12) discount = 0.15; // 15%
+    
+    const totalAmount = subtotal * (1 - discount);
+
+    // Gerar referência única
+    const externalReference = `PAY-${Date.now()}-${user._id}`;
+
+    // Criar registro de pagamento
+    const payment = new Payment({
+      schoolId: user._id,
+      schoolName: user.schoolName || user.name,
+      schoolEmail: user.email,
+      plan,
+      durationMonths,
+      amount: totalAmount,
+      paymentMethod,
+      status: 'pending',
+      externalReference,
+      metadata: {}
+    });
+
+    await payment.save();
+
+    // Configurar dados para Mercado Pago
+    const notificationUrl = process.env.WEBHOOK_URL 
+      ? `${process.env.WEBHOOK_URL}/api/payments/webhook`
+      : undefined;
+
+    const backUrls = {
+      success: `${process.env.FRONTEND_URL}/payment-success?ref=${externalReference}`,
+      failure: `${process.env.FRONTEND_URL}/payment-failure?ref=${externalReference}`,
+      pending: `${process.env.FRONTEND_URL}/payment-pending?ref=${externalReference}`
+    };
+
+    let paymentData: any = {};
+
+    if (paymentMethod === 'pix') {
+      // Criar pagamento PIX
+      const pixResult = await mercadoPagoService.createPixPayment({
+        transaction_amount: totalAmount,
+        description: `${plan.toUpperCase()} - ${durationMonths} mês(es) - ${user.schoolName || user.name}`,
+        payment_method_id: 'pix',
+        payer: {
+          email: user.email,
+          first_name: user.name || user.schoolName
+        },
+        external_reference: externalReference,
+        notification_url: notificationUrl
+      });
+
+      if (!pixResult.success) {
+        console.error('❌ [PUBLIC] Erro Mercado Pago:', pixResult.error);
+        return res.status(500).json({ 
+          success: false,
+          message: '⚠️ Sistema de pagamento em configuração. Entre em contato com wanderpsc@gmail.com para liberar sua licença.',
+          error: pixResult.error,
+          contact: 'wanderpsc@gmail.com',
+          instructions: 'Envie um email informando nome da escola e plano desejado.'
+        });
+      }
+
+      // Atualizar payment com dados do PIX
+      if (pixResult.data) {
+        payment.mercadoPagoId = pixResult.data.id;
+        payment.mercadoPagoStatus = pixResult.data.status;
+        payment.pixQRCode = pixResult.data.qrCode;
+        payment.pixQRCodeBase64 = pixResult.data.qrCodeBase64;
+        payment.pixCopyPaste = pixResult.data.qrCode;
+        await payment.save();
+
+        paymentData = {
+          success: true,
+          paymentId: payment._id,
+          externalReference,
+          method: 'pix',
+          amount: totalAmount,
+          qrCode: pixResult.data.qrCode,
+          qrCodeBase64: pixResult.data.qrCodeBase64,
+          mercadoPagoId: pixResult.data.id
+        };
+      }
+
+      return res.json(paymentData);
+
+    } else {
+      // Criar preferência para cartão
+      console.log('🔵 [PAYMENT] Criando preferência de cartão...');
+      console.log('💳 [PAYMENT] External Reference:', externalReference);
+      console.log('💳 [PAYMENT] Valor:', totalAmount);
+      console.log('💳 [PAYMENT] Notification URL:', notificationUrl || 'não configurado');
+      
+      const preferenceData: any = {
+        items: [{
+          title: `Plano ${plan.toUpperCase()}`,
+          description: `Assinatura ${durationMonths} mês(es)`,
+          quantity: 1,
+          unit_price: totalAmount,
+          currency_id: 'BRL'
+        }],
+        payer: {
+          name: user.name || user.schoolName,
+          email: user.email
+        },
+        external_reference: externalReference
+      };
+
+      // Adicionar back_urls e auto_return apenas se FRONTEND_URL estiver configurado
+      if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
+        preferenceData.back_urls = backUrls;
+        preferenceData.auto_return = 'approved';
+      }
+
+      // Adicionar notification_url apenas se estiver configurado
+      if (notificationUrl) {
+        preferenceData.notification_url = notificationUrl;
+      }
+
+      const preferenceResult = await mercadoPagoService.createPreference(preferenceData);
+
+      if (!preferenceResult.success) {
+        console.error('❌ [PAYMENT] Erro na preferência:', preferenceResult.error);
+        console.error('❌ [PAYMENT] Detalhes:', preferenceResult.details);
+        return res.status(500).json({ 
+          success: false,
+          message: 'Erro ao criar preferência de pagamento',
+          error: preferenceResult.error,
+          details: preferenceResult.details
+        });
+      }
+
+      console.log('✅ [PAYMENT] Preferência criada!');
+      console.log('✅ [PAYMENT] Init Point:', preferenceResult.data.init_point);
+
+      // Atualizar payment
+      if (preferenceResult.data) {
+        payment.mercadoPagoId = preferenceResult.data.id;
+        await payment.save();
+
+        paymentData = {
+          success: true,
+          paymentId: payment._id,
+          externalReference,
+          method: 'credit_card',
+          amount: totalAmount,
+          initPoint: preferenceResult.data.init_point,
+          preferenceId: preferenceResult.data.id
+        };
+      }
+
+      return res.json(paymentData);
+    }
+  } catch (error: any) {
+    console.error('Erro ao criar pagamento público:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao processar pagamento',
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/payments/create
- * Cria uma nova solicitação de pagamento
+ * Cria uma nova solicitação de pagamento (COM autenticação)
  */
 router.post('/create', auth, async (req: AuthRequest, res: Response) => {
   try {
@@ -35,15 +223,17 @@ router.post('/create', auth, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
-    // Calcular valor total
+    // Calcular valor total com descontos
     let basePrice = PLAN_PRICES[plan] || 0;
+    let subtotal = basePrice * durationMonths;
     
-    // Para plano personalizado, adicionar custo de horários
-    if (plan === 'personalizado' && timetableCount) {
-      basePrice += timetableCount * 150;
-    }
-
-    const totalAmount = basePrice * durationMonths;
+    // Aplicar descontos por duração
+    let discount = 0;
+    if (durationMonths === 3) discount = 0.05; // 5%
+    else if (durationMonths === 6) discount = 0.10; // 10%
+    else if (durationMonths === 12) discount = 0.15; // 15%
+    
+    const totalAmount = subtotal * (1 - discount);
 
     // Gerar referência única
     const externalReference = `PAY-${Date.now()}-${userId}`;
@@ -137,7 +327,7 @@ router.post('/create', auth, async (req: AuthRequest, res: Response) => {
         external_reference: externalReference,
         notification_url: notificationUrl,
         payment_methods: {
-          installments: plan === 'enterprise' ? 12 : 6
+          installments: 6
         }
       });
 
@@ -264,7 +454,7 @@ router.get('/school/:schoolId', auth, async (req: AuthRequest, res: Response) =>
  */
 router.get('/admin/all', auth, async (req: AuthRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'admin') {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -297,6 +487,172 @@ router.get('/admin/all', auth, async (req: AuthRequest, res: Response) => {
     console.error('Erro ao listar pagamentos admin:', error);
     res.status(500).json({ 
       message: 'Erro ao listar pagamentos',
+      error: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/payments/webhook
+ * Webhook do Mercado Pago para notificações de pagamento
+ */
+router.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    console.log('📩 Webhook recebido:', JSON.stringify(req.body, null, 2));
+    
+    const { type, data } = req.body;
+    
+    // Mercado Pago envia notificações do tipo "payment"
+    if (type === 'payment') {
+      const paymentId = data.id;
+      
+      console.log('💰 Consultando pagamento:', paymentId);
+      
+      // Buscar detalhes do pagamento no Mercado Pago
+      const mpResponse = await mercadoPagoService.getPaymentStatus(paymentId);
+      
+      console.log('✅ Status do MP:', mpResponse.status);
+      
+      // Atualizar no banco de dados
+      const payment = await Payment.findOne({ mercadoPagoId: paymentId.toString() });
+      
+      if (payment) {
+        payment.status = mpResponse.status;
+        
+        // Se aprovado, ativar licença da escola
+        if (mpResponse.status === 'approved' && payment.status !== 'approved') {
+          payment.approvedAt = new Date();
+          
+          // Buscar escola pelo email
+          const school = await User.findOne({ email: payment.schoolEmail });
+          
+          if (school) {
+            // Ativar licença
+            school.approvedByAdmin = true;
+            school.registrationStatus = 'approved';
+            school.licenseActive = true;
+            
+            // Calcular data de expiração
+            const expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + payment.durationMonths);
+            school.licenseExpiryDate = expiryDate;
+            
+            school.plan = payment.plan;
+            
+            await school.save();
+            
+            console.log('✅ Licença ativada automaticamente para:', school.email);
+            
+            // Enviar email de confirmação para o cliente
+            await sendPaymentConfirmationEmail({
+              schoolName: school.schoolName || school.name,
+              schoolEmail: school.email,
+              amount: payment.amount,
+              paymentMethod: payment.paymentMethod === 'pix' ? 'PIX' : 'Cartão de Crédito',
+              paymentDate: new Date(),
+              planName: payment.plan.toUpperCase(),
+              planDuration: payment.durationMonths,
+              licenseExpiryDate: expiryDate
+            });
+            
+            // Enviar notificação para o admin
+            await sendPaymentNotificationToAdmin(
+              school.schoolName || school.name,
+              school.email,
+              payment.amount,
+              payment.plan,
+              payment.paymentMethod
+            );
+          }
+        }
+        
+        await payment.save();
+        console.log('✅ Pagamento atualizado no banco');
+      }
+    }
+    
+    // Sempre retornar 200 para o Mercado Pago
+    res.status(200).json({ success: true });
+    
+  } catch (error: any) {
+    console.error('❌ Erro no webhook:', error);
+    // Retornar 200 mesmo com erro para não reenviar
+    res.status(200).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * PUT /api/payments/:id/approve
+ * Aprovar pagamento manualmente e ativar licença
+ */
+router.put('/:id/approve', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
+      return res.status(403).json({ message: 'Acesso negado' });
+    }
+
+    const payment = await Payment.findById(req.params.id);
+    
+    if (!payment) {
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+
+    // Atualizar status do pagamento
+    payment.status = 'approved';
+    payment.approvedAt = new Date();
+    await payment.save();
+
+    // Buscar e ativar licença da escola
+    const school = await User.findOne({ email: payment.schoolEmail });
+    
+    if (school) {
+      school.approvedByAdmin = true;
+      school.registrationStatus = 'approved';
+      school.licenseActive = true;
+      
+      // Calcular data de expiração
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + payment.durationMonths);
+      school.licenseExpiryDate = expiryDate;
+      
+      school.plan = payment.plan;
+      
+      await school.save();
+      
+      console.log('✅ Licença ativada manualmente para:', school.email);
+      
+      // Enviar email de confirmação para o cliente
+      await sendPaymentConfirmationEmail({
+        schoolName: school.schoolName || school.name,
+        schoolEmail: school.email,
+        amount: payment.amount,
+        paymentMethod: payment.paymentMethod === 'pix' ? 'PIX' : 'Cartão de Crédito',
+        paymentDate: new Date(),
+        planName: payment.plan.toUpperCase(),
+        planDuration: payment.durationMonths,
+        licenseExpiryDate: expiryDate
+      });
+      
+      // Enviar notificação para o admin
+      await sendPaymentNotificationToAdmin(
+        school.schoolName || school.name,
+        school.email,
+        payment.amount,
+        payment.plan,
+        payment.paymentMethod
+      );
+    }
+
+    res.json({ 
+      success: true,
+      message: 'Pagamento aprovado e licença ativada com sucesso',
+      data: payment
+    });
+
+  } catch (error: any) {
+    console.error('Erro ao aprovar pagamento:', error);
+    res.status(500).json({ 
+      message: 'Erro ao aprovar pagamento',
       error: error.message 
     });
   }

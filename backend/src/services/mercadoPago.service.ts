@@ -55,11 +55,17 @@ class MercadoPagoService {
     this.apiUrl = MERCADO_PAGO_API;
   }
 
-  private getHeaders() {
-    return {
+  private getHeaders(idempotencyKey?: string) {
+    const headers: Record<string, string> = {
       'Authorization': `Bearer ${this.accessToken}`,
       'Content-Type': 'application/json'
     };
+    
+    if (idempotencyKey) {
+      headers['X-Idempotency-Key'] = idempotencyKey;
+    }
+    
+    return headers;
   }
 
   /**
@@ -67,21 +73,35 @@ class MercadoPagoService {
    */
   async createPreference(preferenceData: PaymentPreference) {
     try {
+      console.log('🔵 [MP] Criando preferência de pagamento...');
+      console.log('📤 [MP] Dados enviados:', JSON.stringify(preferenceData, null, 2));
+      
+      // URL correta da API de preferências
+      const preferencesUrl = 'https://api.mercadopago.com/checkout/preferences';
+      
       const response = await axios.post(
-        `${this.apiUrl}/checkout/preferences`,
+        preferencesUrl,
         preferenceData,
         { headers: this.getHeaders() }
       );
+
+      console.log('✅ [MP] Preferência criada com sucesso!');
+      console.log('📥 [MP] Resposta:', response.data);
 
       return {
         success: true,
         data: response.data
       };
     } catch (error: any) {
-      console.error('Erro ao criar preferência MP:', error.response?.data || error.message);
+      console.error('❌ [MP] Erro ao criar preferência!');
+      console.error('📛 [MP] Status:', error.response?.status);
+      console.error('📛 [MP] Erro completo:', JSON.stringify(error.response?.data, null, 2));
+      console.error('📛 [MP] Headers:', error.response?.headers);
+      
       return {
         success: false,
-        error: error.response?.data?.message || 'Erro ao criar preferência de pagamento'
+        error: error.response?.data?.message || error.response?.data || 'Erro ao criar preferência de pagamento',
+        details: error.response?.data
       };
     }
   }
@@ -91,10 +111,13 @@ class MercadoPagoService {
    */
   async createPixPayment(paymentData: PixPaymentRequest) {
     try {
+      // Gerar chave de idempotência única
+      const idempotencyKey = `pix-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
       const response = await axios.post(
         `${this.apiUrl}/payments`,
         paymentData,
-        { headers: this.getHeaders() }
+        { headers: this.getHeaders(idempotencyKey) }
       );
 
       const payment = response.data;
@@ -131,14 +154,15 @@ class MercadoPagoService {
 
       return {
         success: true,
+        status: response.data.status,
+        statusDetail: response.data.status_detail,
+        amount: response.data.transaction_amount,
+        paymentMethod: response.data.payment_method_id,
         data: response.data
       };
     } catch (error: any) {
       console.error('Erro ao consultar pagamento:', error.response?.data || error.message);
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Erro ao consultar pagamento'
-      };
+      throw error;
     }
   }
 

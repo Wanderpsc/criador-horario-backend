@@ -10,7 +10,6 @@ import {
   Menu,
   X,
   Settings,
-  Key,
   DollarSign,
   Package,
   UserPlus,
@@ -25,7 +24,12 @@ import {
   MessageSquare,
   Zap,
   ShieldCheck,
-  Database
+  Database,
+  CreditCard,
+  Mail,
+  TrendingUp,
+  FileText,
+  AlertTriangle
 } from 'lucide-react';
 import { useState } from 'react';
 import NotificationCenter from './NotificationCenter';
@@ -50,7 +54,7 @@ export default function Layout() {
       color: 'blue',
       subtitle: 'Início'
     },
-    ...(user?.role !== 'admin'
+    ...(user?.role !== 'admin' && user?.role !== 'super-admin'
       ? [
           { 
             divider: true, 
@@ -218,12 +222,11 @@ export default function Layout() {
           { 
             icon: Tv, 
             label: 'Painel de Avisos (TV)', 
-            path: '/display-panel',
-            description: '📺 Exibir horários em tempo real em TVs (tipo aeroporto)',
+            path: '/display-panel-config',
+            description: '📺 Configure e exiba horários em tempo real em TVs',
             color: 'purple',
             badge: 'NOVO',
-            subtitle: 'Display em Tempo Real',
-            target: '_blank'
+            subtitle: 'Display em Tempo Real'
           },
           { 
             icon: Settings, 
@@ -235,19 +238,90 @@ export default function Layout() {
           }
         ]
       : []),
-    ...(user?.role === 'admin'
+    ...(user?.role === 'admin' || user?.role === 'super-admin'
       ? [
-          { divider: true, label: '� PAINEL ADMINISTRATIVO', path: '#' },
-          { icon: ShieldCheck, label: 'Dashboard Admin', path: '/admin-dashboard', color: 'purple' },
-          { icon: Building2, label: 'Escolas', path: '/schools-management', color: 'blue' },
-          { icon: Users, label: 'Usuários', path: '/users-management', color: 'indigo' },
-          { icon: Key, label: 'Licenças', path: '/license-management', color: 'orange' },
-          { icon: Database, label: 'Backups', path: '/backup-management', color: 'green' },
-          { divider: true, label: '💼 COMERCIAL', path: '#' },
-          { icon: DollarSign, label: 'Dashboard Vendas', path: '/sales-dashboard', color: 'emerald' },
-          { icon: Package, label: 'Planos', path: '/plans-management', color: 'teal' },
-          { icon: UserPlus, label: 'Leads', path: '/leads-management', color: 'pink' },
-          { icon: ShoppingCart, label: 'Vendas', path: '/sales-management', color: 'yellow' }
+          { divider: true, label: '🔐 PAINEL ADMINISTRATIVO', path: '#' },
+          { 
+            icon: ShieldCheck, 
+            label: 'Dashboard Admin', 
+            path: '/admin-dashboard', 
+            color: 'purple',
+            description: '📊 Painel central com estatísticas e visão geral',
+            subtitle: 'Visão Geral'
+          },
+          { 
+            icon: Building2, 
+            label: 'Escolas Cadastradas', 
+            path: '/schools-management', 
+            color: 'blue',
+            description: '🏫 Visualizar, aprovar e gerenciar licenças',
+            subtitle: 'Gestão de Clientes'
+          },
+          { 
+            icon: DollarSign, 
+            label: 'Controle Financeiro', 
+            path: '/sales-management', 
+            color: 'green',
+            description: '💰 Pagamentos, faturas e cobranças',
+            subtitle: 'Financeiro'
+          },
+          { 
+            icon: CreditCard, 
+            label: 'Pagamentos Online', 
+            path: '/payments-management', 
+            color: 'emerald',
+            description: '💳 Transações PIX e cartão',
+            subtitle: 'Mercado Pago'
+          },
+          { 
+            icon: Database, 
+            label: 'Backups e Dados', 
+            path: '/backup-management', 
+            color: 'indigo',
+            description: '💾 Backup automático e restauração',
+            subtitle: 'Segurança'
+          },
+          { 
+            icon: Mail, 
+            label: 'Mensagens', 
+            path: '/messages', 
+            color: 'pink',
+            description: '✉️ Enviar avisos aos clientes',
+            subtitle: 'Comunicação'
+          },
+          { 
+            icon: Bell, 
+            label: 'Notificações', 
+            path: '/notifications', 
+            color: 'yellow',
+            description: '🔔 Alertas e eventos importantes',
+            subtitle: 'Sistema'
+          },
+          { divider: true, label: '💼 GESTÃO COMERCIAL', path: '#' },
+          { 
+            icon: TrendingUp, 
+            label: 'Pipeline de Vendas', 
+            path: '/sales-dashboard', 
+            color: 'orange',
+            description: '📈 Dashboard comercial completo',
+            subtitle: 'Vendas'
+          },
+          { 
+            icon: UserPlus, 
+            label: 'Leads', 
+            path: '/leads-management', 
+            color: 'cyan',
+            description: '🎯 Gestão de oportunidades',
+            subtitle: 'Prospecção'
+          },
+          { 
+            icon: FileText, 
+            label: 'Planos e Precificação', 
+            path: '/plans-management', 
+            color: 'teal',
+            description: '📋 Criar e gerenciar planos',
+            subtitle: 'Produtos'
+          }
         ]
       : [])
   ];
@@ -286,13 +360,13 @@ export default function Layout() {
           {/* User Info Moderna com Centro de Notificações */}
           <div className="flex items-center gap-3 lg:gap-4">
             {/* Centro de Notificações - Apenas para clientes */}
-            {user?.role !== 'admin' && <NotificationCenter />}
+            {user?.role !== 'admin' && user?.role !== 'super-admin' && <NotificationCenter />}
             
             <div className="hidden md:block text-right">
               <p className="text-sm font-bold text-white">{user?.name}</p>
-              {user?.role !== 'admin' && user?.schoolName && (
-                <p className="text-xs text-blue-200">{user.schoolName}</p>
-              )}
+              {user?.role === 'admin' || user?.role === 'super-admin' ? (
+                <p className="text-xs text-yellow-300 font-semibold">Administrador</p>
+              ) : null}
             </div>
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg ring-2 ring-white/50">
               {user?.name?.charAt(0).toUpperCase()}
@@ -326,12 +400,12 @@ export default function Layout() {
           no-print flex flex-col h-screen
         `}>
           {/* Header Sidebar Compacto */}
-          <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-blue-50">
+          <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-lg">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-blue-700 rounded-lg flex items-center justify-center shadow-md">
-                <GraduationCap className="text-white" size={18} />
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-md">
+                <GraduationCap className="text-indigo-600" size={18} />
               </div>
-              <span className="text-sm font-bold text-primary-700">Menu</span>
+              <span className="text-sm font-bold text-white">Menu Principal</span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -347,11 +421,11 @@ export default function Layout() {
               if (item.divider) {
                 return (
                   <div key={index} className="mt-6 mb-3">
-                    <div className="px-3 py-2 text-sm font-bold text-gray-500 uppercase tracking-wider border-l-4 border-gray-300 bg-gray-50 rounded-r">
+                    <div className="px-3 py-2 text-sm font-bold text-indigo-700 uppercase tracking-wider border-l-4 border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-r shadow-sm">
                       {item.label}
                     </div>
                     {item.description && (
-                      <p className="px-3 mt-1 text-sm text-gray-400 italic">
+                      <p className="px-3 mt-1 text-sm text-indigo-500 italic font-medium">
                         {item.description}
                       </p>
                     )}
@@ -363,18 +437,18 @@ export default function Layout() {
               
               // Color mapping for highlights
               const colorClasses = {
-                blue: 'border-blue-400 bg-blue-50 hover:bg-blue-100',
-                purple: 'border-purple-400 bg-purple-50 hover:bg-purple-100',
-                green: 'border-green-400 bg-green-50 hover:bg-green-100',
-                orange: 'border-orange-400 bg-orange-50 hover:bg-orange-100',
-                red: 'border-red-400 bg-red-50 hover:bg-red-100',
-                indigo: 'border-indigo-400 bg-indigo-50 hover:bg-indigo-100',
-                teal: 'border-teal-400 bg-teal-50 hover:bg-teal-100',
-                yellow: 'border-yellow-400 bg-yellow-50 hover:bg-yellow-100',
-                cyan: 'border-cyan-400 bg-cyan-50 hover:bg-cyan-100',
-                gray: 'border-gray-400 bg-gray-50 hover:bg-gray-100',
-                emerald: 'border-emerald-400 bg-emerald-50 hover:bg-emerald-100',
-                slate: 'border-slate-400 bg-slate-50 hover:bg-slate-100'
+                blue: 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200',
+                purple: 'border-purple-500 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200',
+                green: 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200',
+                orange: 'border-orange-500 bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200',
+                red: 'border-red-500 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200',
+                indigo: 'border-indigo-500 bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200',
+                teal: 'border-teal-500 bg-gradient-to-r from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200',
+                yellow: 'border-yellow-500 bg-gradient-to-r from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200',
+                cyan: 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200',
+                gray: 'border-gray-500 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200',
+                emerald: 'border-emerald-500 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200',
+                slate: 'border-slate-500 bg-gradient-to-r from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200'
               };
 
               const highlightClass = item.highlight 
@@ -388,8 +462,8 @@ export default function Layout() {
                   onClick={() => setSidebarOpen(false)}
                   className={`group flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${highlightClass} ${
                     isActive
-                      ? 'bg-gradient-to-r from-primary-100 to-blue-100 text-primary-800 font-semibold shadow-md border border-primary-200'
-                      : 'text-gray-700 hover:bg-gray-50 hover:shadow-sm'
+                      ? 'bg-gradient-to-r from-indigo-100 via-purple-100 to-blue-100 text-indigo-900 font-semibold shadow-lg border-2 border-indigo-300'
+                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:shadow-md hover:border hover:border-gray-300'
                   }`}
                   title={item.description}
                 >
@@ -410,8 +484,8 @@ export default function Layout() {
                       </span>
                     )}
                     {Icon && !item.step && (
-                      <div className={`p-2 rounded-lg ${
-                        isActive ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                      <div className={`p-2 rounded-lg transition-all duration-200 ${
+                        isActive ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md' : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 group-hover:from-indigo-100 group-hover:to-purple-100 group-hover:text-indigo-600'
                       }`}>
                         <Icon size={20} />
                       </div>
@@ -452,10 +526,9 @@ export default function Layout() {
           {/* User info */}
           <div className="p-4 border-t">
             <div className="mb-3">
-              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
               <p className="text-xs text-gray-500">{user?.email}</p>
               <p className="text-xs text-primary-600 mt-1 font-semibold">
-                {user?.role === 'admin' ? 'Administrador do Sistema' : user?.schoolName}
+                {(user?.role === 'admin' || user?.role === 'super-admin') ? 'Administrador do Sistema' : user?.schoolName}
               </p>
             </div>
             <button

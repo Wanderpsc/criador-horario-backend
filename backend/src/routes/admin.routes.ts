@@ -5,6 +5,7 @@
 
 import { Router, Response } from 'express';
 import User from '../models/User';
+import Payment from '../models/Payment';
 import { authenticate } from '../middleware/auth';
 import { requireAdmin, AuthRequest } from '../middleware/license';
 
@@ -253,19 +254,20 @@ router.delete('/users/:id', async (req: any, res: Response) => {
 });
 
 /**
- * GET /api/admin/schools - Listar todas as escolas cadastradas
+ * GET /api/admin/schools - REMOVIDO - Usar /api/admin/schools do admin-schools.routes.ts
+ * Esta rota estava conflitando e buscando role: 'user' ao invés de 'school'
  */
-router.get('/schools', async (req: any, res: Response) => {
-  try {
-    const schools = await User.find({ role: 'user' })
-      .select('-password -resetPasswordToken -resetPasswordExpire')
-      .sort({ createdAt: -1 });
+// router.get('/schools', async (req: any, res: Response) => {
+//   try {
+//     const schools = await User.find({ role: 'user' })
+//       .select('-password -resetPasswordToken -resetPasswordExpire')
+//       .sort({ createdAt: -1 });
     
-    res.json({ success: true, data: schools });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-});
+//     res.json({ success: true, data: schools });
+//   } catch (error: any) {
+//     res.status(500).json({ message: error.message });
+//   }
+// });
 
 /**
  * PATCH /api/admin/schools/:id/approve - Aprovar cadastro de escola
@@ -374,33 +376,45 @@ router.patch('/schools/:id/notes', async (req: any, res: Response) => {
  */
 router.get('/dashboard-stats', async (req: any, res: Response) => {
   try {
-    const totalClients = await User.countDocuments({ role: 'user' });
+    const totalClients = await User.countDocuments({ role: 'school' });
     const activeClients = await User.countDocuments({ 
-      role: 'user', 
+      role: 'school', 
       registrationStatus: 'approved',
       approvedByAdmin: true 
     });
     const pendingApprovals = await User.countDocuments({ 
-      role: 'user', 
+      role: 'school', 
       registrationStatus: 'pending' 
     });
     const suspendedClients = await User.countDocuments({ 
-      role: 'user', 
+      role: 'school', 
       registrationStatus: 'suspended' 
     });
 
-    // Cálculos financeiros simulados (implementar com modelo Transaction)
-    const monthlyRevenue = 0; // TODO: Calcular da tabela de transações
-    const pendingPayments = await User.countDocuments({ 
-      role: 'user', 
-      paymentStatus: 'pending' 
-    });
+    // Buscar pagamentos reais do Mercado Pago
+    const allPayments = await Payment.find({});
+    const pendingPaymentsCount = await Payment.countDocuments({ status: 'pending' });
+    const approvedPaymentsCount = await Payment.countDocuments({ status: 'approved' });
+    
+    // Calcular receita total e mensal
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const approvedPayments = allPayments.filter(p => p.status === 'approved');
+    const totalRevenue = approvedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    const monthlyPayments = allPayments.filter(p => 
+      p.status === 'approved' && 
+      p.createdAt && 
+      new Date(p.createdAt) >= firstDayOfMonth
+    );
+    const monthlyRevenue = monthlyPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     // Licenças expirando nos próximos 30 dias
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     const expiringSoon = await User.countDocuments({
-      role: 'user',
+      role: 'school',
       licenseExpiryDate: { $lte: thirtyDaysFromNow, $gte: new Date() }
     });
 
@@ -411,9 +425,10 @@ router.get('/dashboard-stats', async (req: any, res: Response) => {
         activeClients,
         pendingApprovals,
         suspendedClients,
-        totalRevenue: 0, // TODO: Implementar
+        totalRevenue,
         monthlyRevenue,
-        pendingPayments,
+        pendingPayments: pendingPaymentsCount,
+        approvedPayments: approvedPaymentsCount,
         expiringSoon,
         unreadMessages: 0, // TODO: Implementar
         systemNotifications: pendingApprovals + expiringSoon
