@@ -22,6 +22,7 @@ export default function Schedules() {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    numberOfPeriods: 8,
     periods: Array.from({ length: 8 }, (_, i) => ({
       period: i + 1,
       startTime: '',
@@ -94,8 +95,10 @@ export default function Schedules() {
       console.log('✏️ Modo edição - Períodos recebidos:', schedule.periods);
       
       setEditingSchedule(schedule);
+      const periodsLength = schedule.periods && schedule.periods.length > 0 ? schedule.periods.length : 8;
       setFormData({
         name: schedule.name,
+        numberOfPeriods: periodsLength,
         periods: schedule.periods && schedule.periods.length > 0 
           ? schedule.periods 
           : Array.from({ length: 8 }, (_, i) => ({
@@ -109,6 +112,7 @@ export default function Schedules() {
       setEditingSchedule(null);
       setFormData({
         name: '',
+        numberOfPeriods: 8,
         periods: [
           { period: 1, startTime: '', endTime: '' },
           { period: 2, startTime: '', endTime: '' },
@@ -258,26 +262,58 @@ export default function Schedules() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Escola / Turno *
-                </label>
-                <select
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input"
-                  required
-                >
-                  <option value="">Selecione o tipo de escola</option>
-                  <option value="Parcial Manhã">Parcial Manhã</option>
-                  <option value="Parcial Tarde">Parcial Tarde</option>
-                  <option value="Parcial Noturno">Parcial Noturno</option>
-                  <option value="Intermediário">Intermediário</option>
-                  <option value="Integral">Integral</option>
-                  <option value="Integral Concomitante">Integral Concomitante</option>
-                  <option value="Integral Integrado">Integral Integrado</option>
-                  <option value="Técnico">Técnico</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Escola / Turno *
+                  </label>
+                  <select
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="input"
+                    required
+                  >
+                    <option value="">Selecione o tipo de escola</option>
+                    <option value="Parcial Manhã">Parcial Manhã</option>
+                    <option value="Parcial Tarde">Parcial Tarde</option>
+                    <option value="Parcial Noturno">Parcial Noturno</option>
+                    <option value="Intermediário">Intermediário</option>
+                    <option value="Integral">Integral</option>
+                    <option value="Integral Concomitante">Integral Concomitante</option>
+                    <option value="Integral Integrado">Integral Integrado</option>
+                    <option value="Técnico">Técnico</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantidade de Períodos/Aulas *
+                  </label>
+                  <select
+                    value={formData.numberOfPeriods}
+                    onChange={(e) => {
+                      const count = parseInt(e.target.value);
+                      setFormData({ 
+                        ...formData, 
+                        numberOfPeriods: count,
+                        periods: Array.from({ length: count }, (_, i) => ({
+                          period: i + 1,
+                          startTime: formData.periods[i]?.startTime || '',
+                          endTime: formData.periods[i]?.endTime || '',
+                        }))
+                      });
+                    }}
+                    className="input"
+                    required
+                  >
+                    <option value="4">4 períodos</option>
+                    <option value="5">5 períodos</option>
+                    <option value="6">6 períodos</option>
+                    <option value="7">7 períodos</option>
+                    <option value="8">8 períodos</option>
+                    <option value="9">9 períodos</option>
+                    <option value="10">10 períodos</option>
+                  </select>
+                </div>
               </div>
 
               <div>

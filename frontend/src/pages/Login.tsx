@@ -13,23 +13,55 @@ export default function Login() {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
+  // Log inicial para confirmar que o componente foi carregado
+  console.log('🔵 Componente Login carregado');
+
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🟢 handleSubmit CHAMADO!');
     e.preventDefault();
+    console.log('🟢 preventDefault executado');
     setLoading(true);
 
+    console.log('🔐 Tentando fazer login com:', { email, password: '***' });
+
     try {
+      console.log('📡 Enviando requisição para:', api.defaults.baseURL + '/auth/login');
       const response = await api.post('/auth/login', { email, password });
+      console.log('✅ Resposta do servidor:', response.data);
+      
       setAuth(response.data.token, response.data.user);
+      console.log('✅ Token salvo no store');
+      
       toast.success('Login realizado com sucesso!');
       
       // Redirecionar baseado no tipo de usuário
-      if (response.data.user.role === 'admin') {
+      if (response.data.user.role === 'admin' || response.data.user.role === 'super-admin') {
+        console.log('➡️ Redirecionando para /admin-dashboard');
         navigate('/admin-dashboard');
       } else {
+        console.log('➡️ Redirecionando para /dashboard');
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erro ao fazer login');
+      console.error('❌ Erro ao fazer login:', error);
+      console.error('❌ Response:', error.response?.data);
+      
+      // Tratamento especial para contas pendentes de aprovação
+      if (error.response?.status === 403) {
+        const data = error.response?.data;
+        
+        if (data?.status === 'pending_approval') {
+          toast.error(data.message, { duration: 6000 });
+        } else if (data?.status === 'suspended') {
+          toast.error(data.message, { duration: 6000 });
+        } else if (data?.status === 'rejected') {
+          toast.error(data.message, { duration: 6000 });
+        } else {
+          toast.error(data?.message || 'Acesso negado');
+        }
+      } else {
+        toast.error(error.response?.data?.message || 'Erro ao fazer login');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,6 +135,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
+            onClick={() => console.log('🔴 BOTÃO CLICADO!')}
             className="btn btn-primary w-full disabled:opacity-50"
           >
             {loading ? 'Entrando...' : 'Entrar'}

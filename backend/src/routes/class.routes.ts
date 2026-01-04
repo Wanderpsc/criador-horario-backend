@@ -79,11 +79,24 @@ router.get('/:id', auth, async (req: any, res: any) => {
       return res.status(404).json({ message: 'Turma não encontrada' });
     }
     
+    console.log(`🔍 GET /classes/${req.params.id}`);
+    console.log(`   - name: "${classItem.name}"`);
+    console.log(`   - gradeId (populated):`, classItem.gradeId);
+    console.log(`   - gradeId.name: "${(classItem.gradeId as any)?.name}"`);
+    
     const transformed = {
       ...classItem.toObject(),
       id: classItem._id,
+      gradeName: (classItem.gradeId as any)?.name || undefined, // ← ADICIONAR CAMPO gradeName
+      grade: classItem.gradeId ? {
+        id: (classItem.gradeId as any)._id,
+        name: (classItem.gradeId as any).name,
+        level: (classItem.gradeId as any).level
+      } : undefined,
       subjectWeeklyHours: classItem.subjectWeeklyHours instanceof Map ? Object.fromEntries(classItem.subjectWeeklyHours) : (classItem.subjectWeeklyHours || {})
     };
+    
+    console.log(`   ✅ Retornando gradeName: "${transformed.gradeName}"`);
     
     res.json({ data: transformed });
   } catch (error: any) {

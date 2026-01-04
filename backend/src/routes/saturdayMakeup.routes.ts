@@ -153,4 +153,42 @@ router.patch('/:id/confirm', async (req, res) => {
   }
 });
 
+// Atualizar registro de presença
+router.put('/:id/attendance', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { attendanceRecords } = req.body;
+
+    console.log('📝 Atualizando presença do sábado:', id);
+    console.log('📋 Registros:', attendanceRecords?.length || 0);
+
+    const saturday = await SaturdayMakeup.findById(id);
+    if (!saturday) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sábado não encontrado'
+      });
+    }
+
+    // Atualizar registros de presença
+    saturday.attendanceRecords = attendanceRecords;
+    await saturday.save();
+
+    console.log('✅ Presença atualizada com sucesso');
+
+    res.json({
+      success: true,
+      data: saturday,
+      message: 'Presença atualizada com sucesso'
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar presença:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao atualizar presença',
+      error: error.message
+    });
+  }
+});
+
 export default router;

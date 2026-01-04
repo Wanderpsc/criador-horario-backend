@@ -150,57 +150,135 @@ export async function getTeacherPendingDebts(teacherId: string) {
 export async function generateSaturdayScheduleFromDebts(
   schoolId: string,
   saturdayDate: Date,
-  maxPeriods: number = 4
+  maxPeriods: number = 4,
+  lessonDuration: number = 60,
+  startTime: string = '08:00',
+  selectedTeacherIds?: string[] // Novo parâmetro: IDs dos professores selecionados
 ) {
-  console.log('🎯 Gerando horário de sábado automaticamente...');
-  console.log('📅 Data:', saturdayDate);
-  console.log('🏫 Escola:', schoolId);
+  try {
+    console.log('🎯 Gerando horário de sábado automaticamente...');
+    console.log('📅 Data:', saturdayDate);
+    console.log('🏫 Escola:', schoolId);
+    console.log(`⏰ Configuração: ${maxPeriods} aulas de ${lessonDuration} minutos iniciando às ${startTime}`);
+    if (selectedTeacherIds && selectedTeacherIds.length > 0) {
+      console.log(`👥 Filtrando ${selectedTeacherIds.length} professores selecionados`);
+    }
 
-  // Buscar todos os débitos pendentes
-  const debts = await TeacherDebtRecord.find({
-    isPaid: false
-  }).sort({ 
-    isAccumulated: -1, // Priorizar acumulados
-    absenceDate: 1 // Mais antigos primeiro
+    // Buscar horários emergenciais com makeupClasses da escola
+    console.log('📦 Importando modelo EmergencySchedule...');
+    const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
+    console.log('✅ Modelo importado');
+    
+    // Primeiro, buscar TODOS os horários emergenciais da escola
+    console.log('🔍 Buscando horários emergenciais...');
+    const allSchedules = await EmergencySchedule.find({ school: schoolId }).sort({ date: 1 });
+    console.log(`📋 Total de ${allSchedules.length} horário(s) emergencial(is) no banco para escola ${schoolId}`);
+  
+  // Filtrar os que têm makeupClasses
+  const emergencySchedules = allSchedules.filter(schedule => 
+    schedule.makeupClasses && schedule.makeupClasses.length > 0
+  );
+  
+  console.log(`📚 ${emergencySchedules.length} horário(s) emergencial(is) com aulas de reposição`);
+  
+  if (emergencySchedules.length > 0) {
+    console.log('📋 Exemplos de horários encontrados:');
+    emergencySchedules.slice(0, 3).forEach(sch => {
+      console.log(`   - ${sch.date} (${sch.dayOfWeek}): ${sch.makeupClasses?.length || 0} aulas`);
+    });
+  }
+
+  // Extrair todos os makeupClasses
+  const allMakeupClasses: any[] = [];
+  emergencySchedules.forEach(schedule => {
+    console.log(`   📋 Processando schedule ${schedule._id}:`, {
+      date: schedule.date,
+      makeupClassesLength: schedule.makeupClasses?.length || 0,
+      absentTeacherNames: schedule.absentTeacherNames
+    });
+    
+    if (schedule.makeupClasses && schedule.makeupClasses.length > 0) {
+      console.log(`      ✅ Adicionando ${schedule.makeupClasses.length} makeupClasses`);
+      allMakeupClasses.push(...schedule.makeupClasses);
+    } else {
+      console.log(`      ⚠️ Sem makeupClasses para adicionar`);
+    }
   });
 
-  console.log(`📊 ${debts.length} débito(s) pendente(s) encontrado(s)`);
+  console.log(`📊 ${allMakeupClasses.length} aula(s) de reposição encontrada(s)`);
+  
+  if (allMakeupClasses.length === 0) {
+    console.log('⚠️ ATENÇÃO: Nenhuma aula de reposição encontrada!');
+    console.log('   Isso pode indicar que:');
+    console.log('   1. Nenhum horário emergencial tem makeupClasses');
+    console.log('   2. Os horários foram criados antes da implementação de makeupClasses');
+    console.log('   3. Todos os professores ausentes já repuseram suas aulas');
+  }
+  
+  if (allMakeupClasses.length > 0) {
+    console.log('👥 Exemplos de professores com débitos:');
+    const uniqueTeachers = new Set(allMakeupClasses.map(m => m.originalTeacherName));
+    Array.from(uniqueTeachers).slice(0, 5).forEach(name => {
+      console.log(`   - ${name}`);
+    });
+  }
 
   // Agrupar por professor
   const debtsByTeacher = new Map<string, any[]>();
-  for (const debt of debts) {
-    if (!debtsByTeacher.has(debt.teacherId)) {
-      debtsByTeacher.set(debt.teacherId, []);
+  for (const makeup of allMakeupClasses) {
+    const teacherId = makeup.originalTeacherId;
+    
+    // 🎯 FILTRAR: Se selectedTeacherIds foi fornecido, incluir apenas os selecionados
+    if (selectedTeacherIds && selectedTeacherIds.length > 0) {
+      if (!selectedTeacherIds.includes(teacherId)) {
+        continue; // Pula professores não selecionados
+      }
     }
-    debtsByTeacher.get(debt.teacherId)!.push(debt);
+    
+    if (!debtsByTeacher.has(teacherId)) {
+      debtsByTeacher.set(teacherId, []);
+    }
+    debtsByTeacher.get(teacherId)!.push(makeup);
   }
+  
+  console.log(`📊 ${debtsByTeacher.size} professor(es) incluído(s) no horário`);
 
-  // Buscar informações dos professores, disciplinas e turmas
+  // Buscar informações dos professores
   const teacherIds = Array.from(debtsByTeacher.keys());
   const teachers = await Teacher.find({ _id: { $in: teacherIds } });
-  const subjects = await Subject.find({});
-  const classes = await Class.find({});
 
   const teacherMap = new Map(teachers.map(t => [t._id.toString(), t]));
-  const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
-  const classMap = new Map(classes.map(c => [c._id.toString(), c]));
 
   // Estrutura do horário: { classId: [slots] }
   const schedule: any = {};
   const teacherDebts: any[] = [];
 
   // Horários padrão (8h-12h, 4 períodos)
-  const periods = [
-    { period: 1, startTime: '08:00', endTime: '09:00' },
-    { period: 2, startTime: '09:00', endTime: '10:00' },
-    { period: 3, startTime: '10:00', endTime: '11:00' },
-    { period: 4, startTime: '11:00', endTime: '12:00' }
-  ];
+  // Gerar períodos dinamicamente baseado na duração das aulas
+  const periods = [];
+  const [initialHour, initialMinute] = startTime.split(':').map(Number);
+  let startHour = initialHour;
+  let startMinute = initialMinute;
+  
+  for (let i = 1; i <= maxPeriods; i++) {
+    const endHour = startHour + Math.floor((startMinute + lessonDuration) / 60);
+    const endMinute = (startMinute + lessonDuration) % 60;
+    
+    periods.push({
+      period: i,
+      startTime: `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`,
+      endTime: `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
+    });
+    
+    startHour = endHour;
+    startMinute = endMinute;
+  }
 
+  console.log('⏰ Períodos gerados:', periods);
   let currentPeriod = 0;
 
   // Distribuir débitos no horário
-  for (const [teacherId, teacherDebts_] of debtsByTeacher) {
+  for (const [teacherId, makeupClasses] of debtsByTeacher) {
     const teacher = teacherMap.get(teacherId);
     if (!teacher) continue;
 
@@ -211,56 +289,48 @@ export async function generateSaturdayScheduleFromDebts(
       details: []
     };
 
-    for (const debt of teacherDebts_) {
+    for (const makeup of makeupClasses) {
       if (currentPeriod >= maxPeriods) break; // Limite de períodos
 
-      const subject = subjectMap.get(debt.subjectId);
-      const classInfo = classMap.get(debt.classId);
+      const period = periods[currentPeriod];
+      const classId = makeup.classId;
       
-      if (!subject || !classInfo) continue;
-
-      const hoursToSchedule = debt.hoursOwed - debt.hoursPaid;
-      
-      for (let i = 0; i < hoursToSchedule && currentPeriod < maxPeriods; i++) {
-        const period = periods[currentPeriod];
-        
-        if (!schedule[debt.classId]) {
-          schedule[debt.classId] = [];
-        }
-
-        schedule[debt.classId].push({
-          period: period.period,
-          startTime: period.startTime,
-          endTime: period.endTime,
-          teacherId: teacher._id.toString(),
-          teacherName: teacher.name,
-          subjectId: subject._id.toString(),
-          subjectName: subject.name,
-          classId: classInfo._id.toString(),
-          className: classInfo.name,
-          debtRecordId: debt._id.toString()
-        });
-
-        teacherDebtSummary.totalHours++;
-        
-        // Adicionar detalhe
-        const existingDetail = teacherDebtSummary.details.find(
-          (d: any) => d.classId === debt.classId && d.subjectId === debt.subjectId
-        );
-        if (existingDetail) {
-          existingDetail.hours++;
-        } else {
-          teacherDebtSummary.details.push({
-            classId: classInfo._id.toString(),
-            className: classInfo.name,
-            subjectId: subject._id.toString(),
-            subjectName: subject.name,
-            hours: 1
-          });
-        }
-
-        currentPeriod++;
+      if (!schedule[classId]) {
+        schedule[classId] = [];
       }
+
+      schedule[classId].push({
+        period: period.period,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        teacherId: teacher._id.toString(),
+        teacherName: teacher.name,
+        subjectId: makeup.subjectId,
+        subjectName: makeup.subjectName,
+        classId: makeup.classId,
+        className: `${makeup.gradeName} - ${makeup.className}`,
+        makeupClassId: makeup._id // Referência ao makeupClass original
+      });
+
+      teacherDebtSummary.totalHours++;
+      
+      // Adicionar detalhe
+      const existingDetail = teacherDebtSummary.details.find(
+        (d: any) => d.classId === classId && d.subjectId === makeup.subjectId
+      );
+      if (existingDetail) {
+        existingDetail.hours++;
+      } else {
+        teacherDebtSummary.details.push({
+          classId: makeup.classId,
+          className: `${makeup.gradeName} - ${makeup.className}`,
+          subjectId: makeup.subjectId,
+          subjectName: makeup.subjectName,
+          hours: 1
+        });
+      }
+
+      currentPeriod++;
     }
 
     if (teacherDebtSummary.totalHours > 0) {
@@ -278,4 +348,10 @@ export async function generateSaturdayScheduleFromDebts(
     teacherDebts,
     totalScheduledHours: currentPeriod
   };
+  } catch (error: any) {
+    console.error('❌ ERRO em generateSaturdayScheduleFromDebts:', error);
+    console.error('❌ Stack:', error.stack);
+    console.error('❌ Mensagem:', error.message);
+    throw error;
+  }
 }

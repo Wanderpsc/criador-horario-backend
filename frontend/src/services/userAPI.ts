@@ -5,7 +5,7 @@ export interface User {
   schoolId?: string;
   email: string;
   name: string;
-  role: 'admin' | 'school';
+  role: 'admin' | 'super-admin' | 'school';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

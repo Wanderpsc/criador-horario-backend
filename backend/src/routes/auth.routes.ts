@@ -36,8 +36,10 @@ router.post('/register-school', async (req: any, res: any) => {
     await user.save();
 
     res.status(201).json({
-      message: 'Cadastro realizado com sucesso! Aguarde aprovação do administrador.',
-      schoolName: user.schoolName
+      message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador. Você receberá um email quando sua licença for liberada.',
+      schoolName: user.schoolName,
+      status: 'pending_approval',
+      nextStep: 'Complete o pagamento e aguarde a aprovação do administrador para acessar o sistema.'
     });
   } catch (error: any) {
     console.error('Erro no registro:', error);
@@ -138,6 +140,33 @@ router.post('/login',
       if (!isMatch) {
         console.log('❌ Senha incorreta');
         return res.status(401).json({ message: 'Credenciais inválidas' });
+      }
+
+      // Verificar se a escola foi aprovada pelo administrador
+      if (user.role === 'school' && !user.approvedByAdmin) {
+        console.log('⚠️ Escola não aprovada ainda');
+        return res.status(403).json({ 
+          message: 'Sua conta está aguardando aprovação do administrador. Você receberá um email quando sua licença for liberada.',
+          status: 'pending_approval'
+        });
+      }
+
+      // Verificar se a conta está suspensa
+      if (user.registrationStatus === 'suspended') {
+        console.log('⚠️ Conta suspensa');
+        return res.status(403).json({ 
+          message: 'Sua conta foi suspensa. Entre em contato com o administrador.',
+          status: 'suspended'
+        });
+      }
+
+      // Verificar se a conta foi rejeitada
+      if (user.registrationStatus === 'rejected') {
+        console.log('⚠️ Conta rejeitada');
+        return res.status(403).json({ 
+          message: 'Sua solicitação de cadastro foi rejeitada. Entre em contato com o administrador.',
+          status: 'rejected'
+        });
       }
 
       console.log('🎫 Gerando token JWT...');

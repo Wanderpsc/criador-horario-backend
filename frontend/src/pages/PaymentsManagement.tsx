@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { DollarSign, CheckCircle, XCircle, Clock, RefreshCw, Search, Filter } from 'lucide-react';
+import { DollarSign, CheckCircle, XCircle, Clock, RefreshCw, Search, Filter, Check } from 'lucide-react';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
 interface Payment {
   _id: string;
@@ -39,8 +40,24 @@ export default function PaymentsManagement() {
       setPayments(response.data.data);
     } catch (error) {
       console.error('Erro ao buscar pagamentos:', error);
+      toast.error('Erro ao buscar pagamentos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApprovePayment = async (paymentId: string) => {
+    if (!confirm('Confirmar aprovação manual deste pagamento?\n\nIsso irá:\n✅ Ativar a licença da escola\n✅ Liberar o acesso ao sistema\n✅ Definir data de expiração')) {
+      return;
+    }
+
+    try {
+      await api.put(`/payments/${paymentId}/approve`);
+      toast.success('Pagamento aprovado! Licença ativada com sucesso.');
+      fetchPayments(); // Recarregar lista
+    } catch (error: any) {
+      console.error('Erro ao aprovar pagamento:', error);
+      toast.error(error.response?.data?.message || 'Erro ao aprovar pagamento');
     }
   };
 
@@ -222,12 +239,15 @@ export default function PaymentsManagement() {
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Data
                 </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     {searchTerm ? 'Nenhum pagamento encontrado com os filtros aplicados' : 'Nenhum pagamento registrado'}
                   </td>
                 </tr>
@@ -264,6 +284,21 @@ export default function PaymentsManagement() {
                         <div className="text-xs text-green-600 mt-1">
                           Aprovado: {new Date(payment.approvedAt).toLocaleDateString('pt-BR')}
                         </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {payment.status === 'pending' && (
+                        <button
+                          onClick={() => handleApprovePayment(payment._id)}
+                          className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                          title="Aprovar pagamento e ativar licença"
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Aprovar
+                        </button>
+                      )}
+                      {payment.status === 'approved' && (
+                        <span className="text-xs text-green-600 font-medium">✓ Aprovado</span>
                       )}
                     </td>
                   </tr>

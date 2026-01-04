@@ -16,7 +16,7 @@ const PLANS: Plan[] = [
   {
     id: 'basico',
     name: 'Básico',
-    price: 99.00,
+    price: 119.90,
     maxProfessors: 30,
     maxClasses: 15,
     features: ['Até 30 professores', 'Até 15 turmas', 'Geração automática', 'Suporte por email']
@@ -24,16 +24,10 @@ const PLANS: Plan[] = [
   {
     id: 'profissional',
     name: 'Profissional',
-    price: 199.00,
+    price: 249.90,
     maxProfessors: 50,
     maxClasses: 25,
     features: ['Até 50 professores', 'Até 25 turmas', 'Geração automática', 'Suporte prioritário', 'Backup automático']
-  },
-  {
-    id: 'personalizado',
-    name: 'Personalizado',
-    price: 450.00,
-    features: ['Formulário personalizado', 'R$150 por horário adicional', 'Emissão em 72h', 'Suporte dedicado']
   }
 ];
 
@@ -49,6 +43,8 @@ export default function PaymentCheckout() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const preSelectedPlan = queryParams.get('plan') || 'basico';
+  const emailFromUrl = queryParams.get('email') || '';
+  const schoolNameFromUrl = queryParams.get('schoolName') || '';
 
   const [selectedPlan, setSelectedPlan] = useState<string>(preSelectedPlan);
   const [duration, setDuration] = useState(1);
@@ -63,13 +59,7 @@ export default function PaymentCheckout() {
   const calculateTotal = () => {
     if (!plan) return 0;
     
-    let basePrice = plan.price;
-    
-    // Para plano personalizado, adicionar custo de horários
-    if (selectedPlan === 'personalizado') {
-      basePrice += (timetableCount - 1) * 150; // Primeiro horário incluso na taxa base
-    }
-    
+    const basePrice = plan.price;
     const subtotal = basePrice * duration;
     const durationData = DURATIONS.find(d => d.months === duration);
     const discount = durationData ? (subtotal * durationData.discount) / 100 : 0;
@@ -82,19 +72,28 @@ export default function PaymentCheckout() {
       setLoading(true);
       setError('');
 
-      const response = await api.post('/payments/create', {
+      // Se tiver email e schoolName na URL, usar rota pública (sem auth)
+      const isPublicPayment = emailFromUrl && schoolNameFromUrl;
+      const endpoint = isPublicPayment ? '/payments/create-public' : '/payments/create';
+
+      const payload = {
         plan: selectedPlan,
         durationMonths: duration,
         paymentMethod,
-        timetableCount: selectedPlan === 'personalizado' ? timetableCount : undefined
-      });
+        ...(isPublicPayment && { 
+          email: decodeURIComponent(emailFromUrl),
+          schoolName: decodeURIComponent(schoolNameFromUrl)
+        })
+      };
+
+      const response = await api.post(endpoint, payload);
 
       if (response.data.success) {
-        setPaymentData(response.data.data);
+        setPaymentData(response.data);
         
         // Se for cartão, redirecionar para link do Mercado Pago
-        if (paymentMethod === 'credit_card' && response.data.data.paymentLink) {
-          window.location.href = response.data.data.paymentLink;
+        if (paymentMethod === 'credit_card' && response.data.initPoint) {
+          window.location.href = response.data.initPoint;
         }
       } else {
         setError(response.data.message || 'Erro ao criar pagamento');

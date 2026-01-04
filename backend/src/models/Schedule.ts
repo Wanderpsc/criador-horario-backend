@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ISchedule extends Document {
   name: string;
   userId: string;
+  numberOfPeriods?: number; // Quantidade de períodos/aulas
   periods?: Array<{
     period: number;
     startTime: string;
@@ -27,6 +28,10 @@ const scheduleSchema = new Schema<ISchedule>(
     userId: {
       type: String,
       required: true,
+    },
+    numberOfPeriods: {
+      type: Number,
+      default: 8,
     },
     periods: [{
       period: Number,

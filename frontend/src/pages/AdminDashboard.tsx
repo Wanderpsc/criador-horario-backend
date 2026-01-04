@@ -9,8 +9,8 @@ import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
 import { 
-  Building2, Users, DollarSign, Bell, MessageSquare, 
-  Key, Database, ShieldCheck, TrendingUp, Mail,
+  Building2, DollarSign, Bell, MessageSquare, 
+  Database, ShieldCheck, TrendingUp, Mail,
   FileText, Clock, CheckCircle, XCircle, AlertTriangle,
   CreditCard
 } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    if (user?.role !== 'admin' && user?.role !== 'super-admin') {
       toast.error('Acesso restrito a administradores');
       navigate('/dashboard');
       return;
@@ -66,30 +66,21 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
     return null;
   }
 
   const adminCards = [
     {
-      title: 'Gestão de Clientes',
-      description: 'Visualizar, aprovar, bloquear e excluir escolas/empresas',
+      title: 'Escolas Cadastradas',
+      description: 'Visualizar, aprovar, gerenciar licenças e usuários das escolas',
       icon: Building2,
       color: 'from-blue-500 to-blue-600',
       path: '/schools-management',
       stat: stats.totalClients,
-      statLabel: 'Total de Clientes',
+      statLabel: 'Total de Escolas',
       badge: stats.pendingApprovals > 0 ? stats.pendingApprovals : null,
       badgeLabel: 'Pendentes'
-    },
-    {
-      title: 'Credenciais de Acesso',
-      description: 'Gerenciar logins, senhas e permissões dos clientes',
-      icon: Key,
-      color: 'from-purple-500 to-purple-600',
-      path: '/users-management',
-      stat: stats.activeClients,
-      statLabel: 'Clientes Ativos'
     },
     {
       title: 'Controle Financeiro',
@@ -112,17 +103,6 @@ export default function AdminDashboard() {
       statLabel: 'Pagamentos Pendentes',
       badge: stats.pendingPayments > 0 ? stats.pendingPayments : null,
       badgeLabel: 'Verificar'
-    },
-    {
-      title: 'Licenças e Planos',
-      description: 'Gerenciar planos, licenças, ativações e renovações',
-      icon: ShieldCheck,
-      color: 'from-orange-500 to-orange-600',
-      path: '/license-management',
-      stat: stats.expiringSoon,
-      statLabel: 'Expirando em Breve',
-      badge: stats.expiringSoon > 0 ? stats.expiringSoon : null,
-      badgeLabel: 'Atenção'
     },
     {
       title: 'Backups e Dados',

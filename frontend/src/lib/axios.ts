@@ -10,16 +10,25 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth-storage');
   if (token) {
-    const { state } = JSON.parse(token);
-    if (state?.token) {
-      config.headers.Authorization = `Bearer ${state.token}`;
+    try {
+      const { state } = JSON.parse(token);
+      if (state?.token) {
+        config.headers.Authorization = `Bearer ${state.token}`;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao parsear auth-storage:', error);
     }
   }
   return config;
+}, (error) => {
+  console.error('❌ Erro no request interceptor:', error);
+  return Promise.reject(error);
 });
 
 // Interceptor para converter _id em id (MongoDB para frontend)
 api.interceptors.response.use((response) => {
+  console.log('📥 Response recebida:', response.config.url, response.data);
+  
   if (response.data) {
     // Função recursiva para converter _id em id
     const convertIds = (obj: any): any => {
@@ -40,9 +49,12 @@ api.interceptors.response.use((response) => {
     };
     
     response.data = convertIds(response.data);
+    console.log('📤 Response após conversão:', response.data);
   }
   return response;
 }, (error) => {
+  console.error('❌ Erro na resposta:', error.config?.url, error.response?.data || error.message);
+  
   // Se receber erro 401 (não autorizado), limpar token e redirecionar para login
   if (error.response?.status === 401) {
     console.warn('⚠️ Token expirado ou inválido. Redirecionando para login...');

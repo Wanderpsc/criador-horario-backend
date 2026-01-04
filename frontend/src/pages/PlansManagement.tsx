@@ -5,26 +5,14 @@ export default function PlansManagement() {
     {
       id: '1',
       name: 'Básico',
-      price: 'R\$ 99,00/mês',
+      price: 'R\$ 119,90/mês',
       features: ['Até 30 professores', 'Até 15 turmas', 'Suporte por e-mail']
     },
     {
       id: '2',
       name: 'Profissional',
-      price: 'R\$ 199,00/mês',
+      price: 'R\$ 249,90/mês',
       features: ['Até 50 professores', 'Até 25 turmas', 'Suporte prioritário', 'Backup automático']
-    },
-    {
-      id: '3',
-      name: 'Personalizado',
-      price: 'R\$ 450,00 taxa + R\$ 150,00/horário',
-      features: ['Formulário personalizado', 'Emissão em até 72 horas', 'Horários sob demanda', 'Suporte dedicado']
-    },
-    {
-      id: '4',
-      name: 'Enterprise',
-      price: 'Sob consulta',
-      features: ['Professores ilimitados', 'Turmas ilimitadas', 'Suporte 24/7', 'Customizações', 'API dedicada']
     }
   ];
 

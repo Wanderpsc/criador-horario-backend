@@ -22,15 +22,14 @@ import SchoolSettings from './pages/SchoolSettings';
 import NotificationSettings from './pages/NotificationSettings';
 import WhatsAppSettings from './pages/WhatsAppSettings';
 import DisplayPanel from './pages/DisplayPanel';
+import DisplayPanelConfig from './pages/DisplayPanelConfig';
 import LiveMessaging from './pages/LiveMessaging';
 import EmergencySchedule from './pages/EmergencySchedule';
 import MakeupSaturdays from './pages/MakeupSaturdays';
-import Licenses from './pages/Licenses';
 import SalesDashboard from './pages/SalesDashboard';
 import PlansManagement from './pages/PlansManagement';
 import LeadsManagement from './pages/LeadsManagement';
 import SalesManagement from './pages/SalesManagement';
-import UsersManagement from './pages/UsersManagement';
 import SchoolsManagement from './pages/SchoolsManagement';
 import AdminDashboard from './pages/AdminDashboard';
 import BackupManagement from './pages/BackupManagement';
@@ -47,12 +46,12 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
-  return user?.role === 'admin' ? <>{children}</> : <Navigate to="/dashboard" />;
+  return (user?.role === 'admin' || user?.role === 'super-admin') ? <>{children}</> : <Navigate to="/dashboard" />;
 }
 
 function ClientRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
-  return user?.role !== 'admin' ? <>{children}</> : <Navigate to="/admin-dashboard" />;
+  return (user?.role !== 'admin' && user?.role !== 'super-admin') ? <>{children}</> : <Navigate to="/admin-dashboard" />;
 }
 
 function App() {
@@ -70,8 +69,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         
-        {/* Payment Routes */}
-        <Route path="/payment-checkout" element={<PrivateRoute><PaymentCheckout /></PrivateRoute>} />
+        {/* Payment Routes - Checkout é público para permitir pagamento antes de aprovação */}
+        <Route path="/payment-checkout" element={<PaymentCheckout />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
         <Route path="/payment-pending" element={<PaymentCheckout />} />
@@ -98,6 +97,7 @@ function App() {
           <Route path="live-messaging" element={<LiveMessaging />} />
           <Route path="emergency-schedule" element={<ClientRoute><EmergencySchedule /></ClientRoute>} />
           <Route path="makeup-saturdays" element={<ClientRoute><MakeupSaturdays /></ClientRoute>} />
+          <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><SchoolSettings /></ClientRoute>} />
           <Route path="timetables" element={<ClientRoute><Timetables /></ClientRoute>} />
@@ -109,8 +109,6 @@ function App() {
           <Route path="plans-management" element={<AdminRoute><PlansManagement /></AdminRoute>} />
           <Route path="leads-management" element={<AdminRoute><LeadsManagement /></AdminRoute>} />
           <Route path="sales-management" element={<AdminRoute><SalesManagement /></AdminRoute>} />
-          <Route path="users-management" element={<AdminRoute><UsersManagement /></AdminRoute>} />
-          <Route path="license-management" element={<AdminRoute><Licenses /></AdminRoute>} />
           <Route path="schools-management" element={<AdminRoute><SchoolsManagement /></AdminRoute>} />
           <Route path="payments-management" element={<AdminRoute><PaymentsManagement /></AdminRoute>} />
         </Route>

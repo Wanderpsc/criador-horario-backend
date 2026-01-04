@@ -10,7 +10,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
-    role: 'admin' | 'school';
+    role: 'admin' | 'super-admin' | 'school';
   };
 }
 
@@ -24,7 +24,7 @@ export const checkLicenseAndPayment = async (
 ) => {
   try {
     // Admin sempre tem acesso
-    if (req.user?.role === 'admin') {
+    if (req.user?.role === 'admin' || req.user?.role === 'super-admin') {
       return next();
     }
 
@@ -102,7 +102,7 @@ export const requireAdmin = (
   res: Response,
   next: NextFunction
 ) => {
-  if (req.user?.role !== 'admin') {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
     return res.status(403).json({
       success: false,
       message: 'Acesso negado: Apenas administradores'

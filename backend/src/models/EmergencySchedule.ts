@@ -35,9 +35,9 @@ export interface ITeacherDebt {
 export interface IMakeupClass {
   originalTeacherId: string;
   originalTeacherName: string;
-  subjectId: string;
+  subjectId?: string; // Opcional - pode estar vazio se professor não tinha aula
   subjectName: string;
-  classId: string;
+  classId?: string; // Opcional - pode estar vazio se professor não tinha aula
   className: string;
   gradeName: string;
   period: number;
@@ -47,13 +47,17 @@ export interface IMakeupClass {
 }
 
 export interface IEmergencySchedule extends mongoose.Document {
-  date: Date;
+  school: mongoose.Types.ObjectId; // Escola que criou o horário
+  name?: string; // Nome/título do horário emergencial
+  date: string; // Formato: YYYY-MM-DD - dia do horário emergencial
   dayOfWeek: string;
+  searchStartDate?: string; // Data inicial da busca de professores faltosos (formato YYYY-MM-DD)
+  searchEndDate?: string; // Data final da busca de professores faltosos (formato YYYY-MM-DD)
   classId: string;
   baseScheduleId: string; // ID do horário base usado
   absentTeacherId?: string; // Mantido para compatibilidade
   absentTeacherIds?: string[]; // Múltiplos professores
-  absentTeacherNames?: string[]; // Nomes dos professores
+  absentTeacherNames?: string | string[]; // Nomes dos professores (string ou array)
   classNames?: string[]; // Nomes das turmas afetadas
   reason?: string;
   originalSlots: IEmergencySlot[];
@@ -72,7 +76,7 @@ const emergencySlotSchema = new mongoose.Schema({
   subjectId: { type: String, required: true },
   subjectName: { type: String }, // Nome da disciplina
   subjectColor: { type: String }, // Cor da disciplina
-  teacherId: { type: String, required: true },
+  teacherId: { type: String, required: false }, // Opcional para JANELA (slots vagos)
   teacherName: { type: String }, // Nome do professor
   originalTeacherId: { type: String },
   isModified: { type: Boolean, default: false },
@@ -89,7 +93,7 @@ const emergencySlotSchema = new mongoose.Schema({
     },
     required: false
   } // De onde veio o substituto
-}, { _id: false });
+}, { _id: false, suppressReservedKeysWarning: true });
 
 const teacherDebtSchema = new mongoose.Schema({
   teacherId: { type: String, required: true },
@@ -103,25 +107,29 @@ const teacherDebtSchema = new mongoose.Schema({
 const makeupClassSchema = new mongoose.Schema({
   originalTeacherId: { type: String, required: true },
   originalTeacherName: { type: String, required: true },
-  subjectId: { type: String, required: true },
+  subjectId: { type: String, required: false }, // Opcional - pode estar vazio se professor não tinha aula
   subjectName: { type: String, required: true },
-  classId: { type: String, required: true },
+  classId: { type: String, required: false }, // Opcional - pode estar vazio se professor não tinha aula
   className: { type: String, required: true },
   gradeName: { type: String, required: true },
   period: { type: Number, required: true },
   originalDay: { type: String, required: true },
-  makeupDay: { type: String, required: true },
-  reason: { type: String, required: true }
+  makeupDay: { type: String, required: false }, // Opcional - será definido ao criar sábado
+  reason: { type: String, required: false } // Opcional
 }, { _id: false });
 
 const emergencyScheduleSchema = new mongoose.Schema({
-  date: { type: Date, required: true },
+  school: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Escola
+  name: { type: String }, // Nome/título do horário emergencial
+  date: { type: String, required: true }, // Formato: YYYY-MM-DD - dia do horário emergencial
   dayOfWeek: { type: String, required: true },
+  searchStartDate: { type: String }, // Data inicial da busca de professores faltosos (formato YYYY-MM-DD)
+  searchEndDate: { type: String }, // Data final da busca de professores faltosos (formato YYYY-MM-DD)
   classId: { type: String, required: true },
   baseScheduleId: { type: String, required: true },
   absentTeacherId: { type: String }, // Compatibilidade com código antigo
   absentTeacherIds: [{ type: String }], // Múltiplos professores
-  absentTeacherNames: [{ type: String }], // Nomes dos professores
+  absentTeacherNames: { type: mongoose.Schema.Types.Mixed }, // String ou Array de strings
   classNames: [{ type: String }], // Nomes das turmas afetadas
   reason: { type: String },
   originalSlots: [emergencySlotSchema],
@@ -134,6 +142,7 @@ const emergencyScheduleSchema = new mongoose.Schema({
 });
 
 // Índices para buscas eficientes
+emergencyScheduleSchema.index({ school: 1 }); // Buscar por escola
 emergencyScheduleSchema.index({ date: 1, classId: 1 });
 emergencyScheduleSchema.index({ absentTeacherId: 1 });
 emergencyScheduleSchema.index({ absentTeacherIds: 1 });

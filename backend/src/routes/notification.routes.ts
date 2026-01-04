@@ -12,8 +12,19 @@ const router = Router();
  */
 router.get('/', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user!.id;
+    // Verificação de autenticação
+    if (!req.user || !req.user.id) {
+      console.error('❌ Usuário não autenticado na rota notifications');
+      return res.status(401).json({
+        success: false,
+        message: 'Usuário não autenticado',
+      });
+    }
+
+    const userId = req.user.id;
     const { status, type, recipientId } = req.query;
+
+    console.log(`📋 Buscando notificações para userId: ${userId}`);
 
     const filter: any = { userId };
     
@@ -25,15 +36,19 @@ router.get('/', auth, async (req: AuthRequest, res: Response) => {
       .sort({ createdAt: -1 })
       .limit(100);
 
+    console.log(`✅ Encontradas ${notifications.length} notificações`);
+
     res.json({
       success: true,
       data: notifications,
     });
   } catch (error: any) {
-    console.error('Erro ao buscar notificações:', error);
+    console.error('❌ Erro ao buscar notificações:', error);
+    console.error('❌ Stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || 'Erro ao buscar notificações',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });

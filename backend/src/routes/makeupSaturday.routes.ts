@@ -301,33 +301,47 @@ router.get('/teacher-debts/:teacherId', auth, async (req: Request, res: Response
 router.post('/generate-from-debts', auth, async (req: Request, res: Response) => {
   try {
     const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
-    const { date, maxPeriods } = req.body;
+    const { date, maxPeriods, lessonDuration, startTime, selectedTeacherIds } = req.body;
 
-    console.log('🎯 Gerando horário automático para:', { schoolId, date, maxPeriods });
+    console.log('🎯 Gerando horário automático para:', { schoolId, date, maxPeriods, lessonDuration, startTime });
+    console.log('📦 Body completo:', JSON.stringify(req.body, null, 2));
+    
+    if (selectedTeacherIds && selectedTeacherIds.length > 0) {
+      console.log(`👥 Filtrando ${selectedTeacherIds.length} professores selecionados:`, selectedTeacherIds);
+    }
 
     if (!schoolId || !date) {
+      console.error('❌ Validação falhou - schoolId:', schoolId, 'date:', date);
       return res.status(400).json({ 
         success: false,
         error: 'schoolId e date são obrigatórios' 
       });
     }
 
+    console.log('📞 Chamando generateSaturdayScheduleFromDebts...');
     const result = await generateSaturdayScheduleFromDebts(
       schoolId,
       new Date(date),
-      maxPeriods || 4
+      maxPeriods || 4,
+      lessonDuration || 60,
+      startTime || '08:00',
+      selectedTeacherIds // Passa os professores selecionados
     );
 
+    console.log('✅ Horário gerado com sucesso!');
     res.json({
       success: true,
       data: result
     });
   } catch (error: any) {
-    console.error('Erro ao gerar horário:', error);
+    console.error('❌ Erro ao gerar horário:', error);
+    console.error('❌ Stack:', error.stack);
+    console.error('❌ Mensagem:', error.message);
     res.status(500).json({ 
       success: false,
       error: 'Erro ao gerar horário',
-      details: error.message 
+      details: error.message,
+      stack: error.stack
     });
   }
 });

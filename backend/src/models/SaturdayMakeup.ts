@@ -19,6 +19,13 @@ export interface ISaturdayMakeup extends mongoose.Document {
   totalDebtsBeingPaid: number;
   status: 'planned' | 'confirmed' | 'completed';
   notes?: string;
+  attendanceRecords?: Array<{
+    teacherId: string;
+    teacherName: string;
+    status: 'present' | 'absent' | 'late';
+    classesGiven?: string[];
+    notes?: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,7 +56,18 @@ const saturdayMakeupSchema = new mongoose.Schema({
     enum: ['planned', 'confirmed', 'completed'],
     default: 'planned'
   },
-  notes: { type: String }
+  notes: { type: String },
+  attendanceRecords: [{
+    teacherId: { type: String, required: true },
+    teacherName: { type: String, required: true },
+    status: { 
+      type: String, 
+      enum: ['present', 'absent', 'late'],
+      required: true 
+    },
+    classesGiven: [{ type: String }],
+    notes: { type: String }
+  }]
 }, {
   timestamps: true
 });

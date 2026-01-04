@@ -91,6 +91,13 @@ const BackupSchema = new Schema<IBackup>(
   },
   {
     timestamps: true,
+    toJSON: {
+      virtuals: true,
+      transform: function(doc, ret) {
+        ret.id = ret._id.toString();
+        return ret;
+      }
+    }
   }
 );
 

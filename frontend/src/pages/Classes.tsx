@@ -292,10 +292,6 @@ export default function Classes() {
           </div>
         </div>
       )}
-
-      <div className="text-center text-sm text-gray-500 py-4">
-        © 2025 Wander Pires Silva Coelho (wanderpsc@gmail.com)
-      </div>
     </div>
   );
 }

@@ -39,7 +39,7 @@ interface Conversation {
 
 export default function LiveMessaging() {
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super-admin';
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -48,12 +48,26 @@ export default function LiveMessaging() {
   const [internalNote, setInternalNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [selectedTeacher, setSelectedTeacher] = useState('');
 
   useEffect(() => {
     fetchConversations();
+    if (!isAdmin) {
+      fetchTeachers();
+    }
     const interval = setInterval(fetchConversations, 10000); // Atualiza a cada 10s
     return () => clearInterval(interval);
   }, []);
+
+  const fetchTeachers = async () => {
+    try {
+      const response = await api.get('/teachers');
+      setTeachers(response.data || []);
+    } catch (error) {
+      console.error('Erro ao buscar professores:', error);
+    }
+  };
 
   const fetchConversations = async () => {
     try {
@@ -103,12 +117,21 @@ export default function LiveMessaging() {
           return;
         }
         data.subject = subject;
+        
+        // Adicionar informação do professor se selecionado
+        if (selectedTeacher) {
+          const teacher = teachers.find(t => t._id === selectedTeacher);
+          if (teacher) {
+            data.message = `[Sobre: Professor ${teacher.name}]\n\n${newMessage}`;
+          }
+        }
       }
 
       await api.post('/messages/send', data);
       
       setNewMessage('');
       setSubject('');
+      setSelectedTeacher('');
       setShowNewMessage(false);
       
       if (selectedConversation) {
@@ -233,6 +256,27 @@ export default function LiveMessaging() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Para quem (Professor) - Opcional
+                    </label>
+                    <select
+                      value={selectedTeacher}
+                      onChange={(e) => setSelectedTeacher(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione um professor (opcional)</option>
+                      {teachers.map((teacher) => (
+                        <option key={teacher._id} value={teacher._id}>
+                          {teacher.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Se quiser mencionar um professor específico na sua mensagem
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Assunto
                     </label>
                     <input
@@ -272,6 +316,7 @@ export default function LiveMessaging() {
                         setShowNewMessage(false);
                         setSubject('');
                         setNewMessage('');
+                        setSelectedTeacher('');
                       }}
                       className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
                     >

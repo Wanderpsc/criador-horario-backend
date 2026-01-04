@@ -29,7 +29,7 @@ interface Backup {
     name: string;
     email: string;
     schoolName: string;
-  };
+  } | string; // Pode ser o ID (string) ou objeto populado
   schoolName: string;
   fileName: string;
   filePath: string;
@@ -78,6 +78,11 @@ const BackupManagement: React.FC = () => {
       setLoading(true);
       const params = filterStatus !== 'all' ? { status: filterStatus } : {};
       const response = await api.get('/backups', { params });
+      
+      console.log('[BackupManagement] Response completa:', JSON.stringify(response.data, null, 2));
+      console.log('[BackupManagement] Primeiro backup:', JSON.stringify(response.data.backups?.[0], null, 2));
+      console.log('[BackupManagement] Chaves do primeiro backup:', Object.keys(response.data.backups?.[0] || {}));
+      
       setBackups(response.data.backups);
     } catch (error: any) {
       toast.error('Erro ao carregar backups');
@@ -115,18 +120,30 @@ const BackupManagement: React.FC = () => {
   };
 
   const handleDelete = async (backupId: string) => {
+    console.log('[BackupManagement] handleDelete chamado com ID:', backupId);
+    
+    if (!backupId || backupId === 'undefined') {
+      console.error('[BackupManagement] ID inválido:', backupId);
+      toast.error('ID de backup inválido');
+      return;
+    }
+
     if (!confirm('Tem certeza que deseja deletar este backup? Esta ação não pode ser desfeita.')) {
       return;
     }
 
     try {
       setActionLoading(backupId);
+      console.log('[BackupManagement] Deletando backup:', backupId);
       await api.delete(`/backups/${backupId}`);
       toast.success('Backup deletado com sucesso');
       loadBackups();
       loadStatistics();
     } catch (error: any) {
-      toast.error('Erro ao deletar backup');
+      console.error('[BackupManagement] Erro ao deletar backup:', error);
+      console.error('[BackupManagement] Response:', error.response);
+      const errorMessage = error.response?.data?.message || error.message || 'Erro ao deletar backup';
+      toast.error(errorMessage);
     } finally {
       setActionLoading(null);
     }
@@ -143,6 +160,23 @@ const BackupManagement: React.FC = () => {
       }, 5000);
     } catch (error: any) {
       toast.error('Erro ao criar backup manual');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCreateClientBackup = async (clientId: string, schoolName: string) => {
+    try {
+      setActionLoading(`create-${clientId}`);
+      await api.post(`/backups/client/${clientId}`);
+      toast.success(`Backup de ${schoolName} iniciado! Aguarde alguns instantes...`);
+      setTimeout(() => {
+        loadBackups();
+        loadStatistics();
+      }, 5000);
+    } catch (error: any) {
+      console.error('Erro ao criar backup do cliente:', error);
+      toast.error(error.response?.data?.message || 'Erro ao criar backup do cliente');
     } finally {
       setActionLoading(null);
     }
@@ -344,8 +378,19 @@ const BackupManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {backups.map((backup) => (
-                  <tr key={backup._id} className="hover:bg-gray-50 transition-colors duration-150">
+                {backups.map((backup, index) => {
+                  if (index === 0) {
+                    console.log('[BackupManagement] Renderizando primeiro backup:', {
+                      _id: backup._id,
+                      id: backup.id,
+                      schoolName: backup.schoolName,
+                      status: backup.status,
+                      userId: backup.userId
+                    });
+                  }
+                  const backupId = backup._id || backup.id;
+                  return (
+                  <tr key={backupId || index} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {getStatusIcon(backup.status)}
@@ -357,7 +402,9 @@ const BackupManagement: React.FC = () => {
                         <User className="h-4 w-4 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium text-gray-900">{backup.schoolName}</p>
-                          <p className="text-xs text-gray-500">{backup.userId.email}</p>
+                          <p className="text-xs text-gray-500">
+                            {typeof backup.userId === 'object' ? backup.userId.email : 'N/A'}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -382,14 +429,30 @@ const BackupManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            const userId = typeof backup.userId === 'object' ? backup.userId._id : backup.userId;
+                            handleCreateClientBackup(userId, backup.schoolName);
+                          }}
+                          disabled={actionLoading === `create-${typeof backup.userId === 'object' ? backup.userId._id : backup.userId}`}
+                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
+                          title="Criar novo backup deste cliente"
+                        >
+                          {actionLoading === `create-${typeof backup.userId === 'object' ? backup.userId._id : backup.userId}` ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                          Criar
+                        </button>
                         {backup.status === 'completed' && (
                           <button
-                            onClick={() => handleRestore(backup._id)}
-                            disabled={actionLoading === backup._id}
+                            onClick={() => handleRestore(backupId!)}
+                            disabled={actionLoading === backupId}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
                             title="Restaurar backup"
                           >
-                            {actionLoading === backup._id ? (
+                            {actionLoading === backupId ? (
                               <RefreshCw className="h-4 w-4 animate-spin" />
                             ) : (
                               <RotateCcw className="h-4 w-4" />
@@ -398,10 +461,10 @@ const BackupManagement: React.FC = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(backup._id)}
-                          disabled={actionLoading === backup._id}
+                          onClick={() => handleDelete(backupId!)}
+                          disabled={actionLoading === backupId}
                           className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
-                          title="Deletar backup"
+                          title={!backupId ? 'ID de backup inválido' : 'Deletar backup'}
                         >
                           <Trash2 className="h-4 w-4" />
                           Deletar
@@ -409,7 +472,8 @@ const BackupManagement: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

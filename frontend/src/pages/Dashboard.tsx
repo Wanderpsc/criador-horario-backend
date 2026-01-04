@@ -18,7 +18,7 @@ export default function Dashboard() {
 
   // Redirecionar administradores para o dashboard admin
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (user?.role === 'admin' || user?.role === 'super-admin') {
       navigate('/admin-dashboard', { replace: true });
     }
   }, [user, navigate]);
@@ -406,21 +406,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="mt-8 card bg-gradient-to-r from-primary-50 to-primary-100 border-l-4 border-primary-500">
-        <h2 className="text-xl font-bold mb-2">Sistema Completo</h2>
-        <p className="text-gray-700 mb-4">
-          Este sistema gera horários escolares automaticamente, evitando conflitos de:
-        </p>
-        <ul className="list-disc list-inside space-y-1 text-gray-700">
-          <li>Mesmo professor no mesmo horário</li>
-          <li>Mesma matéria no mesmo horário</li>
-          <li>Aulas seguidas da mesma matéria</li>
-        </ul>
-        <p className="mt-4 text-sm text-gray-600">
-          Desenvolvido especialmente para otimizar o processo de criação de grades horárias escolares.
-        </p>
       </div>
     </div>
   );

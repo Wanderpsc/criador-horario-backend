@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { Clock, Wifi, WifiOff, Grid3x3, List, BookOpen, MapPin, User } from 'lucide-react';
+import AnalogClock from '../components/AnalogClock';
 
 interface TimetableSlot {
   id: string;
@@ -43,21 +44,152 @@ export default function DisplayPanel({
   const [isEmergencyMode, setIsEmergencyMode] = useState(false); // Modo emergencial
   const [selectedEmergencyId, setSelectedEmergencyId] = useState<string>(''); // ID do horário emergencial selecionado
   const [allClassesList, setAllClassesList] = useState<{ className: string; gradeName?: string }[]>([]); // Lista completa de turmas
+  const [autoChangePeriod, setAutoChangePeriod] = useState(true); // Controle de mudança automática de período
+  const [lastPeriod, setLastPeriod] = useState<number | null>(null); // Rastrear último período para detectar mudança
+  const [alarmPlayed, setAlarmPlayed] = useState<boolean>(false); // Controlar se o alarme de aviso já foi tocado
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // LER PARÂMETROS DA URL (configuração vinda de DisplayPanelConfig)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const timetableId = params.get('timetableId');
+    const emergencyId = params.get('emergencyId');
+
+    console.log('🔗 Parâmetros da URL detectados:');
+    console.log('   mode:', mode);
+    console.log('   timetableId:', timetableId);
+    console.log('   emergencyId:', emergencyId);
+
+    if (mode === 'emergency' && emergencyId) {
+      console.log('🚨 Ativando MODO EMERGENCIAL via URL');
+      setIsEmergencyMode(true);
+      setSelectedEmergencyId(emergencyId);
+    } else if (mode === 'normal' && timetableId) {
+      console.log('📅 Ativando MODO NORMAL via URL');
+      setIsEmergencyMode(false);
+      setSelectedTimetableId(timetableId);
+    }
+  }, []); // Executar apenas uma vez ao montar
 
   // Log do modo de visualização
   useEffect(() => {
     console.log('🎨 Modo de visualização:', viewMode);
   }, [viewMode]);
 
-  // Criar elemento de áudio para alertas
+  // Criar elemento de áudio para alertas e sino de mudança de período
   useEffect(() => {
     try {
       audioRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0PLPgDQGHG7A7+OZSA0PVKzn77BfHA==');
+      
+      console.log('🔊 Sistema de áudio inicializado');
     } catch (error) {
       console.error('Erro ao inicializar áudio:', error);
     }
   }, []);
+
+  // Função para tocar alarme de aviso (5 segundos antes)
+  const playAlarmSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const createTone = (frequency: number, startTime: number, duration: number, volume: number, type: OscillatorType = 'sine') => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.005);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+      
+      // Som de alarme urgente (bips rápidos alternados)
+      const now = audioContext.currentTime;
+      const highFreq = 1200; // Tom agudo
+      const lowFreq = 800;   // Tom grave
+      
+      // Sequência rápida de bips alternados (8 bips em 2 segundos)
+      for (let i = 0; i < 8; i++) {
+        const freq = i % 2 === 0 ? highFreq : lowFreq;
+        const startTime = now + (i * 0.25);
+        createTone(freq, startTime, 0.2, 0.4, 'square');
+      }
+      
+      console.log('⚠️ Alarme de aviso tocado! (5 segundos antes)');
+      
+      setTimeout(() => {
+        audioContext.close();
+      }, 2500);
+      
+    } catch (err) {
+      console.error('❌ Erro ao tocar alarme:', err);
+    }
+  };
+
+  // Função para tocar som de sino usando Web Audio API
+  const playBellSound = () => {
+    try {
+      // Criar contexto de áudio
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Função para criar um tom
+      const createTone = (frequency: number, startTime: number, duration: number, volume: number) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Configurar oscilador (tom de sino)
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        
+        // Envelope de volume (ataque rápido, decay suave)
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+      
+      // Som de sino escolar (3 bips)
+      const now = audioContext.currentTime;
+      const baseFreq = 880; // A5 (nota aguda)
+      
+      // Primeiro bip
+      createTone(baseFreq, now, 0.15, 0.3);
+      // Segundo bip
+      createTone(baseFreq, now + 0.2, 0.15, 0.3);
+      // Terceiro bip
+      createTone(baseFreq, now + 0.4, 0.25, 0.4);
+      
+      console.log('🔔 Som de sino tocado!');
+      
+      // Limpar contexto após uso
+      setTimeout(() => {
+        audioContext.close();
+      }, 1000);
+      
+    } catch (err) {
+      console.error('❌ Erro ao tocar sino:', err);
+      // Fallback: tentar alerta do navegador
+      try {
+        const beep = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+        beep.play();
+      } catch (e) {
+        console.log('Fallback de áudio também falhou');
+      }
+    }
+  };
 
   // Buscar lista de horários disponíveis
   const { data: availableTimetables = [], isLoading: isLoadingAvailable } = useQuery({
@@ -88,6 +220,13 @@ export default function DisplayPanel({
     },
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
   });
+  
+  // LOG DE MONITORAMENTO DO ESTADO EMERGENCIAL
+  useEffect(() => {
+    console.log('');
+    console.log('🔴🔴🔴 ESTADO ATUAL isEmergencyMode:', isEmergencyMode, '🔴🔴🔴');
+    console.log('');
+  }, [isEmergencyMode]);
 
   // Log para debug: ver estrutura dos horários
   useEffect(() => {
@@ -110,13 +249,33 @@ export default function DisplayPanel({
 
   // Auto-selecionar primeiro horário emergencial quando ativar modo emergencial
   useEffect(() => {
-    if (isEmergencyMode && emergencySchedules.length > 0 && !selectedEmergencyId) {
+    console.log('📌 useEffect [Auto-seleção Emergencial] disparado:');
+    console.log('   isEmergencyMode:', isEmergencyMode);
+    console.log('   emergencySchedules.length:', emergencySchedules.length);
+    console.log('   selectedEmergencyId:', selectedEmergencyId);
+    
+    if (isEmergencyMode && emergencySchedules.length > 0) {
       const first = emergencySchedules[0];
       const firstId = first._id || first.id;
-      console.log('🚨 Auto-selecionando horário emergencial:', new Date(first.date).toLocaleDateString('pt-BR'), '| ID:', firstId);
-      setSelectedEmergencyId(firstId);
+      
+      console.log('🚨 Auto-selecionando horário emergencial...');
+      console.log('   Objeto:', first);
+      console.log('   _id:', first._id);
+      console.log('   id:', first.id);
+      console.log('   ID final escolhido:', firstId);
+      console.log('   Data:', first.date ? new Date(first.date).toLocaleDateString('pt-BR') : 'sem data');
+      
+      if (!selectedEmergencyId || selectedEmergencyId !== firstId) {
+        console.log('   ✅ SETANDO selectedEmergencyId para:', firstId);
+        setSelectedEmergencyId(firstId);
+      } else {
+        console.log('   ⏭️ Já está selecionado:', selectedEmergencyId);
+      }
+    } else if (!isEmergencyMode && selectedEmergencyId) {
+      console.log('   🔄 Modo normal ativado, limpando selectedEmergencyId');
+      setSelectedEmergencyId('');
     }
-  }, [isEmergencyMode, emergencySchedules, selectedEmergencyId]);
+  }, [isEmergencyMode, emergencySchedules]);
 
   // Selecionar automaticamente o dia atual na primeira carga
   useEffect(() => {
@@ -155,7 +314,11 @@ export default function DisplayPanel({
         return [];
       }
       
-      console.log('🔍 Modo:', isEmergencyMode ? 'EMERGENCIAL' : 'Normal');
+      console.log('═══════════════════════════════════════════════');
+      console.log('🔍 Modo:', isEmergencyMode ? '🚨 EMERGENCIAL' : '📅 Normal');
+      console.log('🆔 selectedTimetableId:', selectedTimetableId);
+      console.log('🆔 selectedEmergencyId:', selectedEmergencyId);
+      console.log('═══════════════════════════════════════════════');
       
       try {
         // Modo Emergencial: buscar do emergency-schedules
@@ -190,6 +353,7 @@ export default function DisplayPanel({
           console.log('🚨 Horário emergencial selecionado:', new Date(selectedSchedule.date).toLocaleDateString('pt-BR'));
           console.log('🚨 Estrutura completa do horário emergencial:', selectedSchedule);
           console.log('🚨 Número de emergencySlots:', selectedSchedule.emergencySlots?.length || 0);
+          console.log('🚨 scheduleId (horário base):', selectedSchedule.scheduleId);
           
           const allSlots: TimetableSlot[] = [];
           const emergencySlots = selectedSchedule.emergencySlots || [];
@@ -197,8 +361,10 @@ export default function DisplayPanel({
           if (emergencySlots.length > 0) {
             console.log('🚨 Primeiro emergencySlot:', emergencySlots[0]);
             console.log('🚨 Campos do slot:', Object.keys(emergencySlots[0]));
+            console.log('🚨 Total de slots emergenciais:', emergencySlots.length);
           } else {
             console.error('❌ NENHUM emergencySlot encontrado! Array está vazio.');
+            console.log('❌ Isso significa que o horário emergencial não tem dados!');
           }
           
           // PASSO 1: Buscar TODAS as turmas do horário base (versão otimizada)
@@ -286,6 +452,9 @@ export default function DisplayPanel({
           
           console.log(`✅ ${allSlots.length} slots emergenciais processados`);
           console.log(`📋 ${emergencyClasses.length} turmas TOTAIS:`, emergencyClasses.map(c => c.className));
+          console.log('═══════════════════════════════════════════════');
+          console.log('🚨 RETORNANDO SLOTS EMERGENCIAIS:', allSlots.length);
+          console.log('═══════════════════════════════════════════════');
           setAllClassesList(emergencyClasses);
           setIsConnected(true);
           return allSlots;
@@ -391,6 +560,9 @@ export default function DisplayPanel({
         
         console.log(`✅ ${allSlots.length} slots processados`);
         console.log(`📋 ${allClasses.length} turmas únicas encontradas:`, allClasses.map(c => `${c.className} (${c.gradeName || 'sem série'})`));
+        console.log('═══════════════════════════════════════════════');
+        console.log('📅 RETORNANDO SLOTS NORMAIS:', allSlots.length);
+        console.log('═══════════════════════════════════════════════');
         setAllClassesList(allClasses);
         setIsConnected(true);
         return allSlots;
@@ -440,6 +612,22 @@ export default function DisplayPanel({
       }
     });
   }, [currentTime, timetables]);
+
+  // Log de debug para verificar dados carregados
+  useEffect(() => {
+    console.log('═══════════════════════════════════════════════');
+    console.log('📊 DADOS CARREGADOS NO DISPLAY PANEL:');
+    console.log('   Modo:', isEmergencyMode ? '🚨 EMERGENCIAL' : '📅 NORMAL');
+    console.log('   Total de slots:', timetables.length);
+    console.log('   IsLoading:', isLoading);
+    console.log('   IsError:', isError);
+    if (timetables.length > 0) {
+      console.log('   Primeiro slot:', timetables[0]);
+      console.log('   Dias com slots:', [...new Set(timetables.map(s => s.day))]);
+      console.log('   Períodos:', [...new Set(timetables.map(s => s.period))].sort((a,b) => a-b));
+    }
+    console.log('═══════════════════════════════════════════════');
+  }, [timetables, isEmergencyMode, isLoading, isError]);
 
   // Função para tocar alerta sonoro
   const playAlert = () => {
@@ -596,6 +784,104 @@ export default function DisplayPanel({
     return { allClasses: classes, allPeriods: periods, fullWeekGrid: grid, classGradeMap: gradeMap };
   }, [timetables, allClassesList]);
 
+  // Auto-selecionar primeiro dia disponível se o dia atual não tem aulas
+  useEffect(() => {
+    // Verificar se o dia selecionado tem aulas
+    const hasSlotsInSelectedDay = Object.keys(fullWeekGrid[selectedDay] || {}).length > 0;
+    
+    if (!hasSlotsInSelectedDay && timetables.length > 0) {
+      // Procurar primeiro dia com aulas
+      const daysWithSlots = weekDays.filter(day => Object.keys(fullWeekGrid[day] || {}).length > 0);
+      
+      if (daysWithSlots.length > 0 && daysWithSlots[0] !== selectedDay) {
+        console.log(`📅 Dia "${selectedDay}" sem aulas. Mudando automaticamente para "${daysWithSlots[0]}"`);
+        console.log(`   Dias disponíveis: ${daysWithSlots.join(', ')}`);
+        setSelectedDay(daysWithSlots[0]);
+      }
+    }
+  }, [selectedDay, fullWeekGrid, timetables, weekDays]);
+
+  // Detectar mudança de período e tocar sino
+  useEffect(() => {
+    // Só executar se tiver horários carregados
+    if (timetables.length === 0) return;
+
+    // Pegar o período atual do grid
+    const { allPeriods, fullWeekGrid } = (() => {
+      const periods = [...new Set(timetables.map(s => s.period))].sort((a, b) => a - b);
+      const grid: { [day: string]: { [period: number]: any } } = {};
+      weekDays.forEach(day => {
+        grid[day] = {};
+      });
+      timetables.forEach(slot => {
+        const day = slot.day || '';
+        const period = slot.period || 0;
+        if (!grid[day][period]) grid[day][period] = {};
+      });
+      return { allPeriods: periods, fullWeekGrid: grid };
+    })();
+
+    // Determinar período atual
+    let detectedPeriod: number | null = null;
+    let timeUntilPeriodEnd: number | null = null; // Segundos até o fim do período
+
+    if (autoChangePeriod) {
+      // Modo AUTO: detectar baseado no horário
+      const now = currentTime;
+      for (const period of allPeriods) {
+        const periodSlots = fullWeekGrid[selectedDay]?.[period] || {};
+        const firstSlot = timetables.find(s => s.period === period && s.day === selectedDay);
+        
+        if (firstSlot && firstSlot.startTime && firstSlot.endTime) {
+          const [startHour, startMinute] = firstSlot.startTime.split(':').map(Number);
+          const [endHour, endMinute] = firstSlot.endTime.split(':').map(Number);
+          const startTime = new Date(now);
+          startTime.setHours(startHour, startMinute, 0, 0);
+          const endTime = new Date(now);
+          endTime.setHours(endHour, endMinute, 0, 0);
+          
+          const diffMinutes = Math.floor((startTime.getTime() - now.getTime()) / 60000);
+          if ((now >= startTime && now <= endTime) || (diffMinutes > 0 && diffMinutes <= 30)) {
+            detectedPeriod = period;
+            // Calcular segundos até o fim do período
+            timeUntilPeriodEnd = Math.floor((endTime.getTime() - now.getTime()) / 1000);
+            break;
+          }
+        }
+      }
+    } else {
+      // Modo MANUAL: usar o índice atual
+      detectedPeriod = allPeriods[currentPeriodIndex] || null;
+    }
+
+    // Tocar alarme 5 segundos antes da mudança (apenas em modo AUTO)
+    if (autoChangePeriod && timeUntilPeriodEnd !== null && timeUntilPeriodEnd > 0 && timeUntilPeriodEnd <= 5 && !alarmPlayed) {
+      console.log(`⚠️ ALARME: Faltam ${timeUntilPeriodEnd} segundos para mudança de período!`);
+      playAlarmSound();
+      setAlarmPlayed(true);
+    }
+
+    // Resetar flag do alarme quando mudar de período ou quando estiver longe do fim
+    if (timeUntilPeriodEnd === null || timeUntilPeriodEnd > 5) {
+      if (alarmPlayed) {
+        setAlarmPlayed(false);
+      }
+    }
+
+    // Verificar se houve mudança de período
+    if (detectedPeriod !== null && lastPeriod !== null && detectedPeriod !== lastPeriod) {
+      console.log(`🔔 MUDANÇA DE PERÍODO: ${lastPeriod}º → ${detectedPeriod}º`);
+      playBellSound();
+      // Resetar flag do alarme ao mudar de período
+      setAlarmPlayed(false);
+    }
+
+    // Atualizar último período
+    if (detectedPeriod !== null && detectedPeriod !== lastPeriod) {
+      setLastPeriod(detectedPeriod);
+    }
+  }, [currentTime, autoChangePeriod, currentPeriodIndex, selectedDay, timetables, weekDays]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -626,14 +912,23 @@ export default function DisplayPanel({
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
             <h1 className={`text-4xl font-bold mb-2 ${isEmergencyMode ? 'text-red-500 animate-pulse' : ''}`}>
-              {isEmergencyMode ? '🚨 HORÁRIO EMERGENCIAL' : '📚 GRADE DE HORÁRIOS'}
+              {isEmergencyMode ? '🚨 Emergencial - GRADE DE HORÁRIOS' : '📚 Normal - GRADE DE HORÁRIOS'}
             </h1>
-            <p className="text-xl text-yellow-400">
-              {currentDay.toUpperCase()}, {currentTime.toLocaleDateString('pt-BR', { 
-                day: 'numeric', 
-                month: 'long'
-              }).toUpperCase()}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-xl text-yellow-400">
+                {currentDay.toUpperCase()}, {currentTime.toLocaleDateString('pt-BR', { 
+                  day: 'numeric', 
+                  month: 'long'
+                }).toUpperCase()}
+              </p>
+              {!isEmergencyMode && (
+                <div className="text-sm text-gray-300 bg-gray-800 px-3 py-1 rounded-lg">
+                  {autoChangePeriod 
+                    ? '⏰ Período muda automaticamente com o horário' 
+                    : '🔒 Período fixo - Use as setas para navegar'}
+                </div>
+              )}
+            </div>
             
             {/* Seletor de Horário */}
             <div className="mt-3 flex gap-4 items-end">
@@ -681,46 +976,111 @@ export default function DisplayPanel({
               
               {/* Toggle Modo Emergencial */}
               <button
-                onClick={() => setIsEmergencyMode(!isEmergencyMode)}
+                onClick={() => {
+                  alert('🔴 BOTÃO CLICADO! Modo atual: ' + (isEmergencyMode ? 'EMERGENCIAL' : 'NORMAL'));
+                  
+                  console.log('');
+                  console.log('╔════════════════════════════════════════════════════╗');
+                  console.log('║  🖱️ BOTÃO CLICADO! MUDANDO MODO...                 ║');
+                  console.log('╚════════════════════════════════════════════════════╝');
+                  console.log('');
+                  
+                  const newMode = !isEmergencyMode;
+                  
+                  console.log('🔄 Estado ANTES:');
+                  console.log('   isEmergencyMode:', isEmergencyMode);
+                  console.log('   selectedTimetableId:', selectedTimetableId);
+                  console.log('   selectedEmergencyId:', selectedEmergencyId);
+                  console.log('');
+                  
+                  console.log('🔄 NOVO MODO:', newMode ? '🚨 EMERGENCIAL' : '📅 NORMAL');
+                  console.log('   Horários emergenciais disponíveis:', emergencySchedules.length);
+                  
+                  if (newMode && emergencySchedules.length > 0) {
+                    console.log('   📋 Primeiro horário emergencial:');
+                    console.log('      _id:', emergencySchedules[0]._id);
+                    console.log('      id:', emergencySchedules[0].id);
+                    console.log('      date:', emergencySchedules[0].date);
+                    console.log('      emergencySlots:', emergencySchedules[0].emergencySlots?.length || 0, 'slots');
+                  }
+                  
+                  setIsEmergencyMode(newMode);
+                  
+                  console.log('');
+                  console.log('✅ setIsEmergencyMode(' + newMode + ') chamado!');
+                  console.log('   Aguardando useEffect e query refetch...');
+                  console.log('════════════════════════════════════════════════════');
+                  console.log('');
+                }}
                 className={`px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap ${
                   isEmergencyMode 
-                    ? 'bg-red-600 hover:bg-red-700 text-white ring-4 ring-red-400' 
+                    ? 'bg-red-600 hover:bg-red-700 text-white ring-4 ring-red-400 animate-pulse' 
                     : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
                 }`}
               >
                 {isEmergencyMode ? '🚨 EMERGENCIAL' : '📅 Normal'}
               </button>
+              
+              {/* Toggle Mudança Automática de Período */}
+              <button
+                onClick={() => setAutoChangePeriod(!autoChangePeriod)}
+                className={`px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap ${
+                  autoChangePeriod 
+                    ? 'bg-green-600 hover:bg-green-700 text-white ring-4 ring-green-400' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                }`}
+                title={autoChangePeriod ? 'Período muda automaticamente com o horário' : 'Período fixo (use as setas para mudar)'}
+              >
+                {autoChangePeriod ? '⏰ AUTO' : '🔒 MANUAL'}
+              </button>
+              
+              {/* Botão de Teste de Som */}
+              <button
+                onClick={() => {
+                  playBellSound();
+                  console.log('🔊 Teste de som acionado pelo usuário');
+                }}
+                className="hidden px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap bg-purple-600 hover:bg-purple-700 text-white ring-2 ring-purple-400 hover:ring-4"
+                title="Testar som do sino"
+              >
+                🔔 TESTAR SOM
+              </button>
             </div>
           </div>
           
-          <div className="text-right">
-            <div className="text-5xl font-mono font-bold">
-              {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          <div className="text-right flex items-center gap-6">
+            {/* Relógio Analógico */}
+            <div className="flex flex-col items-center">
+              <AnalogClock size={180} showNumbers={true} />
             </div>
-            <div className="flex items-center justify-end gap-2 mt-2">
-              {isConnected ? (
-                <>
-                  <Wifi className="text-green-400" size={20} />
-                  <span className="text-sm text-green-400">Online</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="text-red-400" size={20} />
-                  <span className="text-sm text-red-400">Offline</span>
-                </>
-              )}
-              <button
-                onClick={() => {
-                  const modes: ViewMode[] = ['display', 'airport', 'grid', 'cards'];
-                  const currentIndex = modes.indexOf(viewMode);
-                  const nextIndex = (currentIndex + 1) % modes.length;
-                  setViewMode(modes[nextIndex]);
-                }}
-                className="ml-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                title={`Modo: ${viewMode === 'display' ? 'Display' : viewMode === 'grid' ? 'Grade' : viewMode === 'airport' ? 'Aeroporto' : 'Cards'}`}
-              >
-                {viewMode === 'display' ? <Clock size={20} /> : viewMode === 'grid' ? <Grid3x3 size={20} /> : viewMode === 'airport' ? <Clock size={20} /> : <List size={20} />}
-              </button>
+            
+            {/* Informações de Status */}
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex items-center justify-end gap-2">
+                {isConnected ? (
+                  <>
+                    <Wifi className="text-green-400" size={20} />
+                    <span className="text-sm text-green-400">Online</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="text-red-400" size={20} />
+                    <span className="text-sm text-red-400">Offline</span>
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    const modes: ViewMode[] = ['display', 'airport', 'grid', 'cards'];
+                    const currentIndex = modes.indexOf(viewMode);
+                    const nextIndex = (currentIndex + 1) % modes.length;
+                    setViewMode(modes[nextIndex]);
+                  }}
+                  className="ml-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  title={`Modo: ${viewMode === 'display' ? 'Display' : viewMode === 'grid' ? 'Grade' : viewMode === 'airport' ? 'Aeroporto' : 'Cards'}`}
+                >
+                  {viewMode === 'grid' ? <Grid3x3 size={20} /> : viewMode === 'cards' ? <List size={20} /> : <MapPin size={20} />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -790,7 +1150,10 @@ export default function DisplayPanel({
                 Sem Aulas em {selectedDay}
               </h2>
               <p className="text-xl text-gray-400 mt-4">
-                Não há aulas programadas para este dia.
+                Este horário não possui aulas programadas para {selectedDay}.
+              </p>
+              <p className="text-lg text-yellow-400 mt-4">
+                💡 Selecione outro dia nos botões acima para ver os horários disponíveis.
               </p>
             </div>
           ) : (
@@ -894,29 +1257,34 @@ export default function DisplayPanel({
               <h2 className="text-4xl font-bold text-white mb-4">
                 Sem Aulas em {selectedDay}
               </h2>
+              <p className="text-xl text-gray-400 mt-4">
+                💡 Selecione outro dia acima para ver os horários disponíveis.
+              </p>
             </div>
           ) : (() => {
             // Encontrar o período atual ou próximo
             const now = currentTime;
             let currentPeriod = allPeriods[currentPeriodIndex];
             
-            // Auto-detectar período atual baseado no horário
-            for (const period of allPeriods) {
-              const periodSlots = fullWeekGrid[selectedDay][period] || {};
-              const firstSlot = Object.values(periodSlots)[0];
-              if (firstSlot && firstSlot.startTime && firstSlot.endTime) {
-                const [startHour, startMinute] = firstSlot.startTime.split(':').map(Number);
-                const [endHour, endMinute] = firstSlot.endTime.split(':').map(Number);
-                const startTime = new Date(now);
-                startTime.setHours(startHour, startMinute, 0, 0);
-                const endTime = new Date(now);
-                endTime.setHours(endHour, endMinute, 0, 0);
-                
-                // Se está neste período ou próximo (30 min antes)
-                const diffMinutes = Math.floor((startTime.getTime() - now.getTime()) / 60000);
-                if ((now >= startTime && now <= endTime) || (diffMinutes > 0 && diffMinutes <= 30)) {
-                  currentPeriod = period;
-                  break;
+            // Auto-detectar período atual baseado no horário (SOMENTE SE ATIVADO)
+            if (autoChangePeriod) {
+              for (const period of allPeriods) {
+                const periodSlots = fullWeekGrid[selectedDay][period] || {};
+                const firstSlot = Object.values(periodSlots)[0];
+                if (firstSlot && firstSlot.startTime && firstSlot.endTime) {
+                  const [startHour, startMinute] = firstSlot.startTime.split(':').map(Number);
+                  const [endHour, endMinute] = firstSlot.endTime.split(':').map(Number);
+                  const startTime = new Date(now);
+                  startTime.setHours(startHour, startMinute, 0, 0);
+                  const endTime = new Date(now);
+                  endTime.setHours(endHour, endMinute, 0, 0);
+                  
+                  // Se está neste período ou próximo (30 min antes)
+                  const diffMinutes = Math.floor((startTime.getTime() - now.getTime()) / 60000);
+                  if ((now >= startTime && now <= endTime) || (diffMinutes > 0 && diffMinutes <= 30)) {
+                    currentPeriod = period;
+                    break;
+                  }
                 }
               }
             }
@@ -938,8 +1306,17 @@ export default function DisplayPanel({
                         <div className="text-5xl font-mono font-black text-white mb-2">
                           {firstSlot.startTime} - {firstSlot.endTime}
                         </div>
-                        <div className="text-2xl text-yellow-400 font-bold">
+                        <div className="text-2xl text-yellow-400 font-bold flex items-center gap-3">
                           {selectedDay.toUpperCase()} • {allClasses.length} TURMA(S)
+                          {autoChangePeriod ? (
+                            <span className="bg-green-600 text-white text-sm px-3 py-1 rounded-full animate-pulse">
+                              ⏰ AUTO
+                            </span>
+                          ) : (
+                            <span className="bg-gray-600 text-white text-sm px-3 py-1 rounded-full">
+                              🔒 MANUAL
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -947,16 +1324,22 @@ export default function DisplayPanel({
                     {/* Navegação Manual */}
                     <div className="flex gap-3">
                       <button
-                        onClick={() => setCurrentPeriodIndex(Math.max(0, allPeriods.indexOf(currentPeriod) - 1))}
+                        onClick={() => {
+                          setCurrentPeriodIndex(Math.max(0, allPeriods.indexOf(currentPeriod) - 1));
+                          playBellSound();
+                        }}
                         disabled={allPeriods.indexOf(currentPeriod) === 0}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold text-2xl px-6 py-3 rounded-lg"
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold text-2xl px-6 py-3 rounded-lg transition-all"
                       >
                         ◀ Anterior
                       </button>
                       <button
-                        onClick={() => setCurrentPeriodIndex(Math.min(allPeriods.length - 1, allPeriods.indexOf(currentPeriod) + 1))}
+                        onClick={() => {
+                          setCurrentPeriodIndex(Math.min(allPeriods.length - 1, allPeriods.indexOf(currentPeriod) + 1));
+                          playBellSound();
+                        }}
                         disabled={allPeriods.indexOf(currentPeriod) === allPeriods.length - 1}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold text-2xl px-6 py-3 rounded-lg"
+                        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-bold text-2xl px-6 py-3 rounded-lg transition-all"
                       >
                         Próximo ▶
                       </button>
@@ -1071,6 +1454,9 @@ export default function DisplayPanel({
               <h2 className="text-3xl font-bold text-white mb-2">
                 Sem Aulas em {selectedDay}
               </h2>
+              <p className="text-lg text-yellow-400 mt-3">
+                💡 Selecione outro dia acima para ver os horários.
+              </p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[calc(100vh-180px)] overflow-y-auto">

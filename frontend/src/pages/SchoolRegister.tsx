@@ -63,8 +63,19 @@ export default function SchoolRegister() {
         acceptedTermsDate: new Date().toISOString()
       });
       
-      toast.success('Cadastro realizado com sucesso! Aguarde aprovação do administrador.');
-      navigate('/login');
+      toast.success(
+        'Cadastro realizado! Complete o pagamento para solicitar aprovação.', 
+        { duration: 4000 }
+      );
+      
+      // Redirecionar para página de pagamento com plano selecionado
+      const selectedPlan = data.selectedPlan || 'basico';
+      
+      // Pequeno delay para o usuário ver a mensagem
+      setTimeout(() => {
+        navigate(`/payment-checkout?plan=${selectedPlan}&email=${encodeURIComponent(data.email)}&schoolName=${encodeURIComponent(data.schoolName)}`);
+      }, 1000);
+      
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erro ao fazer cadastro');
     } finally {
@@ -432,12 +443,8 @@ export default function SchoolRegister() {
                   <label className="label">Selecione o Plano *</label>
                   <select {...register('selectedPlan', { required: 'Selecione um plano' })} className="input">
                     <option value="">Escolha seu plano...</option>
-                    <option value="trial">Trial - Gratuito por 30 dias</option>
-                    <option value="micro">Micro - Pagamento por Horário (R$ 25-180 por uso)</option>
-                    <option value="basico">Básico - R$ 99,00/mês (Até 30 professores, 15 turmas)</option>
-                    <option value="profissional">Profissional - R$ 199,00/mês (Até 50 professores, 25 turmas)</option>
-                    <option value="personalizado">Personalizado - R$ 450,00 taxa + R$ 150,00/horário (Emissão em 72h)</option>
-                    <option value="enterprise">Enterprise - Sob consulta (Ilimitado)</option>
+                    <option value="basico">Básico - R$ 119,90/mês (Até 30 professores, 15 turmas)</option>
+                    <option value="profissional">Profissional - R$ 249,90/mês (Até 50 professores, 25 turmas)</option>
                   </select>
                   {errors.selectedPlan && <p className="text-red-500 text-sm mt-1">{errors.selectedPlan.message}</p>}
                 </div>

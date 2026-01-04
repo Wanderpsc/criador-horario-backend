@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, AlertTriangle, Users, BookOpen, Clock, RefreshCw, Save, Printer, CheckCircle, Eye, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -23,6 +23,12 @@ interface Class {
   id?: string;
   name: string;
   shift: 'morning' | 'afternoon' | 'evening';
+  gradeId?: string;
+  grade?: {
+    id: string;
+    name: string;
+    level: string;
+  };
 }
 
 interface TeacherDebt {
@@ -61,6 +67,23 @@ export default function MakeupSaturdays() {
   const [makeupSchedule, setMakeupSchedule] = useState<{ [classId: string]: MakeupSlot[] }>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [wasHeld, setWasHeld] = useState(false); // Se o sábado foi realizado
+  const [maxPeriods, setMaxPeriods] = useState(4); // Quantidade de aulas (1 a 8)
+  const [lessonDuration, setLessonDuration] = useState(60); // Duração em minutos
+  const [startTime, setStartTime] = useState('08:00'); // Horário de início
+  const [selectedTeachersForSaturday, setSelectedTeachersForSaturday] = useState<Set<string>>(new Set()); // Professores selecionados para o sábado
+
+  // Monitor de mudanças no makeupSchedule
+  useEffect(() => {
+    console.log('🔄 makeupSchedule atualizado!');
+    console.log('📋 Novo valor:', makeupSchedule);
+    console.log('📋 Keys:', Object.keys(makeupSchedule));
+    console.log('📋 Quantidade de turmas:', Object.keys(makeupSchedule).length);
+    if (Object.keys(makeupSchedule).length > 0) {
+      console.log('✅ Horário visível agora!');
+    } else {
+      console.log('⚠️ Horário ainda vazio');
+    }
+  }, [makeupSchedule]);
 
   // Buscar professores, disciplinas e turmas
   const { data: teachersData } = useQuery<Teacher[]>({
@@ -131,18 +154,42 @@ export default function MakeupSaturdays() {
     const filteredSchedules = emergencySchedules.filter((schedule: any) => {
       if (!startDate && !endDate) return true; // Sem filtro, mostra todos
       
-      const scheduleDate = new Date(schedule.date);
-      const start = startDate ? new Date(startDate) : null;
-      const end = endDate ? new Date(endDate) : null;
+      // Normalizar datas para comparação (apenas YYYY-MM-DD, sem horas)
+      // Suportar tanto string ISO quanto Date object
+      let scheduleDateStr: string;
+      if (typeof schedule.date === 'string') {
+        // Se for string, verificar se é ISO ou não
+        if (schedule.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          scheduleDateStr = schedule.date; // Já está em formato ISO
+        } else {
+          // String em outro formato, converter
+          const dateObj = new Date(schedule.date);
+          scheduleDateStr = dateObj.toISOString().split('T')[0];
+        }
+      } else {
+        // Date object
+        const scheduleDate = new Date(schedule.date);
+        scheduleDateStr = scheduleDate.toISOString().split('T')[0]; // "YYYY-MM-DD"
+      }
       
-      if (start && scheduleDate < start) return false;
-      if (end && scheduleDate > end) return false;
+      const startDateStr = startDate || '0000-01-01';
+      const endDateStr = endDate || '9999-12-31';
+      
+      // Comparação de strings de data (funciona perfeitamente com formato ISO)
+      if (scheduleDateStr < startDateStr) return false;
+      if (scheduleDateStr > endDateStr) return false;
       
       return true;
     });
 
     console.log(`📅 Período: ${startDate || 'início'} até ${endDate || 'fim'}`);
     console.log(`📚 Horários emergenciais no período: ${filteredSchedules.length}`);
+    console.log(`📋 Lista de horários emergenciais:`, filteredSchedules.map(s => ({
+      title: s.title,
+      date: s.date,
+      makeupClassesCount: s.makeupClasses?.length || 0,
+      absentTeachers: s.absentTeachersNames
+    })));
 
     // Calcular aulas já repostas (por professor que compareceu)
     const realizedDebts = new Map<string, number>();
@@ -165,17 +212,39 @@ export default function MakeupSaturdays() {
     
     console.log('✅ Aulas já repostas por professor:', Object.fromEntries(realizedDebts));
 
-    filteredSchedules.forEach((schedule: any) => {
+    filteredSchedules.forEach((schedule: any, index: number) => {
       // Usar o campo makeupClasses que contém as aulas que precisam ser repostas
       const makeupClasses = schedule.makeupClasses || [];
       
-      console.log(`📋 Horário de ${schedule.date}: ${makeupClasses.length} aulas para reposição`);
+      console.log(`\n📋 Horário ${index + 1}/${filteredSchedules.length}: ${schedule.title || 'Sem título'}`);
+      console.log(`   📅 Data: ${schedule.date}`);
+      console.log(`   📚 ${makeupClasses.length} aulas para reposição`);
+      console.log(`   👥 Professores ausentes: ${schedule.absentTeachersNames || 'N/A'}`);
+      console.log(`   📝 makeupClasses:`, makeupClasses);
       
-      makeupClasses.forEach((makeup: any) => {
+      if (makeupClasses.length === 0) {
+        console.warn(`   ⚠️ Este horário emergencial NÃO TEM makeupClasses!`);
+        console.warn(`   ℹ️ Horário emergencial antigo sem dados de reposição - IGNORANDO`);
+        return; // Pula para próximo horário - não criar débitos falsos
+      }
+      
+      // Processar apenas makeupClasses válidos (que tenham classId e subjectId)
+      makeupClasses.forEach((makeup: any, makeupIndex: number) => {
+        console.log(`      🔍 makeupClass ${makeupIndex + 1}: ${makeup.originalTeacherName} - ${makeup.subjectName}`);
+        
+        // Filtrar makeupClasses inválidos (professores sem aula naquele dia)
+        if (!makeup.classId || !makeup.subjectId || makeup.subjectName === 'N/A - Não tinha aula neste dia') {
+          console.log(`      ⏭️ IGNORADO: ${makeup.originalTeacherName} (não tinha aula neste dia)`);
+          return;
+        }
+        
+        console.log(`      ✅ PROCESSANDO: ${makeup.originalTeacherName} - ${makeup.subjectName} em ${makeup.className}`);
+        
         const teacherId = makeup.originalTeacherId;
         const teacherName = makeup.originalTeacherName;
 
         if (!debtsMap.has(teacherId)) {
+          console.log(`         📝 Adicionando professor ${teacherName} ao mapa de débitos`);
           debtsMap.set(teacherId, {
             teacherId,
             teacherName,
@@ -194,6 +263,7 @@ export default function MakeupSaturdays() {
 
         if (existingDebt) {
           existingDebt.missedLessons++;
+          console.log(`         ➕ Incrementando aulas existentes: ${existingDebt.missedLessons}`);
         } else {
           debt.debts.push({
             subjectId: makeup.subjectId,
@@ -202,12 +272,19 @@ export default function MakeupSaturdays() {
             className: makeup.className || 'Desconhecido',
             missedLessons: 1
           });
+          console.log(`         ➕ Nova aula adicionada`);
         }
       });
     });
 
-    console.log(`📊 Total de professores com débitos: ${debtsMap.size}`);
-    console.log('📋 Débitos calculados:', Array.from(debtsMap.values()));
+    console.log(`\n📊 Total de professores com débitos no mapa: ${debtsMap.size}`);
+    console.log('📋 Débitos calculados por professor:');
+    Array.from(debtsMap.values()).forEach(debt => {
+      console.log(`   👨‍🏫 ${debt.teacherName}: ${debt.totalDebts} aula(s) devidas`);
+      debt.debts.forEach(d => {
+        console.log(`      - ${d.subjectName} em ${d.className}: ${d.missedLessons} aula(s)`);
+      });
+    });
 
     // Descontar aulas já repostas
     const finalDebts = Array.from(debtsMap.values()).map(debt => {
@@ -226,24 +303,46 @@ export default function MakeupSaturdays() {
 
   const teacherDebts = calculateTeacherDebts();
 
-  // Gerar horário automaticamente do backend (com débitos acumulados)
+  // Gerar horário automaticamente do backend (com professores selecionados)
   const generateFromBackend = async () => {
     if (!selectedDate) {
       toast.error('Selecione uma data primeiro');
+      return;
+    }
+    
+    if (selectedTeachersForSaturday.size === 0) {
+      toast.error('Selecione pelo menos um professor');
       return;
     }
 
     setIsGenerating(true);
     try {
       console.log('🎯 Gerando horário automaticamente do backend...');
+      console.log(`⏰ Configuração: ${maxPeriods} aulas de ${lessonDuration} minutos iniciando às ${startTime}`);
+      console.log(`👥 Professores selecionados: ${Array.from(selectedTeachersForSaturday).length}`);
+      
       const response = await api.post('/saturday-makeup/generate-from-debts', {
         date: selectedDate,
-        maxPeriods: 4
+        maxPeriods,
+        lessonDuration,
+        startTime,
+        selectedTeacherIds: Array.from(selectedTeachersForSaturday) // Envia apenas os selecionados
       });
 
+      console.log('📥 Resposta completa do backend:', response);
+      console.log('📦 response.data:', response.data);
+      console.log('📦 response.data.data:', response.data.data);
+      
       const { schedule, teacherDebts: dbTeacherDebts } = response.data.data;
       
+      console.log('📋 Schedule extraído:', schedule);
+      console.log('📋 Tipo do schedule:', typeof schedule);
+      console.log('📋 Keys do schedule:', Object.keys(schedule || {}));
+      console.log('📋 teacherDebts extraído:', dbTeacherDebts);
+      
       setMakeupSchedule(schedule);
+      console.log('✅ setMakeupSchedule chamado com:', schedule);
+      
       toast.success(`✅ Horário gerado! ${dbTeacherDebts.length} professor(es) incluído(s)`);
       console.log('✅ Horário gerado do backend:', { schedule, teacherDebts: dbTeacherDebts });
     } catch (error: any) {
@@ -259,33 +358,98 @@ export default function MakeupSaturdays() {
     console.log('🎯 Iniciando geração de horário de reposição...');
     console.log('📅 Data selecionada:', selectedDate);
     console.log('📊 Débitos de professores:', teacherDebts);
+    console.log(`⏰ Configuração: ${maxPeriods} aulas de ${lessonDuration} minutos`);
     
     setIsGenerating(true);
 
     try {
-      // Horário padrão de sábado: 8h às 12h (4 períodos de 1 hora)
-      const periods = [
-        { period: 1, startTime: '08:00', endTime: '09:00' },
-        { period: 2, startTime: '09:00', endTime: '10:00' },
-        { period: 3, startTime: '10:00', endTime: '11:00' },
-        { period: 4, startTime: '11:00', endTime: '12:00' }
-      ];
+      // 🎯 Gerar períodos baseados na configuração do usuário
+      const basePeriods = [];
+      let currentHour = 8; // Início às 8h
+      let currentMinute = 0;
+
+      for (let i = 1; i <= maxPeriods; i++) {
+        const startHour = currentHour.toString().padStart(2, '0');
+        const startMin = currentMinute.toString().padStart(2, '0');
+        
+        // Calcular horário de término
+        const totalMinutes = currentMinute + lessonDuration;
+        const endHour = currentHour + Math.floor(totalMinutes / 60);
+        const endMinute = totalMinutes % 60;
+        
+        const endHourStr = endHour.toString().padStart(2, '0');
+        const endMinStr = endMinute.toString().padStart(2, '0');
+
+        basePeriods.push({
+          period: i,
+          startTime: `${startHour}:${startMin}`,
+          endTime: `${endHourStr}:${endMinStr}`
+        });
+
+        // Atualizar para próximo período
+        currentHour = endHour;
+        currentMinute = endMinute;
+      }
+
+      console.log('📋 Períodos configurados:', basePeriods);
 
       const schedule: { [classId: string]: MakeupSlot[] } = {};
 
+      // 🎯 MUDANÇA: Incluir TODOS os débitos, independente da quantidade de aulas por turma
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📊 DISTRIBUINDO TODOS OS DÉBITOS POR TURMA/SÉRIE');
+      console.log('═══════════════════════════════════════════════════════');
+
       // Distribuir as reposições por turma
       teacherDebts.forEach(teacherDebt => {
-        console.log('👨‍🏫 Processando débitos do professor:', teacherDebt.teacherName);
+        console.log(`\n👨‍🏫 Professor: ${teacherDebt.teacherName} (${teacherDebt.totalDebts} aulas devidas)`);
+        
         teacherDebt.debts.forEach(debt => {
           if (!schedule[debt.classId]) {
             schedule[debt.classId] = [];
           }
 
-          // Adicionar slots de reposição (até o número de aulas faltantes)
-          for (let i = 0; i < debt.missedLessons && schedule[debt.classId].length < periods.length; i++) {
-            const period = periods[schedule[debt.classId].length];
+          console.log(`  📚 ${debt.subjectName} em ${debt.className}: ${debt.missedLessons} aula(s)`);
+
+          // ✅ CORRIGIDO: Adicionar TODAS as aulas que o professor deve
+          for (let i = 0; i < debt.missedLessons; i++) {
+            const currentLength = schedule[debt.classId].length;
+            
+            // Gerar período dinamicamente
+            let period, startTime, endTime;
+            
+            if (currentLength < basePeriods.length) {
+              // Usar períodos configurados
+              const basePeriod = basePeriods[currentLength];
+              period = basePeriod.period;
+              startTime = basePeriod.startTime;
+              endTime = basePeriod.endTime;
+            } else {
+              // Criar períodos extras além do máximo configurado
+              period = currentLength + 1;
+              
+              // Continuar calculando horários dinamicamente
+              const extraPeriodIndex = currentLength - basePeriods.length;
+              const lastPeriod = basePeriods[basePeriods.length - 1];
+              
+              // Parsear último horário
+              const [lastEndHour, lastEndMin] = lastPeriod.endTime.split(':').map(Number);
+              const totalMinutesFromLast = (extraPeriodIndex + 1) * lessonDuration;
+              
+              const startHour = lastEndHour + Math.floor(totalMinutesFromLast / 60);
+              const startMinute = (lastEndMin + (totalMinutesFromLast % 60)) % 60;
+              
+              const endHour = startHour + Math.floor(lessonDuration / 60);
+              const endMinute = (startMinute + (lessonDuration % 60)) % 60;
+              
+              startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
+              endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+            }
+
             schedule[debt.classId].push({
-              ...period,
+              period,
+              startTime,
+              endTime,
               teacherId: teacherDebt.teacherId,
               teacherName: teacherDebt.teacherName,
               subjectId: debt.subjectId,
@@ -293,12 +457,22 @@ export default function MakeupSaturdays() {
               classId: debt.classId,
               className: debt.className
             });
+
+            console.log(`    ✓ Aula ${i + 1}/${debt.missedLessons} adicionada (período ${period}: ${startTime}-${endTime})`);
           }
         });
       });
 
-      console.log('✅ Horário gerado:', schedule);
-      console.log('📋 Número de turmas com aulas:', Object.keys(schedule).length);
+      console.log('\n═══════════════════════════════════════════════════════');
+      console.log('✅ HORÁRIO GERADO COM TODOS OS DÉBITOS:');
+      console.log('═══════════════════════════════════════════════════════');
+      Object.entries(schedule).forEach(([classId, slots]) => {
+        const className = slots[0]?.className || classId;
+        console.log(`📋 ${className}: ${slots.length} aulas`);
+      });
+      console.log(`📚 Total de turmas: ${Object.keys(schedule).length}`);
+      console.log(`📊 Total de aulas: ${Object.values(schedule).flat().length}`);
+      console.log('═══════════════════════════════════════════════════════\n');
       
       setMakeupSchedule(schedule);
       
@@ -423,12 +597,19 @@ export default function MakeupSaturdays() {
   });
 
   const handleSave = () => {
+    console.log('💾 handleSave chamado');
+    console.log('📅 selectedDate:', selectedDate);
+    console.log('📋 makeupSchedule:', makeupSchedule);
+    console.log('📋 Keys do makeupSchedule:', Object.keys(makeupSchedule));
+    console.log('📋 Quantidade de turmas:', Object.keys(makeupSchedule).length);
+    
     if (!selectedDate) {
       toast.error('Selecione uma data para o sábado de reposição');
       return;
     }
 
     if (Object.keys(makeupSchedule).length === 0) {
+      console.error('❌ makeupSchedule está vazio!');
       toast.error('Gere um horário de reposição primeiro!');
       return;
     }
@@ -437,7 +618,8 @@ export default function MakeupSaturdays() {
       date: selectedDate,
       schedule: makeupSchedule
     };
-
+    
+    console.log('📤 Salvando com data:', data);
     saveMutation.mutate(data);
   };
 
@@ -503,6 +685,132 @@ export default function MakeupSaturdays() {
         </p>
       </div>
 
+      {/* Lista de Horários Salvos - DESTACADA */}
+      {savedMakeupSchedules.length > 0 && (
+        <div className="card bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-300">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-purple-800 flex items-center gap-2">
+              <Calendar size={24} />
+              📚 Sábados Salvos ({savedMakeupSchedules.length})
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {savedMakeupSchedules.map((saved: any) => {
+              const scheduleId = saved._id || saved.id;
+              const attendedTeachers = saved.attendedTeachers || [];
+              
+              // Extrair professores do horário
+              const teachersInSchedule = new Map<string, string>();
+              Object.values(saved.schedule || {}).forEach((period: any) => {
+                if (Array.isArray(period)) {
+                  period.forEach((slot: any) => {
+                    if (slot?.teacherId && slot?.teacherName) {
+                      teachersInSchedule.set(slot.teacherId, slot.teacherName);
+                    }
+                  });
+                }
+              });
+              
+              const totalClasses = Object.values(saved.schedule || {}).flat().length;
+              const totalTeachers = teachersInSchedule.size;
+              
+              return (
+                <div 
+                  key={scheduleId}
+                  className="bg-white rounded-lg border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all p-4"
+                >
+                  {/* Cabeçalho do Card */}
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-purple-100">
+                    <div>
+                      <div className="text-xl font-bold text-purple-800">
+                        📅 {new Date(saved.date).toLocaleDateString('pt-BR', {
+                          weekday: 'short',
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {Object.keys(saved.schedule || {}).length} turma(s) · {totalClasses} aula(s)
+                      </div>
+                    </div>
+                    {saved.status && (
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        saved.status === 'realized' ? 'bg-green-100 text-green-700' :
+                        saved.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {saved.status === 'realized' ? '✓ Realizado' :
+                         saved.status === 'cancelled' ? '✗ Cancelado' :
+                         '⏳ Planejado'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Estatísticas */}
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">👥 Professores:</span>
+                      <span className="font-bold text-gray-800">{totalTeachers}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">✓ Presentes:</span>
+                      <span className="font-bold text-green-600">{attendedTeachers.length}/{totalTeachers}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Botões de Ação */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleView(saved)}
+                      className="btn btn-sm btn-primary flex items-center justify-center gap-1"
+                    >
+                      <Eye size={16} />
+                      Visualizar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMakeupSchedule(saved.schedule);
+                        setSelectedDate(new Date(saved.date).toISOString().split('T')[0]);
+                        setTimeout(() => window.print(), 100);
+                      }}
+                      className="btn btn-sm btn-outline flex items-center justify-center gap-1"
+                    >
+                      <Printer size={16} />
+                      Imprimir
+                    </button>
+                    {saved.status !== 'realized' && attendedTeachers.length > 0 && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Processar sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')}?\n\n` +
+                            `✓ Dar baixa em débitos dos ${attendedTeachers.length} presentes\n` +
+                            `✗ Acumular débitos dos ${totalTeachers - attendedTeachers.length} ausentes`)) {
+                            processSaturdayMutation.mutate(scheduleId);
+                          }
+                        }}
+                        className="btn btn-sm btn-success flex items-center justify-center gap-1"
+                        disabled={processSaturdayMutation.isPending}
+                      >
+                        <CheckCircle size={16} />
+                        Processar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(scheduleId)}
+                      className="btn btn-sm btn-error flex items-center justify-center gap-1"
+                    >
+                      <Trash2 size={16} />
+                      Excluir
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Painel Principal */}
         <div className="lg:col-span-2 space-y-6">
@@ -555,6 +863,68 @@ export default function MakeupSaturdays() {
                 />
               </div>
 
+              {/* 🎯 NOVO: Configuração de Quantidade e Duração das Aulas */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                  <Clock size={18} />
+                  Configuração das Aulas
+                </h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Horário de Início</label>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Quantidade de Aulas</label>
+                    <select
+                      value={maxPeriods}
+                      onChange={(e) => setMaxPeriods(Number(e.target.value))}
+                      className="input w-full"
+                    >
+                      <option value={1}>1 aula</option>
+                      <option value={2}>2 aulas</option>
+                      <option value={3}>3 aulas</option>
+                      <option value={4}>4 aulas</option>
+                      <option value={5}>5 aulas</option>
+                      <option value={6}>6 aulas</option>
+                      <option value={7}>7 aulas</option>
+                      <option value={8}>8 aulas</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Duração (minutos)</label>
+                    <select
+                      value={lessonDuration}
+                      onChange={(e) => setLessonDuration(Number(e.target.value))}
+                      className="input w-full"
+                    >
+                      <option value={30}>30 minutos</option>
+                      <option value={35}>35 minutos</option>
+                      <option value={40}>40 minutos</option>
+                      <option value={45}>45 minutos</option>
+                      <option value={50}>50 minutos</option>
+                      <option value={60}>60 minutos (1 hora)</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-purple-700 mt-2">
+                  ℹ️ Total: {(() => {
+                    const [startHour, startMinute] = startTime.split(':').map(Number);
+                    const totalMinutes = maxPeriods * lessonDuration;
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = totalMinutes % 60;
+                    const endHour = startHour + hours + Math.floor((startMinute + minutes) / 60);
+                    const endMinute = (startMinute + minutes) % 60;
+                    return `${maxPeriods} aulas = ${hours}h${minutes > 0 ? minutes + 'min' : ''} (${startTime} até ${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')})`;
+                  })()}
+                </p>
+              </div>
+
               {/* Checkbox para marcar se foi realizado */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -575,32 +945,107 @@ export default function MakeupSaturdays() {
                 </label>
               </div>
 
+              {/* Seletor de Professores para o Sábado */}
+              {teacherDebts.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                    <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
+                      <Users size={18} />
+                      1️⃣ Selecione os Professores PRESENTES no Sábado
+                    </h4>
+                    
+                    <div className="space-y-2 max-h-64 overflow-y-auto bg-white p-3 rounded border border-blue-200">
+                      <div className="mb-2 flex items-center justify-between">
+                        <button
+                          onClick={() => {
+                            const allIds = new Set(teacherDebts.map(d => d.teacherId));
+                            setSelectedTeachersForSaturday(allIds);
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          ✓ Selecionar Todos
+                        </button>
+                        <button
+                          onClick={() => setSelectedTeachersForSaturday(new Set())}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                        >
+                          ✗ Limpar Seleção
+                        </button>
+                      </div>
+                      
+                      {teacherDebts.map(debt => {
+                        const isSelected = selectedTeachersForSaturday.has(debt.teacherId);
+                        return (
+                          <label
+                            key={debt.teacherId}
+                            className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                              isSelected ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const newSet = new Set(selectedTeachersForSaturday);
+                                if (e.target.checked) {
+                                  newSet.add(debt.teacherId);
+                                } else {
+                                  newSet.delete(debt.teacherId);
+                                }
+                                setSelectedTeachersForSaturday(newSet);
+                              }}
+                              className="w-5 h-5 text-green-600 rounded"
+                            />
+                            <div className="flex-1">
+                              <div className={`font-semibold ${isSelected ? 'text-green-800' : 'text-gray-800'}`}>
+                                {debt.teacherName}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                {debt.totalDebts} aula{debt.totalDebts > 1 ? 's' : ''} a repor
+                              </div>
+                            </div>
+                            {isSelected && <span className="text-green-600 text-xl">✓</span>}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="mt-3 text-sm text-blue-800 font-medium text-center">
+                      {selectedTeachersForSaturday.size} de {teacherDebts.length} professores selecionados
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                  <p className="text-gray-600">
+                    ℹ️ Ajuste o período de busca acima para exibir professores com débitos
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <button
                   onClick={generateFromBackend}
-                  disabled={isGenerating || !selectedDate}
-                  className="btn btn-primary w-full flex items-center justify-center gap-2"
-                  title="Gera automaticamente incluindo débitos acumulados de não comparecimento"
+                  disabled={isGenerating || !selectedDate || selectedTeachersForSaturday.size === 0 || teacherDebts.length === 0}
+                  className="btn btn-primary w-full flex items-center justify-center gap-2 text-lg py-3"
+                  title="Gera horário apenas com os professores selecionados"
                 >
                   <RefreshCw size={20} className={isGenerating ? 'animate-spin' : ''} />
-                  {isGenerating ? 'Gerando...' : '🎯 Gerar Automático (com Acumulados)'}
+                  {isGenerating ? 'Gerando...' : `2️⃣ Gerar Horário (${selectedTeachersForSaturday.size} professores)`}
                 </button>
-
-                <button
-                  onClick={generateMakeupSchedule}
-                  disabled={isGenerating || !selectedDate || teacherDebts.length === 0}
-                  className="btn btn-outline w-full flex items-center justify-center gap-2"
-                >
-                  <RefreshCw size={20} className={isGenerating ? 'animate-spin' : ''} />
-                  {isGenerating ? 'Gerando...' : 'Gerar Manual (Período Filtrado)'}
-                </button>
+                
+                {selectedTeachersForSaturday.size === 0 && teacherDebts.length > 0 && (
+                  <p className="text-sm text-orange-600 text-center">
+                    ⚠️ Selecione pelo menos 1 professor acima
+                  </p>
+                )}
+                
+                {teacherDebts.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center">
+                    ℹ️ Não há professores com débitos no período selecionado
+                  </p>
+                )}
               </div>
-              
-              {teacherDebts.length === 0 && (
-                <p className="text-sm text-gray-500 text-center mt-2">
-                  ℹ️ Não há professores com débitos no período selecionado
-                </p>
-              )}
             </div>
           </div>
 
@@ -665,8 +1110,35 @@ export default function MakeupSaturdays() {
           )}
 
           {/* Horário Gerado */}
-          {Object.keys(makeupSchedule).length > 0 && (
+          {Object.keys(makeupSchedule).length > 0 && (() => {
+            // 🔍 Debug: Verificar conteúdo do makeupSchedule
+            console.log('🔍 DEBUG makeupSchedule:', makeupSchedule);
+            Object.entries(makeupSchedule).forEach(([classId, slots]) => {
+              console.log(`  📋 Turma ${classId}:`, slots);
+              console.log(`    Total de slots: ${slots.length}`);
+            });
+            
+            return (
             <div className="space-y-6">
+              {/* Botões de Ação */}
+              <div className="flex gap-3 justify-end no-print">
+                <button
+                  onClick={() => window.print()}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Printer size={18} />
+                  🖨️ Imprimir Horário
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!selectedDate}
+                  className="btn btn-success flex items-center gap-2"
+                >
+                  <Save size={18} />
+                  💾 Salvar Horário
+                </button>
+              </div>
+              
               {/* Grade Visual (Planilha) */}
               <div className="card border-2 border-green-400 print-container">
                 <h3 className="font-bold text-xl mb-4 flex items-center gap-2 text-green-800">
@@ -679,78 +1151,116 @@ export default function MakeupSaturdays() {
                     <thead>
                       <tr className="bg-green-600 text-white">
                         <th className="border border-gray-300 p-3 text-center font-bold">Horário</th>
-                        {/* Listar todas as turmas que têm aulas */}
+                        {/* Listar todas as turmas */}
                         {Object.keys(makeupSchedule).map(classId => {
                           const classInfo = classes.find((c: Class) => c._id === classId || c.id === classId);
+                          const gradeName = classInfo?.grade?.name || '';
+                          const className = classInfo?.name || 'Turma';
+                          const displayName = gradeName ? `${gradeName} - ${className}` : className;
                           return (
                             <th key={classId} className="border border-gray-300 p-3 text-center font-bold">
-                              {classInfo?.name || 'Turma'}
+                              {displayName}
                             </th>
                           );
                         })}
                       </tr>
                     </thead>
                     <tbody>
-                      {/* Períodos de 1 a 4 */}
-                      {[1, 2, 3, 4].map(period => {
-                        const periodTimes = [
-                          { startTime: '08:00', endTime: '09:00' },
-                          { startTime: '09:00', endTime: '10:00' },
-                          { startTime: '10:00', endTime: '11:00' },
-                          { startTime: '11:00', endTime: '12:00' }
-                        ];
-                        const time = periodTimes[period - 1];
+                      {/* Calcular o número máximo de períodos dinamicamente */}
+                      {(() => {
+                        // 🔍 Debug: Ver os períodos de cada slot
+                        Object.entries(makeupSchedule).forEach(([classId, slots]) => {
+                          console.log(`📊 Turma ${classId}: períodos =`, slots.map(s => s.period));
+                        });
                         
-                        return (
-                          <tr key={period} className="hover:bg-gray-50">
-                            <td className="border border-gray-300 p-3 text-center bg-gray-50">
-                              <div className="font-bold text-lg">{period}º</div>
-                              <div className="text-xs text-gray-600">{time.startTime} - {time.endTime}</div>
-                            </td>
-                            {/* Para cada turma, mostrar a aula do período */}
-                            {Object.entries(makeupSchedule).map(([classId, slots]) => {
-                              const slot = slots.find(s => s.period === period);
-                              
-                              return (
-                                <td 
-                                  key={classId} 
-                                  className="border border-gray-300 p-2"
-                                  style={{
-                                    backgroundColor: slot ? getSubjectColor(slot.subjectId) + '30' : 'transparent'
-                                  }}
-                                >
-                                  {slot ? (
-                                    <div className="text-center">
-                                      <div 
-                                        className="font-bold text-sm mb-1 px-2 py-1 rounded"
-                                        style={{ 
-                                          backgroundColor: getSubjectColor(slot.subjectId),
-                                          color: 'white'
-                                        }}
-                                      >
-                                        {slot.subjectName}
-                                      </div>
-                                      <div className="text-xs text-gray-700 font-medium">
-                                        {slot.teacherName}
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="text-center text-gray-400 text-xs">—</div>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
+                        const maxPeriods = Math.max(
+                          ...Object.values(makeupSchedule).map(slots => slots.length),
+                          4 // No mínimo 4 períodos
                         );
-                      })}
+                        
+                        console.log('📈 maxPeriods calculado:', maxPeriods);
+                        console.log('📈 Maior period nos slots:', Math.max(...Object.values(makeupSchedule).flat().map(s => s.period || 0)));
+                        
+                        return Array.from({ length: maxPeriods }, (_, i) => i + 1).map(period => {
+                          // Buscar horário real do slot (já vem do backend)
+                          let startTime = '—', endTime = '—';
+                          
+                          // Procurar em qualquer turma que tenha esse período
+                          for (const slots of Object.values(makeupSchedule)) {
+                            const slot = slots.find(s => s.period === period);
+                            if (slot) {
+                              startTime = slot.startTime;
+                              endTime = slot.endTime;
+                              break;
+                            }
+                          }
+                        
+                          return (
+                            <tr key={period} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 p-3 text-center bg-gray-50">
+                                <div className="font-bold text-lg">{period}º</div>
+                                <div className="text-xs text-gray-600">{startTime} - {endTime}</div>
+                              </td>
+                              {/* Para cada turma, mostrar a aula do período */}
+                              {Object.entries(makeupSchedule).map(([classId, slots]) => {
+                                const slot = slots.find(s => s.period === period);
+                                
+                                return (
+                                  <td 
+                                    key={classId} 
+                                    className="border border-gray-300 p-2"
+                                    style={{
+                                      backgroundColor: slot ? getSubjectColor(slot.subjectId) + '30' : 'transparent'
+                                    }}
+                                  >
+                                    {slot ? (
+                                      <div className="text-center">
+                                        <div 
+                                          className="font-bold text-sm mb-1 px-2 py-1 rounded"
+                                          style={{ 
+                                            backgroundColor: getSubjectColor(slot.subjectId),
+                                            color: 'white'
+                                          }}
+                                        >
+                                          {slot.subjectName}
+                                        </div>
+                                        <div className="text-xs text-gray-700 font-medium">
+                                          {slot.teacherName}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center text-gray-400 text-xs">—</div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
 
-                <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+                <div className="mt-4 flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Clock size={16} />
-                    <span>Horário: 8h às 12h (4 períodos)</span>
+                    <span>
+                      {(() => {
+                        const maxPeriodsInSchedule = Math.max(
+                          ...Object.values(makeupSchedule).map(slots => slots.length),
+                          0
+                        );
+                        if (maxPeriodsInSchedule === 0) return 'Sem aulas';
+                        
+                        const firstSlot = Object.values(makeupSchedule).flat()[0];
+                        const lastPeriodSlots = Object.values(makeupSchedule).flat()
+                          .filter(s => s.period === maxPeriodsInSchedule);
+                        const lastSlot = lastPeriodSlots[lastPeriodSlots.length - 1] || firstSlot;
+                        
+                        return `${firstSlot?.startTime || '08:00'} às ${lastSlot?.endTime || '12:00'} (${maxPeriodsInSchedule} período${maxPeriodsInSchedule > 1 ? 's' : ''})`;
+                      })()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Users size={16} />
@@ -809,12 +1319,15 @@ export default function MakeupSaturdays() {
 
               {Object.entries(makeupSchedule).map(([classId, slots]) => {
                 const classInfo = classes.find((c: Class) => c._id === classId || c.id === classId);
+                const gradeName = classInfo?.grade?.name || '';
+                const className = classInfo?.name || 'Turma';
+                const displayName = gradeName ? `${gradeName} - ${className}` : className;
                 
                 return (
                   <div key={classId} className="card border-2 border-green-400 print-container">
                     <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                       <CheckCircle className="text-green-600" />
-                      Turma: {classInfo?.name || classId}
+                      Turma: {displayName}
                     </h3>
 
                     <div className="overflow-x-auto">
@@ -857,145 +1370,12 @@ export default function MakeupSaturdays() {
                 );
               })}
             </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Painel Lateral */}
         <div className="space-y-6 no-print">
-          {/* Horários Salvos */}
-          {savedMakeupSchedules.length > 0 && (
-            <div className="card bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200">
-              <h3 className="font-bold text-lg mb-3 text-purple-800 flex items-center gap-2">
-                <Calendar size={20} />
-                Sábados Agendados
-              </h3>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {savedMakeupSchedules.map((saved: any) => {
-                  const scheduleId = saved._id || saved.id;
-                  const attendedTeachers = saved.attendedTeachers || [];
-                  
-                  // Extrair lista única de professores do horário
-                  const teachersInSchedule = new Map<string, string>();
-                  Object.values(saved.schedule || {}).forEach((period: any) => {
-                    if (Array.isArray(period)) {
-                      period.forEach((slot: any) => {
-                        if (slot?.teacherId && slot?.teacherName) {
-                          teachersInSchedule.set(slot.teacherId, slot.teacherName);
-                        }
-                      });
-                    }
-                  });
-                  
-                  return (
-                  <div 
-                    key={scheduleId} 
-                    className="bg-white p-3 rounded-lg border border-purple-200 hover:border-purple-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-bold text-purple-800">
-                        📅 {new Date(saved.date).toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {attendedTeachers.length}/{teachersInSchedule.size} professor(es)
-                      </span>
-                    </div>
-                    
-                    {/* Lista de professores com checkbox individual */}
-                    <div className="mb-3 space-y-1 max-h-32 overflow-y-auto">
-                      {Array.from(teachersInSchedule.entries()).map(([teacherId, teacherName]) => {
-                        const attended = attendedTeachers.includes(teacherId);
-                        return (
-                          <label 
-                            key={teacherId}
-                            className={`flex items-center gap-2 p-1.5 rounded cursor-pointer hover:bg-gray-50 ${
-                              attended ? 'bg-green-50' : ''
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={attended}
-                              onChange={(e) => {
-                                toggleTeacherAttendanceMutation.mutate({ 
-                                  id: scheduleId, 
-                                  teacherId,
-                                  attended: e.target.checked 
-                                });
-                              }}
-                              className="w-4 h-4 text-green-600 rounded"
-                            />
-                            <span className={`text-sm ${
-                              attended ? 'text-green-700 font-medium' : 'text-gray-700'
-                            }`}>
-                              {teacherName}
-                            </span>
-                            {attended && <span className="text-xs text-green-600">✓</span>}
-                          </label>
-                        );
-                      })}
-                    </div>
-                    <div className="text-xs text-gray-600 mb-2">
-                      {Object.keys(saved.schedule || {}).length} turma(s) · {Object.values(saved.schedule || {}).flat().length} aula(s)
-                      {saved.status && (
-                        <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                          saved.status === 'realized' ? 'bg-green-100 text-green-700' :
-                          saved.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {saved.status === 'realized' ? '✓ Realizado' :
-                           saved.status === 'cancelled' ? '✗ Cancelado' :
-                           '⏳ Planejado'}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => handleView(saved)}
-                        className="btn btn-sm btn-primary flex-1 flex items-center justify-center gap-1 text-xs"
-                      >
-                        <Eye size={14} />
-                        Ver
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMakeupSchedule(saved.schedule);
-                          setTimeout(() => window.print(), 100);
-                        }}
-                        className="btn btn-sm btn-outline flex items-center justify-center gap-1 text-xs"
-                      >
-                        <Printer size={14} />
-                      </button>
-                      {saved.status !== 'realized' && attendedTeachers.length > 0 && (
-                        <button
-                          onClick={() => {
-                            if (confirm(`Processar sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')}?\n\n` +
-                              `✓ Dar baixa em débitos dos ${attendedTeachers.length} presentes\n` +
-                              `✗ Acumular débitos dos ${teachersInSchedule.size - attendedTeachers.length} ausentes`)) {
-                              processSaturdayMutation.mutate(scheduleId);
-                            }
-                          }}
-                          className="btn btn-sm btn-success flex items-center justify-center gap-1 text-xs"
-                          title="Processar: dar baixa e acumular débitos"
-                          disabled={processSaturdayMutation.isPending}
-                        >
-                          <CheckCircle size={14} />
-                          Processar
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(scheduleId)}
-                        className="btn btn-sm btn-error flex items-center justify-center gap-1 text-xs"
-                        title="Excluir"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
             <h3 className="font-bold text-lg mb-3 text-blue-800 flex items-center gap-2">
               <AlertTriangle size={20} />

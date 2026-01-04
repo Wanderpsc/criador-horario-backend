@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { AlertTriangle, Calendar, Clock, User, Zap, RefreshCw, Save, Printer, List, Bell, Send, Eye, FileText, Trash2, Info } from 'lucide-react';
@@ -52,6 +52,13 @@ interface EmergencySlot extends TimeSlot {
     className: string;
     gradeName: string;
   };
+  // Informações do professor ausente (para slots vagos)
+  absentTeacherId?: string;
+  absentTeacherName?: string;
+  absentTeacherSubject?: string;
+  vacantReason?: string;
+  // Flag para indicar se o período foi reordenado na compactação
+  wasReordered?: boolean;
 }
 
 interface OriginalSlot extends TimeSlot {
@@ -74,7 +81,10 @@ interface MakeupClass {
 }
 
 export default function EmergencySchedule() {
+  const queryClient = useQueryClient();
+  
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [emergencyScheduleDate, setEmergencyScheduleDate] = useState(''); // Data do horário emergencial gerado/carregado
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedTimetableId, setSelectedTimetableId] = useState('');
   const [absentTeacherIds, setAbsentTeacherIds] = useState<string[]>([]);
@@ -89,6 +99,7 @@ export default function EmergencySchedule() {
   const [sendNotifications, setSendNotifications] = useState(true);
   const [isSendingNotifications, setIsSendingNotifications] = useState(false);
   const [showQuickAccess, setShowQuickAccess] = useState(true);
+  const [customScheduleName, setCustomScheduleName] = useState(''); // Nome personalizado do horário
 
   // Buscar turmas
   const { data: classesData } = useQuery({
@@ -215,6 +226,92 @@ export default function EmergencySchedule() {
   const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
   const currentDay = weekDays[new Date(selectedDate).getDay()];
 
+  /**
+   * Função para compactar horários por turma
+   * Coloca aulas com professor nos primeiros períodos e janelas no final
+   * IMPORTANTE: Renumera os períodos sequencialmente (1, 2, 3...) 
+   */
+  const compactScheduleByClass = (slots: EmergencySlot[]): EmergencySlot[] => {
+    console.log('🔄 Iniciando compactação de horários...');
+    console.log(`   Total de slots recebidos: ${slots.length}`);
+    
+    // Agrupar slots por turma e dia
+    const slotsByClass = slots.reduce((acc: any, slot: any) => {
+      const key = `${slot.classId}|||${slot.day}`;
+      if (!acc[key]) {
+        acc[key] = {
+          classId: slot.classId,
+          className: slot.className,
+          gradeName: slot.gradeName,
+          day: slot.day,
+          slots: []
+        };
+      }
+      acc[key].slots.push(slot);
+      return acc;
+    }, {});
+    
+    console.log(`   Turmas encontradas: ${Object.keys(slotsByClass).length}`);
+    
+    const compactedSlots: EmergencySlot[] = [];
+    
+    // Para cada turma, compactar seus períodos
+    Object.values(slotsByClass).forEach((classData: any) => {
+      const { classId, className, gradeName, day, slots: classSlots } = classData;
+      
+      console.log(`\n📚 Compactando: ${gradeName} - ${className} (${day})`);
+      console.log(`   Períodos originais: ${classSlots.length}`);
+      
+      // Separar slots em dois grupos: com professor e vagos
+      const slotsComProfessor = classSlots.filter((s: any) => !s.isVacant && s.teacherId);
+      const slotsVagos = classSlots.filter((s: any) => s.isVacant || !s.teacherId);
+      
+      console.log(`   - Com professor: ${slotsComProfessor.length}`);
+      console.log(`   - Vagos/Janela: ${slotsVagos.length}`);
+      
+      // Ordenar slots com professor pelo período original (para manter a sequência lógica)
+      slotsComProfessor.sort((a: any, b: any) => a.period - b.period);
+      
+      // Também ordenar os vagos para manter consistência
+      slotsVagos.sort((a: any, b: any) => a.period - b.period);
+      
+      // Renumerar os períodos: aulas com professor vêm primeiro (1, 2, 3...)
+      let novoPeriodo = 1;
+      
+      // Adicionar slots com professor (compactados no início)
+      slotsComProfessor.forEach((slot: any) => {
+        const periodoOriginal = slot.period;
+        compactedSlots.push({
+          ...slot,
+          period: novoPeriodo,
+          // Manter horários do período novo (sequencial)
+          // Usar horários padrão baseados no novo período
+          wasReordered: periodoOriginal !== novoPeriodo
+        });
+        console.log(`      ✓ Período ${periodoOriginal} → ${novoPeriodo}: ${slot.subjectName} (${slot.teacherName})`);
+        novoPeriodo++;
+      });
+      
+      // Adicionar slots vagos no final
+      slotsVagos.forEach((slot: any) => {
+        const periodoOriginal = slot.period;
+        compactedSlots.push({
+          ...slot,
+          period: novoPeriodo,
+          wasReordered: true // Sempre foi movido para o final
+        });
+        console.log(`      ○ Período ${periodoOriginal} → ${novoPeriodo}: JANELA (${slot.absentTeacherName || 'vago'})`);
+        novoPeriodo++;
+      });
+      
+      console.log(`   ✅ Compactado: ${slotsComProfessor.length} aulas nos períodos 1-${slotsComProfessor.length}`);
+      console.log(`              ${slotsVagos.length} janelas nos períodos ${slotsComProfessor.length + 1}-${novoPeriodo - 1}`);
+    });
+    
+    console.log(`\n✅ Compactação concluída! Total de slots: ${compactedSlots.length}`);
+    return compactedSlots;
+  };
+
   const handleGenerateEmergency = async () => {
     console.log('🚀 Iniciando geração de horário emergencial...');
     console.log('   selectedClass:', selectedClass);
@@ -264,8 +361,30 @@ export default function EmergencySchedule() {
         console.log('📊 Horário base completo encontrado:', timetable);
         console.log('📊 Turmas no horário:', Object.keys(timetable.timetable || {}));
 
-        // Percorrer TODAS as turmas do horário base
-        const allClassIds = Object.keys(timetable.timetable || {});
+        // Buscar informações do schedule (períodos com horários)
+        console.log('⏰ Buscando configuração de períodos do schedule ID:', timetable.scheduleId);
+        let schedulePeriodsMap: Record<number, { startTime: string; endTime: string }> = {};
+        try {
+          const scheduleResponse = await api.get(`/schedules/${timetable.scheduleId}`);
+          const schedule = scheduleResponse.data;
+          if (schedule && schedule.periods && Array.isArray(schedule.periods)) {
+            schedule.periods.forEach((p: any) => {
+              schedulePeriodsMap[p.period] = {
+                startTime: p.startTime,
+                endTime: p.endTime
+              };
+            });
+            console.log('✅ Períodos carregados:', Object.keys(schedulePeriodsMap).length);
+          } else {
+            console.warn('⚠️ Schedule não tem períodos definidos, usando valores padrão');
+          }
+        } catch (error) {
+          console.warn('⚠️ Erro ao buscar schedule, usando valores padrão:', error);
+        }
+
+        // Percorrer TODAS as turmas da escola (não apenas as do horário base)
+        // Isso garante que todas as 11 turmas apareçam, mesmo sem horário gerado
+        const allClassIds = classes.map((c: Class) => c.id || c._id).filter((id): id is string => !!id);
         console.log('');
         console.log('═══════════════════════════════════════════════════════════');
         console.log('🚨 PROFESSORES AUSENTES SELECIONADOS:');
@@ -275,27 +394,43 @@ export default function EmergencySchedule() {
           console.log(`   ${index + 1}. ${teacher?.name || 'Desconhecido'} (ID: ${id})`);
         });
         console.log(`📅 Data: ${selectedDate} (${currentDay})`);
-        console.log(`🏫 Buscando em ${allClassIds.length} turmas`);
+        console.log(`🏫 Buscando em ${allClassIds.length} turmas da escola`);
         console.log('═══════════════════════════════════════════════════════════');
         console.log('');
 
         let affectedSlotsCount = 0;
         const classesWithAffectedSlots = new Set<string>();
+        let totalClassesWithoutSchedule = 0;
+        let totalClassesWithoutClassesThisDay = 0;
 
         for (const classId of allClassIds) {
-          const classTimetable = timetable.timetable[classId];
-          if (!Array.isArray(classTimetable)) continue;
+          // Buscar horário da turma (pode não existir)
+          const classTimetable = timetable.timetable?.[classId as string];
+          
+          // Obter informações da turma
+          const classObj = classes.find((c: Class) => c.id === classId || c._id === classId);
+          const className = classObj?.name || classId;
+          const gradeName = classObj?.grade?.name || 'Série Desconhecida';
+          
+          // Se não tem horário gerado, criar slots vazios para a turma aparecer
+          if (!classTimetable || !Array.isArray(classTimetable)) {
+            console.log(`⚠️ Turma ${gradeName} - ${className}: sem horário gerado no sistema`);
+            totalClassesWithoutSchedule++;
+            continue;
+          }
 
           // Filtrar APENAS os slots do dia selecionado
           const daySlots = classTimetable.filter((slot: any) => slot.day === currentDay);
           
+          // Log se não há aulas neste dia
+          if (daySlots.length === 0) {
+            console.log(`📅 Turma ${gradeName} - ${className}: sem aulas cadastradas na ${currentDay}`);
+            totalClassesWithoutClassesThisDay++;
+            continue;
+          }
+          
           // Buscar slots dos professores ausentes NESTE DIA ESPECÍFICO
           const affectedSlots = daySlots.filter((slot: any) => absentTeacherIds.includes(slot.teacherId));
-          
-          // Obter informações da turma
-          const classObj = classes.find((c: Class) => c.id === classId);
-          const className = classObj?.name || classId;
-          const gradeName = classObj?.grade?.name || 'Série Desconhecida';
           
           if (affectedSlots.length > 0) {
             classesWithAffectedSlots.add(classId);
@@ -321,10 +456,13 @@ export default function EmergencySchedule() {
               s.id === slot.subjectId
             );
             
+            // Buscar horários do período no schedulePeriodsMap
+            const periodTimes = schedulePeriodsMap[slot.period] || { startTime: '', endTime: '' };
+            
             realSlots.push({
               period: slot.period,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
+              startTime: slot.startTime || periodTimes.startTime,
+              endTime: slot.endTime || periodTimes.endTime,
               subjectId: slot.subjectId,
               subjectName: subject?.name || 'Desconhecido',
               teacherId: slot.teacherId,
@@ -339,21 +477,55 @@ export default function EmergencySchedule() {
           });
         }
 
+        console.log('');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('📊 RESUMO DO DIA ' + currentDay.toUpperCase() + ':');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log(`🏫 Total de turmas na escola: ${allClassIds.length}`);
+        console.log(`📚 Turmas com horário gerado: ${allClassIds.length - totalClassesWithoutSchedule}`);
+        console.log(`⚠️  Turmas sem horário gerado: ${totalClassesWithoutSchedule}`);
+        console.log(`📅 Turmas sem aulas na ${currentDay}: ${totalClassesWithoutClassesThisDay}`);
+        console.log(`🎯 Turmas com aulas na ${currentDay}: ${allClassIds.length - totalClassesWithoutSchedule - totalClassesWithoutClassesThisDay}`);
+        console.log(`🔴 Turmas afetadas (com professores ausentes): ${classesWithAffectedSlots.size}`);
+        console.log(`📝 Total de períodos afetados: ${affectedSlotsCount}`);
+        console.log('═══════════════════════════════════════════════════════════');
+        
         if (affectedSlotsCount === 0) {
-          toast.error('Estes professores não têm aulas neste dia em nenhuma turma');
+          console.log('');
+          console.log('❌ ERRO: Nenhum período afetado encontrado!');
+          console.log('   Possíveis razões:');
+          console.log('   1. Professores selecionados não têm aulas na ' + currentDay);
+          console.log('   2. Nenhuma turma tem aulas cadastradas neste dia');
+          console.log('   3. Horário base não contém os professores selecionados');
+          console.log('');
+          
+          // Mensagem específica baseada na análise
+          if (totalClassesWithoutClassesThisDay === allClassIds.length - totalClassesWithoutSchedule) {
+            toast.error(
+              `❌ Nenhuma turma tem aulas cadastradas na ${currentDay}!\n\n` +
+              `📅 Por favor, selecione um dia da semana que tenha aulas (Segunda a Sexta).\n\n` +
+              `💡 Dica: Verifique o horário base "${timetable.name || timetable.title}" para ver quais dias têm aulas cadastradas.`,
+              { duration: 8000 }
+            );
+          } else {
+            toast.error(
+              `❌ Os professores selecionados não têm aulas na ${currentDay}!\n\n` +
+              `📅 Tente selecionar outro dia ou outros professores.`,
+              { duration: 6000 }
+            );
+          }
+          
           setGenerating(false);
           return;
         }
 
-        console.log('');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log(`✅ RESUMO: ${affectedSlotsCount} período(s) afetado(s) em ${classesWithAffectedSlots.size} turma(s)`);
+        console.log('✅ Horário emergencial pode ser gerado!');
         console.log('═══════════════════════════════════════════════════════════');
         
         // Verificar quais professores ausentes NÃO têm aulas neste dia
         const teachersWithClasses = new Set<string>();
         for (const classId of allClassIds) {
-          const classTimetable = timetable.timetable[classId];
+          const classTimetable = timetable.timetable?.[classId as string];
           if (!Array.isArray(classTimetable)) continue;
           
           const daySlots = classTimetable.filter((slot: any) => slot.day === currentDay);
@@ -377,13 +549,19 @@ export default function EmergencySchedule() {
         console.log('');
 
         // Função para encontrar professor disponível no mesmo horário
-        const findAvailableTeacher = (period: number, day: string, classId: string, excludeTeacherIds: string[]) => {
+        const findAvailableTeacher = (
+          period: number, 
+          day: string, 
+          classId: string, 
+          excludeTeacherIds: string[],
+          emergencySlots: any[]
+        ) => {
           // Buscar todos os slots do mesmo período e dia em OUTRAS turmas
           const occupiedTeachers = new Set<string>();
           
           for (const cId of allClassIds) {
             if (cId === classId) continue; // Pular a turma atual
-            const classTimetable = timetable.timetable[cId];
+            const classTimetable = timetable.timetable?.[cId as string];
             if (!Array.isArray(classTimetable)) continue;
             
             const sameTimeSlots = classTimetable.filter((s: any) => 
@@ -393,28 +571,88 @@ export default function EmergencySchedule() {
             sameTimeSlots.forEach((s: any) => occupiedTeachers.add(s.teacherId));
           }
           
-          // Encontrar professor disponível (não ausente e não ocupado neste horário)
-          const availableTeacher = teachers.find((t: any) => 
+          // 🎯 PRIORIDADE 1: Buscar professores da PRÓPRIA TURMA neste dia que estejam disponíveis
+          // Eles podem ter seus horários reorganizados/trocados
+          const classTimetable = timetable.timetable?.[classId as string];
+          const classTeachersThisDay = new Set<string>();
+          
+          if (Array.isArray(classTimetable)) {
+            classTimetable
+              .filter((s: any) => s.day === day && !excludeTeacherIds.includes(s.teacherId))
+              .forEach((s: any) => classTeachersThisDay.add(s.teacherId));
+          }
+          
+          // Tentar professores da própria turma primeiro
+          const classTeacher = teachers.find((t: any) => 
+            !excludeTeacherIds.includes(t.id) && 
+            !occupiedTeachers.has(t.id) &&
+            classTeachersThisDay.has(t.id)
+          );
+          
+          if (classTeacher) {
+            return { ...classTeacher, priority: 'class' }; // Prioridade 1
+          }
+          
+          // 🎯 PRIORIDADE 2: Buscar qualquer professor disponível
+          // Pode repetir professor (dar aulas extras)
+          const anyAvailableTeacher = teachers.find((t: any) => 
             !excludeTeacherIds.includes(t.id) && 
             !occupiedTeachers.has(t.id)
           );
           
-          return availableTeacher;
+          if (anyAvailableTeacher) {
+            return { ...anyAvailableTeacher, priority: 'available' }; // Prioridade 2
+          }
+          
+          return null; // Prioridade 3: JANELA (será tratada no processamento)
         };
 
         // Gerar substituições inteligentes para slots afetados
         const makeupClasses: any[] = []; // Aulas para reposição no sábado
         
+        console.log('🔍 Debug de geração de substituições:');
+        console.log(`   - Total de realSlots: ${realSlots.length}`);
+        console.log(`   - Slots afetados: ${realSlots.filter((s: any) => s.isAffected).length}`);
+        console.log(`   - IDs de professores ausentes: ${JSON.stringify(absentTeacherIds)}`);
+        
         emergencySlots = realSlots.map((slot) => {
           if (slot.isAffected) {
+            console.log(`🎯 Processando slot afetado:`, {
+              period: slot.period,
+              day: slot.day,
+              teacher: slot.teacherName,
+              subject: slot.subjectName,
+              class: slot.className
+            });
+            
+            // 🔴 IMPORTANTE: Aula do professor ausente SEMPRE precisa ser reposta
+            console.log(`   → Adicionando aula do professor ausente para reposição`);
+            makeupClasses.push({
+              originalTeacherId: slot.teacherId,
+              originalTeacherName: slot.teacherName,
+              subjectId: slot.subjectId,
+              subjectName: slot.subjectName,
+              classId: slot.classId,
+              className: slot.className,
+              gradeName: slot.gradeName,
+              period: slot.period,
+              originalDay: slot.day,
+              makeupDay: 'Sábado',
+              reason: 'Professor ausente'
+            });
+            
             const availableTeacher = findAvailableTeacher(
               slot.period, 
               slot.day, 
               slot.classId || '',
-              absentTeacherIds
+              absentTeacherIds,
+              emergencySlots
             );
             
             if (availableTeacher) {
+              const priority = availableTeacher.priority || 'unknown';
+              console.log(`   → Substituto encontrado: ${availableTeacher.name} (prioridade: ${priority})`);
+              
               // Encontrou substituto - buscar de onde ele veio
               const substituteOriginSlot = realSlots.find((s: any) => 
                 s.teacherId === availableTeacher.id && 
@@ -423,8 +661,9 @@ export default function EmergencySchedule() {
                 s.classId !== slot.classId
               );
               
-              // Se o substituto tinha aula própria, essa aula precisa ser reposta
+              // Se o substituto tinha aula própria, essa aula TAMBÉM precisa ser reposta
               if (substituteOriginSlot) {
+                console.log(`   → Substituto deixou aula vazia, adicionando para reposição`);
                 makeupClasses.push({
                   originalTeacherId: substituteOriginSlot.teacherId,
                   originalTeacherName: substituteOriginSlot.teacherName,
@@ -445,33 +684,33 @@ export default function EmergencySchedule() {
                 teacherId: availableTeacher.id,
                 teacherName: availableTeacher.name,
                 isModified: true,
+                substitutePriority: priority,
                 substituteOrigin: substituteOriginSlot ? {
                   className: substituteOriginSlot.className || '',
                   gradeName: substituteOriginSlot.gradeName || ''
                 } : undefined
               };
             } else {
-              // Não encontrou substituto - JANELA (aula precisa ser reposta)
-              makeupClasses.push({
-                originalTeacherId: slot.teacherId,
-                originalTeacherName: slot.teacherName,
-                subjectId: slot.subjectId,
-                subjectName: slot.subjectName,
-                classId: slot.classId,
-                className: slot.className,
-                gradeName: slot.gradeName,
-                period: slot.period,
-                originalDay: slot.day,
-                makeupDay: 'Sábado',
-                reason: 'Sem substituto disponível'
-              });
+              // Não encontrou substituto - JANELA
+              console.log(`   → Sem substituto, turma ficará com JANELA`);
+              
+              // Buscar informações do professor ausente original
+              const originalTeacher = teachers.find((t: any) => t.id === slot.teacherId);
+              const absentTeacherInfo = originalTeacher 
+                ? `Professor ausente: ${originalTeacher.name} - ${slot.subjectName}`
+                : 'Professor ausente';
               
               return {
                 ...slot,
                 teacherId: '',
                 teacherName: 'JANELA',
                 isModified: true,
-                isVacant: true
+                isVacant: true,
+                // Preservar informações do professor ausente para exibição
+                absentTeacherId: slot.teacherId,
+                absentTeacherName: originalTeacher?.name || 'Desconhecido',
+                absentTeacherSubject: slot.subjectName,
+                vacantReason: absentTeacherInfo
               };
             }
           }
@@ -481,12 +720,50 @@ export default function EmergencySchedule() {
           };
         });
         
+        // ✅ IMPORTANTE: makeupClasses deve conter APENAS os professores que REALMENTE tinham aula
+        // Se o professor não tinha aula no dia, não há nada para repor no sábado
+        console.log('');
+        console.log('🔍 Verificando professores ausentes sem aulas neste dia...');
+        
+        const teachersInMakeupClasses = new Set(makeupClasses.map((mc: any) => mc.originalTeacherId));
+        const absentTeachersWithoutClasses = absentTeacherIds.filter(id => !teachersInMakeupClasses.has(id));
+        
+        if (absentTeachersWithoutClasses.length > 0) {
+          console.log(`📋 ${absentTeachersWithoutClasses.length} professor(es) ausente(s) SEM aula neste dia`);
+          
+          absentTeachersWithoutClasses.forEach(teacherId => {
+            const teacher = teachers.find((t: any) => t.id === teacherId);
+            if (teacher) {
+              console.log(`   ℹ️ ${teacher.name} não tinha aula neste dia - SEM débito para repor`);
+            }
+          });
+        } else {
+          console.log('✅ Todos os professores ausentes já estão na lista (tinham aulas)');
+        }
+        
         console.log('');
         console.log('═══════════════════════════════════════════════════════════');
         console.log('📊 RESULTADO DA GERAÇÃO:');
         console.log('═══════════════════════════════════════════════════════════');
         console.log(`📚 Total de slots (realSlots): ${realSlots.length}`);
         console.log(`📚 Total de slots (emergencySlots): ${emergencySlots.length}`);
+        console.log(`📅 ${makeupClasses.length} débito(s) REAIS para sábado (apenas professores com aulas)`);
+        
+        // Estatísticas de substituições
+        const substitutionStats = {
+          classTeachers: emergencySlots.filter((s: any) => s.substitutePriority === 'class').length,
+          availableTeachers: emergencySlots.filter((s: any) => s.substitutePriority === 'available').length,
+          janelas: emergencySlots.filter((s: any) => s.isVacant).length,
+          unchanged: emergencySlots.filter((s: any) => !s.isModified).length
+        };
+        
+        console.log('📊 Estatísticas de substituições:');
+        console.log(`   ✅ ${substitutionStats.classTeachers} aula(s) cobertas por professores da própria turma (reorganizados)`);
+        console.log(`   🔄 ${substitutionStats.availableTeachers} aula(s) cobertas por professores externos (repetindo aulas)`);
+        console.log(`   ⏰ ${substitutionStats.janelas} JANELA(S) (vão para o final para saída antecipada)`);
+        console.log(`   📌 ${substitutionStats.unchanged} aula(s) mantidas sem alteração`);
+        
+        console.log(`🔍 makeupClasses detalhado:`, JSON.stringify(makeupClasses, null, 2));
         
         // Agrupar por turma para contagem
         const slotsByClass = emergencySlots.reduce((acc: any, slot: any) => {
@@ -507,9 +784,46 @@ export default function EmergencySchedule() {
         console.log('═══════════════════════════════════════════════════════════');
         console.log('');
 
+        // 🎯 ORDENAÇÃO INTELIGENTE: JANELAS PARA O FINAL POR TURMA
+        // Agrupar por turma, ordenar cada turma (aulas primeiro, janelas no final), depois juntar tudo
+        console.log('🔄 Reorganizando horário: colocando JANELAS no final de cada turma...');
+        
+        const slotsByClassForOrdering = emergencySlots.reduce((acc: any, slot: any) => {
+          const key = `${slot.classId}_${slot.day}`;
+          if (!acc[key]) {
+            acc[key] = [];
+          }
+          acc[key].push(slot);
+          return acc;
+        }, {});
+        
+        // Ordenar cada turma: aulas normais primeiro (por período), janelas no final
+        Object.values(slotsByClassForOrdering).forEach((classSlots: any) => {
+          classSlots.sort((a: any, b: any) => {
+            // JANELAS vão pro final
+            if (a.isVacant && !b.isVacant) return 1;
+            if (!a.isVacant && b.isVacant) return -1;
+            // Mesmo tipo: ordenar por período
+            return a.period - b.period;
+          });
+        });
+        
+        // Juntar tudo novamente
+        emergencySlots = Object.values(slotsByClassForOrdering).flat() as EmergencySlot[];
+        
+        console.log('✅ Horário reorganizado! Aulas com conteúdo primeiro, JANELAS no final.');
+
+        // 🎯 COMPACTAÇÃO FINAL: Mover TODAS as janelas para o final por turma
+        // Isso permite que alunos saiam mais cedo quando há professores faltando
+        console.log('');
+        console.log('🔄 Aplicando compactação final dos períodos...');
+        emergencySlots = compactScheduleByClass(emergencySlots);
+        console.log('✅ Compactação concluída! Períodos vagos movidos para o final.');
+
         setOriginalSlots(realSlots);
         setEmergencySlots(emergencySlots);
         setMakeupClasses(makeupClasses);
+        setEmergencyScheduleDate(selectedDate); // Salvar a data do horário gerado
         
       } else {
         // Buscar horário específico
@@ -596,21 +910,81 @@ export default function EmergencySchedule() {
           return;
         }
 
-        // Gerar horário emergencial (substituições)
+        // 🎯 FUNÇÃO AUXILIAR: Encontrar professor disponível (mesma lógica que "todas as turmas")
+        const findAvailableTeacherForClass = (period: number, day: string) => {
+          // 1. Buscar professores ocupados neste mesmo horário em OUTRAS turmas
+          const occupiedTeachers = new Set<string>();
+          
+          // Usar as turmas disponíveis no horário base
+          const allAvailableClassIds = Object.keys(timetable.timetable || {});
+          
+          for (const cId of allAvailableClassIds) {
+            if (cId === selectedClass) continue;
+            const classTimetable = timetable.timetable[cId];
+            if (!Array.isArray(classTimetable)) continue;
+            
+            const sameTimeSlots = classTimetable.filter((s: any) => 
+              s.period === period && s.day === day
+            );
+            
+            sameTimeSlots.forEach((s: any) => occupiedTeachers.add(s.teacherId));
+          }
+          
+          // 2. Buscar apenas professores que DÃO AULA NESTE DIA na turma selecionada
+          const classTimetable = timetable.timetable[selectedClass];
+          const teachersInThisDay = new Set<string>();
+          
+          if (Array.isArray(classTimetable)) {
+            classTimetable
+              .filter((s: any) => s.day === day)
+              .forEach((s: any) => teachersInThisDay.add(s.teacherId));
+          }
+          
+          // 3. Encontrar professor disponível (não ausente, não ocupado, e que dá aula neste dia)
+          const availableTeacher = teachers.find((t: any) => 
+            !absentTeacherIds.includes(t.id) && 
+            !occupiedTeachers.has(t.id) &&
+            teachersInThisDay.has(t.id) // ✅ Apenas professores deste dia
+          );
+          
+          return availableTeacher;
+        };
+
+        // Gerar horário emergencial (substituições inteligentes)
         const emergencySlots: EmergencySlot[] = realSlots.map((slot) => {
           if (slot.isAffected) {
-            // Substituir professores ausentes
-            const substituteTeacher = teachers.find((t: any) => !absentTeacherIds.includes(t.id))?.id || '';
-            return {
-              ...slot,
-              teacherId: substituteTeacher,
-              isModified: true,
-            };
+            // Buscar substituto disponível (da mesma turma e dia)
+            const availableTeacher = findAvailableTeacherForClass(slot.period, slot.day);
+            
+            if (availableTeacher) {
+              return {
+                ...slot,
+                teacherId: availableTeacher.id,
+                teacherName: availableTeacher.name,
+                isModified: true,
+              };
+            } else {
+              // Sem substituto disponível - JANELA
+              return {
+                ...slot,
+                teacherId: '',
+                teacherName: 'JANELA',
+                isModified: true,
+                isVacant: true
+              };
+            }
           }
           return {
             ...slot,
             isModified: false,
           };
+        });
+
+        // 🎯 ORDENAÇÃO: JANELAS PARA O FINAL (mesmo lógica para turma específica)
+        emergencySlots.sort((a, b) => {
+          if (a.isVacant && !b.isVacant) return 1;
+          if (!a.isVacant && b.isVacant) return -1;
+          return a.period - b.period;
         });
 
         setOriginalSlots(realSlots);
@@ -693,7 +1067,49 @@ export default function EmergencySchedule() {
       .filter(Boolean)
       .join(', ');
     
-    const scheduleName = `Emergencial - ${absentTeachersNames} - ${new Date(selectedDate).toLocaleDateString('pt-BR')}`;
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('💾 SALVANDO HORÁRIO EMERGENCIAL - VERIFICAÇÃO');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('👥 Total de professores ausentes:', absentTeacherIds.length);
+    console.log('📝 IDs dos professores:', absentTeacherIds);
+    console.log('📝 Nomes dos professores:', absentTeachersNames);
+    console.log('📚 Total de slots emergenciais:', emergencySlots.length);
+    
+    // Verificar quantos slots vagos existem (cada um deve ter info do professor ausente)
+    const vacantSlots = emergencySlots.filter(s => s.isVacant);
+    console.log('🔵 Total de JANELAS (slots vagos):', vacantSlots.length);
+    
+    // Verificar se cada janela tem informação do professor ausente
+    vacantSlots.forEach((slot, index) => {
+      console.log(`   Janela ${index + 1}:`, {
+        turma: `${slot.gradeName} - ${slot.className}`,
+        periodo: slot.period,
+        absentTeacherId: slot.absentTeacherId,
+        absentTeacherName: slot.absentTeacherName,
+        absentTeacherSubject: slot.absentTeacherSubject
+      });
+    });
+    
+    // Verificar se todos os professores ausentes estão representados nos slots
+    const representedTeachers = new Set(vacantSlots.map(s => s.absentTeacherId).filter(Boolean));
+    const missingTeachers = absentTeacherIds.filter(id => !representedTeachers.has(id));
+    
+    if (missingTeachers.length > 0) {
+      console.warn('⚠️ ATENÇÃO: Professores ausentes NÃO representados nas janelas:');
+      missingTeachers.forEach(id => {
+        const teacher = teachers.find(t => t.id === id);
+        console.warn(`   → ${teacher?.name || id} (pode não ter aulas neste dia)`);
+      });
+    } else {
+      console.log('✅ Todos os professores ausentes estão representados nas janelas.');
+    }
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('');
+    
+    // Usar nome personalizado ou gerar um automático
+    const scheduleName = customScheduleName || 
+      `Emergencial - ${absentTeachersNames} - ${new Date(selectedDate).toLocaleDateString('pt-BR')}`;
     
     // Obter dia da semana - usar horário local, não UTC
     const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -720,9 +1136,15 @@ export default function EmergencySchedule() {
         affectedClasses: [...new Set(emergencySlots.map(s => s.classId))].filter(Boolean),
       };
 
-      console.log('💾 Salvando horário emergencial:', scheduleData);
-      console.log('📦 Payload completo:', JSON.stringify(scheduleData, null, 2));
-      console.log('📊 makeupClasses no payload:', scheduleData.makeupClasses);
+      console.log('💾 Salvando horário emergencial:', {
+        name: scheduleName,
+        date: selectedDate,
+        dayOfWeek,
+        absentTeachersCount: absentTeacherIds.length,
+        emergencySlotsCount: emergencySlots.length,
+        vacantSlotsCount: vacantSlots.length,
+        makeupClassesCount: makeupClasses.length
+      });
 
       const response = await api.post('/emergency-schedules', scheduleData);
       console.log('✅ Resposta do servidor:', response.data);
@@ -837,6 +1259,7 @@ export default function EmergencySchedule() {
     setOriginalSlots(enrichedOriginalSlots);
     setEmergencySlots(enrichedEmergencySlots);
     setMakeupClasses(schedule.makeupClasses || []);
+    setEmergencyScheduleDate(schedule.date || selectedDate); // Atualizar data do horário emergencial
     setGenerating(false);
     
     // Rolar suavemente para a visualização
@@ -872,6 +1295,9 @@ export default function EmergencySchedule() {
       // Atualizar lista local
       setSavedSchedules(savedSchedules.filter(s => (s._id || s.id) !== scheduleId));
       
+      // Invalidar cache do React Query
+      queryClient.invalidateQueries({ queryKey: ['generatedTimetables'] });
+      
       // Limpar horário se estava visualizando o que foi excluído
       if (selectedTimetableId === scheduleId || emergencySlots.some(slot => slot.classId === scheduleId)) {
         setEmergencySlots([]);
@@ -881,7 +1307,19 @@ export default function EmergencySchedule() {
     } catch (error: any) {
       console.error('❌ Erro ao excluir:', error);
       console.error('❌ Detalhes do erro:', error.response?.data);
-      toast.error(error.response?.data?.message || 'Erro ao excluir horário');
+      
+      // Se for 404, remover da lista local (já foi excluído antes)
+      if (error.response?.status === 404) {
+        console.log('⚠️ Horário não encontrado (404), removendo da lista local e invalidando cache...');
+        setSavedSchedules(savedSchedules.filter(s => (s._id || s.id) !== scheduleId));
+        
+        // Invalidar cache para recarregar dados frescos
+        queryClient.invalidateQueries({ queryKey: ['generatedTimetables'] });
+        
+        toast.info('Horário já havia sido excluído anteriormente');
+      } else {
+        toast.error(error.response?.data?.message || 'Erro ao excluir horário');
+      }
     }
   };
 
@@ -1313,6 +1751,23 @@ export default function EmergencySchedule() {
             {/* Botões de ação após gerar */}
             {emergencySlots.length > 0 && (
               <>
+                {/* Campo para nomear o horário */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Horário (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={customScheduleName}
+                    onChange={(e) => setCustomScheduleName(e.target.value)}
+                    placeholder={`Emergencial - ${new Date(selectedDate).toLocaleDateString('pt-BR')}`}
+                    className="input w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Se deixar em branco, será gerado automaticamente
+                  </p>
+                </div>
+
                 {/* Checkbox para enviar notificações */}
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg no-print">
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -1475,6 +1930,13 @@ export default function EmergencySchedule() {
                 <div className="w-4 h-4 bg-red-200 border border-red-500 rounded"></div>
                 <span>Aula afetada pela ausência</span>
               </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded border-l-4 border-blue-500">
+                <p className="font-semibold text-blue-800 mb-1">📌 Compactação de Horários</p>
+                <p className="text-xs text-gray-700">
+                  As janelas são automaticamente movidas para o final do dia, 
+                  permitindo que os alunos saiam mais cedo quando há professores ausentes.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1507,7 +1969,7 @@ export default function EmergencySchedule() {
                     
                     <div className="bg-white p-6 rounded-lg text-left">
                       <p className="text-2xl mb-4">
-                        <strong>📅 Data:</strong> {new Date(selectedDate).toLocaleDateString('pt-BR', { 
+                        <strong>📅 Data:</strong> {new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR', { 
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -1613,7 +2075,7 @@ export default function EmergencySchedule() {
                           {gradeName} - {className}
                         </h2>
                         <p className="text-center text-gray-600 mt-2">
-                          Horário Emergencial • {new Date(selectedDate).toLocaleDateString('pt-BR')}
+                          Horário Emergencial • {new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR')}
                         </p>
                         <p className="text-center text-sm text-gray-500 mt-1">
                           Professor(es) Ausente(s): <span className="font-bold text-red-700">{absentTeacherIds.map(id => getTeacherName(id)).join(', ')}</span> • 
@@ -1740,7 +2202,23 @@ export default function EmergencySchedule() {
                                                   {slot.subjectName || getSubjectName(slot.subjectId)}
                                                 </div>
                                                 <div className={`text-xs mt-1 ${isModified ? 'text-green-700 font-bold' : 'text-gray-600'}`}>
-                                                  {slot.isVacant ? '🔵 JANELA' : (slot.teacherName || getTeacherName(slot.teacherId))}
+                                                  {slot.isVacant ? (
+                                                    <div className="space-y-1">
+                                                      <div className="font-bold text-orange-700">🔵 JANELA</div>
+                                                      {slot.absentTeacherName && (
+                                                        <div className="text-[10px] text-red-600 italic">
+                                                          Ausente: {slot.absentTeacherName}
+                                                        </div>
+                                                      )}
+                                                      {slot.absentTeacherSubject && (
+                                                        <div className="text-[10px] text-gray-500">
+                                                          ({slot.absentTeacherSubject})
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    slot.teacherName || getTeacherName(slot.teacherId)
+                                                  )}
                                                 </div>
                                                 {isModified && !slot.isVacant && (
                                                   <div className="text-xs font-bold text-green-600 mt-1 bg-green-200 px-1 py-0.5 rounded inline-block">
@@ -1754,7 +2232,10 @@ export default function EmergencySchedule() {
                                                 )}
                                                 {slot.isVacant && (
                                                   <div className="text-xs text-yellow-700 mt-1 font-semibold">
-                                                    (vai para o final do dia)
+                                                    {slot.wasReordered 
+                                                      ? '(compactado ao final)' 
+                                                      : '(sem substituição)'
+                                                    }
                                                   </div>
                                                 )}
                                               </div>

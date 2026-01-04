@@ -23,8 +23,8 @@ export class AutoBackupService {
 
       // Buscar dados do usuário
       const user = await User.findById(userId);
-      if (!user || user.role === 'admin') {
-        console.log('[AutoBackup] Usuário admin ou não encontrado - backup não criado');
+      if (!user || user.role === 'admin' || user.role === 'super-admin') {
+        console.log('[AutoBackup] Usuário admin/super-admin ou não encontrado - backup não criado');
         return;
       }
 
