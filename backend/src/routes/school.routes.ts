@@ -55,6 +55,76 @@ router.get('/profile', auth, async (req: any, res: Response) => {
 });
 
 /**
+ * PUT /api/schools/profile
+ * Atualiza os dados da escola (nome, dias de aula, ano letivo)
+ */
+router.put('/profile', auth, async (req: any, res: Response) => {
+  try {
+    console.log('\n💾💾💾 PUT /api/schools/profile - Atualizando dados da escola');
+    console.log('   req.user:', req.user);
+    console.log('   User ID:', req.user?.id);
+    console.log('   Dados recebidos:', req.body);
+
+    if (!req.user || !req.user.id) {
+      console.log('❌ User não autenticado ou sem userId');
+      return res.status(401).json({
+        success: false,
+        message: 'Não autenticado'
+      });
+    }
+
+    const { schoolName, workingDays, academicYear } = req.body;
+
+    // Validações
+    if (!schoolName) {
+      console.log('❌ Nome da escola é obrigatório');
+      return res.status(400).json({
+        success: false,
+        message: 'Nome da escola é obrigatório'
+      });
+    }
+
+    console.log('   Atualizando escola ID:', req.user.id);
+    const updateData: any = { schoolName };
+    if (workingDays) updateData.workingDays = workingDays;
+    if (academicYear) updateData.academicYear = academicYear;
+
+    // Atualiza a escola
+    const updatedSchool = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true }
+    ).select('-password');
+
+    if (!updatedSchool) {
+      console.log('❌ Escola não encontrada');
+      return res.status(404).json({
+        success: false,
+        message: 'Escola não encontrada'
+      });
+    }
+
+    console.log('✅ Dados da escola atualizados com sucesso!');
+    console.log('   Nome:', updatedSchool.schoolName);
+    console.log('   Dias de aula:', workingDays);
+    console.log('   Ano letivo:', academicYear);
+
+    return res.json({
+      success: true,
+      message: 'Dados da escola atualizados com sucesso',
+      data: updatedSchool
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar escola:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao atualizar dados da escola',
+      error: error.message
+    });
+  }
+});
+
+/**
  * PUT /api/schools/responsible
  * Atualiza os dados do responsável pela escola
  */

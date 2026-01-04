@@ -2,6 +2,7 @@ import api from './api';
 
 export interface Sale {
   id: string;
+  _id?: string;
   schoolId: string;
   planId?: string;
   amount: number;
@@ -10,7 +11,7 @@ export interface Sale {
   saleDate: string;
   notes?: string;
   invoiceNumber?: string;
-  createdBy: string;
+  createdBy?: string;
   school?: {
     id: string;
     name: string;
@@ -19,16 +20,20 @@ export interface Sale {
   plan?: {
     id: string;
     name: string;
-    monthlyPrice: number;
-    yearlyPrice: number;
+    monthlyPrice?: number;
+    yearlyPrice?: number;
   };
   creator?: {
     id: string;
     name: string;
     email: string;
   };
-  createdAt: string;
-  updatedAt: string;
+  // Campos do backend Payment
+  schoolName?: string;
+  schoolEmail?: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateSaleData {
@@ -59,10 +64,10 @@ export interface SalesStats {
 
 export const saleAPI = {
   getAll: (params?: { startDate?: string; endDate?: string; paymentStatus?: string; schoolId?: string }) => 
-    api.get<{ data: Sale[] }>('/sales', { params }),
-  getById: (id: string) => api.get<{ data: Sale }>(`/sales/${id}`),
-  getStats: () => api.get<{ data: SalesStats }>('/sales/stats'),
-  create: (data: CreateSaleData) => api.post<{ data: Sale }>('/sales', data),
-  update: (id: string, data: CreateSaleData) => api.put<{ data: Sale }>(`/sales/${id}`, data),
-  delete: (id: string) => api.delete<{ message: string }>(`/sales/${id}`)
+    api.get<{ data: Sale[] }>('/payments/admin/all', { params }),
+  getById: (id: string) => api.get<{ data: Sale }>(`/payments/${id}`),
+  getStats: () => api.get<{ data: SalesStats }>('/admin/dashboard-stats'),
+  create: (data: CreateSaleData) => api.post<{ data: Sale }>('/payments', data),
+  update: (id: string, data: CreateSaleData) => api.put<{ data: Sale }>(`/payments/${id}`, data),
+  delete: (id: string) => api.delete<{ message: string }>(`/payments/${id}`)
 };

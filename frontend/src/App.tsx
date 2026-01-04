@@ -37,6 +37,7 @@ import PaymentCheckout from './pages/PaymentCheckout';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
 import PaymentsManagement from './pages/PaymentsManagement';
+import MessagesManagement from './pages/MessagesManagement';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -105,6 +106,7 @@ function App() {
           {/* Admin Routes */}
           <Route path="admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="backup-management" element={<AdminRoute><BackupManagement /></AdminRoute>} />
+          <Route path="messages" element={<AdminRoute><MessagesManagement /></AdminRoute>} />
           <Route path="sales-dashboard" element={<AdminRoute><SalesDashboard /></AdminRoute>} />
           <Route path="plans-management" element={<AdminRoute><PlansManagement /></AdminRoute>} />
           <Route path="leads-management" element={<AdminRoute><LeadsManagement /></AdminRoute>} />

@@ -22,6 +22,17 @@ export default function SalesManagement() {
     invoiceNumber: ''
   });
 
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return '-';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '-';
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return '-';
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -34,9 +45,33 @@ export default function SalesManagement() {
         schoolAPI.getAll(),
         planAPI.getAll()
       ]);
-      setSales(salesRes.data.data);
-      setSchools(schoolsRes.data.data);
-      setPlans(plansRes.data.data);
+      
+      // Mapear dados do Payment para Sale
+      const mappedSales = (salesRes.data.data || salesRes.data || []).map((payment: any) => ({
+        id: payment._id || payment.id,
+        _id: payment._id,
+        schoolId: payment.schoolId,
+        amount: payment.amount,
+        paymentMethod: payment.paymentMethod,
+        paymentStatus: payment.status === 'approved' ? 'paid' : 
+                       payment.status === 'pending' ? 'pending' :
+                       payment.status === 'rejected' ? 'failed' : 
+                       payment.status === 'refunded' ? 'refunded' : 'pending',
+        saleDate: payment.createdAt || payment.updatedAt,
+        school: {
+          id: payment.schoolId,
+          name: payment.schoolName || 'N/A',
+          email: payment.schoolEmail || ''
+        },
+        plan: {
+          id: payment.plan,
+          name: payment.plan ? payment.plan.charAt(0).toUpperCase() + payment.plan.slice(1) : 'N/A'
+        }
+      }));
+      
+      setSales(mappedSales);
+      setSchools(schoolsRes.data.data || schoolsRes.data || []);
+      setPlans(plansRes.data.data || plansRes.data || []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -187,7 +222,7 @@ export default function SalesManagement() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                    {new Date(sale.saleDate).toLocaleDateString('pt-BR')}
+                    {formatDate(sale.saleDate)}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">{sale.school?.name}</td>
@@ -206,7 +241,21 @@ export default function SalesManagement() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <div className="flex gap-2">
-                    <button onClick={() => { setFormData({ schoolId: sale.schoolId, planId: sale.planId || '', amount: sale.amount, paymentMethod: sale.paymentMethod, paymentStatus: sale.paymentStatus, saleDate: sale.saleDate.split('T')[0], notes: sale.notes || '', invoiceNumber: sale.invoiceNumber || '' }); setEditingId(sale.id); setShowForm(true); }} className="text-blue-600 hover:text-blue-800">
+                    <button onClick={() => { 
+                      const saleDateFormatted = sale.saleDate ? sale.saleDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                      setFormData({ 
+                        schoolId: sale.schoolId, 
+                        planId: sale.planId || '', 
+                        amount: sale.amount, 
+                        paymentMethod: sale.paymentMethod, 
+                        paymentStatus: sale.paymentStatus, 
+                        saleDate: saleDateFormatted, 
+                        notes: sale.notes || '', 
+                        invoiceNumber: sale.invoiceNumber || '' 
+                      }); 
+                      setEditingId(sale.id); 
+                      setShowForm(true); 
+                    }} className="text-blue-600 hover:text-blue-800">
                       <Edit className="h-4 w-4" />
                     </button>
                     <button onClick={() => handleDelete(sale.id)} className="text-red-600 hover:text-red-800">

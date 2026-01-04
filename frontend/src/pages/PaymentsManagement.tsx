@@ -4,7 +4,8 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 
 interface Payment {
-  _id: string;
+  _id?: string;
+  id?: string;
   schoolName: string;
   schoolEmail: string;
   plan: string;
@@ -267,8 +268,10 @@ export default function PaymentsManagement() {
                   </td>
                 </tr>
               ) : (
-                filteredPayments.map((payment) => (
-                  <tr key={payment._id} className="hover:bg-gray-50 transition-colors">
+                filteredPayments.map((payment) => {
+                  const paymentId = payment._id || payment.id || '';
+                  return (
+                  <tr key={paymentId} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
                         <div className="font-medium text-gray-900">{payment.schoolName}</div>
@@ -305,7 +308,7 @@ export default function PaymentsManagement() {
                       <div className="flex items-center gap-2">
                         {payment.status === 'pending' && (
                           <button
-                            onClick={() => handleApprovePayment(payment._id)}
+                            onClick={() => handleApprovePayment(paymentId)}
                             className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
                             title="Aprovar pagamento e ativar licença"
                           >
@@ -316,17 +319,20 @@ export default function PaymentsManagement() {
                         {payment.status === 'approved' && (
                           <span className="text-xs text-green-600 font-medium">✓ Aprovado</span>
                         )}
-                        <button
-                          onClick={() => handleDeletePayment(payment._id, payment.schoolName)}
-                          className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
-                          title="Excluir pagamento permanentemente"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {paymentId && (
+                          <button
+                            onClick={() => handleDeletePayment(paymentId, payment.schoolName)}
+                            className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+                            title="Excluir pagamento permanentemente"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

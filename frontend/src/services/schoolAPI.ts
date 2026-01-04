@@ -15,6 +15,6 @@ export interface School {
 }
 
 export const schoolAPI = {
-  getAll: () => api.get<{ data: School[] }>('/schools'),
-  getById: (id: string) => api.get<{ data: School }>(`/schools/${id}`)
+  getAll: () => api.get<{ data: School[] }>('/admin/schools'),
+  getById: (id: string) => api.get<{ data: School }>(`/admin/schools/${id}`)
 };

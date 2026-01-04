@@ -79,11 +79,11 @@ export const authAPI = {
 };
 
 export const schoolAPI = {
-  getAll: () => api.get('/schools'),
-  getById: (id: string) => api.get(`/schools/${id}`),
-  update: (id: string, data: any) => api.put(`/schools/${id}`, data),
+  getAll: () => api.get('/admin/schools'),
+  getById: (id: string) => api.get(`/admin/schools/${id}`),
+  update: (id: string, data: any) => api.put(`/admin/schools/${id}`, data),
   uploadLogo: (id: string, formData: FormData) => 
-    api.post(`/schools/${id}/logo`, formData, {
+    api.post(`/admin/schools/${id}/logo`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 };

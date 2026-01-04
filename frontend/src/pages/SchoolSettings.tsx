@@ -12,7 +12,7 @@ interface ResponsibleData {
 
 export default function SchoolSettings() {
   const [formData, setFormData] = useState({
-    schoolName: 'Minha Escola',
+    schoolName: '',
     workingDays: 5,
     academicYear: new Date().getFullYear()
   });
@@ -36,6 +36,13 @@ export default function SchoolSettings() {
       const response = await api.get('/schools/profile');
       if (response.data.success) {
         const data = response.data.data;
+        // Carregar dados da escola
+        setFormData({
+          schoolName: data.schoolName || '',
+          workingDays: data.workingDays || 5,
+          academicYear: data.academicYear || new Date().getFullYear()
+        });
+        // Carregar dados do responsável
         setResponsibleData({
           responsibleName: data.responsibleName || '',
           responsibleCPF: data.responsibleCPF || '',
@@ -48,9 +55,19 @@ export default function SchoolSettings() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Configurações salvas com sucesso!');
+    setLoading(true);
+    try {
+      await api.put('/schools/profile', formData);
+      toast.success('Configurações salvas com sucesso!');
+      await loadSchoolData();
+    } catch (error: any) {
+      console.error('Erro ao salvar:', error);
+      toast.error(error.response?.data?.message || 'Erro ao salvar configurações');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveResponsible = async () => {

@@ -403,7 +403,7 @@ const BackupManagement: React.FC = () => {
                         <div>
                           <p className="text-sm font-medium text-gray-900">{backup.schoolName}</p>
                           <p className="text-xs text-gray-500">
-                            {typeof backup.userId === 'object' ? backup.userId.email : 'N/A'}
+                            {typeof backup.userId === 'object' && backup.userId ? backup.userId.email : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -431,14 +431,14 @@ const BackupManagement: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => {
-                            const userId = typeof backup.userId === 'object' ? backup.userId._id : backup.userId;
+                            const userId = typeof backup.userId === 'object' && backup.userId ? backup.userId._id : backup.userId;
                             handleCreateClientBackup(userId, backup.schoolName);
                           }}
-                          disabled={actionLoading === `create-${typeof backup.userId === 'object' ? backup.userId._id : backup.userId}`}
+                          disabled={actionLoading === `create-${typeof backup.userId === 'object' && backup.userId ? backup.userId._id : backup.userId}`}
                           className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center gap-1"
                           title="Criar novo backup deste cliente"
                         >
-                          {actionLoading === `create-${typeof backup.userId === 'object' ? backup.userId._id : backup.userId}` ? (
+                          {actionLoading === `create-${typeof backup.userId === 'object' && backup.userId ? backup.userId._id : backup.userId}` ? (
                             <RefreshCw className="h-4 w-4 animate-spin" />
                           ) : (
                             <Download className="h-4 w-4" />
