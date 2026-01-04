@@ -8,6 +8,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 
@@ -15,6 +18,7 @@ dotenv.config();
 
 import connectDB from './config/database';
 import authRoutes from './routes/auth.routes';
+import schoolRoutes from './routes/school.routes';
 import teacherRoutes from './routes/teacher.routes';
 import subjectRoutes from './routes/subject.routes';
 import timetableRoutes from './routes/timetable.routes';
@@ -42,15 +46,65 @@ import messageRoutes from './routes/message.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { startNotificationCron } from './services/notification.cron';
 import { startCalendarAlertsCron } from './services/calendar.alerts.cron';
+import { COPYRIGHT, SECURITY_INFO } from './config/copyright';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// 🔥 DESABILITAR ETAG - Impede cache 304
+app.set('etag', false);
+
 // Conectar ao banco de dados
 connectDB();
 
-// Middleware
-app.use(helmet());
+// ============================================
+// SEGURANÇA - PROTEÇÃO CONTRA VULNERABILIDADES
+// ============================================
+
+// Helmet: Headers HTTP seguros
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Rate Limiting: Previne ataques de força bruta
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // Limite de 100 requisições por IP
+  message: 'Muitas requisições deste IP, tente novamente em 15 minutos.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate Limit para rotas de autenticação (mais restritivo)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Apenas 5 tentativas de login
+  message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
+  skipSuccessfulRequests: true, // Não conta requisições bem-sucedidas
+});
+
+// Aplicar rate limiting global
+app.use(limiter);
+
+// Sanitização contra NoSQL Injection
+app.use(mongoSanitize({
+  replaceWith: '_', // Substitui caracteres proibidos
+}));
+
+// Proteção contra HPP (HTTP Parameter Pollution)
+app.use(hpp());
+
+// ============================================
+// MIDDLEWARES
+// ============================================
 
 // CORS configuration
 const allowedOrigins = [
@@ -68,11 +122,25 @@ app.use(cors({
 }));
 
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' })); // Aumentar limite para horários grandes
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 🔥 MIDDLEWARE DE DEBUG - SEMPRE EXECUTA
+app.use((req, res, next) => {
+  if (req.path.includes('/admin/schools') && req.method === 'GET') {
+    console.log('\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+    console.log('🚨 MIDDLEWARE: Requisição para /admin/schools');
+    console.log('🚨 Path completo:', req.path);
+    console.log('🚨 URL completa:', req.url);
+    console.log('🚨 Método:', req.method);
+    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
+  }
+  next();
+});
 
 // Rotas
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes); // Rate limit especial para autenticação
+app.use('/api/schools', schoolRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/schools', adminSchoolsRoutes);
 app.use('/api/credits', creditsRoutes);
@@ -109,13 +177,15 @@ app.use(errorHandler);
 const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   
+  // Exibir copyright e informações de segurança
+  COPYRIGHT.display();
+  SECURITY_INFO.display();
+  
   // Iniciar cronjob de notificações
   startNotificationCron();
   
   // Iniciar cronjob de alertas de calendário
   startCalendarAlertsCron();
-  
-  console.log(`© 2025 Wander Pires Silva Coelho - Todos os direitos reservados`);
 });
 
 // Graceful shutdown
