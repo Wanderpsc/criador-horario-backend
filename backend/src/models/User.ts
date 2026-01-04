@@ -6,7 +6,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'admin' | 'school';
+  role: 'admin' | 'super-admin' | 'school';
   
   // Dados da instituição
   schoolName?: string;
@@ -36,7 +36,9 @@ export interface IUser extends Document {
   // Licenciamento
   school?: mongoose.Types.ObjectId; // ID da escola (para relacionamento)
   isActive?: boolean; // Status ativo/inativo
+  licenseActive?: boolean; // Licença está ativa
   licenseKey?: string;
+  plan?: string; // Plano contratado (basico/profissional)
   selectedPlan?: string; // ID do plano selecionado
   paymentStatus: 'pending' | 'paid' | 'expired' | 'cancelled';
   approvedByAdmin: boolean;
@@ -71,7 +73,7 @@ const userSchema = new Schema<IUser>(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'school'], default: 'school' },
+    role: { type: String, enum: ['admin', 'super-admin', 'school'], default: 'school' },
     
     // Dados da instituição
     schoolName: { type: String },
@@ -101,7 +103,9 @@ const userSchema = new Schema<IUser>(
     // Licenciamento
     school: { type: Schema.Types.ObjectId, ref: 'User' },
     isActive: { type: Boolean, default: true },
+    licenseActive: { type: Boolean, default: false },
     licenseKey: { type: String },
+    plan: { type: String },
     selectedPlan: { type: String },
     paymentStatus: { type: String, enum: ['pending', 'paid', 'expired', 'cancelled'], default: 'pending' },
     approvedByAdmin: { type: Boolean, default: false },
