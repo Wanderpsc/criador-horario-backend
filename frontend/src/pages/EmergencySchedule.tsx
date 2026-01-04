@@ -1083,7 +1083,7 @@ export default function EmergencySchedule() {
     // Verificar se cada janela tem informação do professor ausente
     vacantSlots.forEach((slot, index) => {
       console.log(`   Janela ${index + 1}:`, {
-        turma: `${slot.gradeName} - ${slot.className}`,
+        turma: slot.className,
         periodo: slot.period,
         absentTeacherId: slot.absentTeacherId,
         absentTeacherName: slot.absentTeacherName,
@@ -1199,11 +1199,7 @@ export default function EmergencySchedule() {
     setAbsentTeacherIds(schedule.absentTeacherIds || []);
     setReason(schedule.reason || '');
     
-    // 🎯 Definir automaticamente o tipo de horário salvo
-    if (schedule.scheduleType) {
-      setScheduleType(schedule.scheduleType);
-      console.log('✅ Tipo de horário definido automaticamente:', schedule.scheduleType);
-    }
+    // scheduleType removido - não existe no state
     
     console.log('📋 Original slots do horário salvo:', schedule.originalSlots?.length);
     console.log('⚡ Emergency slots do horário salvo:', schedule.emergencySlots?.length);
@@ -1316,7 +1312,7 @@ export default function EmergencySchedule() {
         // Invalidar cache para recarregar dados frescos
         queryClient.invalidateQueries({ queryKey: ['generatedTimetables'] });
         
-        toast.info('Horário já havia sido excluído anteriormente');
+        toast.success('Horário já havia sido excluído anteriormente');
       } else {
         toast.error(error.response?.data?.message || 'Erro ao excluir horário');
       }

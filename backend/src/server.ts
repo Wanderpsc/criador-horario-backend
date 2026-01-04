@@ -181,8 +181,13 @@ app.use('/api/payments', webhookRoutes);
 app.use('/api/messages', messageRoutes);
 
 // Rota de health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Sistema Criador de Horário de Aula Escolar - API funcionando', timestamp: new Date().toISOString() });
+});
+
+// Health check sem /api para verificação do Render
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Sistema Criador de Horário de Aula Escolar - API funcionando' });
+  res.json({ status: 'OK', message: 'Sistema funcionando', timestamp: new Date().toISOString() });
 });
 
 // Error handler
