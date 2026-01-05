@@ -1,0 +1,1616 @@
+{
+  "classes": [
+    {
+      "id": "69481793d1c0d7cf40718865",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69480fd4fcdf1265c9cb61ea",
+      "grade": {
+        "id": "69480fd4fcdf1265c9cb61ea",
+        "name": "9º Ano",
+        "level": "Fundamental II"
+      },
+      "name": "EFR-FUND IIANOS FINAIS INT-9º ANO-I-A",
+      "shift": "full",
+      "capacity": 30,
+      "subjectIds": [
+        "6949e5dd702078965405a06d",
+        "694833158f31664565b2215d",
+        "6949e583702078965405a065",
+        "694833418f31664565b22166",
+        "694831b08f31664565b22121",
+        "694835608f31664565b221c6",
+        "694835808f31664565b221cc",
+        "6948344e8f31664565b22199",
+        "6948325f8f31664565b2213c",
+        "6948351e8f31664565b221bd",
+        "694832e78f31664565b22154",
+        "694833a88f31664565b2217b",
+        "694834ba8f31664565b221ae",
+        "6948352f8f31664565b221c0",
+        "69489d77286bd70806be3371",
+        "694ed08f1659703ca38a1f46"
+      ],
+      "subjectWeeklyHours": {
+        "694835a48f31664565b221d2": 2,
+        "6949e5dd702078965405a06d": 2,
+        "694833158f31664565b2215d": 2,
+        "6949e583702078965405a065": 2,
+        "694833418f31664565b22166": 2,
+        "694831b08f31664565b22121": 2,
+        "694835c08f31664565b221d8": 2,
+        "694835608f31664565b221c6": 2,
+        "694835808f31664565b221cc": 2,
+        "6948344e8f31664565b22199": 2,
+        "6948325f8f31664565b2213c": 2,
+        "6948351e8f31664565b221bd": 2,
+        "694832738f31664565b2213f": 2,
+        "694832e78f31664565b22154": 2,
+        "694833278f31664565b22160": 2,
+        "694833a88f31664565b2217b": 2,
+        "694834ba8f31664565b221ae": 2,
+        "6948352f8f31664565b221c0": 2,
+        "6948356f8f31664565b221c9": 2,
+        "694835b18f31664565b221d5": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ed08f1659703ca38a1f46": 3,
+        "694ed0c01659703ca38a1fe3": 14,
+        "6948348d8f31664565b221a5": 2
+      },
+      "subjects": [
+        {
+          "id": "6949e5dd702078965405a06d",
+          "name": "FÍSICA (BASE)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833158f31664565b2215d",
+          "name": "RECOMPOSIÇÃO DE MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6949e583702078965405a065",
+          "name": "ELETIVA (ESPORTE/ CULTURA/ ROBÓTICA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833418f31664565b22166",
+          "name": "RECOMPOSIÇÃO DE LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831b08f31664565b22121",
+          "name": "MUSICA/DANÇA/TEATRO/ESPORTE",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948344e8f31664565b22199",
+          "name": "MATEMÁTICA/ACOMPANHAMENTO PEDAGÓGICO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832e78f31664565b22154",
+          "name": "HISTÓRIA E CULTURA AFRO-BRASILEIRA E INDÍGENA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833a88f31664565b2217b",
+          "name": "PROJETO INTERDISCIPLINAR",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834ba8f31664565b221ae",
+          "name": "PROJETO DE VIDA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ed08f1659703ca38a1f46",
+          "name": "ENSINO RELIGIOSO",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:51:47.749Z",
+      "updatedAt": "2026-01-04T20:27:23.658Z"
+    },
+    {
+      "id": "6949b9a50ee55f2aa4956a7f",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69480fd4fcdf1265c9cb61ea",
+      "grade": {
+        "id": "69480fd4fcdf1265c9cb61ea",
+        "name": "9º Ano",
+        "level": "Fundamental II"
+      },
+      "name": "EFR-FUND IIANOS FINAIS INT-9º ANO-I-B",
+      "shift": "full",
+      "capacity": 30,
+      "subjectIds": [
+        "694835908f31664565b221cf",
+        "694835608f31664565b221c6",
+        "6948325f8f31664565b2213c",
+        "694831b08f31664565b22121",
+        "6948344e8f31664565b22199",
+        "6948351e8f31664565b221bd",
+        "694833a88f31664565b2217b",
+        "6948352f8f31664565b221c0",
+        "69489d77286bd70806be3371",
+        "694ed08f1659703ca38a1f46"
+      ],
+      "subjectWeeklyHours": {
+        "694833278f31664565b22160": 2,
+        "6948348d8f31664565b221a5": 2,
+        "694835908f31664565b221cf": 2,
+        "694835608f31664565b221c6": 2,
+        "6948325f8f31664565b2213c": 2,
+        "694835b18f31664565b221d5": 2,
+        "694831b08f31664565b22121": 2,
+        "694835c08f31664565b221d8": 2,
+        "6948344e8f31664565b22199": 2,
+        "6948351e8f31664565b221bd": 2,
+        "694833a88f31664565b2217b": 2,
+        "6948352f8f31664565b221c0": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ed08f1659703ca38a1f46": 3,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "694835908f31664565b221cf",
+          "name": "CIÊNCIAS NATURAIS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831b08f31664565b22121",
+          "name": "MUSICA/DANÇA/TEATRO/ESPORTE",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948344e8f31664565b22199",
+          "name": "MATEMÁTICA/ACOMPANHAMENTO PEDAGÓGICO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833a88f31664565b2217b",
+          "name": "PROJETO INTERDISCIPLINAR",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ed08f1659703ca38a1f46",
+          "name": "ENSINO RELIGIOSO",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-22T21:35:33.625Z",
+      "updatedAt": "2026-01-04T20:28:21.287Z"
+    },
+    {
+      "id": "694814eca3fd5c6752dbabbb",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69480fecfcdf1265c9cb61ee",
+      "grade": {
+        "id": "69480fecfcdf1265c9cb61ee",
+        "name": "1ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMRINTEGRAL-3ª SERIE-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [],
+      "subjectWeeklyHours": {},
+      "subjects": [],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:40:28.016Z",
+      "updatedAt": "2026-01-05T11:24:14.058Z"
+    },
+    {
+      "id": "69481428a3fd5c6752dbab9b",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69480fecfcdf1265c9cb61ee",
+      "grade": {
+        "id": "69480fecfcdf1265c9cb61ee",
+        "name": "1ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTP ADMI - EMPR - 1ª SERIE-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "694830ac8f31664565b22106",
+        "694831288f31664565b22112",
+        "6949e583702078965405a065",
+        "6949e5dd702078965405a06d",
+        "694835608f31664565b221c6",
+        "6948343f8f31664565b22196",
+        "694835808f31664565b221cc",
+        "6948351e8f31664565b221bd",
+        "6948325f8f31664565b2213c",
+        "694832198f31664565b22130",
+        "6948322b8f31664565b22133",
+        "694832c48f31664565b2214e",
+        "694833098f31664565b2215a",
+        "694833158f31664565b2215d",
+        "694833418f31664565b22166",
+        "6948352f8f31664565b221c0",
+        "69489d77286bd70806be3371",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "694830ac8f31664565b22106": 2,
+        "69498fc85234c826e146379a": 2,
+        "694831288f31664565b22112": 2,
+        "6949e583702078965405a065": 2,
+        "6949e5dd702078965405a06d": 2,
+        "694835c08f31664565b221d8": 2,
+        "694831508f31664565b22115": 2,
+        "6948353d8f31664565b221c3": 2,
+        "694835608f31664565b221c6": 2,
+        "6948348d8f31664565b221a5": 2,
+        "694832738f31664565b2213f": 2,
+        "6948343f8f31664565b22196": 2,
+        "694835808f31664565b221cc": 2,
+        "6948351e8f31664565b221bd": 2,
+        "6948325f8f31664565b2213c": 2,
+        "694835b18f31664565b221d5": 2,
+        "694832198f31664565b22130": 2,
+        "6948322b8f31664565b22133": 2,
+        "694832c48f31664565b2214e": 2,
+        "694833098f31664565b2215a": 2,
+        "694833158f31664565b2215d": 2,
+        "694833418f31664565b22166": 2,
+        "6948352f8f31664565b221c0": 2,
+        "6948356f8f31664565b221c9": 2,
+        "694835a48f31664565b221d2": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ece7d1659703ca38a1bff": 2,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "694830ac8f31664565b22106",
+          "name": "EDUCAÇÃO FINANCEIRA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831288f31664565b22112",
+          "name": "FISICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6949e583702078965405a065",
+          "name": "ELETIVA (ESPORTE/ CULTURA/ ROBÓTICA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6949e5dd702078965405a06d",
+          "name": "FÍSICA (BASE)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948343f8f31664565b22196",
+          "name": "QUIMICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832198f31664565b22130",
+          "name": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948322b8f31664565b22133",
+          "name": "LÍNGUA INGLESA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832c48f31664565b2214e",
+          "name": "ADMINISTRAÇÃO DE BANCO DE DADOS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833098f31664565b2215a",
+          "name": "ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBOTICA(ELETIVA OBRIGATORIA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833158f31664565b2215d",
+          "name": "RECOMPOSIÇÃO DE MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833418f31664565b22166",
+          "name": "RECOMPOSIÇÃO DE LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:37:12.23Z",
+      "updatedAt": "2026-01-04T21:22:13.922Z"
+    },
+    {
+      "id": "6948144ea3fd5c6752dbabab",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69480fecfcdf1265c9cb61ee",
+      "grade": {
+        "id": "69480fecfcdf1265c9cb61ee",
+        "name": "1ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTP DES SIST -  1ª SERIE-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "694833d98f31664565b22184",
+        "6948338a8f31664565b22175",
+        "694833fc8f31664565b2218a",
+        "694834c98f31664565b221b1",
+        "694834198f31664565b22190",
+        "6948345e8f31664565b2219c",
+        "6948351e8f31664565b221bd",
+        "694830bd8f31664565b22109",
+        "694831908f31664565b2211b",
+        "694831f68f31664565b2212d",
+        "694832418f31664565b22136",
+        "694832508f31664565b22139",
+        "6948325f8f31664565b2213c",
+        "6948335b8f31664565b2216c",
+        "6948336b8f31664565b2216f",
+        "694833c78f31664565b22181",
+        "6948349f8f31664565b221a8",
+        "6948352f8f31664565b221c0",
+        "694835608f31664565b221c6",
+        "694835808f31664565b221cc",
+        "69489d77286bd70806be3371",
+        "694ed24b1659703ca38a232a",
+        "694ed2bd1659703ca38a246c",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "694833d98f31664565b22184": 2,
+        "6948338a8f31664565b22175": 2,
+        "694833fc8f31664565b2218a": 2,
+        "694834c98f31664565b221b1": 2,
+        "694834198f31664565b22190": 2,
+        "6948345e8f31664565b2219c": 2,
+        "6948351e8f31664565b221bd": 2,
+        "694830bd8f31664565b22109": 2,
+        "694831908f31664565b2211b": 2,
+        "694831f68f31664565b2212d": 2,
+        "694832418f31664565b22136": 2,
+        "694832508f31664565b22139": 2,
+        "6948325f8f31664565b2213c": 2,
+        "694832738f31664565b2213f": 2,
+        "6948335b8f31664565b2216c": 2,
+        "6948336b8f31664565b2216f": 2,
+        "694833c78f31664565b22181": 2,
+        "6948349f8f31664565b221a8": 2,
+        "6948352f8f31664565b221c0": 2,
+        "694835608f31664565b221c6": 2,
+        "6948356f8f31664565b221c9": 2,
+        "694835808f31664565b221cc": 2,
+        "694835a48f31664565b221d2": 2,
+        "694835b18f31664565b221d5": 2,
+        "694835c08f31664565b221d8": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ed0c01659703ca38a1fe3": 14,
+        "694ed24b1659703ca38a232a": 1,
+        "694ed2bd1659703ca38a246c": 10,
+        "694ece7d1659703ca38a1bff": 2
+      },
+      "subjects": [
+        {
+          "id": "694833d98f31664565b22184",
+          "name": "MÉTODOS ÁGEIS DE DESENVOLVIMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948338a8f31664565b22175",
+          "name": "TECNOLOGIAS, AVA E MÉTODOS DE APRENDIZAGEM",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833fc8f31664565b2218a",
+          "name": "FUNDAMENTOS DA TECNOLOGIA DA INFORMAÇÃO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834c98f31664565b221b1",
+          "name": "MENTORIAS TEC",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834198f31664565b22190",
+          "name": "FUNDAMENTOS DE BANCO DE DADOS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948345e8f31664565b2219c",
+          "name": "PENSAMENTO COMPUTACIONAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694830bd8f31664565b22109",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - EDUCAÇÃO FINANCEIRA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831908f31664565b2211b",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - PROJETO DE VIDA/EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831f68f31664565b2212d",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MATEMÁTICA/RECOMPOSIÇÃO DA APRENDIZAGEM",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832418f31664565b22136",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBÓTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832508f31664565b22139",
+          "name": "FUNDAMENTOS DE REDES DE COMPUTADORES",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948335b8f31664565b2216c",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA INGLESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948336b8f31664565b2216f",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA PORTUGUESA/RECOMPOSIÇÃO DA APRENDIZAGEM",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833c78f31664565b22181",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MONITORIA / HORÁRIO DE ESTUDO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948349f8f31664565b221a8",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA ESPANHOLA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ed24b1659703ca38a232a",
+          "name": "FUNDAMENTOS DA ADMINISTRAÇÃO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694ed2bd1659703ca38a246c",
+          "name": "ARQUITETURA DE COMPUTADORES",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:37:50.881Z",
+      "updatedAt": "2026-01-04T21:23:49.732Z"
+    },
+    {
+      "id": "695ad9cf63ff96d19338d714",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69480fecfcdf1265c9cb61ee",
+      "grade": {
+        "id": "69480fecfcdf1265c9cb61ee",
+        "name": "1ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTP FARM -  1ª SERIE-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [],
+      "subjectWeeklyHours": {},
+      "subjects": [],
+      "isActive": true,
+      "createdAt": "2026-01-04T21:21:19.549Z",
+      "updatedAt": "2026-01-04T21:24:01.547Z"
+    },
+    {
+      "id": "69481509a3fd5c6752dbabc4",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69481009fcdf1265c9cb61f2",
+      "grade": {
+        "id": "69481009fcdf1265c9cb61f2",
+        "name": "2ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "694831c38f31664565b22124",
+        "694831788f31664565b22118",
+        "694833348f31664565b22163",
+        "694834d58f31664565b221b4",
+        "694834f28f31664565b221b7",
+        "694832c48f31664565b2214e",
+        "6948351e8f31664565b221bd",
+        "694831a18f31664565b2211e",
+        "694831e38f31664565b2212a",
+        "694832958f31664565b22145",
+        "694832b38f31664565b2214b",
+        "694832d08f31664565b22151",
+        "6948334e8f31664565b22169",
+        "6948337b8f31664565b22172",
+        "6948340a8f31664565b2218d",
+        "6948346c8f31664565b2219f",
+        "6948347f8f31664565b221a2",
+        "6948352f8f31664565b221c0",
+        "694835608f31664565b221c6",
+        "694835808f31664565b221cc",
+        "69489d77286bd70806be3371",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "694831c38f31664565b22124": 2,
+        "694831788f31664565b22118": 2,
+        "694833348f31664565b22163": 2,
+        "694834d58f31664565b221b4": 2,
+        "694834f28f31664565b221b7": 2,
+        "694832a58f31664565b22148": 2,
+        "694832c48f31664565b2214e": 2,
+        "6948351e8f31664565b221bd": 2,
+        "694831a18f31664565b2211e": 2,
+        "694831e38f31664565b2212a": 2,
+        "694832958f31664565b22145": 2,
+        "694832b38f31664565b2214b": 2,
+        "694832d08f31664565b22151": 2,
+        "6948334e8f31664565b22169": 2,
+        "6948337b8f31664565b22172": 2,
+        "6948340a8f31664565b2218d": 2,
+        "6948346c8f31664565b2219f": 2,
+        "6948347f8f31664565b221a2": 2,
+        "6948352f8f31664565b221c0": 2,
+        "6948353d8f31664565b221c3": 2,
+        "694835608f31664565b221c6": 2,
+        "6948356f8f31664565b221c9": 2,
+        "694835808f31664565b221cc": 2,
+        "694835a48f31664565b221d2": 2,
+        "694835b18f31664565b221d5": 2,
+        "694835c08f31664565b221d8": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ece7d1659703ca38a1bff": 2,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "694831c38f31664565b22124",
+          "name": "ORIENTAÇÃO PROFISSIONAL E EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831788f31664565b22118",
+          "name": "PROGRAMAÇÃO WEB FRONT-END",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833348f31664565b22163",
+          "name": "PROGRAMAÇÃO ORIENTADA À OBJETOS - POO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834d58f31664565b221b4",
+          "name": "FUNDAMENTOS DE UI / UX OU IHC",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834f28f31664565b221b7",
+          "name": "PROGRAMACAO ESTRUTURADA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832c48f31664565b2214e",
+          "name": "ADMINISTRAÇÃO DE BANCO DE DADOS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831a18f31664565b2211e",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - CIÊNCIAS DA NATUREZA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831e38f31664565b2212a",
+          "name": "PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832958f31664565b22145",
+          "name": "PROGRAMAÇÃO WEB BACK-END",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832b38f31664565b2214b",
+          "name": "ATIVIDADES INTEGRADORAS - ESPORTE INTEGRADO A EDUCAÇÃO FÍSICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832d08f31664565b22151",
+          "name": "PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948334e8f31664565b22169",
+          "name": "ATIVIDADES INTEGRADORAS - MONITORIA / HORÁRIO DE ESTUDO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948337b8f31664565b22172",
+          "name": "ATIVIDADES INTEGRADORAS - CULTURA INTEGRADA A ARTE",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948340a8f31664565b2218d",
+          "name": "ATIVIDADES INTEGRADORAS - EDUCAÇÃO DO TRÂNSITO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948346c8f31664565b2219f",
+          "name": "PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948347f8f31664565b221a2",
+          "name": "MANUTENÇÃO DE SISTEMAS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:40:57.041Z",
+      "updatedAt": "2026-01-04T20:29:54.429Z"
+    },
+    {
+      "id": "6949c593b30f8044bfd98dda",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69481009fcdf1265c9cb61f2",
+      "grade": {
+        "id": "69481009fcdf1265c9cb61f2",
+        "name": "2ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTPDES-SIS-2ª SERIE - INTEGRAL-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "694830ac8f31664565b22106",
+        "694830e88f31664565b2210c",
+        "6949e583702078965405a065",
+        "694831288f31664565b22112",
+        "6949e5dd702078965405a06d",
+        "6948322b8f31664565b22133",
+        "694833418f31664565b22166",
+        "6948351e8f31664565b221bd",
+        "6948343f8f31664565b22196",
+        "694835808f31664565b221cc",
+        "694835608f31664565b221c6",
+        "694832198f31664565b22130",
+        "6948325f8f31664565b2213c",
+        "694833098f31664565b2215a",
+        "694833158f31664565b2215d",
+        "6948352f8f31664565b221c0",
+        "69489d77286bd70806be3371",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "694830ac8f31664565b22106": 2,
+        "69498fc85234c826e146379a": 2,
+        "694830e88f31664565b2210c": 2,
+        "6949e583702078965405a065": 2,
+        "694831288f31664565b22112": 2,
+        "6949e5dd702078965405a06d": 2,
+        "694835c08f31664565b221d8": 2,
+        "694831508f31664565b22115": 2,
+        "694835a48f31664565b221d2": 2,
+        "6948353d8f31664565b221c3": 2,
+        "6948322b8f31664565b22133": 2,
+        "6948348d8f31664565b221a5": 2,
+        "694833418f31664565b22166": 2,
+        "6948351e8f31664565b221bd": 2,
+        "694832738f31664565b2213f": 2,
+        "6948343f8f31664565b22196": 2,
+        "694835808f31664565b221cc": 2,
+        "694835608f31664565b221c6": 2,
+        "694835b18f31664565b221d5": 2,
+        "694832198f31664565b22130": 2,
+        "6948325f8f31664565b2213c": 2,
+        "694833098f31664565b2215a": 2,
+        "694833158f31664565b2215d": 2,
+        "6948352f8f31664565b221c0": 2,
+        "6948356f8f31664565b221c9": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ece7d1659703ca38a1bff": 2,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "694830ac8f31664565b22106",
+          "name": "EDUCAÇÃO FINANCEIRA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694830e88f31664565b2210c",
+          "name": "ATIVIDADES INTEGRADORAS - INTELIGÊNCIA ARTIFICIAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6949e583702078965405a065",
+          "name": "ELETIVA (ESPORTE/ CULTURA/ ROBÓTICA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831288f31664565b22112",
+          "name": "FISICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6949e5dd702078965405a06d",
+          "name": "FÍSICA (BASE)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948322b8f31664565b22133",
+          "name": "LÍNGUA INGLESA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833418f31664565b22166",
+          "name": "RECOMPOSIÇÃO DE LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948343f8f31664565b22196",
+          "name": "QUIMICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832198f31664565b22130",
+          "name": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833098f31664565b2215a",
+          "name": "ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBOTICA(ELETIVA OBRIGATORIA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833158f31664565b2215d",
+          "name": "RECOMPOSIÇÃO DE MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-22T22:26:27.814Z",
+      "updatedAt": "2026-01-04T20:30:24.711Z"
+    },
+    {
+      "id": "69481571a3fd5c6752dbabe6",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69481019fcdf1265c9cb61f6",
+      "grade": {
+        "id": "69481019fcdf1265c9cb61f6",
+        "name": "3ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "6949e5dd702078965405a06d",
+        "694831288f31664565b22112",
+        "6948351e8f31664565b221bd",
+        "6948343f8f31664565b22196",
+        "694835808f31664565b221cc",
+        "694832198f31664565b22130",
+        "6948322b8f31664565b22133",
+        "6948325f8f31664565b2213c",
+        "694833098f31664565b2215a",
+        "694833158f31664565b2215d",
+        "694833418f31664565b22166",
+        "6948352f8f31664565b221c0",
+        "694835608f31664565b221c6",
+        "69489d77286bd70806be3371",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "6949e5dd702078965405a06d": 2,
+        "694831288f31664565b22112": 2,
+        "694835c08f31664565b221d8": 2,
+        "694831508f31664565b22115": 2,
+        "6948348d8f31664565b221a5": 2,
+        "694835a48f31664565b221d2": 2,
+        "6948353d8f31664565b221c3": 2,
+        "6948351e8f31664565b221bd": 2,
+        "6948343f8f31664565b22196": 2,
+        "694835808f31664565b221cc": 2,
+        "694835b18f31664565b221d5": 2,
+        "694832198f31664565b22130": 2,
+        "6948322b8f31664565b22133": 2,
+        "6948325f8f31664565b2213c": 2,
+        "694832738f31664565b2213f": 2,
+        "694833098f31664565b2215a": 2,
+        "694833158f31664565b2215d": 2,
+        "694833418f31664565b22166": 2,
+        "6948352f8f31664565b221c0": 2,
+        "694835608f31664565b221c6": 2,
+        "6948356f8f31664565b221c9": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ece7d1659703ca38a1bff": 2,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "6949e5dd702078965405a06d",
+          "name": "FÍSICA (BASE)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831288f31664565b22112",
+          "name": "FISICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948343f8f31664565b22196",
+          "name": "QUIMICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832198f31664565b22130",
+          "name": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948322b8f31664565b22133",
+          "name": "LÍNGUA INGLESA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833098f31664565b2215a",
+          "name": "ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBOTICA(ELETIVA OBRIGATORIA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833158f31664565b2215d",
+          "name": "RECOMPOSIÇÃO DE MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833418f31664565b22166",
+          "name": "RECOMPOSIÇÃO DE LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:42:41.932Z",
+      "updatedAt": "2026-01-04T20:31:29.693Z"
+    },
+    {
+      "id": "69481554a3fd5c6752dbabdd",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69481019fcdf1265c9cb61f6",
+      "grade": {
+        "id": "69481019fcdf1265c9cb61f6",
+        "name": "3ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "6949e5dd702078965405a06d",
+        "694831288f31664565b22112",
+        "6948351e8f31664565b221bd",
+        "6948322b8f31664565b22133",
+        "6948343f8f31664565b22196",
+        "694835808f31664565b221cc",
+        "694832198f31664565b22130",
+        "6948325f8f31664565b2213c",
+        "694833098f31664565b2215a",
+        "694833158f31664565b2215d",
+        "694833418f31664565b22166",
+        "6948352f8f31664565b221c0",
+        "694835608f31664565b221c6",
+        "69489d77286bd70806be3371",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "6949e5dd702078965405a06d": 2,
+        "694831288f31664565b22112": 2,
+        "694835c08f31664565b221d8": 2,
+        "694831508f31664565b22115": 2,
+        "694835a48f31664565b221d2": 2,
+        "6948353d8f31664565b221c3": 2,
+        "6948351e8f31664565b221bd": 2,
+        "6948322b8f31664565b22133": 2,
+        "6948343f8f31664565b22196": 2,
+        "694835808f31664565b221cc": 2,
+        "694835b18f31664565b221d5": 2,
+        "6948348d8f31664565b221a5": 2,
+        "694832198f31664565b22130": 2,
+        "6948325f8f31664565b2213c": 2,
+        "694832738f31664565b2213f": 2,
+        "694833098f31664565b2215a": 2,
+        "694833158f31664565b2215d": 2,
+        "694833418f31664565b22166": 2,
+        "6948352f8f31664565b221c0": 2,
+        "694835608f31664565b221c6": 2,
+        "6948356f8f31664565b221c9": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ece7d1659703ca38a1bff": 2,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "6949e5dd702078965405a06d",
+          "name": "FÍSICA (BASE)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831288f31664565b22112",
+          "name": "FISICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948322b8f31664565b22133",
+          "name": "LÍNGUA INGLESA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948343f8f31664565b22196",
+          "name": "QUIMICA - APROFUNDAMENTO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832198f31664565b22130",
+          "name": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948325f8f31664565b2213c",
+          "name": "LEITURA E PRODUÇÃO TEXTUAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833098f31664565b2215a",
+          "name": "ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBOTICA(ELETIVA OBRIGATORIA)",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833158f31664565b2215d",
+          "name": "RECOMPOSIÇÃO DE MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833418f31664565b22166",
+          "name": "RECOMPOSIÇÃO DE LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:42:12.56Z",
+      "updatedAt": "2026-01-04T20:31:49.007Z"
+    },
+    {
+      "id": "6948153aa3fd5c6752dbabd4",
+      "userId": "6948aa5c54a857ec2cf21a84",
+      "gradeId": "69481009fcdf1265c9cb61f2",
+      "grade": {
+        "id": "69481009fcdf1265c9cb61f2",
+        "name": "2ª Série",
+        "level": "Ensino Médio"
+      },
+      "name": "EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A",
+      "shift": "full",
+      "capacity": 40,
+      "subjectIds": [
+        "694831c38f31664565b22124",
+        "694834d58f31664565b221b4",
+        "694834f28f31664565b221b7",
+        "6948351e8f31664565b221bd",
+        "694830e88f31664565b2210c",
+        "694830bd8f31664565b22109",
+        "694832958f31664565b22145",
+        "694831a18f31664565b2211e",
+        "694831e38f31664565b2212a",
+        "694832b38f31664565b2214b",
+        "694832c48f31664565b2214e",
+        "694832d08f31664565b22151",
+        "694833348f31664565b22163",
+        "6948334e8f31664565b22169",
+        "6948337b8f31664565b22172",
+        "6948340a8f31664565b2218d",
+        "6948346c8f31664565b2219f",
+        "6948347f8f31664565b221a2",
+        "6948352f8f31664565b221c0",
+        "694835608f31664565b221c6",
+        "694835808f31664565b221cc",
+        "69489d77286bd70806be3371",
+        "694ece7d1659703ca38a1bff"
+      ],
+      "subjectWeeklyHours": {
+        "694831c38f31664565b22124": 2,
+        "694834d58f31664565b221b4": 2,
+        "694834f28f31664565b221b7": 2,
+        "694832a58f31664565b22148": 2,
+        "6948351e8f31664565b221bd": 2,
+        "694830e88f31664565b2210c": 2,
+        "694830bd8f31664565b22109": 2,
+        "694832958f31664565b22145": 2,
+        "694831a18f31664565b2211e": 2,
+        "694831e38f31664565b2212a": 2,
+        "694832b38f31664565b2214b": 2,
+        "694832c48f31664565b2214e": 2,
+        "694832d08f31664565b22151": 2,
+        "694833348f31664565b22163": 2,
+        "6948334e8f31664565b22169": 2,
+        "6948337b8f31664565b22172": 2,
+        "6948340a8f31664565b2218d": 2,
+        "6948346c8f31664565b2219f": 2,
+        "6948347f8f31664565b221a2": 2,
+        "6948352f8f31664565b221c0": 2,
+        "6948353d8f31664565b221c3": 2,
+        "694835608f31664565b221c6": 2,
+        "6948356f8f31664565b221c9": 2,
+        "694835808f31664565b221cc": 2,
+        "694835a48f31664565b221d2": 2,
+        "694835b18f31664565b221d5": 2,
+        "694835c08f31664565b221d8": 2,
+        "69489d77286bd70806be3371": 2,
+        "694ece681659703ca38a1b66": 8,
+        "694ece7d1659703ca38a1bff": 2,
+        "694ed0c01659703ca38a1fe3": 14
+      },
+      "subjects": [
+        {
+          "id": "694831c38f31664565b22124",
+          "name": "ORIENTAÇÃO PROFISSIONAL E EMPREENDEDORISMO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834d58f31664565b221b4",
+          "name": "FUNDAMENTOS DE UI / UX OU IHC",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694834f28f31664565b221b7",
+          "name": "PROGRAMACAO ESTRUTURADA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948351e8f31664565b221bd",
+          "name": "LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694830e88f31664565b2210c",
+          "name": "ATIVIDADES INTEGRADORAS - INTELIGÊNCIA ARTIFICIAL",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694830bd8f31664565b22109",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - EDUCAÇÃO FINANCEIRA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832958f31664565b22145",
+          "name": "PROGRAMAÇÃO WEB BACK-END",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831a18f31664565b2211e",
+          "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - CIÊNCIAS DA NATUREZA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694831e38f31664565b2212a",
+          "name": "PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - LÍNGUA PORTUGUESA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832b38f31664565b2214b",
+          "name": "ATIVIDADES INTEGRADORAS - ESPORTE INTEGRADO A EDUCAÇÃO FÍSICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832c48f31664565b2214e",
+          "name": "ADMINISTRAÇÃO DE BANCO DE DADOS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694832d08f31664565b22151",
+          "name": "PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694833348f31664565b22163",
+          "name": "PROGRAMAÇÃO ORIENTADA À OBJETOS - POO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948334e8f31664565b22169",
+          "name": "ATIVIDADES INTEGRADORAS - MONITORIA / HORÁRIO DE ESTUDO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948337b8f31664565b22172",
+          "name": "ATIVIDADES INTEGRADORAS - CULTURA INTEGRADA A ARTE",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948340a8f31664565b2218d",
+          "name": "ATIVIDADES INTEGRADORAS - EDUCAÇÃO DO TRÂNSITO",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948346c8f31664565b2219f",
+          "name": "PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948347f8f31664565b221a2",
+          "name": "MANUTENÇÃO DE SISTEMAS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "6948352f8f31664565b221c0",
+          "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835608f31664565b221c6",
+          "name": "MATEMÁTICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "694835808f31664565b221cc",
+          "name": "QUÍMICA",
+          "color": "#4a90e2"
+        },
+        {
+          "id": "69489d77286bd70806be3371",
+          "name": "ARTE",
+          "color": "#4A90E2"
+        },
+        {
+          "id": "694ece7d1659703ca38a1bff",
+          "name": "SOCIOLOGIA",
+          "color": "#4a90e2"
+        }
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-21T15:41:46.736Z",
+      "updatedAt": "2026-01-04T20:30:55.62Z"
+    }
+  ],
+  "subjects": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "timestamp": "20260105-124110"
+}

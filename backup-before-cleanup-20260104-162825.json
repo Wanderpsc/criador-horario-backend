@@ -1,0 +1,4766 @@
+[
+  {
+    "_id": "694830988f31664565b22103",
+    "name": "TESTE DE SISTEMAS E SEGURANÇA DE DADOS",
+    "code": "",
+    "workloadHours": 80,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T15:27:06.88Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "weeklyHours": 2,
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": false,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694830ac8f31664565b22106",
+    "name": "EDUCAÇÃO FINANCEIRA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T16:25:34.803Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694830bd8f31664565b22109",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - EDUCAÇÃO FINANCEIRA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T21:50:25.811Z",
+    "__v": 3,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694830e88f31664565b2210c",
+    "name": "ATIVIDADES INTEGRADORAS - INTELIGÊNCIA ARTIFICIAL",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T21:50:25.801Z",
+    "__v": 1,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694830fa8f31664565b2210f",
+    "name": "COMPORTAMENTO DO CONSUMIDOR",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T21:57:45.425Z",
+    "__v": 1,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694831288f31664565b22112",
+    "name": "FISICA - APROFUNDAMENTO",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:26.791Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694831508f31664565b22115",
+    "name": "BIOLOGIA - APROFUNDAMENTO",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:27.018Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481019fcdf1265c9cb61f6",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "6949c593b30f8044bfd98dda"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694831788f31664565b22118",
+    "name": "PROGRAMAÇÃO WEB FRONT-END",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:27.247Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694831908f31664565b2211b",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - PROJETO DE VIDA/EMPREENDEDORISMO",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:21:19.102Z",
+    "__v": 2,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "69481793d1c0d7cf40718865",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694831a18f31664565b2211e",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - CIÊNCIAS DA NATUREZA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:23:22.891Z",
+    "__v": 2,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694831b08f31664565b22121",
+    "name": "MUSICA/DANÇA/TEATRO/ESPORTE",
+    "code": "",
+    "workloadHours": 6,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:28.249Z",
+    "__v": 0,
+    "gradeId": "69480fd4fcdf1265c9cb61ea",
+    "gradeIds": [
+      "69480fd4fcdf1265c9cb61ea",
+      "6949b9480ee55f2aa4956a66"
+    ],
+    "classIds": [
+      "69481793d1c0d7cf40718865",
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89"
+    ],
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "_id": "694831c38f31664565b22124",
+    "name": "ORIENTAÇÃO PROFISSIONAL E EMPREENDEDORISMO",
+    "code": "",
+    "workloadHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T15:28:09.861Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": false,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694831d28f31664565b22127",
+    "name": "INTRODUÇÃO AO MARKETING",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:26:59.659Z",
+    "__v": 1,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694831e38f31664565b2212a",
+    "name": "PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - LÍNGUA PORTUGUESA",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:32:12.81Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "6949b9480ee55f2aa4956a66",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949b9c90ee55f2aa4956a89",
+      "6949c593b30f8044bfd98dda",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694831f68f31664565b2212d",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MATEMÁTICA/RECOMPOSIÇÃO DA APRENDIZAGEM",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:36:18.961Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832198f31664565b22130",
+    "name": "PROJETO DE VIDA/EMPREENDEDORISMO",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:41:20.476Z",
+    "__v": 4,
+    "gradeId": "",
+    "classIds": [
+      "69481571a3fd5c6752dbabe6",
+      "69481428a3fd5c6752dbab9b",
+      "69481554a3fd5c6752dbabdd",
+      "6949c593b30f8044bfd98dda"
+    ],
+    "gradeIds": [
+      "69481019fcdf1265c9cb61f6",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948322b8f31664565b22133",
+    "name": "LÍNGUA INGLESA - APROFUNDAMENTO",
+    "code": "",
+    "workloadHours": 6,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:54:32.571Z",
+    "__v": 1,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832418f31664565b22136",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBÓTICA",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:05:58.691Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832508f31664565b22139",
+    "name": "FUNDAMENTOS DE REDES DE COMPUTADORES",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:07:44.507Z",
+    "__v": 1,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948325f8f31664565b2213c",
+    "name": "LEITURA E PRODUÇÃO TEXTUAL",
+    "code": "",
+    "workloadHours": 9,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:15:47.502Z",
+    "__v": 5,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "6949b9c90ee55f2aa4956a89",
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865",
+      "69481428a3fd5c6752dbab9b",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832738f31664565b2213f",
+    "name": "INTELIGÊNCIA ARTIFICIAL",
+    "code": "",
+    "workloadHours": 17,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:25:46.552Z",
+    "__v": 3,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee",
+      "69481019fcdf1265c9cb61f6",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "69481793d1c0d7cf40718865",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832818f31664565b22142",
+    "name": "LEGISLAÇÃO E ÉTICA NO MARKETING",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:29:42.613Z",
+    "__v": 1,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832958f31664565b22145",
+    "name": "PROGRAMAÇÃO WEB BACK-END",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T22:05:28.865Z",
+    "__v": 1,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694832a58f31664565b22148",
+    "name": "ÉTICA, TRABALHO E CIDADANIA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:30.851Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832b38f31664565b2214b",
+    "name": "ATIVIDADES INTEGRADORAS - ESPORTE INTEGRADO A EDUCAÇÃO FÍSICA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:37:39.722Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832c48f31664565b2214e",
+    "name": "ADMINISTRAÇÃO DE BANCO DE DADOS",
+    "code": "",
+    "workloadHours": 5,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-25T23:47:34.819Z",
+    "__v": 1,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "69481428a3fd5c6752dbab9b"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832d08f31664565b22151",
+    "name": "PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS",
+    "code": "",
+    "workloadHours": 12,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:32:56.101Z",
+    "__v": 2,
+    "gradeId": "",
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694832e78f31664565b22154",
+    "name": "HISTÓRIA E CULTURA AFRO-BRASILEIRA E INDÍGENA",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:35:08.447Z",
+    "__v": 1,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "_id": "694832f98f31664565b22157",
+    "name": "MARKETING EM MIDIAS E REDES SOCIAIS",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:41:01.706Z",
+    "__v": 1,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694833098f31664565b2215a",
+    "name": "ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBOTICA(ELETIVA OBRIGATORIA)",
+    "code": "",
+    "workloadHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:45:26.397Z",
+    "__v": 4,
+    "gradeId": "",
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "69481571a3fd5c6752dbabe6",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481019fcdf1265c9cb61f6",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694833158f31664565b2215d",
+    "name": "RECOMPOSIÇÃO DE MATEMÁTICA",
+    "code": "",
+    "workloadHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:48:30.474Z",
+    "__v": 4,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "6949b9c90ee55f2aa4956a89",
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865",
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694833278f31664565b22160",
+    "name": "COMPUTAÇAO",
+    "code": "",
+    "workloadHours": 3,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:52:29.837Z",
+    "__v": 1,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481793d1c0d7cf40718865"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "_id": "694833348f31664565b22163",
+    "name": "PROGRAMAÇÃO ORIENTADA À OBJETOS - POO",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T00:56:40.417Z",
+    "__v": 1,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694833418f31664565b22166",
+    "name": "RECOMPOSIÇÃO DE LÍNGUA PORTUGUESA",
+    "code": "",
+    "workloadHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T01:08:01.259Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865",
+      "69481571a3fd5c6752dbabe6",
+      "69481554a3fd5c6752dbabdd"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948334e8f31664565b22169",
+    "name": "ATIVIDADES INTEGRADORAS - MONITORIA / HORÁRIO DE ESTUDO",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T01:11:48.44Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948335b8f31664565b2216c",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA INGLESA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T01:13:29.123Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948336b8f31664565b2216f",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA PORTUGUESA/RECOMPOSIÇÃO DA APRENDIZAGEM",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T01:16:09.315Z",
+    "__v": 2,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948337b8f31664565b22172",
+    "name": "ATIVIDADES INTEGRADORAS - CULTURA INTEGRADA A ARTE",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T01:17:08.133Z",
+    "__v": 2,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948338a8f31664565b22175",
+    "name": "TECNOLOGIAS, AVA E MÉTODOS DE APRENDIZAGEM",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T01:42:07.038Z",
+    "__v": 1,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694833998f31664565b22178",
+    "name": "CRIAÇÃO DE CONTEÚDO PARA MÍDIAS DIGITAIS",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:34.095Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694833a88f31664565b2217b",
+    "name": "PROJETO INTERDISCIPLINAR",
+    "code": "",
+    "workloadHours": 3,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T08:52:40.169Z",
+    "__v": 3,
+    "gradeId": "69481019fcdf1265c9cb61f6",
+    "gradeIds": [
+      "69481019fcdf1265c9cb61f6",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "69481554a3fd5c6752dbabdd",
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481793d1c0d7cf40718865"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "_id": "694833b58f31664565b2217e",
+    "name": "PROJETO INTEGRADOR",
+    "code": "",
+    "workloadHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T09:03:12.064Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694833c78f31664565b22181",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MONITORIA / HORÁRIO DE ESTUDO",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T09:08:58.209Z",
+    "__v": 2,
+    "gradeId": "",
+    "classIds": [
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694833d98f31664565b22184",
+    "name": "MÉTODOS ÁGEIS DE DESENVOLVIMENTO",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:34.856Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694833e98f31664565b22187",
+    "name": "FUNDAMENTOS DE DESIGN DIGITAL",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:35.17Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694833fc8f31664565b2218a",
+    "name": "FUNDAMENTOS DA TECNOLOGIA DA INFORMAÇÃO",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:01.64Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948340a8f31664565b2218d",
+    "name": "ATIVIDADES INTEGRADORAS - EDUCAÇÃO DO TRÂNSITO",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T09:14:14.02Z",
+    "__v": 2,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694834198f31664565b22190",
+    "name": "FUNDAMENTOS DE BANCO DE DADOS",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:02.105Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694834308f31664565b22193",
+    "name": "REDAÇÃO PARA MARKETING DIGITAL",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:02.325Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6948343f8f31664565b22196",
+    "name": "QUIMICA - APROFUNDAMENTO",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:02.542Z",
+    "__v": 0,
+    "gradeId": "69481019fcdf1265c9cb61f6",
+    "gradeIds": [
+      "69481019fcdf1265c9cb61f6",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6948344e8f31664565b22199",
+    "name": "MATEMÁTICA/ACOMPANHAMENTO PEDAGÓGICO",
+    "code": "",
+    "workloadHours": 6,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:02.79Z",
+    "__v": 0,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865",
+      "6949b9c90ee55f2aa4956a89"
+    ],
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6948345e8f31664565b2219c",
+    "name": "PENSAMENTO COMPUTACIONAL",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:03.033Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948346c8f31664565b2219f",
+    "name": "PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - MATEMÁTICA",
+    "code": "",
+    "workloadHours": 4,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T15:53:47.673Z",
+    "__v": 2,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6948347f8f31664565b221a2",
+    "name": "MANUTENÇÃO DE SISTEMAS",
+    "code": "",
+    "workloadHours": 12,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:03.479Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948348d8f31664565b221a5",
+    "name": "HORÁRIO DE ESTUDO",
+    "code": "",
+    "workloadHours": 38,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T18:44:11.31Z",
+    "__v": 1,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9c90ee55f2aa4956a89",
+      "6949b9a50ee55f2aa4956a7f",
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481571a3fd5c6752dbabe6",
+      "69481554a3fd5c6752dbabdd",
+      "69481793d1c0d7cf40718865"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948349f8f31664565b221a8",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA ESPANHOLA",
+    "code": "",
+    "workloadHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T16:19:07.804Z",
+    "__v": 2,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694834ab8f31664565b221ab",
+    "name": "E-COMMERCE",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:04.139Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694834ba8f31664565b221ae",
+    "name": "PROJETO DE VIDA",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T16:28:28.18Z",
+    "__v": 1,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694834c98f31664565b221b1",
+    "name": "MENTORIAS TEC",
+    "code": "",
+    "workloadHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:04.603Z",
+    "__v": 0,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694834d58f31664565b221b4",
+    "name": "FUNDAMENTOS DE UI / UX OU IHC",
+    "code": "",
+    "workloadHours": 80,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T21:16:02.457Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694834f28f31664565b221b7",
+    "name": "PROGRAMACAO ESTRUTURADA",
+    "code": "",
+    "workloadHours": 80,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T21:17:11.294Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "_id": "694835048f31664565b221ba",
+    "name": "INTERNET DAS COISAS - IOT",
+    "code": "",
+    "workloadHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T15:29:30.416Z",
+    "__v": 0,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": false,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6948351e8f31664565b221bd",
+    "name": "LÍNGUA PORTUGUESA",
+    "code": "",
+    "workloadHours": 34,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:05.518Z",
+    "__v": 0,
+    "gradeId": "69481019fcdf1265c9cb61f6",
+    "gradeIds": [
+      "69481019fcdf1265c9cb61f6",
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee",
+      "69480fd4fcdf1265c9cb61ea",
+      "6949b9480ee55f2aa4956a66"
+    ],
+    "classIds": [
+      "69481554a3fd5c6752dbabdd",
+      "6949c593b30f8044bfd98dda",
+      "69481571a3fd5c6752dbabe6",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "69481428a3fd5c6752dbab9b",
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab",
+      "69481793d1c0d7cf40718865",
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89"
+    ],
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948352f8f31664565b221c0",
+    "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+    "code": "",
+    "workloadHours": 18,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T16:53:29.321Z",
+    "__v": 1,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481571a3fd5c6752dbabe6",
+      "69481793d1c0d7cf40718865",
+      "69481554a3fd5c6752dbabdd",
+      "6948144ea3fd5c6752dbabab",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948353d8f31664565b221c3",
+    "name": "LÍNGUA ESTRANGEIRA ESPANHOL",
+    "code": "",
+    "workloadHours": 6,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:07:16.869Z",
+    "__v": 2,
+    "gradeId": "69481009fcdf1265c9cb61f2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694835608f31664565b221c6",
+    "name": "MATEMÁTICA",
+    "code": "",
+    "workloadHours": 43,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:13:54.65Z",
+    "__v": 6,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865",
+      "6949c593b30f8044bfd98dda",
+      "6949b9c90ee55f2aa4956a89",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "6948356f8f31664565b221c9",
+    "name": "FÍSICA",
+    "code": "",
+    "workloadHours": 17,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:17:25.067Z",
+    "__v": 9,
+    "classIds": [
+      "69481793d1c0d7cf40718865",
+      "69481428a3fd5c6752dbab9b",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "gradeIds": [
+      "69480fd4fcdf1265c9cb61ea",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694835808f31664565b221cc",
+    "name": "QUÍMICA",
+    "code": "",
+    "workloadHours": 15,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:32:26.823Z",
+    "__v": 4,
+    "gradeId": "69480fd4fcdf1265c9cb61ea",
+    "gradeIds": [
+      "69480fd4fcdf1265c9cb61ea",
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481793d1c0d7cf40718865",
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "694835908f31664565b221cf",
+    "name": "CIÊNCIAS NATURAIS",
+    "code": "",
+    "workloadHours": 6,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-23T13:13:07.054Z",
+    "__v": 0,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66"
+    ],
+    "classIds": [
+      "6949b9c90ee55f2aa4956a89",
+      "6949b9a50ee55f2aa4956a7f"
+    ],
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "_id": "694835a48f31664565b221d2",
+    "name": "BIOLOGIA",
+    "code": "",
+    "workloadHours": 17,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:37:48.921Z",
+    "__v": 4,
+    "gradeId": "69480fd4fcdf1265c9cb61ea",
+    "gradeIds": [
+      "69480fd4fcdf1265c9cb61ea",
+      "69481019fcdf1265c9cb61f6",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481793d1c0d7cf40718865",
+      "69481571a3fd5c6752dbabe6",
+      "69481554a3fd5c6752dbabdd",
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694835b18f31664565b221d5",
+    "name": "HISTÓRIA",
+    "code": "",
+    "workloadHours": 16,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:40:43.83Z",
+    "__v": 4,
+    "gradeId": "6949b9480ee55f2aa4956a66",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69481019fcdf1265c9cb61f6",
+      "69481009fcdf1265c9cb61f2",
+      "69480fecfcdf1265c9cb61ee",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "6949c593b30f8044bfd98dda",
+      "69481428a3fd5c6752dbab9b",
+      "69481793d1c0d7cf40718865",
+      "69481509a3fd5c6752dbabc4",
+      "6948153aa3fd5c6752dbabd4",
+      "694814eca3fd5c6752dbabbb",
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694835c08f31664565b221d8",
+    "name": "GEOGRAFIA",
+    "code": "",
+    "workloadHours": 16,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-21T17:38:17.325Z",
+    "updatedAt": "2025-12-26T17:52:18.509Z",
+    "__v": 4,
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6",
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6",
+      "6949b9c90ee55f2aa4956a89",
+      "6949b9a50ee55f2aa4956a7f",
+      "69481793d1c0d7cf40718865",
+      "6948144ea3fd5c6752dbabab",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "69489d77286bd70806be3371",
+    "name": "ARTE",
+    "workloadHours": 1,
+    "color": "#4A90E2",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-22T01:23:03.417Z",
+    "updatedAt": "2025-12-26T17:59:56.271Z",
+    "__v": 11,
+    "code": "",
+    "description": "",
+    "gradeId": "",
+    "scheduleNotes": "",
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481793d1c0d7cf40718865",
+      "69481428a3fd5c6752dbab9b",
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481509a3fd5c6752dbabc4",
+      "69481571a3fd5c6752dbabe6",
+      "69481554a3fd5c6752dbabdd"
+    ],
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "isActive": true,
+    "weeklyHours": 2,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6949e583702078965405a065",
+    "name": "ELETIVA (ESPORTE/ CULTURA/ ROBÓTICA)",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "CETI Desembargador Amaral",
+    "createdAt": "2025-12-23T00:42:43.556Z",
+    "updatedAt": "2025-12-23T13:13:08.222Z",
+    "__v": 0,
+    "code": "",
+    "color": "#4a90e2",
+    "description": "",
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "scheduleNotes": "",
+    "workloadHours": 10,
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "6949c593b30f8044bfd98dda",
+      "69481793d1c0d7cf40718865"
+    ],
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      }
+    ]
+  },
+  {
+    "weeklyHours": 2,
+    "isActive": true,
+    "_id": "6949e5dd702078965405a06d",
+    "name": "FÍSICA (BASE)",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "CETI Desembargador Amaral",
+    "createdAt": "2025-12-23T00:44:13.568Z",
+    "updatedAt": "2025-12-23T13:13:08.488Z",
+    "__v": 0,
+    "code": "",
+    "color": "#4a90e2",
+    "description": "",
+    "gradeId": "69480fecfcdf1265c9cb61ee",
+    "scheduleNotes": "",
+    "workloadHours": 13,
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69480fd4fcdf1265c9cb61ea",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b",
+      "69481793d1c0d7cf40718865",
+      "6949c593b30f8044bfd98dda",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694ece681659703ca38a1b66",
+    "name": "FILOSOFIA",
+    "workloadHours": 40,
+    "weeklyHours": 8,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab",
+      "69481428a3fd5c6752dbab9b",
+      "694814eca3fd5c6752dbabbb",
+      "69481509a3fd5c6752dbabc4",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:05:28.199Z",
+    "updatedAt": "2025-12-26T18:06:48.708Z",
+    "__v": 8,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694ece7d1659703ca38a1bff",
+    "name": "SOCIOLOGIA",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab",
+      "69481428a3fd5c6752dbab9b",
+      "694814eca3fd5c6752dbabbb",
+      "69481509a3fd5c6752dbabc4",
+      "69481571a3fd5c6752dbabe6",
+      "69481554a3fd5c6752dbabdd",
+      "6948153aa3fd5c6752dbabd4",
+      "6949c593b30f8044bfd98dda"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:05:49.744Z",
+    "updatedAt": "2025-12-26T18:08:04.793Z",
+    "__v": 8,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694ed08f1659703ca38a1f46",
+    "name": "ENSINO RELIGIOSO",
+    "workloadHours": 40,
+    "weeklyHours": 3,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481793d1c0d7cf40718865"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:14:39.527Z",
+    "updatedAt": "2025-12-26T18:17:08.725Z",
+    "__v": 3,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      }
+    ]
+  },
+  {
+    "_id": "694ed0c01659703ca38a1fe3",
+    "name": "EDUCAÇÃO FÍSICA",
+    "workloadHours": 40,
+    "weeklyHours": 14,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "6949b9480ee55f2aa4956a66",
+      "69480fd4fcdf1265c9cb61ea",
+      "69480fecfcdf1265c9cb61ee",
+      "69481009fcdf1265c9cb61f2",
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "6949b9a50ee55f2aa4956a7f",
+      "6949b9c90ee55f2aa4956a89",
+      "69481793d1c0d7cf40718865",
+      "6948144ea3fd5c6752dbabab",
+      "6949c593b30f8044bfd98dda",
+      "6948153aa3fd5c6752dbabd4",
+      "69481428a3fd5c6752dbab9b",
+      "694814eca3fd5c6752dbabbb",
+      "69481554a3fd5c6752dbabdd",
+      "69481509a3fd5c6752dbabc4",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:15:28.169Z",
+    "updatedAt": "2025-12-26T18:20:05.217Z",
+    "__v": 11,
+    "classGrades": [
+      {
+        "className": "A",
+        "gradeName": "9º Ano"
+      },
+      {
+        "className": "A",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "3ª Série"
+      },
+      {
+        "className": "A - Integral",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "B",
+        "gradeName": "8º Ano"
+      },
+      {
+        "className": "B - Des. Sist.",
+        "gradeName": "2ª Série"
+      },
+      {
+        "className": "B - Integral",
+        "gradeName": "3ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694ed24b1659703ca38a232a",
+    "name": "FUNDAMENTOS DA ADMINISTRAÇÃO",
+    "workloadHours": 40,
+    "weeklyHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab",
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:22:03.112Z",
+    "updatedAt": "2025-12-26T18:27:07.768Z",
+    "__v": 2,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      },
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694ed2821659703ca38a23cb",
+    "name": "LÓGICA DE PROGRAMAÇÃO",
+    "workloadHours": 40,
+    "weeklyHours": 1,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "694814eca3fd5c6752dbabbb"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:22:58.672Z",
+    "updatedAt": "2025-12-26T18:32:47.828Z",
+    "__v": 1,
+    "classGrades": [
+      {
+        "className": "A - Marketing",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "694ed2bd1659703ca38a246c",
+    "name": "ARQUITETURA DE COMPUTADORES",
+    "workloadHours": 400,
+    "weeklyHours": 10,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2025-12-26T18:23:57.226Z",
+    "updatedAt": "2025-12-26T21:17:45.283Z",
+    "__v": 1,
+    "classGrades": [
+      {
+        "className": "A - Des. Sist.",
+        "gradeName": "1ª Série"
+      }
+    ]
+  },
+  {
+    "_id": "695abbce63ff96d19338ce08",
+    "name": "BRANDING - GESTÃO DE MARCAS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:18.209Z",
+    "updatedAt": "2026-01-04T19:13:18.209Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbcf63ff96d19338ce0b",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LINGUAGENS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:19.4Z",
+    "updatedAt": "2026-01-04T19:13:19.4Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd063ff96d19338ce0e",
+    "name": "TESTE DE SISTEMAS E SEGURANÇA DA INFORMAÇÃO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:20.995Z",
+    "updatedAt": "2026-01-04T19:13:20.995Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd263ff96d19338ce11",
+    "name": "ATIVIDADES INTEGRADAS - EDUCAÇÃO FÍSICA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:22.149Z",
+    "updatedAt": "2026-01-04T19:13:22.149Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd363ff96d19338ce14",
+    "name": "FÍSICA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:23.297Z",
+    "updatedAt": "2026-01-04T19:13:23.297Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd463ff96d19338ce17",
+    "name": "PRODUTOS INTEGRADORES II",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:24.434Z",
+    "updatedAt": "2026-01-04T19:13:24.434Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd563ff96d19338ce1a",
+    "name": "BIOLOGIA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:25.584Z",
+    "updatedAt": "2026-01-04T19:13:25.584Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd663ff96d19338ce1d",
+    "name": "INTRODUÇÃO AO ECOSSISTEMA DE APLICATIVOS MÓVEIS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:26.724Z",
+    "updatedAt": "2026-01-04T19:13:26.724Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd763ff96d19338ce20",
+    "name": "CAIXAS, OPERADORES FINANCEIROS E GESTÃO DO RELACIONAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:27.995Z",
+    "updatedAt": "2026-01-04T19:13:27.995Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbd963ff96d19338ce23",
+    "name": "PRINCÍPIOS DE APROFUNDAMENTO INTEGRAÇÃO DE ESTUDOS - FILOSOFIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:29.145Z",
+    "updatedAt": "2026-01-04T19:13:29.145Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbda63ff96d19338ce26",
+    "name": "INTEGRAÇÃO DE ESTUDOS - PROJETO DE VIDA/MUNDO DO TRABALHO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:30.26Z",
+    "updatedAt": "2026-01-04T19:13:30.26Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbdb63ff96d19338ce29",
+    "name": "ATIVIDADES INTEGRADAS - ESPANHOL - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:31.419Z",
+    "updatedAt": "2026-01-04T19:13:31.419Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbdc63ff96d19338ce2c",
+    "name": "EXPORTAÇÃO E IMPORTAÇÃO DE LEITURA DE MUNDO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:32.582Z",
+    "updatedAt": "2026-01-04T19:13:32.582Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbdd63ff96d19338ce2f",
+    "name": "LÍNGUA PORTUGUESA E SUAS TECNOLOGIAS - LÍNGUA PORTUGUESA E LITERATURA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:33.705Z",
+    "updatedAt": "2026-01-04T19:13:33.705Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbde63ff96d19338ce32",
+    "name": "PERCURSOS DE APROFUNDAMENTO INTEGRAÇÃO DE ESTUDOS - LÍNGUA PORTUGUESA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:34.852Z",
+    "updatedAt": "2026-01-04T19:13:34.852Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbdf63ff96d19338ce35",
+    "name": "MATEMÁTICA E SUAS TECNOLOGIAS - MATEMÁTICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:35.994Z",
+    "updatedAt": "2026-01-04T19:13:35.994Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe163ff96d19338ce38",
+    "name": "ORIENTAÇÃO PROFISSIONAL E PREPARAÇÃO PARA O MUNDO DO TRABALHO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:37.126Z",
+    "updatedAt": "2026-01-04T19:13:37.126Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe263ff96d19338ce3b",
+    "name": "LÍNGUA INGLESA E SUAS TECNOLOGIAS - LÍNGUA INGLESA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:38.255Z",
+    "updatedAt": "2026-01-04T19:13:38.255Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe363ff96d19338ce3e",
+    "name": "MATEMÁTICA E COMPUTAÇÃO EM LINGUAGENS (PROGRAMAÇÃO)",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:39.384Z",
+    "updatedAt": "2026-01-04T19:13:39.384Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe463ff96d19338ce41",
+    "name": "ANÁLISE E MODELAGEM DE SISTEMAS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:40.523Z",
+    "updatedAt": "2026-01-04T19:13:40.523Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe563ff96d19338ce44",
+    "name": "LEITURA E PRODUÇÃO TEXTUAL",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:41.651Z",
+    "updatedAt": "2026-01-04T19:13:41.651Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe763ff96d19338ce47",
+    "name": "LOGÍSTICA E ORGANIZAÇÃO II",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:43.182Z",
+    "updatedAt": "2026-01-04T19:13:43.182Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe863ff96d19338ce4a",
+    "name": "FÍSICA E SUAS TECNOLOGIAS - FÍSICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:44.323Z",
+    "updatedAt": "2026-01-04T19:13:44.323Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbe963ff96d19338ce4d",
+    "name": "QUÍMICA E SUAS TECNOLOGIAS - QUÍMICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:45.453Z",
+    "updatedAt": "2026-01-04T19:13:45.453Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbea63ff96d19338ce50",
+    "name": "INTELIGÊNCIA ARTIFICIAL",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:46.589Z",
+    "updatedAt": "2026-01-04T19:13:46.589Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbec63ff96d19338ce53",
+    "name": "INGLÊS FOCADO EM TECNOLOGIA DA INFORMAÇÃO E COMUNICAÇÃO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:48.173Z",
+    "updatedAt": "2026-01-04T19:13:48.173Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbed63ff96d19338ce56",
+    "name": "UX/UI EXPERIENCE (UX)",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:49.3Z",
+    "updatedAt": "2026-01-04T19:13:49.3Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbee63ff96d19338ce59",
+    "name": "CIÊNCIAS HUMANAS E SOCIAIS - HISTÓRIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:50.452Z",
+    "updatedAt": "2026-01-04T19:13:50.452Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbef63ff96d19338ce5c",
+    "name": "PROJETO DE APROFUNDAGEM INTEGRAÇÃO DE ESTUDOS - HISTÓRIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:51.577Z",
+    "updatedAt": "2026-01-04T19:13:51.577Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf063ff96d19338ce5f",
+    "name": "ARQUITETURA DE MICROSERVIÇOS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:52.749Z",
+    "updatedAt": "2026-01-04T19:13:52.749Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf163ff96d19338ce62",
+    "name": "ARTE E SUAS TECNOLOGIAS - ARTE",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:53.876Z",
+    "updatedAt": "2026-01-04T19:13:53.876Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf363ff96d19338ce65",
+    "name": "PRINCÍPIO DE APROFUNDAMENTO INTEGRAÇÃO DE ESTUDOS - ARTE",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:55.004Z",
+    "updatedAt": "2026-01-04T19:13:55.004Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf463ff96d19338ce68",
+    "name": "PROGRAMAÇÃO PARA DISPOSITIVOS MÓVEIS I",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:56.131Z",
+    "updatedAt": "2026-01-04T19:13:56.131Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf563ff96d19338ce6b",
+    "name": "ATIVIDADES INTEGRADAS - ESPANHOL - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:57.267Z",
+    "updatedAt": "2026-01-04T19:13:57.267Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf663ff96d19338ce6e",
+    "name": "LEITURA, INTERPRETAÇÃO E PRODUÇÃO DE TEXTOS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:58.418Z",
+    "updatedAt": "2026-01-04T19:13:58.418Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf763ff96d19338ce71",
+    "name": "BANCO DE DADOS - BIG DATA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:13:59.546Z",
+    "updatedAt": "2026-01-04T19:13:59.546Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf863ff96d19338ce75",
+    "name": "INTEGRAÇÃO DE ESTUDOS - LÍNGUA PORTUGUESA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:00.705Z",
+    "updatedAt": "2026-01-04T19:14:00.705Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbf963ff96d19338ce78",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MONITORIA / ROBÓTICA DE ESTUDOS - MONITORIA / ROBÓTICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:01.843Z",
+    "updatedAt": "2026-01-04T19:14:01.843Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbfa63ff96d19338ce7b",
+    "name": "MARKETING MOBILE",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:02.956Z",
+    "updatedAt": "2026-01-04T19:14:02.956Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbfc63ff96d19338ce7e",
+    "name": "GEOGRAFIA E SUAS TECNOLOGIAS - GEOGRAFIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:04.501Z",
+    "updatedAt": "2026-01-04T19:14:04.501Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbfd63ff96d19338ce81",
+    "name": "ATIVIDADES INTEGRADAS - QUÍMICA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:05.651Z",
+    "updatedAt": "2026-01-04T19:14:05.651Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbfe63ff96d19338ce84",
+    "name": "PROJETO DE VIDA E CARREIRA PROFISSIONAL - PROJETO DE VIDA E CARREIRA / EDUCAÇÃO DE ESTUDOS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:06.779Z",
+    "updatedAt": "2026-01-04T19:14:06.779Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abbff63ff96d19338ce87",
+    "name": "ECO - OTIMIZAÇÃO PARA MECANISMOS DE BUSCA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:07.901Z",
+    "updatedAt": "2026-01-04T19:14:07.901Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0163ff96d19338ce8a",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - EDUCAÇÃO FÍSICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:09.049Z",
+    "updatedAt": "2026-01-04T19:14:09.049Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0263ff96d19338ce8d",
+    "name": "METODOLOGIA DE APROFUNDAMENTO INTEGRAÇÃO DE ESTUDOS - PORTUGUÊS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:10.182Z",
+    "updatedAt": "2026-01-04T19:14:10.182Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0363ff96d19338ce90",
+    "name": "ATIVIDADES INTEGRADAS - CIÊNCIA DA NATUREZA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:11.335Z",
+    "updatedAt": "2026-01-04T19:14:11.335Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0463ff96d19338ce93",
+    "name": "TIMBRAR DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:12.462Z",
+    "updatedAt": "2026-01-04T19:14:12.462Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0563ff96d19338ce96",
+    "name": "MATEMÁTICA/COMPONENTES E APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:13.582Z",
+    "updatedAt": "2026-01-04T19:14:13.582Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0663ff96d19338ce99",
+    "name": "PEDAGOGIA E APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:14.74Z",
+    "updatedAt": "2026-01-04T19:14:14.74Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0763ff96d19338ce9c",
+    "name": "EDUCAÇÃO FÍSICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:15.892Z",
+    "updatedAt": "2026-01-04T19:14:15.892Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0963ff96d19338ce9f",
+    "name": "QUÍMICA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:17.022Z",
+    "updatedAt": "2026-01-04T19:14:17.022Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0a63ff96d19338cea4",
+    "name": "EDUCAÇÃO FÍSICA - APROFUNDAMENTO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:18.175Z",
+    "updatedAt": "2026-01-04T19:14:18.175Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0b63ff96d19338cea7",
+    "name": "GESTÃO E LIDERANÇA - GESTÃO DE EQUIPES",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:19.324Z",
+    "updatedAt": "2026-01-04T19:14:19.324Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0c63ff96d19338ceaa",
+    "name": "MATEMÁTICA E SUAS TECNOLOGIAS - MATEMÁTICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:20.467Z",
+    "updatedAt": "2026-01-04T19:14:20.467Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0d63ff96d19338cead",
+    "name": "HORÁRIO DE ESTUDO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:21.599Z",
+    "updatedAt": "2026-01-04T19:14:21.599Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0e63ff96d19338ceb0",
+    "name": "SOCIOLOGIA E SUAS TECNOLOGIAS - SOCIOLOGIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:22.714Z",
+    "updatedAt": "2026-01-04T19:14:22.714Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc0f63ff96d19338ceb3",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - FILOSOFIA E SOCIOLOGIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:23.849Z",
+    "updatedAt": "2026-01-04T19:14:23.849Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1163ff96d19338ceb6",
+    "name": "APROFUNDAMENTO - ESPANHOL",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:25.023Z",
+    "updatedAt": "2026-01-04T19:14:25.023Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1263ff96d19338ceb9",
+    "name": "LOGÍSTICA E OPERAÇÕES II",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:26.151Z",
+    "updatedAt": "2026-01-04T19:14:26.151Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1363ff96d19338cebc",
+    "name": "BANCO DE DADOS (SGBD)",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:27.291Z",
+    "updatedAt": "2026-01-04T19:14:27.291Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1463ff96d19338cebf",
+    "name": "ESPANHOL/ESTRUTURA/CULTURA DE LINGUAGENS E APLICAÇÃO SOCIAL",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:28.43Z",
+    "updatedAt": "2026-01-04T19:14:28.43Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1563ff96d19338cec2",
+    "name": "INTERAÇÃO DISCURSIVA - LÍNGUA ESTRANGEIRA INGLÊS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:29.57Z",
+    "updatedAt": "2026-01-04T19:14:29.57Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1663ff96d19338cec5",
+    "name": "ECOLOGIA LÍNGUA INGLESA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:30.735Z",
+    "updatedAt": "2026-01-04T19:14:30.735Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1763ff96d19338cec8",
+    "name": "PROGRAMAÇÃO ESTRUTURADA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:31.865Z",
+    "updatedAt": "2026-01-04T19:14:31.865Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1963ff96d19338cecb",
+    "name": "FUNDAMENTOS DE REDE",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:33.016Z",
+    "updatedAt": "2026-01-04T19:14:33.016Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1a63ff96d19338cece",
+    "name": "LINGUAGEM E SUAS TECNOLOGIAS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:34.168Z",
+    "updatedAt": "2026-01-04T19:14:34.168Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1b63ff96d19338ced1",
+    "name": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - SOCIOLOGIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:35.357Z",
+    "updatedAt": "2026-01-04T19:14:35.357Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1c63ff96d19338ced4",
+    "name": "COMPUTAÇÃO",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:36.528Z",
+    "updatedAt": "2026-01-04T19:14:36.528Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1d63ff96d19338ced7",
+    "name": "LINGUAGENS E SUAS TECNOLOGIAS - LÍNGUA PORTUGUESA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:37.654Z",
+    "updatedAt": "2026-01-04T19:14:37.654Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1e63ff96d19338ceda",
+    "name": "HISTÓRIA E CULTURA AFRO-BRASILEIRA E INDIGENOAMERICANA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:38.786Z",
+    "updatedAt": "2026-01-04T19:14:38.786Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc1f63ff96d19338cedd",
+    "name": "ECOLOGIA LÍNGUA PORTUGUESA - RETROSPECTIVA OBRIGATÓRIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:39.935Z",
+    "updatedAt": "2026-01-04T19:14:39.935Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2163ff96d19338cee0",
+    "name": "LÍNGUA ESTRANGEIRA INGLÊS",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:41.051Z",
+    "updatedAt": "2026-01-04T19:14:41.051Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2263ff96d19338cee3",
+    "name": "ECOLOGIA LÍNGUA PORTUGUESA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:42.201Z",
+    "updatedAt": "2026-01-04T19:14:42.201Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2363ff96d19338cee6",
+    "name": "MATEMÁTICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:43.337Z",
+    "updatedAt": "2026-01-04T19:14:43.337Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2463ff96d19338cee9",
+    "name": "FÍSICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:44.47Z",
+    "updatedAt": "2026-01-04T19:14:44.47Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2563ff96d19338ceec",
+    "name": "QUÍMICA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:45.657Z",
+    "updatedAt": "2026-01-04T19:14:45.657Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2663ff96d19338ceef",
+    "name": "BIOLOGIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:46.786Z",
+    "updatedAt": "2026-01-04T19:14:46.786Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2763ff96d19338cef2",
+    "name": "HISTÓRIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:47.913Z",
+    "updatedAt": "2026-01-04T19:14:47.913Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2963ff96d19338cef5",
+    "name": "GEOGRAFIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:49.101Z",
+    "updatedAt": "2026-01-04T19:14:49.101Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2a63ff96d19338cef8",
+    "name": "FILOSOFIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:50.246Z",
+    "updatedAt": "2026-01-04T19:14:50.246Z",
+    "__v": 0,
+    "classGrades": []
+  },
+  {
+    "_id": "695abc2b63ff96d19338cefb",
+    "name": "SOCIOLOGIA",
+    "workload": 1,
+    "weeklyHours": 2,
+    "gradeIds": [],
+    "classIds": [],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-01-04T19:14:51.403Z",
+    "updatedAt": "2026-01-04T19:14:51.403Z",
+    "__v": 0,
+    "classGrades": []
+  }
+]
