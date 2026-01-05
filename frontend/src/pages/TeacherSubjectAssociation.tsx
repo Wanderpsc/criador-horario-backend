@@ -199,6 +199,40 @@ const TeacherSubjectAssociation: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleClearAllAssociations = async () => {
+    if (!window.confirm('⚠️ ATENÇÃO: Esta ação irá excluir TODAS as lotações (associações professor-disciplina-turma).\n\nOs professores, disciplinas e turmas NÃO serão excluídos, apenas as lotações.\n\nDeseja continuar?')) {
+      return;
+    }
+
+    // Confirmação dupla
+    if (!window.confirm('Esta ação é IRREVERSÍVEL!\n\nTem certeza que deseja limpar TODAS as lotações?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setMessage('🔄 Excluindo todas as lotações...');
+
+      // 🔥 BULK DELETE - Uma única requisição para deletar tudo
+      const response = await api.delete(`/teacher-subjects/bulk/${user?.id}`);
+      
+      const deleted = response.data.deletedCount || 0;
+
+      // Recarregar dados
+      await loadData();
+
+      setMessage(`✅ Todas as ${deleted} lotações foram excluídas com sucesso!`);
+      
+      setTimeout(() => setMessage(''), 5000);
+    } catch (error: any) {
+      console.error('Erro ao limpar lotações:', error);
+      setMessage(`❌ Erro ao limpar lotações: ${error.response?.data?.message || error.message}`);
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -1189,13 +1223,23 @@ const TeacherSubjectAssociation: React.FC = () => {
       <div id="componentes-professores" className="bg-white rounded-lg shadow-md p-6 scroll-mt-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Componentes Curriculares e Professores Lotados</h2>
-          <button
-            onClick={handlePrintBySubject}
-            className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 font-medium flex items-center"
-            title="Imprimir listagem por componentes"
-          >
-            🖨️ Imprimir
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleClearAllAssociations}
+              disabled={loading || associations.length === 0}
+              className="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Limpar todas as lotações (não exclui professores, disciplinas ou turmas)"
+            >
+              🗑️ Limpar Lotações
+            </button>
+            <button
+              onClick={handlePrintBySubject}
+              className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 font-medium flex items-center"
+              title="Imprimir listagem por componentes"
+            >
+              🖨️ Imprimir
+            </button>
+          </div>
         </div>
 
         {/* Campo de Busca de Disciplinas */}

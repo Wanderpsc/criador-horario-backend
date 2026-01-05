@@ -324,7 +324,28 @@ router.post('/bulk', async (req, res) => {
   }
 });
 
-// Deletar associação
+// 🔥 BULK DELETE - Deletar TODAS as associações de um usuário de uma vez
+router.delete('/bulk/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Deletar todas as associações do usuário
+    const result = await TeacherSubject.deleteMany({ userId });
+    
+    console.log(`✅ BULK DELETE: ${result.deletedCount} associações removidas para usuário ${userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `${result.deletedCount} lotações excluídas com sucesso`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error: any) {
+    console.error('❌ Erro no BULK DELETE:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Deletar associação individual
 router.delete('/:id', async (req, res) => {
   try {
     await TeacherSubject.findByIdAndDelete(req.params.id);
