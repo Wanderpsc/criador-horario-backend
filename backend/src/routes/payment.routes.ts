@@ -211,7 +211,10 @@ router.post('/create-public', async (req: any, res: Response) => {
           name: user.name || user.schoolName,
           email: user.email
         },
-        external_reference: externalReference
+        external_reference: externalReference,
+        // Configurações para garantir que o cliente pague (não redirecionar para conta logada)
+        purpose: 'wallet_purchase',
+        binary_mode: false
       };
 
       // Adicionar back_urls e auto_return apenas se FRONTEND_URL estiver configurado
