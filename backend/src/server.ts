@@ -113,6 +113,8 @@ const allowedOrigins = [
   'http://localhost:3002',
   'http://localhost:3003',
   'https://criador-horario-aula.surge.sh',
+  'https://horario-escolar.surge.sh',
+  'https://wanderpsc.github.io',
   process.env.FRONTEND_URL
 ].filter((origin): origin is string => Boolean(origin));
 
