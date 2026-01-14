@@ -146,14 +146,14 @@ router.post('/create-public', async (req: any, res: Response) => {
             paymentId: payment._id,
             externalReference,
             method: 'pix',
-          amount: totalAmount,
-          qrCode: pixResult.data.qrCode,
-          qrCodeBase64: pixResult.data.qrCodeBase64,
-          mercadoPagoId: pixResult.data.id
-        };
-      }
+            amount: totalAmount,
+            qrCode: pixResult.data.qrCode,
+            qrCodeBase64: pixResult.data.qrCodeBase64,
+            mercadoPagoId: pixResult.data.id
+          };
+        }
 
-      return res.json(paymentData);
+        return res.json(paymentData);
       
       } catch (pixError: any) {
         console.error('❌ [PUBLIC] Exceção ao criar PIX:', pixError);
