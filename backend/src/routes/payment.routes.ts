@@ -212,9 +212,13 @@ router.post('/create-public', async (req: any, res: Response) => {
           email: user.email
         },
         external_reference: externalReference,
-        // Configurações para garantir que o cliente pague (não redirecionar para conta logada)
-        purpose: 'wallet_purchase',
-        binary_mode: false
+        payment_methods: {
+          installments: 12, // Permite parcelamento
+          default_installments: 1
+        },
+        // Forçar checkout como guest (sem login)
+        binary_mode: false,
+        purpose: 'onboarding_credits' // Tipo que não requer login
       };
 
       // Adicionar back_urls e auto_return apenas se FRONTEND_URL estiver configurado
