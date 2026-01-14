@@ -184,6 +184,8 @@ router.get('/', async (req: any, res: Response) => {
 
     res.json({
       success: true,
+      count: responseData.length,
+      schools: responseData, // Para compatibilidade
       data: responseData
     });
   } catch (error) {

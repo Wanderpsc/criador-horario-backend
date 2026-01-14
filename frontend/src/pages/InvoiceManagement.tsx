@@ -60,10 +60,20 @@ export const InvoiceManagement: React.FC = () => {
 
   const loadSchools = async () => {
     try {
-      const response = await api.get('/users/schools');
-      setSchools(response.data.schools || []);
-    } catch (error) {
-      console.error('Erro ao carregar escolas:', error);
+      console.log('[InvoiceManagement] Carregando escolas...');
+      const response = await api.get('/admin/schools');
+      console.log('[InvoiceManagement] Resposta completa:', response.data);
+      
+      // A resposta vem em response.data.data, não response.data.schools
+      const schoolsList = response.data.data || response.data.schools || [];
+      console.log('[InvoiceManagement] Escolas extraídas:', schoolsList);
+      
+      setSchools(schoolsList);
+      console.log(`[InvoiceManagement] ${schoolsList.length} escolas carregadas`);
+    } catch (error: any) {
+      console.error('[InvoiceManagement] Erro ao carregar escolas:', error);
+      console.error('[InvoiceManagement] Detalhes do erro:', error.response?.data);
+      toast.error('Erro ao carregar lista de escolas: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -240,6 +250,9 @@ export const InvoiceManagement: React.FC = () => {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Escola (Tomador de Serviço)
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({schools.length} escola{schools.length !== 1 ? 's' : ''} disponível{schools.length !== 1 ? 'is' : ''})
+                    </span>
                   </label>
                   <select
                     value={selectedSchool}
@@ -247,13 +260,27 @@ export const InvoiceManagement: React.FC = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Selecione uma escola</option>
+                    <option value="">
+                      {schools.length === 0 
+                        ? 'Carregando escolas...' 
+                        : 'Selecione uma escola'}
+                    </option>
                     {schools.map(school => (
                       <option key={school._id} value={school._id}>
-                        {school.schoolName} - {school.email}
+                        {school.schoolName} - {school.email} {school.cnpj ? `- CNPJ: ${school.cnpj}` : ''}
                       </option>
                     ))}
                   </select>
+                  {schools.length === 0 && (
+                    <p className="mt-2 text-sm text-orange-600">
+                      ⚠️ Nenhuma escola cadastrada no sistema
+                    </p>
+                  )}
+                  {schools.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {schools.length} escola(s) disponível(is)
+                    </p>
+                  )}
                 </div>
 
                 {/* ID do Pagamento */}
