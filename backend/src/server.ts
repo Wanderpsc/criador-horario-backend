@@ -116,18 +116,28 @@ const allowedOrigins = [
   'https://criador-horario-aula.surge.sh',
   'https://horario-escolar.surge.sh',
   'https://wanderpsc.github.io',
+  'https://wanderpsc.github.io/criador-horario-backend',
   process.env.FRONTEND_URL
 ].filter((origin): origin is string => Boolean(origin));
+
+console.log('🌐 Origens permitidas no CORS:', allowedOrigins);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Permitir requisições sem origin (mobile apps, Postman, etc)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ CORS: Requisição sem origin (permitido)');
+      return callback(null, true);
+    }
+    
+    console.log('🔍 CORS: Verificando origem:', origin);
     
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ CORS: Origem permitida:', origin);
       callback(null, true);
     } else {
-      console.log('❌ CORS bloqueado para origem:', origin);
+      console.log('❌ CORS: Origem BLOQUEADA:', origin);
+      console.log('📋 Origens permitidas:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
