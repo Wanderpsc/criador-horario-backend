@@ -81,43 +81,71 @@ router.post('/create-public', async (req: any, res: Response) => {
 
     if (paymentMethod === 'pix') {
       // Criar pagamento PIX
-      const pixResult = await mercadoPagoService.createPixPayment({
-        transaction_amount: totalAmount,
-        description: `${plan.toUpperCase()} - ${durationMonths} mês(es) - ${user.schoolName || user.name}`,
-        payment_method_id: 'pix',
-        payer: {
-          email: user.email,
-          first_name: user.name || user.schoolName
-        },
-        external_reference: externalReference,
-        notification_url: notificationUrl
-      });
-
-      if (!pixResult.success) {
-        console.error('❌ [PUBLIC] Erro Mercado Pago:', pixResult.error);
-        return res.status(500).json({ 
-          success: false,
-          message: '⚠️ Sistema de pagamento em configuração. Entre em contato com wanderpsc@gmail.com para liberar sua licença.',
-          error: pixResult.error,
-          contact: 'wanderpsc@gmail.com',
-          instructions: 'Envie um email informando nome da escola e plano desejado.'
+      try {
+        const pixResult = await mercadoPagoService.createPixPayment({
+          transaction_amount: totalAmount,
+          description: `${plan.toUpperCase()} - ${durationMonths} mês(es) - ${user.schoolName || user.name}`,
+          payment_method_id: 'pix',
+          payer: {
+            email: user.email,
+            first_name: user.name || user.schoolName
+          },
+          external_reference: externalReference,
+          notification_url: notificationUrl
         });
-      }
 
-      // Atualizar payment com dados do PIX
-      if (pixResult.data) {
-        payment.mercadoPagoId = pixResult.data.id;
-        payment.mercadoPagoStatus = pixResult.data.status;
-        payment.pixQRCode = pixResult.data.qrCode;
-        payment.pixQRCodeBase64 = pixResult.data.qrCodeBase64;
-        payment.pixCopyPaste = pixResult.data.qrCode;
-        await payment.save();
+        if (!pixResult.success) {
+          console.error('❌ [PUBLIC] Erro Mercado Pago PIX:', pixResult.error);
+          
+          // Criar pagamento "manual" para não bloquear o cadastro
+          payment.status = 'pending_manual';
+          payment.metadata = {
+            ...payment.metadata,
+            errorReason: 'Mercado Pago não disponível',
+            errorDetails: pixResult.error,
+            paymentMethod: 'pix'
+          };
+          await payment.save();
+          
+          return res.status(200).json({ 
+            success: false,
+            fallbackMode: true,
+            paymentId: payment._id,
+            message: '⚠️ Sistema de pagamento temporariamente indisponível. Seu cadastro foi salvo!',
+            instructions: [
+              '1. Seu cadastro foi registrado com sucesso',
+              '2. Entre em contato conosco para finalizar o pagamento',
+              '3. Sua licença será liberada após confirmação',
+              '4. Email: wanderpsc@gmail.com',
+              `5. Referência: ${externalReference}`
+            ],
+            contact: {
+              email: 'wanderpsc@gmail.com',
+              whatsapp: '(00) 00000-0000'
+            },
+            paymentInfo: {
+              plan: plan.toUpperCase(),
+              amount: totalAmount,
+              duration: `${durationMonths} mês(es)`,
+              reference: externalReference
+            }
+          });
+        }
 
-        paymentData = {
-          success: true,
-          paymentId: payment._id,
-          externalReference,
-          method: 'pix',
+        // Atualizar payment com dados do PIX
+        if (pixResult.data) {
+          payment.mercadoPagoId = pixResult.data.id;
+          payment.mercadoPagoStatus = pixResult.data.status;
+          payment.pixQRCode = pixResult.data.qrCode;
+          payment.pixQRCodeBase64 = pixResult.data.qrCodeBase64;
+          payment.pixCopyPaste = pixResult.data.qrCode;
+          await payment.save();
+
+          paymentData = {
+            success: true,
+            paymentId: payment._id,
+            externalReference,
+            method: 'pix',
           amount: totalAmount,
           qrCode: pixResult.data.qrCode,
           qrCodeBase64: pixResult.data.qrCodeBase64,
@@ -126,13 +154,45 @@ router.post('/create-public', async (req: any, res: Response) => {
       }
 
       return res.json(paymentData);
+      
+      } catch (pixError: any) {
+        console.error('❌ [PUBLIC] Exceção ao criar PIX:', pixError);
+        
+        // Fallback em caso de exceção
+        payment.status = 'pending_manual';
+        payment.metadata = {
+          ...payment.metadata,
+          errorReason: 'Exceção no Mercado Pago',
+          errorMessage: pixError.message
+        };
+        await payment.save();
+        
+        return res.status(200).json({ 
+          success: false,
+          fallbackMode: true,
+          paymentId: payment._id,
+          message: '⚠️ Sistema de pagamento temporariamente indisponível',
+          instructions: [
+            'Seu cadastro foi registrado com sucesso',
+            'Entre em contato: wanderpsc@gmail.com',
+            `Referência: ${externalReference}`
+          ],
+          contact: { email: 'wanderpsc@gmail.com' },
+          paymentInfo: {
+            plan: plan.toUpperCase(),
+            amount: totalAmount,
+            duration: `${durationMonths} mês(es)`
+          }
+        });
+      }
 
     } else {
       // Criar preferência para cartão
-      console.log('🔵 [PAYMENT] Criando preferência de cartão...');
-      console.log('💳 [PAYMENT] External Reference:', externalReference);
-      console.log('💳 [PAYMENT] Valor:', totalAmount);
-      console.log('💳 [PAYMENT] Notification URL:', notificationUrl || 'não configurado');
+      try {
+        console.log('🔵 [PAYMENT] Criando preferência de cartão...');
+        console.log('💳 [PAYMENT] External Reference:', externalReference);
+        console.log('💳 [PAYMENT] Valor:', totalAmount);
+        console.log('💳 [PAYMENT] Notification URL:', notificationUrl || 'não configurado');
       
       const preferenceData: any = {
         items: [{
@@ -193,6 +253,37 @@ router.post('/create-public', async (req: any, res: Response) => {
       }
 
       return res.json(paymentData);
+      
+      } catch (cardError: any) {
+        console.error('❌ [PUBLIC] Exceção ao criar preferência de cartão:', cardError);
+        
+        // Fallback em caso de exceção no cartão
+        payment.status = 'pending_manual';
+        payment.metadata = {
+          ...payment.metadata,
+          errorReason: 'Exceção no Mercado Pago (Cartão)',
+          errorMessage: cardError.message
+        };
+        await payment.save();
+        
+        return res.status(200).json({ 
+          success: false,
+          fallbackMode: true,
+          paymentId: payment._id,
+          message: '⚠️ Sistema de pagamento temporariamente indisponível',
+          instructions: [
+            'Seu cadastro foi registrado com sucesso',
+            'Entre em contato: wanderpsc@gmail.com',
+            `Referência: ${externalReference}`
+          ],
+          contact: { email: 'wanderpsc@gmail.com' },
+          paymentInfo: {
+            plan: plan.toUpperCase(),
+            amount: totalAmount,
+            duration: `${durationMonths} mês(es)`
+          }
+        });
+      }
     }
   } catch (error: any) {
     console.error('Erro ao criar pagamento público:', error);
