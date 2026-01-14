@@ -2,29 +2,18 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/criador-horario-backend/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EduSync-PRO - Sistema Criador de Horário de Aula Escolar</title>
+    <title>Redirecionando...</title>
     
-    <!-- GitHub Pages SPA Redirect Fix -->
+    <!-- GitHub Pages SPA Redirect -->
     <script type="text/javascript">
       // Single Page Apps for GitHub Pages
-      // https://github.com/rafgraph/spa-github-pages
-      // Immediately redirect to the correct URL
-      (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
-          );
-        }
-      }(window.location))
+      // Salva a rota no sessionStorage e redireciona para index.html
+      sessionStorage.setItem('path', window.location.pathname + window.location.search + window.location.hash);
+      window.location.replace(window.location.origin + '/criador-horario-backend/');
     </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/criador-horario-backend/src/main.tsx"></script>
+    <p style="text-align: center; padding: 50px; font-family: Arial;">Redirecionando...</p>
   </body>
 </html>
