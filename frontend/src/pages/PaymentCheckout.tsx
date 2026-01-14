@@ -117,13 +117,15 @@ export default function PaymentCheckout() {
     if (!paymentData?.paymentId) return;
 
     try {
-      const response = await api.get(`/payments/${paymentData.paymentId}`);
+      // Usar rota pública /status/:id que não requer autenticação
+      const response = await api.get(`/payments/status/${paymentData.paymentId}`);
       
       if (response.data.data.status === 'approved') {
         navigate('/payment-success');
       }
     } catch (err) {
       console.error('Erro ao verificar status:', err);
+      // Não mostrar erro ao usuário, apenas logar
     }
   };
 

@@ -477,8 +477,94 @@ router.post('/create', auth, async (req: AuthRequest, res: Response) => {
 });
 
 /**
+ * GET /api/payments/status/:id
+ * Consulta status de um pagamento SEM autenticação (para checkout público)
+ */
+router.get('/status/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    console.log('🔍 [STATUS] Consultando pagamento público:', id);
+
+    const payment = await Payment.findById(id);
+    if (!payment) {
+      console.log('❌ [STATUS] Pagamento não encontrado:', id);
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+
+    console.log('✅ [STATUS] Pagamento encontrado:', payment._id);
+    console.log('📊 [STATUS] Status atual:', payment.status);
+
+    // Se tiver mercadoPagoId, buscar status atualizado
+    if (payment.mercadoPagoId) {
+      console.log('💳 [STATUS] Consultando Mercado Pago:', payment.mercadoPagoId);
+      
+      const statusResult = await mercadoPagoService.getPaymentStatus(payment.mercadoPagoId);
+      
+      if (statusResult.success) {
+        const mpStatus = statusResult.data.status;
+        console.log('📥 [STATUS] Status do MP:', mpStatus);
+        
+        // Atualizar status se mudou
+        if (mpStatus === 'approved' && payment.status !== 'approved') {
+          console.log('✅ [STATUS] Pagamento aprovado! Atualizando...');
+          payment.status = 'approved';
+          payment.mercadoPagoStatus = mpStatus;
+          payment.approvedAt = new Date();
+          await payment.save();
+
+          // Ativar licença da escola
+          const school = await User.findById(payment.schoolId);
+          if (school) {
+            school.approvedByAdmin = true;
+            school.registrationStatus = 'approved';
+            school.licenseActive = true;
+            
+            const expiryDate = new Date();
+            expiryDate.setMonth(expiryDate.getMonth() + payment.durationMonths);
+            school.licenseExpiryDate = expiryDate;
+            school.plan = payment.plan;
+            
+            await school.save();
+            console.log('🎉 [STATUS] Licença ativada para:', school.email);
+          }
+        } else if (mpStatus === 'rejected' && payment.status !== 'rejected') {
+          console.log('❌ [STATUS] Pagamento rejeitado');
+          payment.status = 'rejected';
+          payment.mercadoPagoStatus = mpStatus;
+          payment.rejectedReason = statusResult.data.status_detail;
+          await payment.save();
+        }
+      }
+    }
+
+    // Retornar apenas dados essenciais (sem dados sensíveis)
+    res.json({ 
+      success: true, 
+      data: {
+        _id: payment._id,
+        status: payment.status,
+        mercadoPagoStatus: payment.mercadoPagoStatus,
+        amount: payment.amount,
+        plan: payment.plan,
+        paymentMethod: payment.paymentMethod,
+        createdAt: payment.createdAt,
+        approvedAt: payment.approvedAt
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ [STATUS] Erro ao buscar pagamento:', error);
+    res.status(500).json({ 
+      message: 'Erro ao buscar pagamento',
+      error: error.message 
+    });
+  }
+});
+
+/**
  * GET /api/payments/:id
- * Consulta status de um pagamento
+ * Consulta status de um pagamento (REQUER AUTENTICAÇÃO)
  */
 router.get('/:id', auth, async (req: AuthRequest, res: Response) => {
   try {
