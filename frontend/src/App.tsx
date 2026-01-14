@@ -58,6 +58,7 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter
+      basename="/criador-horario-backend"
       future={{
         v7_startTransition: true,
         v7_relativeSplatPath: true

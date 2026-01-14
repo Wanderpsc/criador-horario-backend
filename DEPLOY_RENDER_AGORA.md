@@ -264,3 +264,4 @@ Seu sistema está no ar! 🎉
 **© 2025 Wander Pires Silva Coelho - Sistema Protegido**
 
 📧 Dúvidas: wanderpsc@gmail.com
+

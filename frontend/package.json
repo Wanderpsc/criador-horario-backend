@@ -36,6 +36,8 @@
     "build": "vite build",
     "build:check": "tsc && vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && surge dist --domain criador-horario-aula.surge.sh"
-  }
+    "deploy": "npm run build && surge dist --domain criador-horario-aula.surge.sh",
+    "deploy:github": "npm run build && gh-pages -d dist"
+  },
+  "homepage": "https://wanderpsc.github.io/criador-horario-backend"
 }

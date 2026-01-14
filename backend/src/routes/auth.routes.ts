@@ -203,6 +203,67 @@ router.post('/login',
   }
 );
 
+// Aceite de Termos
+router.post('/accept-terms', async (req: any, res: any) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    
+    const { termsVersion, privacyVersion, copyrightAcknowledged } = req.body;
+    
+    // Atualizar usuário
+    const user = await User.findByIdAndUpdate(
+      decoded.id,
+      {
+        acceptedTerms: true,
+        acceptedTermsDate: new Date(),
+        termsVersion: termsVersion || '1.0',
+        privacyVersion: privacyVersion || '1.0',
+        copyrightAcknowledged: copyrightAcknowledged || false
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    // Criar registro de aceite para fins legais
+    const TermsAcceptance = require('../models/TermsAcceptance').default;
+    const crypto = require('crypto');
+    
+    const digitalSignature = crypto
+      .createHash('sha256')
+      .update(`${user._id}-${termsVersion}-${Date.now()}`)
+      .digest('hex');
+
+    await TermsAcceptance.create({
+      userId: user._id,
+      schoolId: user.school,
+      termsVersion: termsVersion || '1.0',
+      privacyVersion: privacyVersion || '1.0',
+      acceptedAt: new Date(),
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('user-agent'),
+      digitalSignature
+    });
+
+    res.json({
+      success: true,
+      message: 'Termos aceitos com sucesso',
+      acceptedAt: user.acceptedTermsDate
+    });
+  } catch (error: any) {
+    console.error('Erro ao aceitar termos:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Esqueci minha senha
 router.post('/forgot-password',
   [body('email').isEmail().withMessage('Email inválido')],

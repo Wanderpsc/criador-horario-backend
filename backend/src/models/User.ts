@@ -53,6 +53,9 @@ export interface IUser extends Document {
   // Termos e condições
   acceptedTerms: boolean;
   acceptedTermsDate?: Date;
+  termsVersion?: string;
+  privacyVersion?: string;
+  copyrightAcknowledged: boolean;
   
   // Recuperação de senha
   resetPasswordToken?: string;
@@ -120,6 +123,9 @@ const userSchema = new Schema<IUser>(
     // Termos e condições
     acceptedTerms: { type: Boolean, default: false },
     acceptedTermsDate: { type: Date },
+    termsVersion: { type: String },
+    privacyVersion: { type: String },
+    copyrightAcknowledged: { type: Boolean, default: false },
     
     // Recuperação de senha
     resetPasswordToken: { type: String },
