@@ -74,7 +74,7 @@ if ($deploy -eq "S" -or $deploy -eq "s") {
     
     git add .
     git commit -m "fix: Corrige erro 404 após geração de QR Code PIX - adiciona rota pública de status"
-    git push origin main
+    git push origin master
     
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Erro no push para o git!" -ForegroundColor Red
