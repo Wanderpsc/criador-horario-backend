@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
 import { Building2, FileText, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { TermsModal } from '../components/TermsModal';
 
 interface RegisterForm {
   // Dados básicos
@@ -44,10 +45,11 @@ interface RegisterForm {
 }
 
 export default function SchoolRegister() {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterForm>();
+  const { register, handleSubmit, watch, formState: { errors }, setValue } = useForm<RegisterForm>();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [showTerms, setShowTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
@@ -55,11 +57,20 @@ export default function SchoolRegister() {
   const password = watch('password');
 
   const onSubmit = async (data: RegisterForm) => {
+    if (!termsAccepted) {
+      toast.error('Você precisa aceitar os termos de uso para continuar');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await api.post('/auth/register-school', {
         ...data,
+        acceptedTerms: true,
+        termsVersion: '1.0',
+        privacyVersion: '1.0',
+        copyrightAcknowledged: true,
         acceptedTermsDate: new Date().toISOString()
       });
       
@@ -450,82 +461,60 @@ export default function SchoolRegister() {
                 </div>
 
                 {/* Termos de Uso */}
-                <div className="bg-gray-50 p-6 rounded-lg border-2 border-gray-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center">
-                      <FileText className="text-primary-600 mr-2" size={24} />
-                      <h3 className="text-lg font-semibold">Termos de Licenciamento</h3>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-2 border-blue-200">
+                  <div className="flex items-center mb-4">
+                    <FileText className="text-blue-600 mr-3" size={32} />
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Termos de Uso e Proteção Legal</h3>
+                      <p className="text-sm text-gray-600">Leia e aceite os termos para continuar</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowTerms(!showTerms)}
-                      className="text-primary-600 hover:text-primary-700 text-sm font-medium"
-                    >
-                      {showTerms ? 'Ocultar' : 'Ler completo'}
-                    </button>
                   </div>
 
-                  {showTerms && (
-                    <div className="bg-white p-4 rounded border max-h-64 overflow-y-auto text-sm text-gray-700 mb-4">
-                      <h4 className="font-bold mb-2">CONTRATO DE LICENCIAMENTO DE SOFTWARE</h4>
-                      <p className="mb-2">
-                        <strong>1. OBJETO:</strong> O presente contrato tem por objeto o licenciamento de uso do sistema
-                        EduSync-PRO para criação automatizada de horários escolares.
-                      </p>
-                      <p className="mb-2">
-                        <strong>2. LICENÇA:</strong> A licença concedida é não-exclusiva, intransferível e limitada ao
-                        número de usuários contratado no plano escolhido.
-                      </p>
-                      <p className="mb-2">
-                        <strong>3. PROPRIEDADE INTELECTUAL:</strong> Todos os direitos autorais e de propriedade
-                        intelectual pertencem exclusivamente ao desenvolvedor Wander Pires Silva Coelho.
-                      </p>
-                      <p className="mb-2">
-                        <strong>4. PAGAMENTO:</strong> O pagamento deve ser realizado conforme o plano contratado,
-                        mensalmente ou anualmente, através dos métodos disponibilizados.
-                      </p>
-                      <p className="mb-2">
-                        <strong>5. DADOS E PRIVACIDADE:</strong> Os dados cadastrados são de propriedade da instituição
-                        e serão tratados conforme a LGPD (Lei Geral de Proteção de Dados).
-                      </p>
-                      <p className="mb-2">
-                        <strong>6. SUPORTE:</strong> Suporte técnico será fornecido conforme o plano contratado,
-                        via e-mail ou sistema de tickets.
-                      </p>
-                      <p className="mb-2">
-                        <strong>7. RESCISÃO:</strong> O contrato pode ser rescindido por qualquer das partes com
-                        aviso prévio de 30 dias. Em caso de inadimplência, o acesso será suspenso automaticamente.
-                      </p>
-                      <p className="mb-2">
-                        <strong>8. GARANTIA:</strong> O software é fornecido "como está", sem garantias além das
-                        funcionalidades descritas na documentação.
-                      </p>
-                      <p className="mb-2">
-                        <strong>9. FORO:</strong> Fica eleito o foro da comarca de São Paulo/SP para dirimir
-                        quaisquer questões oriundas deste contrato.
-                      </p>
-                      <p className="text-xs text-gray-600 mt-4">
-                        © 2025 Wander Pires Silva Coelho - Todos os direitos reservados<br/>
-                        E-mail: wanderpsc@gmail.com
+                  {termsAccepted ? (
+                    <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                      <div className="flex items-center text-green-800">
+                        <CheckCircle2 className="mr-2" size={24} />
+                        <div>
+                          <p className="font-bold">Termos Aceitos com Sucesso!</p>
+                          <p className="text-sm">Você leu e concordou com todos os termos e políticas</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="bg-white border border-gray-300 rounded-lg p-4">
+                        <p className="text-sm text-gray-700 mb-3">
+                          Antes de continuar, você precisa ler e aceitar nossos:
+                        </p>
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          <li className="flex items-start">
+                            <span className="mr-2">📜</span>
+                            <span><strong>Termos de Uso e Licença</strong> - Direitos, obrigações e restrições</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="mr-2">🔒</span>
+                            <span><strong>Política de Privacidade</strong> - Como tratamos seus dados (LGPD)</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="mr-2">⚠️</span>
+                            <span><strong>Declaração de Direitos Autorais</strong> - Propriedade intelectual e proteções</span>
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                      >
+                        <FileText className="mr-2" size={20} />
+                        Ler e Aceitar Termos de Uso
+                      </button>
+                      
+                      <p className="text-xs text-red-600 text-center">
+                        * Obrigatório para finalizar o cadastro
                       </p>
                     </div>
-                  )}
-
-                  <label className="flex items-start cursor-pointer">
-                    <input
-                      type="checkbox"
-                      {...register('acceptedTerms', { 
-                        required: 'Você deve aceitar os termos para continuar' 
-                      })}
-                      className="mt-1 mr-3"
-                    />
-                    <span className="text-sm text-gray-700">
-                      Li e aceito os <strong>Termos de Licenciamento</strong> e autorizo o uso dos dados
-                      fornecidos conforme a <strong>Política de Privacidade</strong> e <strong>LGPD</strong>.
-                    </span>
-                  </label>
-                  {errors.acceptedTerms && (
-                    <p className="text-red-500 text-sm mt-2">{errors.acceptedTerms.message}</p>
                   )}
                 </div>
 
@@ -580,6 +569,23 @@ export default function SchoolRegister() {
           <p className="mt-1">E-mail: wanderpsc@gmail.com</p>
         </div>
       </div>
+
+      {/* Modal de Termos */}
+      {showTermsModal && (
+        <TermsModal
+          isRegistration={true}
+          onAccept={() => {
+            setTermsAccepted(true);
+            setShowTermsModal(false);
+            setValue('acceptedTerms', true);
+            toast.success('Termos aceitos com sucesso!');
+          }}
+          onReject={() => {
+            setShowTermsModal(false);
+            toast.error('Você precisa aceitar os termos para continuar o cadastro');
+          }}
+        />
+      )}
     </div>
   );
 }

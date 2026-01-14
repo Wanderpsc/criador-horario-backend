@@ -11,9 +11,10 @@ import toast from 'react-hot-toast';
 interface TermsModalProps {
   onAccept: () => void;
   onReject: () => void;
+  isRegistration?: boolean; // Se true, não faz chamada à API
 }
 
-export const TermsModal: React.FC<TermsModalProps> = ({ onAccept, onReject }) => {
+export const TermsModal: React.FC<TermsModalProps> = ({ onAccept, onReject, isRegistration = false }) => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [copyrightAccepted, setCopyrightAccepted] = useState(false);
@@ -25,6 +26,13 @@ export const TermsModal: React.FC<TermsModalProps> = ({ onAccept, onReject }) =>
       return;
     }
 
+    // Se for durante o registro, apenas chama onAccept sem fazer API call
+    if (isRegistration) {
+      onAccept();
+      return;
+    }
+
+    // Se for após login, registra no backend
     setLoading(true);
     try {
       await api.post('/auth/accept-terms', {
