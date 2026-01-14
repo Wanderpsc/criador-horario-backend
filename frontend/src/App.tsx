@@ -57,9 +57,12 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // Use basename apenas em produção (GitHub Pages)
+  const basename = import.meta.env.MODE === 'production' ? '/criador-horario-backend' : '/';
+  
   return (
     <BrowserRouter
-      basename="/criador-horario-backend"
+      basename={basename}
       future={{
         v7_startTransition: true,
         v7_relativeSplatPath: true

@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { copyFileSync } from 'fs';
 import { resolve } from 'path';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     {
@@ -22,7 +22,8 @@ export default defineConfig({
       }
     }
   ],
-  base: '/criador-horario-backend/',
+  // Use base apenas em produção (build), não em dev
+  base: command === 'build' ? '/criador-horario-backend/' : '/',
   server: {
     port: 3001,
     host: true,
@@ -33,4 +34,4 @@ export default defineConfig({
       }
     }
   }
-});
+}));
