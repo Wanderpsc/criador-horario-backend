@@ -6,6 +6,21 @@
   <title>Sistema Criador de Horário de Aula Escolar</title>
   <meta name="description" content="Sistema completo para criação automática de horários escolares">
   <meta name="author" content="Wander Pires Silva Coelho">
+  
+  <!-- GitHub Pages SPA Redirect Fix -->
+  <script type="text/javascript">
+    // Single Page Apps for GitHub Pages - Redirect 404 to index.html
+    (function(l) {
+      if (l.search[1] === '/' ) {
+        var decoded = l.search.slice(1).split('&').map(function(s) { 
+          return s.replace(/~and~/g, '&')
+        }).join('?');
+        window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+        );
+      }
+    }(window.location))
+  </script>
 </head>
 <body>
   <div id="root"></div>
