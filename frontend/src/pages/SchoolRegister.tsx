@@ -52,13 +52,57 @@ export default function SchoolRegister() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [recommendedPlan, setRecommendedPlan] = useState<string>('');
   const navigate = useNavigate();
 
   const password = watch('password');
+  const numberOfTeachers = watch('numberOfTeachers');
+  const numberOfStudents = watch('numberOfStudents');
+  const selectedPlan = watch('selectedPlan');
+
+  // Calcular plano recomendado baseado nos números
+  const calculateRecommendedPlan = () => {
+    const teachers = numberOfTeachers || 0;
+    const students = numberOfStudents || 0;
+    
+    if (teachers <= 30 && students <= 500) {
+      return 'basico';
+    } else if (teachers <= 50 && students <= 1000) {
+      return 'profissional';
+    } else {
+      return 'enterprise'; // Para casos maiores
+    }
+  };
+
+  // Validar se o plano selecionado é adequado
+  const validatePlanSelection = () => {
+    const teachers = numberOfTeachers || 0;
+    const recommended = calculateRecommendedPlan();
+    
+    if (selectedPlan === 'basico' && teachers > 30) {
+      return false;
+    }
+    if (selectedPlan === 'profissional' && teachers > 50) {
+      return false;
+    }
+    return true;
+  };
+
+  // Atualizar plano recomendado quando números mudarem
+  useState(() => {
+    const recommended = calculateRecommendedPlan();
+    setRecommendedPlan(recommended);
+  });
 
   const onSubmit = async (data: RegisterForm) => {
     if (!termsAccepted) {
       toast.error('Você precisa aceitar os termos de uso para continuar');
+      return;
+    }
+
+    // Validar plano antes de submeter
+    if (!validatePlanSelection()) {
+      toast.error('O plano selecionado não suporta o número de professores informado. Escolha um plano adequado.');
       return;
     }
 
@@ -173,6 +217,7 @@ export default function SchoolRegister() {
                           minLength: { value: 6, message: 'Mínimo 6 caracteres' }
                         })}
                         className="input pr-10"
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
@@ -195,6 +240,7 @@ export default function SchoolRegister() {
                           validate: value => value === password || 'Senhas não conferem'
                         })}
                         className="input pr-10"
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
@@ -450,14 +496,87 @@ export default function SchoolRegister() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Plano e Termos de Uso</h2>
                 
+                {/* Resumo dos dados informados */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <h3 className="font-bold text-gray-900 mb-2">📊 Resumo da Instituição:</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium">Professores:</span> {numberOfTeachers || 0}
+                    </div>
+                    <div>
+                      <span className="font-medium">Alunos:</span> {numberOfStudents || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Alerta de plano recomendado */}
+                {(numberOfTeachers || 0) > 0 && (
+                  <div className={`border rounded-lg p-4 ${
+                    calculateRecommendedPlan() === 'basico' 
+                      ? 'bg-green-50 border-green-300' 
+                      : 'bg-yellow-50 border-yellow-300'
+                  }`}>
+                    <div className="flex items-start">
+                      <span className="text-2xl mr-2">
+                        {calculateRecommendedPlan() === 'basico' ? '✅' : '⚠️'}
+                      </span>
+                      <div>
+                        <p className="font-bold text-gray-900 mb-1">
+                          Plano Recomendado: {calculateRecommendedPlan() === 'basico' ? 'Básico' : 'Profissional'}
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          {calculateRecommendedPlan() === 'basico' 
+                            ? 'O plano Básico atende sua necessidade atual.'
+                            : 'Recomendamos o plano Profissional para o número de professores informado.'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="label">Selecione o Plano *</label>
-                  <select {...register('selectedPlan', { required: 'Selecione um plano' })} className="input">
+                  <select 
+                    {...register('selectedPlan', { 
+                      required: 'Selecione um plano',
+                      validate: () => validatePlanSelection() || 'Este plano não suporta o número de professores informado'
+                    })} 
+                    className="input"
+                  >
                     <option value="">Escolha seu plano...</option>
-                    <option value="basico">Básico - R$ 119,90/mês (Até 30 professores, 15 turmas)</option>
-                    <option value="profissional">Profissional - R$ 249,90/mês (Até 50 professores, 25 turmas)</option>
+                    <option 
+                      value="basico"
+                      disabled={(numberOfTeachers || 0) > 30}
+                    >
+                      Básico - R$ 119,90/mês (Até 30 professores, 15 turmas)
+                      {(numberOfTeachers || 0) > 30 ? ' ❌ INSUFICIENTE' : ''}
+                    </option>
+                    <option 
+                      value="profissional"
+                      disabled={(numberOfTeachers || 0) > 50}
+                    >
+                      Profissional - R$ 249,90/mês (Até 50 professores, 25 turmas)
+                      {(numberOfTeachers || 0) > 50 ? ' ❌ INSUFICIENTE' : ''}
+                    </option>
                   </select>
                   {errors.selectedPlan && <p className="text-red-500 text-sm mt-1">{errors.selectedPlan.message}</p>}
+                  
+                  {/* Aviso se plano selecionado é inadequado */}
+                  {selectedPlan && !validatePlanSelection() && (
+                    <div className="mt-2 bg-red-50 border border-red-300 rounded p-3">
+                      <p className="text-red-800 text-sm font-medium">
+                        ⚠️ ATENÇÃO: Este plano não suporta {numberOfTeachers} professores. 
+                        Escolha o plano Profissional ou reduza o número de professores.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Mensagem explicativa */}
+                  <p className="text-xs text-gray-600 mt-2">
+                    * O plano é validado com base no número de professores informado anteriormente.
+                    Se precisar de mais capacidade, entre em contato: wanderpsc@gmail.com
+                  </p>
                 </div>
 
                 {/* Termos de Uso */}
@@ -465,8 +584,13 @@ export default function SchoolRegister() {
                   <div className="flex items-center mb-4">
                     <FileText className="text-blue-600 mr-3" size={32} />
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Termos de Uso e Proteção Legal</h3>
-                      <p className="text-sm text-gray-600">Leia e aceite os termos para continuar</p>
+                      <h3 className="text-lg font-bold text-gray-900">Termos de Uso e Proteção Legal *</h3>
+                      <p className="text-sm text-gray-600">
+                        {termsAccepted 
+                          ? 'Termos aceitos e validados' 
+                          : '⚠️ Leitura e aceitação obrigatória para continuar'
+                        }
+                      </p>
                     </div>
                   </div>
 
@@ -475,29 +599,39 @@ export default function SchoolRegister() {
                       <div className="flex items-center text-green-800">
                         <CheckCircle2 className="mr-2" size={24} />
                         <div>
-                          <p className="font-bold">Termos Aceitos com Sucesso!</p>
+                          <p className="font-bold">✅ Termos Aceitos com Sucesso!</p>
                           <p className="text-sm">Você leu e concordou com todos os termos e políticas</p>
+                          <p className="text-xs mt-2 text-green-600">Agora você pode finalizar o cadastro</p>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                        <div className="flex items-start">
+                          <span className="text-2xl mr-2">⚠️</span>
+                          <div>
+                            <p className="font-bold text-yellow-800 mb-2">OBRIGATÓRIO</p>
+                            <p className="text-sm text-yellow-700">
+                              O cadastro <strong>não pode ser concluído</strong> sem a leitura e aceitação dos termos abaixo:
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <div className="bg-white border border-gray-300 rounded-lg p-4">
-                        <p className="text-sm text-gray-700 mb-3">
-                          Antes de continuar, você precisa ler e aceitar nossos:
-                        </p>
-                        <ul className="space-y-2 text-sm text-gray-700">
+                        <ul className="space-y-3 text-sm text-gray-700">
                           <li className="flex items-start">
-                            <span className="mr-2">📜</span>
-                            <span><strong>Termos de Uso e Licença</strong> - Direitos, obrigações e restrições</span>
+                            <span className="mr-2 text-lg">📜</span>
+                            <span><strong>Termos de Uso e Licença</strong> - Direitos, obrigações e restrições de uso</span>
                           </li>
                           <li className="flex items-start">
-                            <span className="mr-2">🔒</span>
-                            <span><strong>Política de Privacidade</strong> - Como tratamos seus dados (LGPD)</span>
+                            <span className="mr-2 text-lg">🔒</span>
+                            <span><strong>Política de Privacidade</strong> - Tratamento de dados conforme LGPD</span>
                           </li>
                           <li className="flex items-start">
-                            <span className="mr-2">⚠️</span>
-                            <span><strong>Declaração de Direitos Autorais</strong> - Propriedade intelectual e proteções</span>
+                            <span className="mr-2 text-lg">©</span>
+                            <span><strong>Declaração de Direitos Autorais</strong> - Propriedade intelectual protegida</span>
                           </li>
                         </ul>
                       </div>
@@ -505,14 +639,14 @@ export default function SchoolRegister() {
                       <button
                         type="button"
                         onClick={() => setShowTermsModal(true)}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center shadow-lg hover:shadow-xl"
                       >
                         <FileText className="mr-2" size={20} />
-                        Ler e Aceitar Termos de Uso
+                        📖 Ler e Aceitar Todos os Termos
                       </button>
                       
-                      <p className="text-xs text-red-600 text-center">
-                        * Obrigatório para finalizar o cadastro
+                      <p className="text-sm text-red-600 text-center font-medium bg-red-50 p-3 rounded border border-red-200">
+                        ❌ Botão "Finalizar Cadastro" bloqueado até aceitar os termos
                       </p>
                     </div>
                   )}
@@ -539,8 +673,13 @@ export default function SchoolRegister() {
                   </button>
                   <button 
                     type="submit" 
-                    disabled={loading}
-                    className="btn btn-primary flex items-center"
+                    disabled={loading || !termsAccepted}
+                    className={`btn flex items-center ${
+                      !termsAccepted 
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                        : 'btn-primary'
+                    }`}
+                    title={!termsAccepted ? 'Você precisa aceitar os termos primeiro' : ''}
                   >
                     {loading ? (
                       <>Processando...</>
@@ -552,6 +691,12 @@ export default function SchoolRegister() {
                     )}
                   </button>
                 </div>
+                
+                {!termsAccepted && (
+                  <p className="text-center text-red-600 text-sm mt-2 font-medium">
+                    ⚠️ Você precisa ler e aceitar os termos de uso para finalizar o cadastro
+                  </p>
+                )}
               </div>
             )}
           </form>

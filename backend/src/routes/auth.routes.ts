@@ -12,10 +12,27 @@ const router = express.Router();
 // Registro completo de escola
 router.post('/register-school', async (req: any, res: any) => {
   try {
-    const { email, password, acceptedTerms, ...schoolData } = req.body;
+    const { email, password, acceptedTerms, numberOfTeachers, selectedPlan, ...schoolData } = req.body;
 
     if (!acceptedTerms) {
       return res.status(400).json({ message: 'Você deve aceitar os termos de uso' });
+    }
+
+    // Validar plano baseado no número de professores
+    const teachers = numberOfTeachers || 0;
+    
+    if (selectedPlan === 'basico' && teachers > 30) {
+      return res.status(400).json({ 
+        message: 'O plano Básico suporta até 30 professores. Você informou ' + teachers + ' professores. Escolha o plano Profissional.',
+        requiredPlan: 'profissional'
+      });
+    }
+    
+    if (selectedPlan === 'profissional' && teachers > 50) {
+      return res.status(400).json({ 
+        message: 'O plano Profissional suporta até 50 professores. Você informou ' + teachers + ' professores. Entre em contato para planos personalizados.',
+        contact: 'wanderpsc@gmail.com'
+      });
     }
 
     const existingUser = await User.findOne({ email });
@@ -30,7 +47,9 @@ router.post('/register-school', async (req: any, res: any) => {
       role: 'school',
       registrationStatus: 'pending',
       acceptedTerms,
-      acceptedTermsDate: new Date()
+      acceptedTermsDate: new Date(),
+      numberOfTeachers,
+      selectedPlan
     });
 
     await user.save();
@@ -39,6 +58,8 @@ router.post('/register-school', async (req: any, res: any) => {
       message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador. Você receberá um email quando sua licença for liberada.',
       schoolName: user.schoolName,
       status: 'pending_approval',
+      selectedPlan: selectedPlan,
+      numberOfTeachers: teachers,
       nextStep: 'Complete o pagamento e aguarde a aprovação do administrador para acessar o sistema.'
     });
   } catch (error: any) {
