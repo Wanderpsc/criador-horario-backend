@@ -274,6 +274,14 @@ export default function Layout() {
             subtitle: 'Mercado Pago'
           },
           { 
+            icon: FileText, 
+            label: 'Notas Fiscais', 
+            path: '/invoices', 
+            color: 'purple',
+            description: '📄 Emissão e envio de NF/ISS',
+            subtitle: 'Fiscal'
+          },
+          { 
             icon: Database, 
             label: 'Backups e Dados', 
             path: '/backup-management', 

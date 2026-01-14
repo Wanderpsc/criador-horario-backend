@@ -38,6 +38,7 @@ import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
 import PaymentsManagement from './pages/PaymentsManagement';
 import MessagesManagement from './pages/MessagesManagement';
+import InvoiceManagement from './pages/InvoiceManagement';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -114,6 +115,7 @@ function App() {
           <Route path="sales-management" element={<AdminRoute><SalesManagement /></AdminRoute>} />
           <Route path="schools-management" element={<AdminRoute><SchoolsManagement /></AdminRoute>} />
           <Route path="payments-management" element={<AdminRoute><PaymentsManagement /></AdminRoute>} />
+          <Route path="invoices" element={<AdminRoute><InvoiceManagement /></AdminRoute>} />
         </Route>
         
         {/* Rota pública para o painel de avisos (TV) */}
