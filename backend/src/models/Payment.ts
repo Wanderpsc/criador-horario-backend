@@ -8,7 +8,7 @@ export interface IPayment extends Document {
   durationMonths: number;
   amount: number;
   paymentMethod: 'pix' | 'credit_card' | 'boleto';
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded' | 'pending_manual';
   mercadoPagoId?: string;
   mercadoPagoStatus?: string;
   preferenceId?: string;
@@ -63,7 +63,7 @@ const PaymentSchema = new Schema<IPayment>(
     },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'cancelled', 'refunded'],
+      enum: ['pending', 'approved', 'rejected', 'cancelled', 'refunded', 'pending_manual'],
       default: 'pending',
       index: true
     },

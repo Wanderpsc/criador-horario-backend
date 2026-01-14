@@ -53,6 +53,15 @@ class MercadoPagoService {
   constructor() {
     this.accessToken = MERCADO_PAGO_ACCESS_TOKEN;
     this.apiUrl = MERCADO_PAGO_API;
+    
+    // Log de inicialização
+    if (!this.accessToken) {
+      console.error('⚠️ [MP] ACCESS_TOKEN não configurado!');
+      console.error('⚠️ [MP] Configure MERCADO_PAGO_ACCESS_TOKEN no arquivo .env');
+    } else {
+      console.log('✅ [MP] Mercado Pago inicializado');
+      console.log(`🔑 [MP] Token presente: ${this.accessToken.substring(0, 15)}...`);
+    }
   }
 
   private getHeaders(idempotencyKey?: string) {
@@ -67,6 +76,13 @@ class MercadoPagoService {
     
     return headers;
   }
+  
+  /**
+   * Verifica se o token está configurado
+   */
+  isConfigured(): boolean {
+    return !!this.accessToken && this.accessToken.length > 0;
+  }
 
   /**
    * Cria uma preferência de pagamento (para checkout transparente ou redirect)
@@ -74,6 +90,17 @@ class MercadoPagoService {
   async createPreference(preferenceData: PaymentPreference) {
     try {
       console.log('🔵 [MP] Criando preferência de pagamento...');
+      
+      // Verificar se o token está configurado
+      if (!this.isConfigured()) {
+        console.error('❌ [MP] Token não configurado!');
+        return {
+          success: false,
+          error: 'Mercado Pago não configurado. Entre em contato com o suporte.',
+          details: { reason: 'missing_token' }
+        };
+      }
+      
       console.log('📤 [MP] Dados enviados:', JSON.stringify(preferenceData, null, 2));
       
       // URL correta da API de preferências
@@ -111,8 +138,23 @@ class MercadoPagoService {
    */
   async createPixPayment(paymentData: PixPaymentRequest) {
     try {
+      console.log('🔵 [MP] Criando pagamento PIX...');
+      
+      // Verificar se o token está configurado
+      if (!this.isConfigured()) {
+        console.error('❌ [MP] Token não configurado para PIX!');
+        return {
+          success: false,
+          error: 'Mercado Pago não configurado. Entre em contato com o suporte.',
+          details: { reason: 'missing_token' }
+        };
+      }
+      
+      console.log('📤 [MP] Dados do PIX:', JSON.stringify(paymentData, null, 2));
+      
       // Gerar chave de idempotência única
       const idempotencyKey = `pix-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      console.log('🔑 [MP] Chave idempotência:', idempotencyKey);
       
       const response = await axios.post(
         `${this.apiUrl}/payments`,
@@ -121,6 +163,10 @@ class MercadoPagoService {
       );
 
       const payment = response.data;
+      
+      console.log('✅ [MP] PIX criado com sucesso!');
+      console.log('📥 [MP] Payment ID:', payment.id);
+      console.log('📥 [MP] Status:', payment.status);
 
       return {
         success: true,
@@ -134,10 +180,15 @@ class MercadoPagoService {
         }
       };
     } catch (error: any) {
-      console.error('Erro ao criar pagamento PIX:', error.response?.data || error.message);
+      console.error('❌ [MP] Erro ao criar pagamento PIX!');
+      console.error('📛 [MP] Status:', error.response?.status);
+      console.error('📛 [MP] Message:', error.message);
+      console.error('📛 [MP] Erro completo:', JSON.stringify(error.response?.data, null, 2));
+      
       return {
         success: false,
-        error: error.response?.data?.message || 'Erro ao criar pagamento PIX'
+        error: error.response?.data?.message || error.message || 'Erro ao criar pagamento PIX',
+        details: error.response?.data
       };
     }
   }

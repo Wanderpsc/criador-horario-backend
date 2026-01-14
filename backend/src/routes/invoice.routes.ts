@@ -3,8 +3,8 @@
  * © 2025-2026 Wander Pires Silva Coelho
  */
 
-import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.middleware';
+import { Router, Request, Response } from 'express';
+import { auth, AuthRequest } from '../middleware/auth';
 import { InvoiceService } from '../services/invoice.service';
 import Invoice from '../models/Invoice';
 import User from '../models/User';
@@ -15,9 +15,9 @@ const router = Router();
  * @route POST /api/invoices/create
  * @desc Criar nota fiscal manualmente (Admin)
  */
-router.post('/create', authMiddleware, async (req, res) => {
+router.post('/create', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     if (!user || user.role !== 'super-admin') {
       return res.status(403).json({ 
@@ -83,9 +83,9 @@ router.post('/create', authMiddleware, async (req, res) => {
  * @route POST /api/invoices/:invoiceId/generate-pdf
  * @desc Gerar PDF da nota fiscal
  */
-router.post('/:invoiceId/generate-pdf', authMiddleware, async (req, res) => {
+router.post('/:invoiceId/generate-pdf', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     if (!user || user.role !== 'super-admin') {
       return res.status(403).json({ 
@@ -116,9 +116,9 @@ router.post('/:invoiceId/generate-pdf', authMiddleware, async (req, res) => {
  * @route POST /api/invoices/:invoiceId/send-email
  * @desc Enviar nota fiscal por email
  */
-router.post('/:invoiceId/send-email', authMiddleware, async (req, res) => {
+router.post('/:invoiceId/send-email', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     if (!user || user.role !== 'super-admin') {
       return res.status(403).json({ 
@@ -148,9 +148,9 @@ router.post('/:invoiceId/send-email', authMiddleware, async (req, res) => {
  * @route GET /api/invoices
  * @desc Listar todas as notas fiscais (Admin)
  */
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     if (!user || user.role !== 'super-admin') {
       return res.status(403).json({ 
@@ -205,9 +205,9 @@ router.get('/', authMiddleware, async (req, res) => {
  * @route GET /api/invoices/:invoiceId
  * @desc Buscar nota fiscal por ID
  */
-router.get('/:invoiceId', authMiddleware, async (req, res) => {
+router.get('/:invoiceId', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     const invoice = await Invoice.findById(req.params.invoiceId);
     
@@ -219,7 +219,7 @@ router.get('/:invoiceId', authMiddleware, async (req, res) => {
     }
     
     // Escola só pode ver suas próprias notas
-    if (user?.role !== 'super-admin' && invoice.customer.schoolId.toString() !== req.userId) {
+    if (user?.role !== 'super-admin' && invoice.customer.schoolId.toString() !== req.user?.id) {
       return res.status(403).json({ 
         success: false, 
         message: 'Acesso negado' 
@@ -245,9 +245,9 @@ router.get('/:invoiceId', authMiddleware, async (req, res) => {
  * @route GET /api/invoices/:invoiceId/download
  * @desc Download do PDF da nota fiscal
  */
-router.get('/:invoiceId/download', authMiddleware, async (req, res) => {
+router.get('/:invoiceId/download', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     const invoice = await Invoice.findById(req.params.invoiceId);
     
@@ -259,7 +259,7 @@ router.get('/:invoiceId/download', authMiddleware, async (req, res) => {
     }
     
     // Escola só pode baixar suas próprias notas
-    if (user?.role !== 'super-admin' && invoice.customer.schoolId.toString() !== req.userId) {
+    if (user?.role !== 'super-admin' && invoice.customer.schoolId.toString() !== req.user?.id) {
       return res.status(403).json({ 
         success: false, 
         message: 'Acesso negado' 
@@ -292,9 +292,9 @@ router.get('/:invoiceId/download', authMiddleware, async (req, res) => {
  * @route DELETE /api/invoices/:invoiceId/cancel
  * @desc Cancelar nota fiscal
  */
-router.delete('/:invoiceId/cancel', authMiddleware, async (req, res) => {
+router.post('/:invoiceId/cancel', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     if (!user || user.role !== 'super-admin') {
       return res.status(403).json({ 
@@ -346,12 +346,12 @@ router.delete('/:invoiceId/cancel', authMiddleware, async (req, res) => {
  * @route GET /api/invoices/school/:schoolId
  * @desc Buscar notas fiscais de uma escola específica
  */
-router.get('/school/:schoolId', authMiddleware, async (req, res) => {
+router.get('/school/:schoolId', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user?.id);
     
     // Escola só pode ver suas próprias notas
-    if (user?.role !== 'super-admin' && req.params.schoolId !== req.userId) {
+    if (user?.role !== 'super-admin' && req.params.schoolId !== req.user?.id) {
       return res.status(403).json({ 
         success: false, 
         message: 'Acesso negado' 

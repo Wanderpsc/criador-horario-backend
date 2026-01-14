@@ -105,8 +105,11 @@ export class InvoiceService {
       .text(`Código do Serviço: ${invoice.service.code}`)
       .text(`Descrição: ${invoice.service.description}`)
       .text(`Quantidade: ${invoice.service.quantity}`)
-      .text(`Valor Unitário: R$ ${invoice.service.unitPrice.toFixed(2)}`)
-      .text(`Valor Total: R$ ${invoice.service.totalPrice.toFixed(2)}`, { bold: true })
+      .text(`Valor Unitário: R$ ${invoice.service.unitPrice.toFixed(2)}`);
+    
+    doc.font('Helvetica-Bold')
+      .text(`Valor Total: R$ ${invoice.service.totalPrice.toFixed(2)}`)
+      .font('Helvetica')
       .moveDown();
     
     // Valores e Impostos
@@ -281,7 +284,7 @@ export class InvoiceService {
     paymentDate: Date;
     plan: string;
     amount: number;
-  }): Promise<typeof Invoice> {
+  }): Promise<any> {
     
     const serviceDescription = `Licença de uso do software EduSync-PRO - Plano ${data.plan} - Sistema de criação automatizada de horários escolares`;
     

@@ -200,6 +200,34 @@ app.use(errorHandler);
 const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   
+  // Diagnóstico de variáveis de ambiente
+  console.log('\n📋 DIAGNÓSTICO DE CONFIGURAÇÃO:');
+  console.log('================================');
+  console.log(`✅ NODE_ENV: ${process.env.NODE_ENV || 'não configurado'}`);
+  console.log(`✅ PORT: ${PORT}`);
+  console.log(`✅ MONGODB_URI: ${process.env.MONGODB_URI ? 'Configurado' : '❌ NÃO CONFIGURADO'}`);
+  console.log(`✅ JWT_SECRET: ${process.env.JWT_SECRET ? 'Configurado' : '❌ NÃO CONFIGURADO'}`);
+  console.log(`✅ FRONTEND_URL: ${process.env.FRONTEND_URL || 'não configurado'}`);
+  console.log(`✅ EMAIL_USER: ${process.env.EMAIL_USER || 'não configurado'}`);
+  console.log(`✅ EMAIL_PASSWORD: ${process.env.EMAIL_PASSWORD ? 'Configurado' : '❌ NÃO CONFIGURADO'}`);
+  
+  // MERCADO PAGO - Verificação crítica
+  const mpToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  if (!mpToken || mpToken.length === 0) {
+    console.log('❌ MERCADO_PAGO_ACCESS_TOKEN: ⚠️⚠️⚠️ NÃO CONFIGURADO ⚠️⚠️⚠️');
+    console.log('⚠️ O SISTEMA DE PAGAMENTO NÃO FUNCIONARÁ!');
+    console.log('⚠️ Configure o token no Render: Environment Variables');
+  } else if (mpToken.startsWith('APP_USR-')) {
+    console.log(`✅ MERCADO_PAGO_ACCESS_TOKEN: Configurado (${mpToken.substring(0, 20)}...)`);
+  } else {
+    console.log(`⚠️ MERCADO_PAGO_ACCESS_TOKEN: Configurado mas formato incorreto`);
+    console.log(`⚠️ Deve começar com 'APP_USR-'`);
+    console.log(`⚠️ Valor atual: ${mpToken.substring(0, 20)}...`);
+  }
+  
+  console.log(`✅ WEBHOOK_URL: ${process.env.WEBHOOK_URL || 'não configurado (opcional)'}`);
+  console.log('================================\n');
+  
   // Exibir copyright e informações de segurança
   COPYRIGHT.display();
   SECURITY_INFO.display();

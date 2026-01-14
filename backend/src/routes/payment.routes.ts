@@ -19,15 +19,20 @@ const PLAN_PRICES: Record<string, number> = {
  */
 router.post('/create-public', async (req: any, res: Response) => {
   try {
+    console.log('🔵 [ROUTE] Recebendo requisição /create-public');
+    console.log('📥 [ROUTE] Body:', req.body);
+    
     const { plan, durationMonths, paymentMethod, email, schoolName } = req.body;
 
     if (!email || !schoolName) {
+      console.error('❌ [ROUTE] Email ou nome da escola ausente');
       return res.status(400).json({ 
         message: 'Email e nome da escola são obrigatórios' 
       });
     }
 
     // Buscar usuário pelo email
+    console.log('🔍 [ROUTE] Buscando usuário:', email);
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ 
@@ -286,11 +291,22 @@ router.post('/create-public', async (req: any, res: Response) => {
       }
     }
   } catch (error: any) {
-    console.error('Erro ao criar pagamento público:', error);
+    console.error('❌ [ROUTE] Erro crítico ao criar pagamento público!');
+    console.error('❌ [ROUTE] Error:', error);
+    console.error('❌ [ROUTE] Stack:', error.stack);
+    
     res.status(500).json({
       success: false,
-      message: 'Erro ao processar pagamento',
-      error: error.message
+      message: 'Erro interno ao processar pagamento',
+      error: error.message || 'Erro desconhecido',
+      instructions: [
+        'Seu cadastro pode ter sido registrado',
+        'Entre em contato para verificar: wanderpsc@gmail.com',
+        'Informe este erro ao suporte'
+      ],
+      contact: {
+        email: 'wanderpsc@gmail.com'
+      }
     });
   }
 });
