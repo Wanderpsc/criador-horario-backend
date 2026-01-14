@@ -163,3 +163,4 @@ export const emergencyScheduleAPI = {
   update: (id: string, data: any) => api.put(`/emergency-schedules/${id}`, data),
   delete: (id: string) => api.delete(`/emergency-schedules/${id}`)
 };
+

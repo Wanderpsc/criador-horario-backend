@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Send, Download, X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-import { api } from '../services/api';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 
 interface School {
@@ -458,3 +458,5 @@ export const InvoiceManagement: React.FC = () => {
     </div>
   );
 };
+
+export default InvoiceManagement;
