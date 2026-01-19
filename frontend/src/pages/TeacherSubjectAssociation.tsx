@@ -995,9 +995,6 @@ const TeacherSubjectAssociation: React.FC = () => {
                   />
                   <div className="flex flex-col flex-1">
                     <span className="text-sm font-medium">{subject.name}</span>
-                    {subject.gradeName && (
-                      <span className="text-xs text-blue-600">📚 {subject.gradeName}</span>
-                    )}
                   </div>
                 </label>
               ))
