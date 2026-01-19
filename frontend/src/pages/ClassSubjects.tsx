@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit2, Trash2, X, Power, PowerOff, BookOpen, School, Search, Copy, ChevronDown, ChevronUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Power, PowerOff, BookOpen, School, Search, Copy, ChevronDown, ChevronUp, AlertCircle, CheckCircle, Printer } from 'lucide-react';
 import { classAPI, Class } from '../services/classAPI';
 import { subjectAPI } from '../services/api';
 import toast from 'react-hot-toast';
@@ -101,6 +101,10 @@ export default function ClassSubjects() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const openModal = (classId: string) => {
@@ -607,14 +611,22 @@ export default function ClassSubjects() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Turmas & Componentes Curriculares</h1>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-gray-600">
             Associe componentes curriculares às turmas
           </p>
         </div>
         <div className="flex gap-2">
           <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 no-print"
+            title="Imprimir página"
+          >
+            <Printer size={20} />
+            Imprimir
+          </button>
+          <button
             onClick={() => setFilterActive(null)}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-lg no-print ${
               filterActive === null ? 'bg-blue-600 text-white' : 'bg-gray-200'
             }`}
           >
@@ -622,7 +634,7 @@ export default function ClassSubjects() {
           </button>
           <button
             onClick={() => setFilterActive(true)}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-lg no-print ${
               filterActive === true ? 'bg-green-600 text-white' : 'bg-gray-200'
             }`}
           >
@@ -630,7 +642,7 @@ export default function ClassSubjects() {
           </button>
           <button
             onClick={() => setFilterActive(false)}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-lg no-print ${
               filterActive === false ? 'bg-red-600 text-white' : 'bg-gray-200'
             }`}
           >

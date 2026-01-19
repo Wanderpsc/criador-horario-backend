@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { subjectAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit2, Trash2, X, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Search, Printer } from 'lucide-react';
 import api from '../lib/axios';
 
 interface Subject {
@@ -39,6 +39,10 @@ export default function Subjects() {
       weeklyHours: 2
     }
   });
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   useEffect(() => {
     if (user) {
@@ -201,13 +205,23 @@ export default function Subjects() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Componentes Curriculares</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn btn-primary flex items-center"
-        >
-          <Plus className="w-4 h-4 mr-2" />
+        <div className="flex gap-2">
+          <button
+            onClick={handlePrint}
+            className="btn btn-secondary flex items-center no-print"
+            title="Imprimir lista de componentes"
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            Imprimir
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="btn btn-primary flex items-center no-print"
+          >
+            <Plus className="w-4 h-4 mr-2" />
             Novo Componente
           </button>
+        </div>
       </div>
 
       {/* Campo de Busca */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Printer } from 'lucide-react';
 import { classAPI, Class } from '../services/classAPI';
 import { gradeAPI, Grade } from '../services/gradeAPI';
 
@@ -22,6 +22,10 @@ export default function Classes() {
     shift: 'morning' as 'morning' | 'afternoon' | 'evening' | 'full',
     capacity: ''
   });
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   useEffect(() => {
     loadData();
@@ -122,13 +126,23 @@ export default function Classes() {
           <h1 className="text-2xl font-bold text-gray-900">Turmas</h1>
           <p className="mt-1 text-sm text-gray-600">Gerencie as turmas da escola</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5" />
-          Nova Turma
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 no-print"
+            title="Imprimir lista de turmas"
+          >
+            <Printer className="w-5 h-5" />
+            Imprimir
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 no-print"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Turma
+          </button>
+        </div>
       </div>
 
       {grades.length === 0 && (
