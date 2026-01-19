@@ -16,10 +16,12 @@
 </head>
 <body>
   <h1>🔍 Verificação de Cargas Horárias</h1>
-  <div id="content">Carregando dados...</div>
+  <p id="status" style="padding: 10px; background: #e3f2fd; border-radius: 5px;">⏳ Conectando à API...</p>
+  <div id="content"></div>
 
   <script>
-    const API_URL = 'https://criador-horario-backend.onrender.com/api/verify/verify';
+    const API_URL = 'http://localhost:5000/api/verify/verify';  // Usando servidor local
+    // const API_URL = 'https://criador-horario-backend.onrender.com/api/verify/verify';  // Produção
     
     // Dados esperados das planilhas
     const expectedData = {
@@ -345,13 +347,27 @@
     };
 
     async function loadData() {
+      const statusEl = document.getElementById('status');
+      const contentEl = document.getElementById('content');
+      
       try {
+        statusEl.innerHTML = '⏳ Buscando dados do servidor...';
+        statusEl.style.background = '#e3f2fd';
+        
         const response = await fetch(API_URL);
+        
+        if (!response.ok) {
+          throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         if (!data.success) {
-          throw new Error(data.error);
+          throw new Error(data.error || 'Erro desconhecido na API');
         }
+
+        statusEl.innerHTML = `✅ ${data.data.length} turmas encontradas`;
+        statusEl.style.background = '#d4edda';
 
         let html = '';
         
@@ -435,7 +451,24 @@
         
         document.getElementById('content').innerHTML = html || '<p>Nenhum dado encontrado</p>';
       } catch (error) {
-        document.getElementById('content').innerHTML = `<p style="color: red;">Erro: ${error.message}</p>`;
+        const statusEl = document.getElementById('status');
+        statusEl.innerHTML = `❌ Erro: ${error.message}`;
+        statusEl.style.background = '#f8d7da';
+        
+        document.getElementById('content').innerHTML = `
+          <div style="padding: 20px; background: #fff3cd; border-radius: 5px; margin-top: 20px;">
+            <h3>⚠️ Detalhes do Erro:</h3>
+            <p><strong>Mensagem:</strong> ${error.message}</p>
+            <p><strong>URL tentada:</strong> ${API_URL}</p>
+            <h4>Possíveis soluções:</h4>
+            <ol>
+              <li>Verifique se o servidor backend está rodando (localhost:5000)</li>
+              <li>Aguarde alguns minutos se estiver usando a URL do Render</li>
+              <li>Verifique o console do navegador (F12) para mais detalhes</li>
+            </ol>
+          </div>
+        `;
+        console.error('Erro detalhado:', error);
       }
     }
 

@@ -1,6 +1,6 @@
 import express from 'express';
-import Subject from '../models/Subject.js';
-import Class from '../models/Class.js';
+import Subject from '../models/Subject';
+import Class from '../models/Class';
 
 const router = express.Router();
 
@@ -32,9 +32,9 @@ router.get('/verify', async (req, res) => {
     }
     
     res.json({ success: true, data: report });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao verificar cargas horárias:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error?.message || 'Erro desconhecido' });
   }
 });
 
