@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verificação de Cargas Horárias</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .turma { margin: 30px 0; border: 2px solid #333; padding: 15px; }
+    .turma h2 { background: #4CAF50; color: white; padding: 10px; margin: -15px -15px 15px -15px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .total { font-weight: bold; background-color: #fff3cd; }
+    .error { background-color: #f8d7da; }
+    .success { background-color: #d4edda; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Verificação de Cargas Horárias</h1>
+  <div id="content">Carregando dados...</div>
+
+  <script>
+    const API_URL = 'https://criador-horario-backend.onrender.com/api/verify/verify';
+    
+    // Dados esperados das planilhas
+    const expectedData = {
+      'EMTPFARM-1ª SÉRIE - INTEGRAL-I-A': {
+        'ANATOMIA E FISIOLOGIA HUMANA': 2,
+        'ARTE': 1,
+        'BISSEGURANÇA NO SETOR FARMACÊUTICO': 2,
+        'BOAS PRÁTICAS DE MANIPULAÇÃO E CONTROLE DE QUALIDADE': 2,
+        'EDUCAÇÃO FINANCEIRA': 1,
+        'EDUCAÇÃO FÍSICA': 1,
+        'ESPORTE/CULTURA/CLUBE DE LEITURA/OLIMPÍADAS DO CONHECIMENTO OU ROBOTICA(ELETIVA OBRIGATORIA)': 2,
+        'FILOSOFIA': 1,
+        'FÍSICA': 2,
+        'GEOGRAFIA': 2,
+        'HISTÓRIA': 2,
+        'INTELIGÊNCIA ARTIFICIAL': 1,
+        'LEGISLAÇÃO FARMACÊUTICA E SANITÁRIA': 2,
+        'LEITURA, INTERPRETAÇÃO E PRODUÇÃO TEXTUAL': 1,
+        'LINGUA ESPANHOLA': 1,
+        'LINGUA INGLESA': 2,
+        'LÍNGUA PORTUGUESA': 2,
+        'LINGUA PORTUGUESA/ RECOMPOSIÇÃO DA APRENDIZAGEM': 1,
+        'MATEMÁTICA': 3,
+        'MATEMÁTICA/ RECOMPOSIÇÃO DA APREDIZAGEM': 1,
+        'NOÇÕES DE FARMACOLOGIA': 2,
+        'PROJETO DE VIDA/EMPREENDEDORISMO': 1,
+        'QUÍMICA': 2,
+        'SOCIOLOGIA': 1,
+        'BIOLOGIA': 2
+      },
+      'EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A': {
+        'ARTE': 1,
+        'ATIVIDADES INTEGRADORAS - CULTURA INTEGRADA A ARTE': 1,
+        'ATIVIDADES INTEGRADORAS - EDUCAÇÃO DO TRÂNSITO': 2,
+        'ATIVIDADES INTEGRADORAS - ESPORTE INTEGRADO A EDUCAÇÃO FÍSICA': 1,
+        'ATIVIDADES INTEGRADORAS - INTELIGÊNCIA ARTIFICIAL': 1,
+        'ATIVIDADES INTEGRADORAS - MONITORIA / HORÁRIO DE ESTUDO': 1,
+        'BIOLOGIA': 1,
+        'EDUCAÇÃO FÍSICA': 1,
+        'FILOSOFIA': 1,
+        'FÍSICA': 2,
+        'GEOGRAFIA': 1,
+        'HISTÓRIA': 1,
+        'INTELIGÊNCIA ARTIFICIAL APLICADA A AUTOMAÇÃO': 2,
+        'INTERNET DAS COISAS - IOT': 2,
+        'LÍNGUA ESTRANGEIRA ESPANHOL': 1,
+        'LÍNGUA ESTRANGEIRA INGLÊS': 2,
+        'LÍNGUA PORTUGUESA': 3,
+        'MATEMÁTICA': 3,
+        'ORIENTAÇÃO PROFISSIONAL E EMPREENDEDORISMO': 1,
+        'PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - CIÊNCIAS DA NATUREZA': 1,
+        'PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - LÍNGUA PORTUGUESA': 2,
+        'PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - MATEMÁTICA': 1,
+        'PROJETO INTEGRADOR': 3,
+        'QUÍMICA': 2,
+        'SOCIOLOGIA': 1,
+        'TESTE DE SISTEMAS E SEGURANÇA DE DADOS': 2
+      }
+    };
+
+    async function loadData() {
+      try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error);
+        }
+
+        let html = '';
+        
+        for (const classData of data.data) {
+          const expected = expectedData[classData.class];
+          html += `<div class="turma">`;
+          html += `<h2>${classData.class}</h2>`;
+          html += `<table>`;
+          html += `<tr><th>Componente Curricular</th><th>CH Cadastrada</th><th>CH Esperada</th><th>Status</th></tr>`;
+          
+          let totalCadastrada = 0;
+          let totalEsperada = 0;
+          
+          // Criar mapa de componentes cadastrados
+          const cadastrados = {};
+          for (const subject of classData.subjects) {
+            cadastrados[subject.name] = subject.weeklyHours;
+            totalCadastrada += subject.weeklyHours;
+          }
+          
+          // Se temos dados esperados, comparar
+          if (expected) {
+            // Calcular total esperado
+            for (const hours of Object.values(expected)) {
+              totalEsperada += hours;
+            }
+            
+            // Verificar cada disciplina esperada
+            for (const [nome, horasEsperadas] of Object.entries(expected)) {
+              const horasCadastradas = cadastrados[nome] || 0;
+              const match = horasCadastradas === horasEsperadas;
+              const status = match ? '✅' : '❌';
+              const rowClass = match ? 'success' : 'error';
+              
+              html += `<tr class="${rowClass}">`;
+              html += `<td>${nome}</td>`;
+              html += `<td>${horasCadastradas}</td>`;
+              html += `<td>${horasEsperadas}</td>`;
+              html += `<td>${status}</td>`;
+              html += `</tr>`;
+              
+              delete cadastrados[nome];
+            }
+            
+            // Mostrar disciplinas cadastradas que não estão na planilha
+            for (const [nome, horas] of Object.entries(cadastrados)) {
+              html += `<tr class="error">`;
+              html += `<td>${nome}</td>`;
+              html += `<td>${horas}</td>`;
+              html += `<td>-</td>`;
+              html += `<td>⚠️ NÃO ESTÁ NA PLANILHA</td>`;
+              html += `</tr>`;
+            }
+            
+            const totalMatch = totalCadastrada === totalEsperada;
+            html += `<tr class="total ${totalMatch ? 'success' : 'error'}">`;
+            html += `<td>TOTAL</td>`;
+            html += `<td>${totalCadastrada}</td>`;
+            html += `<td>${totalEsperada}</td>`;
+            html += `<td>${totalMatch ? '✅' : '❌'}</td>`;
+            html += `</tr>`;
+          } else {
+            // Sem dados esperados, apenas mostrar o que está cadastrado
+            for (const subject of classData.subjects) {
+              html += `<tr>`;
+              html += `<td>${subject.name}</td>`;
+              html += `<td>${subject.weeklyHours}</td>`;
+              html += `<td colspan="2">⚠️ Sem dados para comparação</td>`;
+              html += `</tr>`;
+            }
+            html += `<tr class="total">`;
+            html += `<td>TOTAL</td>`;
+            html += `<td>${totalCadastrada}</td>`;
+            html += `<td colspan="2">-</td>`;
+            html += `</tr>`;
+          }
+          
+          html += `</table>`;
+          html += `</div>`;
+        }
+        
+        document.getElementById('content').innerHTML = html || '<p>Nenhum dado encontrado</p>';
+      } catch (error) {
+        document.getElementById('content').innerHTML = `<p style="color: red;">Erro: ${error.message}</p>`;
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
