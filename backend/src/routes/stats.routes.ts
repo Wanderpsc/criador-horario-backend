@@ -141,6 +141,17 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
         if (ts.classId) {
           teacherWorkload[teacherId].classes.add(ts.classId.toString());
         }
+
+        // Log detalhado para Claudia
+        const teacher = activeTeachers.find(t => t._id.toString() === teacherId);
+        if (teacher && teacher.name.includes('Claudia')) {
+          console.log(`\n📚 Lotação Claudia:`, {
+            componente: subject.name,
+            weeklyHours: weeklyHours,
+            turmaId: ts.classId,
+            totalAcumulado: teacherWorkload[teacherId].totalLessons
+          });
+        }
       }
     }
 
