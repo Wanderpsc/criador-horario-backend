@@ -22,6 +22,14 @@ interface ClassSubjectAssociation {
   isActive: boolean;
 }
 
+// Função para normalizar texto (remover acentos)
+const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
 export default function ClassSubjects() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -525,9 +533,63 @@ export default function ClassSubjects() {
     toast.success('Todas as alterações foram descartadas');
   };
 
-  const filteredSubjects = subjects.filter(s =>
-    s.name.toLowerCase().includes(searchSubject.toLowerCase())
-  );
+  // Filtrar disciplinas sem diferenciar acentos
+  const filteredSubjects = subjects.filter(s => {
+    const normalizedSubject = normalizeText(s.name);
+    const normalizedSearch = normalizeText(searchSubject);
+    return normalizedSubject.includes(normalizedSearch);
+  });
+
+  // Verificar se a busca não encontrou resultados
+  const hasNoResults = searchSubject.trim() !== '' && filteredSubjects.length === 0;
+
+  // Função para criar nova disciplina
+  const handleCreateSubject = async () => {
+    const newSubjectName = searchSubject.trim();
+    if (!newSubjectName) {
+      toast.error('Digite o nome da disciplina');
+      return;
+    }
+
+    try {
+      const hours = prompt(
+        `Quantas aulas semanais para "${newSubjectName}"?`,
+        '2'
+      );
+
+      if (hours === null) return; // Cancelou
+
+      const hoursNum = parseInt(hours);
+      if (isNaN(hoursNum) || hoursNum < 1) {
+        toast.error('Quantidade de aulas inválida');
+        return;
+      }
+
+      const response = await subjectAPI.create({
+        name: newSubjectName,
+        weeklyHours: hoursNum,
+        workloadHours: hoursNum * 40, // Estimativa de 40 semanas
+        color: '#' + Math.floor(Math.random()*16777215).toString(16),
+        isActive: true
+      });
+
+      toast.success(`Componente "${newSubjectName}" criado!`);
+      
+      // Recarregar dados
+      await loadData();
+      
+      // Adicionar automaticamente à turma se estiver editando
+      if (editingClassId) {
+        const newSubjectId = response.data._id || response.data.id;
+        setSelectedSubjects(prev => [...prev, newSubjectId]);
+      }
+      
+      setSearchSubject('');
+    } catch (error: any) {
+      console.error('❌ Erro ao criar disciplina:', error);
+      toast.error(error.response?.data?.message || 'Erro ao criar componente');
+    }
+  };
 
   if (loading) {
     return (
@@ -809,7 +871,7 @@ export default function ClassSubjects() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <input
                         type="text"
-                        placeholder="Buscar componente nesta turma..."
+                        placeholder="Buscar componente (sem acentos)..."
                         value={searchByClass[assoc.classId] || ''}
                         onChange={(e) => setSearchByClass({ ...searchByClass, [assoc.classId]: e.target.value })}
                         className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -824,12 +886,52 @@ export default function ClassSubjects() {
                       )}
                     </div>
 
+                    {/* Botão para criar disciplina quando não encontrada na busca por turma */}
+                    {(() => {
+                      const searchTerm = searchByClass[assoc.classId] || '';
+                      const filteredByClass = subjects.filter(subject => {
+                        const normalizedSubject = normalizeText(subject.name);
+                        const normalizedSearch = normalizeText(searchTerm);
+                        return normalizedSubject.includes(normalizedSearch);
+                      });
+                      const hasNoResultsInClass = searchTerm.trim() !== '' && filteredByClass.length === 0;
+
+                      if (hasNoResultsInClass) {
+                        return (
+                          <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-yellow-600" />
+                              <div className="flex-1">
+                                <p className="text-xs text-yellow-800">
+                                  "<strong>{searchTerm}</strong>" não encontrado.
+                                </p>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  await handleCreateSubject();
+                                  // Limpar busca após criar
+                                  setSearchByClass({ ...searchByClass, [assoc.classId]: '' });
+                                }}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Criar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     {/* Lista de TODOS os Componentes com Checkboxes */}
                     <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
                   {subjects
                     .filter(subject => {
-                      const searchTerm = (searchByClass[assoc.classId] || '').toLowerCase();
-                      return subject.name.toLowerCase().includes(searchTerm);
+                      const searchTerm = searchByClass[assoc.classId] || '';
+                      const normalizedSubject = normalizeText(subject.name);
+                      const normalizedSearch = normalizeText(searchTerm);
+                      return normalizedSubject.includes(normalizedSearch);
                     })
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((subject) => {
@@ -967,12 +1069,33 @@ export default function ClassSubjects() {
               <div className="mb-4">
                 <input
                   type="text"
-                  placeholder="Buscar componente curricular..."
+                  placeholder="Buscar componente curricular (sem diferenciar acentos)..."
                   value={searchSubject}
                   onChange={(e) => setSearchSubject(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg"
                 />
               </div>
+
+              {/* Botão para criar disciplina quando não encontrada */}
+              {hasNoResults && (
+                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    <div className="flex-1">
+                      <p className="text-sm text-yellow-800">
+                        Componente "<strong>{searchSubject}</strong>" não encontrado.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCreateSubject}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Criar Agora
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 mb-6 max-h-96 overflow-y-auto">
                 {filteredSubjects.map((subject) => (

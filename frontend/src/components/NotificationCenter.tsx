@@ -40,12 +40,19 @@ export default function NotificationCenter() {
       const data = response.data.data || [];
       setNotifications(data);
       setUnreadCount(data.filter((n: Notification) => !n.read).length);
-    } catch (error) {
-      console.error('Erro ao carregar notificações:', error);
+    } catch (error: any) {
+      // Silenciar erros de conexão para não spammar o console
+      if (error.code !== 'ERR_NETWORK' && error.code !== 'ERR_CONNECTION_CLOSED') {
+        console.error('Erro ao carregar notificações:', error);
+      }
     }
   };
 
   const markAsRead = async (notificationId: string) => {
+    if (!notificationId || notificationId === 'undefined') {
+      console.error('❌ ID de notificação inválido:', notificationId);
+      return;
+    }
     try {
       await api.patch(`/notifications/${notificationId}/read`);
       setNotifications(prev =>
@@ -54,6 +61,7 @@ export default function NotificationCenter() {
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Erro ao marcar como lida:', error);
+      toast.error('Erro ao marcar notificação como lida');
     }
   };
 
@@ -72,6 +80,11 @@ export default function NotificationCenter() {
   };
 
   const deleteNotification = async (notificationId: string) => {
+    if (!notificationId || notificationId === 'undefined') {
+      console.error('❌ ID de notificação inválido:', notificationId);
+      toast.error('Erro: ID de notificação inválido');
+      return;
+    }
     try {
       await api.delete(`/notifications/${notificationId}`);
       setNotifications(prev => prev.filter(n => n._id !== notificationId));
@@ -170,7 +183,9 @@ export default function NotificationCenter() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {notifications.map((notification) => {
+                  {notifications
+                    .filter(n => n._id) // Filtrar apenas notificações com ID válido
+                    .map((notification) => {
                     const Icon = getIcon(notification.type);
                     return (
                       <div

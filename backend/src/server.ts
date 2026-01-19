@@ -44,6 +44,7 @@ import paymentRoutes from './routes/payment.routes';
 import webhookRoutes from './routes/webhook.routes';
 import messageRoutes from './routes/message.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import statsRoutes from './routes/stats.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { startNotificationCron } from './services/notification.cron';
 import { startCalendarAlertsCron } from './services/calendar.alerts.cron';
@@ -193,6 +194,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/payments', webhookRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Rota de health check
 app.get('/api/health', (req, res) => {
