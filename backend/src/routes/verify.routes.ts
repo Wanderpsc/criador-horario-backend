@@ -1,17 +1,23 @@
 import express from 'express';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
+import Grade from '../models/Grade';
 
 const router = express.Router();
 
 router.get('/verify', async (req, res) => {
   try {
-    const classes = await Class.find({ isActive: true }).sort({ gradeName: 1, name: 1 });
+    const classes = await Class.find({ isActive: true })
+      .populate('gradeId')
+      .sort({ name: 1 });
     
     const report = [];
     
     for (const classItem of classes) {
-      const className = `${classItem.gradeName}-${classItem.name}`;
+      const grade = classItem.gradeId as any;
+      const gradeName = grade?.title || grade?.name || 'Sem Série';
+      const className = `${gradeName}-${classItem.name}`;
+      
       const subjects = await Subject.find({
         classIds: classItem._id,
         isActive: true
