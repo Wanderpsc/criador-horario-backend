@@ -56,7 +56,9 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       GeneratedTimetable.find({ 
         $or: [
           { userId: userId },
-          { userId: userId.toString() }
+          { userId: userId.toString() },
+          { userId: { $exists: false } },
+          { userId: null }
         ]
       }),
       EmergencySchedule.find({ 
@@ -82,6 +84,27 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
 
     // Filtrar apenas professores ativos
     const activeTeachers = teachers.filter(t => t.isActive !== false);
+
+    console.log('📊 Dados brutos encontrados:', {
+      teachers: teachers.length,
+      activeTeachers: activeTeachers.length,
+      subjects: subjects.length,
+      schedules: schedules.length,
+      timetables: timetables.length,
+      generatedTimetables: generatedTimetables.length,
+      classes: classes.length
+    });
+
+    // Para GeneratedTimetables, agrupar por título para contar apenas horários únicos
+    const uniqueTimetablesByTitle = generatedTimetables.reduce((acc: any, t: any) => {
+      if (t.title && t.title.trim() !== '') {
+        acc[t.title] = t;
+      }
+      return acc;
+    }, {});
+    const uniqueGeneratedCount = Object.keys(uniqueTimetablesByTitle).length;
+
+    console.log('📊 Grades geradas únicas por título:', uniqueGeneratedCount);
 
     // Calcular aulas por professor
     const teacherWorkload: Record<string, {
@@ -134,7 +157,7 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       teachers: activeTeachers.length,
       subjects: subjects.length,
       schedules: schedules.length,
-      timetables: timetables.length + generatedTimetables.length,
+      timetables: timetables.length + uniqueGeneratedCount, // Usar contagem única de grades geradas
       emergencySchedules: emergencySchedules.length,
       classes: classes.length,
       teacherWorkload: teacherWorkloadArray,
@@ -148,7 +171,8 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       timetables: stats.timetables,
       timetablesDetail: {
         timetables: timetables.length,
-        generatedTimetables: generatedTimetables.length
+        generatedTimetables: generatedTimetables.length,
+        uniqueGeneratedTimetables: uniqueGeneratedCount
       },
       classes: stats.classes,
       teachersWithLessons: teacherWorkloadArray.filter(t => t.totalLessons > 0).length,
