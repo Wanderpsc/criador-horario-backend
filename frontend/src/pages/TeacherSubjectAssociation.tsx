@@ -648,10 +648,11 @@ const TeacherSubjectAssociation: React.FC = () => {
     }
   };
 
-  const getSubjectName = (subjectId: string) => {
+  const getSubjectName = (subjectId: string, showGrade: boolean = false) => {
     const subject = subjects.find(s => s.id === subjectId);
     if (!subject) return 'Componente não encontrado';
-    return subject.gradeName ? `${subject.name} (${subject.gradeName})` : subject.name;
+    // Não mostrar gradeName na lotação, pois a turma já indica a série
+    return showGrade && subject.gradeName ? `${subject.name} (${subject.gradeName})` : subject.name;
   };
 
   const getClassName = (classId?: string) => {

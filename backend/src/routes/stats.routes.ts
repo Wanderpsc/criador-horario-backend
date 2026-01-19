@@ -75,7 +75,8 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
         $or: [
           { userId: userId },
           { userId: userId.toString() }
-        ]
+        ],
+        isActive: true // Apenas turmas ativas
       })
     ]);
 
@@ -145,6 +146,11 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       subjects: stats.subjects,
       schedules: stats.schedules,
       timetables: stats.timetables,
+      timetablesDetail: {
+        timetables: timetables.length,
+        generatedTimetables: generatedTimetables.length
+      },
+      classes: stats.classes,
       teachersWithLessons: teacherWorkloadArray.filter(t => t.totalLessons > 0).length,
       totalLessons: stats.totalLessons
     });
