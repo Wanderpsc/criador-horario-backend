@@ -56,6 +56,7 @@ const TeacherSubjectAssociation: React.FC = () => {
   const [searchSubject, setSearchSubject] = useState('');
   const [searchTeacher, setSearchTeacher] = useState('');
   const [searchSubjectInList, setSearchSubjectInList] = useState('');
+  const [searchClass, setSearchClass] = useState('');
   const [showNewTeacherModal, setShowNewTeacherModal] = useState(false);
   const [showNewSubjectModal, setShowNewSubjectModal] = useState(false);
   const [showPdfUploadModal, setShowPdfUploadModal] = useState(false);
@@ -1039,41 +1040,93 @@ const TeacherSubjectAssociation: React.FC = () => {
             Turmas * (selecione uma ou mais)
           </label>
           
+          {/* Campo de Busca de Turmas */}
+          <div className="mb-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar turma por nome, série ou turno..."
+                value={searchClass}
+                onChange={(e) => setSearchClass(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchClass && (
+                <button
+                  onClick={() => setSearchClass('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+          </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4 bg-gray-50 rounded max-h-96 overflow-y-auto">
             {classes.length > 0 ? (
-              [...classes].sort((a, b) => {
-                const gradeA = a.grade?.name || '';
-                const gradeB = b.grade?.name || '';
-                return gradeA.localeCompare(gradeB) || a.name.localeCompare(b.name);
-              }).map(classItem => {
-                const shiftLabel = {
-                  morning: 'Matutino',
-                  afternoon: 'Vespertino',
-                  evening: 'Noturno',
-                  full: 'Integral'
-                }[classItem.shift] || classItem.shift;
+              (() => {
+                const filteredClasses = [...classes]
+                  .filter(classItem => {
+                    if (!searchClass) return true;
+                    const searchLower = searchClass.toLowerCase();
+                    const shiftLabel = {
+                      morning: 'Matutino',
+                      afternoon: 'Vespertino',
+                      evening: 'Noturno',
+                      full: 'Integral'
+                    }[classItem.shift] || classItem.shift;
+                    
+                    return (
+                      classItem.name.toLowerCase().includes(searchLower) ||
+                      (classItem.grade?.name || '').toLowerCase().includes(searchLower) ||
+                      shiftLabel.toLowerCase().includes(searchLower) ||
+                      classItem.shift.toLowerCase().includes(searchLower)
+                    );
+                  })
+                  .sort((a, b) => {
+                    const gradeA = a.grade?.name || '';
+                    const gradeB = b.grade?.name || '';
+                    return gradeA.localeCompare(gradeB) || a.name.localeCompare(b.name);
+                  });
                 
-                return (
-                  <label
-                    key={classItem.id}
-                    className="flex items-start space-x-2 p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedClasses.includes(classItem.id)}
-                      onChange={() => handleClassToggle(classItem.id)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mt-1"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{classItem.name}</span>
-                      {classItem.grade && (
-                        <span className="text-xs text-blue-600">📚 {classItem.grade.name}</span>
-                      )}
-                      <span className="text-xs text-gray-500">⏰ {shiftLabel}</span>
+                if (filteredClasses.length === 0) {
+                  return (
+                    <div className="col-span-full text-center text-gray-500 py-4">
+                      🔍 Nenhuma turma encontrada com esse filtro
                     </div>
-                  </label>
-                );
-              })
+                  );
+                }
+                
+                return filteredClasses.map(classItem => {
+                  const shiftLabel = {
+                    morning: 'Matutino',
+                    afternoon: 'Vespertino',
+                    evening: 'Noturno',
+                    full: 'Integral'
+                  }[classItem.shift] || classItem.shift;
+                  
+                  return (
+                    <label
+                      key={classItem.id}
+                      className="flex items-start space-x-2 p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedClasses.includes(classItem.id)}
+                        onChange={() => handleClassToggle(classItem.id)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mt-1"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{classItem.name}</span>
+                        {classItem.grade && (
+                          <span className="text-xs text-blue-600">📚 {classItem.grade.name}</span>
+                        )}
+                        <span className="text-xs text-gray-500">⏰ {shiftLabel}</span>
+                      </div>
+                    </label>
+                  );
+                });
+              })()
             ) : (
               <div className="col-span-full text-center text-gray-500 py-4">
                 Nenhuma turma cadastrada
