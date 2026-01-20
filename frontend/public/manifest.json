@@ -2,20 +2,20 @@
   "name": "EduSync-PRO - Sistema Criador de Horário",
   "short_name": "EduSync-PRO",
   "description": "Sistema completo para criação automática de horários escolares",
-  "start_url": "./",
+  "start_url": "/criador-horario-backend/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./icon-192.svg",
+      "src": "/criador-horario-backend/icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.svg",
+      "src": "/criador-horario-backend/icon-512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -24,7 +24,7 @@
   "categories": ["education", "productivity"],
   "lang": "pt-BR",
   "dir": "ltr",
-  "scope": "./",
+  "scope": "/criador-horario-backend/",
   "related_applications": [],
   "prefer_related_applications": false,
   "screenshots": [
