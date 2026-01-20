@@ -58,7 +58,7 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   // Base path para GitHub Pages
-  const basename = import.meta.env.MODE === 'production' ? '/criador-horario-backend1' : '/';
+  const basename = import.meta.env.MODE === 'production' ? '/criador-horario-backend' : '/';
   
   return (
     <BrowserRouter
