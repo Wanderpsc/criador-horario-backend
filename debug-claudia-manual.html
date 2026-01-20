@@ -11,6 +11,154 @@
     .error { background: #f8d7da; }
     .success { background: #d4edda; }
   </style>
+  
+  <!-- PROTEÇÃO DO CONSOLE -->
+  <script>
+    (function() {
+      'use strict';
+      
+      // Senha para desbloquear o console (ALTERE ESTA SENHA!)
+      const SENHA_CONSOLE = 'wander2025';
+      let consoleDesbloqueado = false;
+      
+      // Salvar funções originais do console
+      const consoleOriginal = {
+        log: console.log.bind(console),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console),
+        info: console.info.bind(console),
+        debug: console.debug.bind(console),
+        table: console.table.bind(console),
+        dir: console.dir.bind(console),
+        clear: console.clear.bind(console)
+      };
+      
+      // Função para bloquear o console
+      function bloquearConsole() {
+        const mensagemBloqueio = '⛔ Console bloqueado! Use desbloquearConsole("sua_senha") para acessar.';
+        
+        console.log = console.warn = console.error = console.info = 
+        console.debug = console.table = console.dir = function() {
+          consoleOriginal.warn(mensagemBloqueio);
+        };
+        
+        console.clear = function() {
+          consoleOriginal.clear();
+          consoleOriginal.warn(mensagemBloqueio);
+        };
+      }
+      
+      // Função para desbloquear o console
+      window.desbloquearConsole = function(senha) {
+        if (senha === SENHA_CONSOLE) {
+          consoleDesbloqueado = true;
+          console.log = consoleOriginal.log;
+          console.warn = consoleOriginal.warn;
+          console.error = consoleOriginal.error;
+          console.info = consoleOriginal.info;
+          console.debug = consoleOriginal.debug;
+          console.table = consoleOriginal.table;
+          console.dir = consoleOriginal.dir;
+          console.clear = consoleOriginal.clear;
+          consoleOriginal.log('✅ Console desbloqueado com sucesso!');
+          consoleOriginal.log('📌 Para bloquear novamente, use: bloquearConsole()');
+          return true;
+        } else {
+          consoleOriginal.error('❌ Senha incorreta!');
+          return false;
+        }
+      };
+      
+      // Função para bloquear novamente
+      window.bloquearConsole = function() {
+        if (consoleDesbloqueado) {
+          consoleDesbloqueado = false;
+          bloquearConsole();
+          consoleOriginal.warn('🔒 Console bloqueado novamente!');
+        }
+      };
+      
+      // Detectar abertura do DevTools
+      let devtoolsAberto = false;
+      const threshold = 160;
+      
+      function detectarDevTools() {
+        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        
+        if (widthThreshold || heightThreshold) {
+          if (!devtoolsAberto) {
+            devtoolsAberto = true;
+            if (!consoleDesbloqueado) {
+              consoleOriginal.warn('🚨 DevTools detectado! Console bloqueado para segurança.');
+              consoleOriginal.warn('💡 Use desbloquearConsole("sua_senha") para acessar.');
+            }
+          }
+        } else {
+          devtoolsAberto = false;
+        }
+      }
+      
+      // Bloquear atalhos de teclado comuns do console
+      document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.keyCode === 123) {
+          if (!consoleDesbloqueado) {
+            e.preventDefault();
+            consoleOriginal.warn('⛔ F12 bloqueado! Use desbloquearConsole("sua_senha")');
+            return false;
+          }
+        }
+        
+        // Ctrl+Shift+I (Chrome DevTools)
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+          if (!consoleDesbloqueado) {
+            e.preventDefault();
+            consoleOriginal.warn('⛔ Atalho bloqueado! Use desbloquearConsole("sua_senha")');
+            return false;
+          }
+        }
+        
+        // Ctrl+Shift+J (Chrome Console)
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+          if (!consoleDesbloqueado) {
+            e.preventDefault();
+            consoleOriginal.warn('⛔ Atalho bloqueado! Use desbloquearConsole("sua_senha")');
+            return false;
+          }
+        }
+        
+        // Ctrl+U (View Source)
+        if (e.ctrlKey && e.keyCode === 85) {
+          if (!consoleDesbloqueado) {
+            e.preventDefault();
+            consoleOriginal.warn('⛔ Visualizar código-fonte bloqueado!');
+            return false;
+          }
+        }
+      });
+      
+      // Bloquear menu de contexto (botão direito)
+      document.addEventListener('contextmenu', function(e) {
+        if (!consoleDesbloqueado) {
+          e.preventDefault();
+          consoleOriginal.warn('⛔ Botão direito bloqueado!');
+          return false;
+        }
+      });
+      
+      // Iniciar bloqueio
+      bloquearConsole();
+      
+      // Verificar DevTools periodicamente
+      setInterval(detectarDevTools, 1000);
+      
+      // Mensagem inicial
+      consoleOriginal.warn('🔒 Sistema de proteção ativado!');
+      consoleOriginal.info('💡 Para desenvolvedores autorizados: desbloquearConsole("sua_senha")');
+      
+    })();
+  </script>
 </head>
 <body>
   <h1>Debug - Professora Claudia</h1>

@@ -19,6 +19,20 @@ export default defineConfig(({ command }) => ({
         } catch (error) {
           console.error('⚠️ Erro ao copiar 404.html:', error);
         }
+        
+        // Copia arquivos PWA para o dist
+        const pwaFiles = ['manifest.json', 'sw.js', 'icon.svg', 'icon-192.svg', 'icon-512.svg'];
+        pwaFiles.forEach(file => {
+          try {
+            copyFileSync(
+              resolve(__dirname, `public/${file}`),
+              resolve(__dirname, `dist/${file}`)
+            );
+            console.log(`✅ ${file} copiado para dist/`);
+          } catch (error) {
+            console.error(`⚠️ Erro ao copiar ${file}:`, error);
+          }
+        });
       }
     }
   ],
