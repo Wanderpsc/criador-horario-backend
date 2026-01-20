@@ -4,6 +4,7 @@ export interface ITeacherSubject extends Document {
   teacherId: string;
   subjectId: string;
   classId?: string;
+  weeklyHours?: number; // Carga horária específica deste professor neste componente/turma
   schoolId: string;
   userId: string;
   createdAt: Date;
@@ -23,6 +24,13 @@ const teacherSubjectSchema = new Schema<ITeacherSubject>(
     classId: {
       type: String,
       required: false,
+    },
+    weeklyHours: {
+      type: Number,
+      required: false,
+      min: 0,
+      max: 40,
+      default: undefined, // Undefined = usar carga horária da turma ou do componente
     },
     schoolId: {
       type: String,

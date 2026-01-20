@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug - Claudia</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #4CAF50; color: white; }
+    .total { background: #fff3cd; font-weight: bold; }
+    .error { background: #f8d7da; }
+    .success { background: #d4edda; }
+  </style>
+</head>
+<body>
+  <h1>Debug - Professora Claudia</h1>
+  
+  <h2>INSTRUÇÕES:</h2>
+  <ol>
+    <li>Abra o sistema principal (frontend)</li>
+    <li>Vá em "Professores com Disciplinas"</li>
+    <li>Procure a professora "Claudia Rodrigues Correia Carvalho"</li>
+    <li>Liste aqui TODAS as disciplinas e turmas dela</li>
+  </ol>
+  
+  <h2>OU faça manualmente a soma:</h2>
+  <p>Baseado na imagem da planilha que você enviou, vi os seguintes componentes:</p>
+  
+  <table>
+    <tr>
+      <th>Componente Curricular</th>
+      <th>Turmas</th>
+      <th>CH por Turma</th>
+      <th>Total</th>
+    </tr>
+    <tr>
+      <td>LEITURA, INTERPRETAÇÃO E PRODUÇÃO TEXTUAL</td>
+      <td>EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-A</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>LEITURA E PRODUÇÃO TEXTUAL</td>
+      <td>EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>PERCURSOS DE APROFUNDAMENTO/RECOMPOSIÇÃO - LÍNGUA PORTUGUESA</td>
+      <td>EMRINTEGRAL-3ª SERIE-I-A</td>
+      <td>2</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>LINGUA PORTUGUESA/ RECOMPOSIÇÃO DA APRENDIZAGEM</td>
+      <td>EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>LINGUA PORTUGUESA/ RECOMPOSIÇÃO DA APRENDIZAGEM</td>
+      <td>EMRINTEGRAL-3ª SERIE-I-A</td>
+      <td>2</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA PORTUGUESA/RECOMPOSIÇÃO DA APRENDIZAGEM</td>
+      <td>EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B</td>
+      <td>2</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>ATIVIDADES INTEGRADORAS - MONITORIA / HORÁRIO DE ESTUDO</td>
+      <td>EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>ATIVIDADES INTEGRADORAS - MONITORIA / HORÁRIO DE ESTUDO</td>
+      <td>EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B</td>
+      <td>2</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>LÍNGUA PORTUGUESA</td>
+      <td>EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A</td>
+      <td>3</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>LÍNGUA PORTUGUESA</td>
+      <td>EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B</td>
+      <td>3</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <td>LÍNGUA PORTUGUESA</td>
+      <td>EMRINTEGRAL-3ª SERIE-I-A</td>
+      <td>3</td>
+      <td>3</td>
+    </tr>
+    <tr class="total">
+      <td colspan="3">TOTAL CALCULADO</td>
+      <td><strong>21</strong></td>
+    </tr>
+  </table>
+  
+  <div class="error" style="padding: 15px; margin: 20px 0; border-radius: 5px;">
+    <h3>⚠️ IMPORTANTE</h3>
+    <p>A soma acima dá <strong>21 aulas</strong>, não 26 nem 28.</p>
+    <p>Precisamos verificar se há outros componentes que não estão visíveis na imagem da planilha que você enviou.</p>
+    <p><strong>Ação necessária:</strong> Por favor, verifique no sistema quais são TODOS os 7 componentes da Claudia e liste as cargas horárias.</p>
+  </div>
+
+</body>
+</html>

@@ -35,6 +35,7 @@ interface TeacherSubject {
   subjectId: string;
   classId?: string;
   className?: string;
+  weeklyHours?: number; // Carga horária específica do professor nesta lotação
 }
 
 const TeacherSubjectAssociation: React.FC = () => {
@@ -46,7 +47,8 @@ const TeacherSubjectAssociation: React.FC = () => {
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
-  const [pendingAssociations, setPendingAssociations] = useState<Array<{teacher: string; subject: string; class: string}>>([]);
+  const [pendingAssociations, setPendingAssociations] = useState<Array<{teacher: string; subject: string; class: string; weeklyHours?: number}>>([]);
+  const [weeklyHoursInput, setWeeklyHoursInput] = useState<string>(''); // Input para horas compartilhadas
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   
@@ -154,8 +156,16 @@ const TeacherSubjectAssociation: React.FC = () => {
       return;
     }
 
+    // Validar horas se informado
+    const hours = weeklyHoursInput ? parseInt(weeklyHoursInput) : undefined;
+    if (weeklyHoursInput && (isNaN(hours!) || hours! < 1 || hours! > 40)) {
+      setMessage('⚠️ Horas/semana deve ser um número entre 1 e 40');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
     // Criar combinações de componente × turma
-    const newAssociations: Array<{teacher: string; subject: string; class: string}> = [];
+    const newAssociations: Array<{teacher: string; subject: string; class: string; weeklyHours?: number}> = [];
     for (const subjectId of selectedSubjects) {
       for (const classId of selectedClasses) {
         // Verificar se já existe
@@ -164,7 +174,12 @@ const TeacherSubjectAssociation: React.FC = () => {
         );
 
         if (!exists) {
-          newAssociations.push({ teacher: selectedTeacher, subject: subjectId, class: classId });
+          newAssociations.push({ 
+            teacher: selectedTeacher, 
+            subject: subjectId, 
+            class: classId,
+            weeklyHours: hours
+          });
         }
       }
     }
@@ -180,6 +195,7 @@ const TeacherSubjectAssociation: React.FC = () => {
     // Limpar seleções
     setSelectedSubjects([]);
     setSelectedClasses([]);
+    setWeeklyHoursInput(''); // Limpar input de horas
     setMessage(`✅ ${newAssociations.length} lotação(ões) adicionada(s)! Adicione mais ou clique em Salvar`);
     setTimeout(() => setMessage(''), 3000);
   };
@@ -581,13 +597,19 @@ const TeacherSubjectAssociation: React.FC = () => {
       // Enviar associações uma por uma para capturar erros individuais
       for (const assoc of pendingAssociations) {
         try {
-          const payload = {
+          const payload: any = {
             teacherId: assoc.teacher,
             subjectId: assoc.subject,
             classId: assoc.class,
             schoolId: user?.schoolName || 'default',
             userId: user?.id
           };
+          
+          // Adicionar weeklyHours apenas se foi especificado (compartilhamento)
+          if (assoc.weeklyHours !== undefined) {
+            payload.weeklyHours = assoc.weeklyHours;
+          }
+          
           console.log('📤 Enviando associação:', payload);
           await api.post('/teacher-subjects', payload);
           successCount++;
@@ -1065,6 +1087,27 @@ const TeacherSubjectAssociation: React.FC = () => {
           )}
         </div>
 
+        {/* Campo para horas compartilhadas */}
+        <div className="mb-4 p-4 bg-blue-50 rounded border border-blue-200">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            ⏱️ Horas/Semana (Opcional - Para compartilhamento)
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="40"
+            value={weeklyHoursInput}
+            onChange={(e) => setWeeklyHoursInput(e.target.value)}
+            placeholder="Ex: 2"
+            className="w-full md:w-48 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <p className="text-xs text-gray-600 mt-2">
+            💡 <strong>Deixe em branco</strong> para usar a carga horária padrão do componente/turma.<br/>
+            📝 <strong>Preencha apenas</strong> se múltiplos professores compartilham este componente na mesma turma.<br/>
+            <span className="text-blue-700 font-medium">Exemplo:</span> "Horário de Estudo" tem 4h/semana, mas este professor leciona apenas 2h dessas 4h.
+          </p>
+        </div>
+
         <button
           onClick={handleAddAssociation}
           disabled={loading || !selectedTeacher || selectedSubjects.length === 0 || selectedClasses.length === 0}
@@ -1086,6 +1129,11 @@ const TeacherSubjectAssociation: React.FC = () => {
                     <span className="text-green-700">{getSubjectName(assoc.subject)}</span>
                     <span className="text-gray-600 mx-2">→</span>
                     <span className="text-purple-700">{getClassName(assoc.class)}</span>
+                    {assoc.weeklyHours && (
+                      <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded">
+                        ⏱️ {assoc.weeklyHours}h compartilhadas
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => handleRemovePending(index)}

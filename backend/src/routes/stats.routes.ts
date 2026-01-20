@@ -134,41 +134,50 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       const subject = subjects.find(s => s._id.toString() === ts.subjectId.toString());
       
       if (subject && ts.classId) {
-        // Buscar a turma para pegar a carga horária específica
-        const classItem = classes.find((c: any) => c._id.toString() === ts.classId!.toString());
-        
         let weeklyHours = 2; // Padrão: 2 aulas/semana
         let specificHours: number | undefined = undefined;
+        let teacherSpecificHours: number | undefined = undefined;
         
-        if (classItem && classItem.subjectWeeklyHours) {
-          // Buscar carga horária específica para este componente nesta turma
-          const subjectId = ts.subjectId.toString();
-          specificHours = classItem.subjectWeeklyHours instanceof Map 
-            ? classItem.subjectWeeklyHours.get(subjectId)
-            : classItem.subjectWeeklyHours[subjectId];
+        // PRIORIDADE 1: Carga horária específica do TeacherSubject (compartilhamento)
+        if ((ts as any).weeklyHours !== undefined && (ts as any).weeklyHours !== null) {
+          teacherSpecificHours = (ts as any).weeklyHours;
+          weeklyHours = teacherSpecificHours!; // Já validamos que não é undefined
+        } else {
+          // PRIORIDADE 2: Carga horária específica da turma
+          const classItem = classes.find((c: any) => c._id.toString() === ts.classId!.toString());
           
-          if (specificHours !== undefined) {
-            weeklyHours = specificHours;
+          if (classItem && classItem.subjectWeeklyHours) {
+            // Buscar carga horária específica para este componente nesta turma
+            const subjectId = ts.subjectId.toString();
+            specificHours = classItem.subjectWeeklyHours instanceof Map 
+              ? classItem.subjectWeeklyHours.get(subjectId)
+              : classItem.subjectWeeklyHours[subjectId];
+            
+            if (specificHours !== undefined) {
+              weeklyHours = specificHours;
+            } else if (subject.weeklyHours) {
+              // PRIORIDADE 3: Carga horária geral do subject
+              weeklyHours = subject.weeklyHours;
+            }
           } else if (subject.weeklyHours) {
-            // Fallback: usar carga horária geral do subject
+            // PRIORIDADE 3: Carga horária geral do subject
             weeklyHours = subject.weeklyHours;
           }
-        } else if (subject.weeklyHours) {
-          // Fallback: usar carga horária geral do subject
-          weeklyHours = subject.weeklyHours;
         }
         
         teacherWorkload[teacherId].totalLessons += weeklyHours;
         teacherWorkload[teacherId].subjects.add(ts.subjectId.toString());
         teacherWorkload[teacherId].classes.add(ts.classId.toString());
 
-        // Log detalhado para Claudia
+        // Log detalhado para debug
         const teacher = activeTeachers.find(t => t._id.toString() === teacherId);
         if (teacher && teacher.name.includes('Claudia')) {
+          const classItem = classes.find((c: any) => c._id.toString() === ts.classId!.toString());
           console.log(`\n📚 Lotação Claudia:`, {
             componente: subject.name,
             turma: classItem?.name,
-            weeklyHoursEspecifico: specificHours,
+            weeklyHoursTeacherSubject: teacherSpecificHours,
+            weeklyHoursTurma: specificHours,
             weeklyHoursGeral: subject.weeklyHours,
             weeklyHoursUsado: weeklyHours,
             totalAcumulado: teacherWorkload[teacherId].totalLessons

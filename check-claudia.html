@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verificação Detalhada - Claudia</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+    .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+    .stat-card.total { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .stat-card.turmas { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .stat-card.componentes { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .stat-value { font-size: 36px; font-weight: bold; margin: 10px 0; }
+    .stat-label { font-size: 14px; opacity: 0.9; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background-color: #4CAF50; color: white; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    tr:hover { background-color: #f5f5f5; }
+    .grupo { margin: 30px 0; padding: 20px; background: #f0f0f0; border-radius: 8px; }
+    .grupo h3 { color: #4CAF50; margin-top: 0; }
+    .duplicado { background-color: #ffe6e6 !important; }
+    .warning { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 20px 0; }
+    .success { background: #d4edda; padding: 15px; border-radius: 5px; border-left: 4px solid #28a745; margin: 20px 0; }
+    .error { background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545; margin: 20px 0; }
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .turma-tag { display: inline-block; background: #e3f2fd; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Verificação Detalhada - Professora Claudia</h1>
+    <div id="content" class="loading">⏳ Carregando dados...</div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3001/api/check-claudia';
+    
+    async function loadData() {
+      const contentEl = document.getElementById('content');
+      
+      try {
+        const response = await fetch(API_URL);
+        
+        if (!response.ok) {
+          throw new Error(`Erro HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Erro desconhecido');
+        }
+
+        let html = '';
+        
+        // Cards de estatísticas
+        html += `<div class="stats">`;
+        html += `<div class="stat-card total">`;
+        html += `<div class="stat-label">TOTAL AULAS/SEMANA</div>`;
+        html += `<div class="stat-value">${data.totalAulas}</div>`;
+        html += `</div>`;
+        html += `<div class="stat-card componentes">`;
+        html += `<div class="stat-label">COMPONENTES</div>`;
+        html += `<div class="stat-value">${data.totalComponentes}</div>`;
+        html += `</div>`;
+        html += `<div class="stat-card turmas">`;
+        html += `<div class="stat-label">TURMAS</div>`;
+        html += `<div class="stat-value">${data.totalTurmas}</div>`;
+        html += `</div>`;
+        html += `<div class="stat-card">`;
+        html += `<div class="stat-label">REGISTROS</div>`;
+        html += `<div class="stat-value">${data.totalRegistrosTeacherSubject}</div>`;
+        html += `</div>`;
+        html += `</div>`;
+        
+        // Alerta de comparação
+        const aulasEsperadas = 26;
+        if (data.totalAulas === aulasEsperadas) {
+          html += `<div class="success">`;
+          html += `<strong>✅ CORRETO!</strong> Total de ${data.totalAulas} aulas/semana está conforme esperado.`;
+          html += `</div>`;
+        } else if (data.totalAulas > aulasEsperadas) {
+          html += `<div class="error">`;
+          html += `<strong>❌ ERRO!</strong> Total de ${data.totalAulas} aulas/semana está acima do esperado (${aulasEsperadas} aulas).`;
+          html += `<br><strong>Diferença: +${data.totalAulas - aulasEsperadas} aulas a mais</strong>`;
+          html += `</div>`;
+        } else {
+          html += `<div class="warning">`;
+          html += `<strong>⚠️ ATENÇÃO!</strong> Total de ${data.totalAulas} aulas/semana está abaixo do esperado (${aulasEsperadas} aulas).`;
+          html += `<br><strong>Diferença: -${aulasEsperadas - data.totalAulas} aulas a menos</strong>`;
+          html += `</div>`;
+        }
+        
+        // Tabela completa
+        html += `<h2>📋 Todos os Registros (${data.detalhes.length})</h2>`;
+        html += `<table>`;
+        html += `<tr>`;
+        html += `<th>#</th>`;
+        html += `<th>Componente Curricular</th>`;
+        html += `<th>Turma</th>`;
+        html += `<th>CH Semanal</th>`;
+        html += `<th>TeacherSubject ID</th>`;
+        html += `</tr>`;
+        
+        let totalAcumulado = 0;
+        data.detalhes.forEach((d, index) => {
+          totalAcumulado += d.weeklyHours;
+          html += `<tr>`;
+          html += `<td>${index + 1}</td>`;
+          html += `<td>${d.componente}</td>`;
+          html += `<td>${d.turma}</td>`;
+          html += `<td><strong>${d.weeklyHours}</strong> (acum: ${totalAcumulado})</td>`;
+          html += `<td style="font-size: 10px; color: #666;">${d.teacherSubjectId}</td>`;
+          html += `</tr>`;
+        });
+        
+        html += `<tr style="background: #fffbcc; font-weight: bold;">`;
+        html += `<td colspan="3">TOTAL</td>`;
+        html += `<td><strong>${data.totalAulas}</strong></td>`;
+        html += `<td></td>`;
+        html += `</tr>`;
+        html += `</table>`;
+        
+        // Agrupamento por componente
+        html += `<h2>📚 Agrupamento por Componente</h2>`;
+        
+        for (const [componente, registros] of Object.entries(data.porComponente)) {
+          const subtotal = registros.reduce((sum, r) => sum + r.weeklyHours, 0);
+          
+          html += `<div class="grupo">`;
+          html += `<h3>${componente} <span style="color: #999; font-size: 16px;">(${registros.length} turma${registros.length > 1 ? 's' : ''} = ${subtotal}h/semana)</span></h3>`;
+          
+          registros.forEach(r => {
+            html += `<div class="turma-tag">${r.turma} - ${r.weeklyHours}h</div>`;
+          });
+          
+          html += `</div>`;
+        }
+        
+        contentEl.innerHTML = html;
+        
+      } catch (error) {
+        contentEl.innerHTML = `
+          <div class="error">
+            <h3>❌ Erro ao carregar dados</h3>
+            <p><strong>Mensagem:</strong> ${error.message}</p>
+            <p><strong>URL:</strong> ${API_URL}</p>
+            <h4>Verifique:</h4>
+            <ol>
+              <li>O servidor está rodando? Execute: <code>node server-check-claudia.js</code></li>
+              <li>A porta 3001 está disponível?</li>
+              <li>Abra o console do navegador (F12) para mais detalhes</li>
+            </ol>
+          </div>
+        `;
+        console.error('Erro:', error);
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
