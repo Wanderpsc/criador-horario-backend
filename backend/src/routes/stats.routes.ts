@@ -135,7 +135,7 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       
       if (subject && ts.classId) {
         // Buscar a turma para pegar a carga horária específica
-        const classItem = activeClasses.find(c => c._id.toString() === ts.classId.toString());
+        const classItem = classes.find((c: any) => c._id.toString() === ts.classId!.toString());
         
         let weeklyHours = 2; // Padrão: 2 aulas/semana
         let specificHours: number | undefined = undefined;
