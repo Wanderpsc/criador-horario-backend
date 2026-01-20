@@ -36,8 +36,8 @@ export default defineConfig(({ command }) => ({
       }
     }
   ],
-  // Base path para GitHub Pages (necessário para subpath)
-  base: command === 'build' ? '/criador-horario-backend/' : '/',
+  // Base path vazio - usar caminhos relativos
+  base: './',
   server: {
     port: 3001,
     host: true,
