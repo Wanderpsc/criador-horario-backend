@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
-// import InstallPWA from '../components/InstallPWA';
+import InstallPWA from '../components/InstallPWA';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -70,8 +70,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
-      {/* Componente de Instalação PWA - Temporariamente desabilitado */}
-      {/* <InstallPWA /> */}
+      <InstallPWA />
       
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
