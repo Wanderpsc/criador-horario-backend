@@ -124,31 +124,53 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       };
     });
 
-    // Contar aulas por professor baseado em TeacherSubject e Subject.weeklyHours
+    // Contar aulas por professor baseado em TeacherSubject e carga horária específica da turma
     for (const ts of teacherSubjects) {
       const teacherId = ts.teacherId.toString();
       
       if (!teacherWorkload[teacherId]) continue;
 
-      // Buscar o subject para pegar weeklyHours
+      // Buscar o subject
       const subject = subjects.find(s => s._id.toString() === ts.subjectId.toString());
       
-      if (subject) {
-        const weeklyHours = subject.weeklyHours || 2; // Padrão: 2 aulas/semana
+      if (subject && ts.classId) {
+        // Buscar a turma para pegar a carga horária específica
+        const classItem = activeClasses.find(c => c._id.toString() === ts.classId.toString());
+        
+        let weeklyHours = 2; // Padrão: 2 aulas/semana
+        let specificHours: number | undefined = undefined;
+        
+        if (classItem && classItem.subjectWeeklyHours) {
+          // Buscar carga horária específica para este componente nesta turma
+          const subjectId = ts.subjectId.toString();
+          specificHours = classItem.subjectWeeklyHours instanceof Map 
+            ? classItem.subjectWeeklyHours.get(subjectId)
+            : classItem.subjectWeeklyHours[subjectId];
+          
+          if (specificHours !== undefined) {
+            weeklyHours = specificHours;
+          } else if (subject.weeklyHours) {
+            // Fallback: usar carga horária geral do subject
+            weeklyHours = subject.weeklyHours;
+          }
+        } else if (subject.weeklyHours) {
+          // Fallback: usar carga horária geral do subject
+          weeklyHours = subject.weeklyHours;
+        }
+        
         teacherWorkload[teacherId].totalLessons += weeklyHours;
         teacherWorkload[teacherId].subjects.add(ts.subjectId.toString());
-        
-        if (ts.classId) {
-          teacherWorkload[teacherId].classes.add(ts.classId.toString());
-        }
+        teacherWorkload[teacherId].classes.add(ts.classId.toString());
 
         // Log detalhado para Claudia
         const teacher = activeTeachers.find(t => t._id.toString() === teacherId);
         if (teacher && teacher.name.includes('Claudia')) {
           console.log(`\n📚 Lotação Claudia:`, {
             componente: subject.name,
-            weeklyHours: weeklyHours,
-            turmaId: ts.classId,
+            turma: classItem?.name,
+            weeklyHoursEspecifico: specificHours,
+            weeklyHoursGeral: subject.weeklyHours,
+            weeklyHoursUsado: weeklyHours,
             totalAcumulado: teacherWorkload[teacherId].totalLessons
           });
         }
