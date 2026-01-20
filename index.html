@@ -15,11 +15,11 @@
   <meta name="apple-mobile-web-app-title" content="EduSync-PRO">
   
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="./icon.svg">
-  <link rel="apple-touch-icon" href="./icon-192.svg">
+  <link rel="icon" type="image/svg+xml" href="/criador-horario-backend/icon.svg">
+  <link rel="apple-touch-icon" href="/criador-horario-backend/icon-192.svg">
   
   <!-- PWA Manifest -->
-  <link rel="manifest" href="./manifest.json">
+  <link rel="manifest" href="/criador-horario-backend/manifest.json">
   
   <!-- GitHub Pages SPA Redirect Fix -->
   <script type="text/javascript">
@@ -42,11 +42,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        const swPath = document.querySelector('base')?.href 
-          ? new URL('./sw.js', document.querySelector('base').href).href
-          : './sw.js';
-        
-        navigator.serviceWorker.register(swPath)
+        navigator.serviceWorker.register('/criador-horario-backend/sw.js')
           .then(registration => {
             console.log('✅ Service Worker registrado com sucesso:', registration.scope);
           })
@@ -56,8 +52,8 @@
       });
     }
   </script>
-  <script type="module" crossorigin src="./assets/index-DLWLWHuQ.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DAg1YSOJ.css">
+  <script type="module" crossorigin src="/criador-horario-backend/assets/index-BSOWlpN4.js"></script>
+  <link rel="stylesheet" crossorigin href="/criador-horario-backend/assets/index-DAg1YSOJ.css">
 </head>
 <body>
   <div id="root"></div>
