@@ -37,7 +37,7 @@ export default defineConfig(({ command }) => ({
     }
   ],
   // Base path para GitHub Pages
-  base: command === 'build' ? '/criador-horario-backend/' : '/',
+  base: command === 'build' ? '/criador-horario-backend1/' : '/',
   server: {
     port: 3001,
     host: true,
