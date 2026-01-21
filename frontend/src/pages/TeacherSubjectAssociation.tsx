@@ -1298,11 +1298,15 @@ const TeacherSubjectAssociation: React.FC = () => {
                             <span>
                               {getSubjectName(assoc.subjectId)}
                               {(() => {
-                                // Buscar carga horária específica da turma
+                                // 1ª prioridade: Carga horária específica do professor nesta lotação (para disciplinas compartilhadas)
+                                if (assoc.weeklyHours) {
+                                  return <span className="text-blue-700 font-semibold ml-1">({assoc.weeklyHours}h)</span>;
+                                }
+                                // 2ª prioridade: Buscar carga horária específica da turma
                                 if (assoc.classId && classSubjectsData[assoc.classId]?.[assoc.subjectId]) {
                                   return <span className="text-blue-700 font-semibold ml-1">({classSubjectsData[assoc.classId][assoc.subjectId]}h)</span>;
                                 }
-                                // Fallback para carga genérica da disciplina
+                                // 3ª prioridade: Fallback para carga genérica da disciplina
                                 const subject = subjects.find(s => s.id === assoc.subjectId);
                                 return subject?.weeklyHours ? <span className="text-blue-700 font-semibold ml-1">({subject.weeklyHours}h)</span> : null;
                               })()}
