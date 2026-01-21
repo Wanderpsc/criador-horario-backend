@@ -69,6 +69,7 @@ const TeacherSubjectAssociation: React.FC = () => {
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectGrade, setNewSubjectGrade] = useState('');
   const [grades, setGrades] = useState<any[]>([]);
+  const [classSubjectsData, setClassSubjectsData] = useState<{[classId: string]: {[subjectId: string]: number}}>({}); // Cargas horárias por turma
 
   useEffect(() => {
     loadData();
@@ -104,6 +105,15 @@ const TeacherSubjectAssociation: React.FC = () => {
           return a.name.localeCompare(b.name);
         });
         setClasses(sortedClasses);
+        
+        // Extrair cargas horárias de cada turma
+        const classSubjectsMap: {[classId: string]: {[subjectId: string]: number}} = {};
+        sortedClasses.forEach((classItem: any) => {
+          if (classItem.subjectWeeklyHours) {
+            classSubjectsMap[classItem.id || classItem._id] = classItem.subjectWeeklyHours;
+          }
+        });
+        setClassSubjectsData(classSubjectsMap);
       } catch (error) {
         console.error('Erro ao carregar turmas:', error);
         setClasses([]);
@@ -1288,6 +1298,11 @@ const TeacherSubjectAssociation: React.FC = () => {
                             <span>
                               {getSubjectName(assoc.subjectId)}
                               {(() => {
+                                // Buscar carga horária específica da turma
+                                if (assoc.classId && classSubjectsData[assoc.classId]?.[assoc.subjectId]) {
+                                  return <span className="text-blue-700 font-semibold ml-1">({classSubjectsData[assoc.classId][assoc.subjectId]}h)</span>;
+                                }
+                                // Fallback para carga genérica da disciplina
                                 const subject = subjects.find(s => s.id === assoc.subjectId);
                                 return subject?.weeklyHours ? <span className="text-blue-700 font-semibold ml-1">({subject.weeklyHours}h)</span> : null;
                               })()}
