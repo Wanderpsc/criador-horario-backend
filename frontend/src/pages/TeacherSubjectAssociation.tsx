@@ -14,6 +14,7 @@ interface Subject {
   name: string;
   gradeId?: string;
   gradeName?: string;
+  weeklyHours?: number;
 }
 
 interface Class {
@@ -1286,6 +1287,10 @@ const TeacherSubjectAssociation: React.FC = () => {
                           >
                             <span>
                               {getSubjectName(assoc.subjectId)}
+                              {(() => {
+                                const subject = subjects.find(s => s.id === assoc.subjectId);
+                                return subject?.weeklyHours ? <span className="text-blue-700 font-semibold ml-1">({subject.weeklyHours}h)</span> : null;
+                              })()}
                               {className && <span className="text-purple-700 ml-1">→ {className}</span>}
                             </span>
                             <button
@@ -1386,7 +1391,7 @@ const TeacherSubjectAssociation: React.FC = () => {
                 <div key={subject.id} className="border rounded p-4 bg-blue-50">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-lg text-blue-900">
-                      📚 {subject.name}
+                      📚 {subject.name} {subject.weeklyHours && <span className="text-blue-600">({subject.weeklyHours}h)</span>}
                     </h3>
                     <div className="flex items-center space-x-2">
                       <button
