@@ -9,6 +9,11 @@ export interface ITeacher extends Document {
   phone?: string;
   specialization?: string;
   availabilityNotes?: string;
+  availability?: {
+    [day: string]: {
+      [period: number]: boolean;
+    };
+  };
   contractType?: '20h' | '40h';
   weeklyWorkload?: number; // Horas-aula por semana (13 para 20h, 26 para 40h)
   isActive: boolean;
@@ -51,6 +56,11 @@ const teacherSchema = new Schema<ITeacher>(
     availabilityNotes: {
       type: String,
       required: false,
+    },
+    availability: {
+      type: Schema.Types.Mixed,
+      required: false,
+      default: {},
     },
     contractType: {
       type: String,

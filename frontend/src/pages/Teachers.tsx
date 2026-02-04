@@ -5,6 +5,12 @@ import { teacherAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit2, Trash2, X, Printer, Download, FileSpreadsheet } from 'lucide-react';
 
+interface TeacherAvailability {
+  [day: string]: { // 'segunda', 'terça', etc.
+    [period: number]: boolean; // true = disponível, false = indisponível
+  };
+}
+
 interface Teacher {
   id: string;
   cpf: string;
@@ -15,6 +21,7 @@ interface Teacher {
   academicBackground: string;
   specialization?: string;
   availabilityNotes?: string;
+  availability?: TeacherAvailability;
   contractType?: '20h' | '40h';
   weeklyWorkload?: number;
   isActive: boolean;
@@ -29,6 +36,8 @@ export default function Teachers() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<TeacherForm>({
     defaultValues: {
@@ -47,7 +56,15 @@ export default function Teachers() {
     try {
       // Usar userId ao invés de schoolId
       const response = await teacherAPI.getAll(user!.id);
-      setTeachers(response.data.data);
+      const teachersData = response.data.data;
+      
+      console.log('📚 Professores carregados do backend:', teachersData.length);
+      console.log('🔍 Professores com availability configurada:', 
+        teachersData.filter((t: Teacher) => t.availability && Object.keys(t.availability).length > 0)
+          .map((t: Teacher) => ({ name: t.name, availability: t.availability }))
+      );
+      
+      setTeachers(teachersData);
     } catch (error: any) {
       toast.error('Erro ao carregar professores');
     } finally {
@@ -110,6 +127,40 @@ export default function Teachers() {
       loadTeachers();
     } catch (error: any) {
       toast.error('Erro ao excluir professor');
+    }
+  };
+
+  const handleOpenAvailability = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setShowAvailabilityModal(true);
+  };
+
+  const handleSaveAvailability = async (availability: TeacherAvailability) => {
+    if (!selectedTeacher) return;
+    
+    console.log('💾 Salvando disponibilidade:', {
+      teacherId: selectedTeacher.id,
+      teacherName: selectedTeacher.name,
+      availability: availability,
+      quantidadeDias: Object.keys(availability).length,
+      exemplo: availability['segunda']
+    });
+    
+    try {
+      const response = await teacherAPI.update(selectedTeacher.id, { availability });
+      console.log('✅ Resposta COMPLETA do servidor:', response);
+      console.log('📦 Dados retornados:', response.data);
+      console.log('🔍 Availability no retorno:', response.data?.availability);
+      
+      toast.success('Disponibilidade atualizada com sucesso');
+      setShowAvailabilityModal(false);
+      
+      // Recarregar professores
+      await loadTeachers();
+    } catch (error: any) {
+      console.error('❌ Erro COMPLETO:', error);
+      console.error('❌ Response do erro:', error.response);
+      toast.error(error.response?.data?.message || 'Erro ao salvar disponibilidade');
     }
   };
 
@@ -554,6 +605,13 @@ export default function Teachers() {
                   </div>
                 )}
               </div>
+              
+              <button
+                onClick={() => handleOpenAvailability(teacher)}
+                className="mt-4 w-full btn bg-indigo-600 hover:bg-indigo-700 text-white text-sm py-2"
+              >
+                📅 Configurar Horários Disponíveis
+              </button>
             </div>
           ))}
         </div>
@@ -744,7 +802,196 @@ export default function Teachers() {
         </div>
       )}
 
+      {/* Modal de Disponibilidade */}
+      {showAvailabilityModal && selectedTeacher && (
+        <AvailabilityModal
+          teacher={selectedTeacher}
+          onClose={() => setShowAvailabilityModal(false)}
+          onSave={handleSaveAvailability}
+        />
+      )}
+    </div>
+  );
+}
 
+// Componente Modal de Disponibilidade
+function AvailabilityModal({ 
+  teacher, 
+  onClose, 
+  onSave 
+}: { 
+  teacher: Teacher; 
+  onClose: () => void; 
+  onSave: (availability: TeacherAvailability) => void; 
+}) {
+  const days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const periods = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  
+  console.log('🔍 Abrindo modal de disponibilidade:', {
+    teacherName: teacher.name,
+    hasAvailability: !!teacher.availability,
+    availability: teacher.availability
+  });
+  
+  // Inicializar com todos os horários disponíveis por padrão
+  const [availability, setAvailability] = useState<TeacherAvailability>(() => {
+    if (teacher.availability && Object.keys(teacher.availability).length > 0) {
+      console.log('✅ Carregando disponibilidade salva:', teacher.availability);
+      return teacher.availability;
+    }
+    
+    console.log('⚠️ Nenhuma disponibilidade salva, usando padrão (todos disponíveis)');
+    // Default: todos disponíveis
+    const defaultAvailability: TeacherAvailability = {};
+    days.forEach(day => {
+      defaultAvailability[day] = {};
+      periods.forEach(period => {
+        defaultAvailability[day][period] = true; // true = disponível
+      });
+    });
+    return defaultAvailability;
+  });
+
+  const togglePeriod = (day: string, period: number) => {
+    setAvailability(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [period]: !prev[day]?.[period]
+      }
+    }));
+  };
+
+  const toggleDay = (day: string) => {
+    const allAvailable = periods.every(p => availability[day]?.[p] === true);
+    setAvailability(prev => ({
+      ...prev,
+      [day]: Object.fromEntries(
+        periods.map(p => [p, !allAvailable])
+      )
+    }));
+  };
+
+  const toggleAll = () => {
+    const allAvailable = days.every(day => 
+      periods.every(p => availability[day]?.[p] === true)
+    );
+    
+    const newAvailability: TeacherAvailability = {};
+    days.forEach(day => {
+      newAvailability[day] = {};
+      periods.forEach(period => {
+        newAvailability[day][period] = !allAvailable;
+      });
+    });
+    setAvailability(newAvailability);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Horários Disponíveis
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {teacher.name}
+            </p>
+          </div>
+          <button onClick={onClose}>
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+          <p className="text-sm text-blue-800">
+            ✓ <strong>Verde</strong> = Professor DISPONÍVEL neste horário<br />
+            ✗ <strong>Vermelho</strong> = Professor INDISPONÍVEL (não será alocado)
+          </p>
+        </div>
+
+        <div className="mb-4">
+          <button
+            onClick={toggleAll}
+            className="btn bg-gray-600 hover:bg-gray-700 text-white text-sm"
+          >
+            Alternar Todos
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-gray-300 px-3 py-2 text-sm font-semibold">
+                  Dia/Período
+                </th>
+                {periods.map(period => (
+                  <th key={period} className="border border-gray-300 px-2 py-2 text-sm font-semibold">
+                    {period}º
+                  </th>
+                ))}
+                <th className="border border-gray-300 px-3 py-2 text-sm font-semibold">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {days.map(day => (
+                <tr key={day}>
+                  <td className="border border-gray-300 px-3 py-2 font-medium text-sm capitalize">
+                    {day}
+                  </td>
+                  {periods.map(period => {
+                    const isAvailable = availability[day]?.[period] === true;
+                    return (
+                      <td 
+                        key={period} 
+                        className="border border-gray-300 p-0"
+                      >
+                        <button
+                          onClick={() => togglePeriod(day, period)}
+                          className={`w-full h-full px-2 py-3 text-center text-sm font-bold transition-colors ${
+                            isAvailable 
+                              ? 'bg-green-100 hover:bg-green-200 text-green-800' 
+                              : 'bg-red-100 hover:bg-red-200 text-red-800'
+                          }`}
+                        >
+                          {isAvailable ? '✓' : '✗'}
+                        </button>
+                      </td>
+                    );
+                  })}
+                  <td className="border border-gray-300 px-2 py-2 text-center">
+                    <button
+                      onClick={() => toggleDay(day)}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Alternar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button 
+            onClick={() => onSave(availability)}
+            className="btn btn-primary flex-1"
+          >
+            Salvar Disponibilidade
+          </button>
+          <button
+            onClick={onClose}
+            className="btn btn-secondary flex-1"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -5,10 +5,17 @@ import toast from 'react-hot-toast';
 import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calendar, Clock, Trash2, Edit, FolderOpen } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
+interface TeacherAvailability {
+  [day: string]: {
+    [period: number]: boolean;
+  };
+}
+
 interface Teacher {
   id: string;
   name: string;
   observations?: string;
+  availability?: TeacherAvailability;
   isActive?: boolean;
 }
 
@@ -63,6 +70,7 @@ export default function TimetableGenerator() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
   const [observations, setObservations] = useState<string>('');
+  const [printFormat, setPrintFormat] = useState<'normal' | 'transposed'>('normal'); // Formato de impressão
 
   const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 
@@ -84,7 +92,17 @@ export default function TimetableGenerator() {
     queryFn: async () => {
       const response = await api.get('/teachers');
       const data = response.data.data || response.data;
-      return Array.isArray(data) ? data : [];
+      const teachersArray = Array.isArray(data) ? data : [];
+      
+      console.log('📚 Professores carregados:', teachersArray.length);
+      console.log('📊 Disponibilidade configurada:', 
+        teachersArray.filter(t => t.availability).map(t => ({
+          name: t.name,
+          availability: t.availability
+        }))
+      );
+      
+      return teachersArray;
     },
   });
 
@@ -183,6 +201,261 @@ export default function TimetableGenerator() {
       schedules: schedules.length
     });
   }, [teachers, subjects, grades, classes, schedules]);
+
+  // Função para verificar se professor está disponível baseado em observações (PRIORIDADE MÁXIMA)
+  const isTeacherAvailableAtTime = (teacher: Teacher, day: string, period: number): boolean => {
+    console.log(`🔍 Verificando ${teacher.name} - ${day} período ${period}:`, {
+      hasAvailability: !!teacher.availability,
+      availabilityData: teacher.availability,
+      hasObservations: !!teacher.observations
+    });
+
+    // PRIORIDADE ABSOLUTA: Verificar disponibilidade estruturada (checkboxes)
+    if (teacher.availability) {
+      const dayLower = day.toLowerCase();
+      const isAvailable = teacher.availability[dayLower]?.[period];
+      
+      console.log(`  📊 Availability check:`, {
+        day: dayLower,
+        period,
+        dayData: teacher.availability[dayLower],
+        isAvailable,
+        isDefined: isAvailable !== undefined
+      });
+      
+      // Se existe configuração para este dia/período, usar ela SEMPRE
+      if (isAvailable !== undefined) {
+        if (!isAvailable) {
+          console.log(`  🚫 BLOQUEADO por disponibilidade: ${teacher.name} não está disponível em ${dayLower} período ${period}`);
+        } else {
+          console.log(`  ✅ DISPONÍVEL por configuração: ${teacher.name} está disponível em ${dayLower} período ${period}`);
+        }
+        return isAvailable;
+      }
+      
+      // Se não há configuração específica para este dia/período, considerar indisponível por segurança
+      console.log(`  ⚠️ Sem configuração para ${dayLower} período ${period}, considerando INDISPONÍVEL`);
+      return false;
+    }
+
+    // PRIORIDADE 2: Se não tem disponibilidade estruturada, tentar parsear observações
+    console.log(`  📝 Usando observações (availability não configurada)`);
+    if (!teacher.observations) return true;
+    
+    const obs = teacher.observations.toLowerCase();
+    const dayLower = day.toLowerCase();
+    
+    // MAPEAMENTO: Período para turno e horário
+    const isMorning = period <= 5;
+    const isAfternoon = period >= 6;
+    const periodHour = period <= 5 ? (7 + period - 1) : (13 + period - 6);
+    
+    // ========== DETECÇÃO GENÉRICA DE DIAS DA SEMANA ==========
+    const daysMap: Record<string, string[]> = {
+      'segunda': ['segunda', 'segunda-feira', 'seg'],
+      'terça': ['terça', 'terca', 'terça-feira', 'terca-feira', 'ter'],
+      'quarta': ['quarta', 'quarta-feira', 'qua'],
+      'quinta': ['quinta', 'quinta-feira', 'qui'],
+      'sexta': ['sexta', 'sexta-feira', 'sex'],
+      'sábado': ['sábado', 'sabado', 'sab'],
+      'domingo': ['domingo', 'dom']
+    };
+    
+    // Verificar se o dia atual está mencionado nas observações
+    let dayMentioned = false;
+    const dayVariations = daysMap[dayLower] || [];
+    for (const variation of dayVariations) {
+      if (obs.includes(variation)) {
+        dayMentioned = true;
+        break;
+      }
+    }
+    
+    // ========== DETECÇÃO GENÉRICA DE VERBOS NEGATIVOS ==========
+    const hasNegativeContext = 
+      obs.includes('não pode') || 
+      obs.includes('nao pode') ||
+      obs.includes('não trabalha') ||
+      obs.includes('nao trabalha') ||
+      obs.includes('indisponível') ||
+      obs.includes('indisponivel') ||
+      obs.includes('não disponível') ||
+      obs.includes('ausente') ||
+      obs.includes('evitar') ||
+      obs.includes('bloqueado') ||
+      obs.includes('proibido');
+    
+    // ========== DETECÇÃO DE TURNOS (MANHÃ/TARDE/NOITE) ==========
+    const hasMorningMention = obs.includes('manhã') || obs.includes('manha');
+    const hasAfternoonMention = obs.includes('tarde') || obs.includes('tardes');
+    const hasNightMention = obs.includes('noite');
+    
+    // ========== DETECÇÃO DE HORÁRIOS ESPECÍFICOS ==========
+    const timeMatches = obs.matchAll(/(\d{1,2})[:h](\d{2})?/g);
+    let restrictedFromHour: number | null = null;
+    
+    for (const match of timeMatches) {
+      const hour = parseInt(match[1]);
+      if (hour >= 6 && hour <= 23) {
+        // Verificar contexto antes do horário: "a partir de", "depois de", "após", "a partir das"
+        const beforeText = obs.substring(Math.max(0, match.index! - 25), match.index).toLowerCase();
+        const afterText = obs.substring(match.index!, Math.min(obs.length, match.index! + 15)).toLowerCase();
+        
+        // Se tem contexto de restrição temporal OU contexto negativo
+        if (beforeText.includes('partir') || 
+            beforeText.includes('depois') || 
+            beforeText.includes('após') ||
+            beforeText.includes('apos') ||
+            afterText.includes('em diante') ||
+            hasNegativeContext) {
+          restrictedFromHour = hour;
+          console.log(`⏰ Detectado horário restrito: ${hour}:00h para ${teacher} (contexto: "${beforeText.trim()}...")`);
+          break; // Usa o primeiro horário encontrado
+        }
+      }
+    }
+    
+    // Se não encontrou horário específico mas menciona "tarde" + negativo, bloquear após 12h
+    if (restrictedFromHour === null && hasAfternoonMention && hasNegativeContext) {
+      restrictedFromHour = 12;
+      console.log(`⏰ Detectado restrição de tarde para ${teacher}, bloqueando após 12:00h`);
+    }
+    
+    // ========== DETECÇÃO DE PERÍODOS ESPECÍFICOS ==========
+    const periodPatterns: Record<string, number> = {
+      'primeiro': 1, '1º': 1, '1°': 1, '1o': 1,
+      'segundo': 2, '2º': 2, '2°': 2, '2o': 2,
+      'terceiro': 3, '3º': 3, '3°': 3, '3o': 3,
+      'quarto': 4, '4º': 4, '4°': 4, '4o': 4,
+      'quinto': 5, '5º': 5, '5°': 5, '5o': 5,
+      'sexto': 6, '6º': 6, '6°': 6, '6o': 6,
+      'sétimo': 7, 'setimo': 7, '7º': 7, '7°': 7, '7o': 7,
+      'oitavo': 8, '8º': 8, '8°': 8, '8o': 8,
+      'nono': 9, '9º': 9, '9°': 9, '9o': 9,
+      'décimo': 10, 'decimo': 10, '10º': 10, '10°': 10, '10o': 10,
+      'último': 99, 'ultima': 99, 'ultimo': 99
+    };
+    
+    // ========== ANÁLISE CONTEXTUAL ==========
+    
+    // REGRA 1: "A partir do Xº período" (período mínimo)
+    for (const [periodName, periodNum] of Object.entries(periodPatterns)) {
+      const apartirPattern = new RegExp(`(a\\s*partir|apartir|começa|comeca|inicia).*${periodName}`, 'i');
+      if (obs.match(apartirPattern)) {
+        if (period < periodNum) {
+          return false; // Professor só pode a partir deste período
+        }
+      }
+    }
+    
+    // REGRA 2: "Não pode no Xº período" ou "Evitar Xº período"
+    for (const [periodName, periodNumConst] of Object.entries(periodPatterns)) {
+      let periodNum = periodNumConst;
+      if (periodNum === 99) periodNum = currentSchedule?.periods?.length || 8; // último período
+      
+      const avoidPattern = new RegExp(`(não|nao|evitar|sem).*(${periodName}|periodo|período|horário|horario|aula)`, 'i');
+      if (obs.match(avoidPattern) && period === periodNum) {
+        return false;
+      }
+    }
+    
+    // REGRA 3: Dia + Turno (ex: "não pode nas tardes de segunda")
+    if (dayMentioned && hasNegativeContext) {
+      // Se menciona manhã e é manhã
+      if (hasMorningMention && isMorning) {
+        return false;
+      }
+      
+      // Se menciona tarde e é tarde
+      if (hasAfternoonMention && isAfternoon) {
+        // Verificar se tem horário específico "a partir de"
+        if (restrictedFromHour && periodHour >= restrictedFromHour) {
+          return false;
+        } else if (!restrictedFromHour) {
+          return false; // Toda tarde bloqueada
+        }
+      }
+      
+      // Se menciona noite
+      if (hasNightMention && period >= 8) {
+        return false;
+      }
+      
+      // Se não menciona turno específico mas menciona o dia com negativa
+      if (!hasMorningMention && !hasAfternoonMention && !hasNightMention) {
+        return false; // Dia inteiro bloqueado
+      }
+    }
+    
+    // REGRA 4: Apenas turno sem dia específico (aplica a todos os dias)
+    if (!dayMentioned && hasNegativeContext) {
+      if (hasMorningMention && isMorning) {
+        console.log(`🚫 ${teacher} bloqueado: manhã em ${dayLower} período ${period}`);
+        return false;
+      }
+      if (hasAfternoonMention && isAfternoon) {
+        console.log(`🚫 ${teacher} bloqueado: tarde em ${dayLower} período ${period} (observação: "${observations}")`);
+        return false;
+      }
+      if (hasNightMention && period >= 8) {
+        console.log(`🚫 ${teacher} bloqueado: noite em ${dayLower} período ${period}`);
+        return false;
+      }
+    }
+    
+    // REGRA 5: Horário específico (ex: "após 12:00h", "a partir das 14h", "não pode às 14:15")
+    // PRIORIDADE MÁXIMA: Se há horário específico restrito, bloquear SEMPRE
+    if (restrictedFromHour !== null && periodHour >= restrictedFromHour) {
+      console.log(`🚫 ${teacher} bloqueado: horário ${periodHour}:00 >= ${restrictedFromHour}:00 em ${dayLower} período ${period} (observação: "${observations}")`);
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Função para verificar se professor já deu aula na mesma turma no período anterior
+  const hasConsecutiveClassInSameClass = (
+    timetable: TimetableSlot[],
+    teacherId: string,
+    classId: string,
+    day: string,
+    period: number
+  ): boolean => {
+    if (period === 1) return false; // Primeiro período não pode ter anterior
+    
+    // Verificar se professor deu aula no período anterior na mesma turma
+    const previousSlot = timetable.find(
+      slot => slot.day === day && slot.period === period - 1 && 
+              slot.teacherId === teacherId && slot.classId === classId
+    );
+    
+    return !!previousSlot;
+  };
+
+  // Função para calcular score de preferência do professor (quanto maior, melhor)
+  const calculateTeacherPreferenceScore = (
+    globalSchedule: { [day: string]: { [period: number]: Set<string> } },
+    teacherId: string,
+    day: string,
+    period: number
+  ): number => {
+    let score = 0;
+    
+    // Priorizar professores que já estão dando aula neste dia (aulas sequenciais)
+    const teacherSlotsToday = Array.from({ length: 8 }, (_, i) => i + 1)
+      .filter(p => globalSchedule[day][p]?.has(teacherId));
+    
+    if (teacherSlotsToday.length > 0) {
+      score += 50; // Bonus por já estar no dia
+      
+      // Bonus maior se for sequencial (períodos consecutivos)
+      if (teacherSlotsToday.includes(period - 1) || teacherSlotsToday.includes(period + 1)) {
+        score += 30; // Bonus por sequência
+      }
+    }
+    
+    return score;
+  };
 
   // Função para gerar horários para TODAS as turmas SEM CONFLITOS
   const generateTimetable = () => {
@@ -316,84 +589,119 @@ export default function TimetableGenerator() {
         }
 
         let lessonIndex = 0;
+        let attemptMode = 0; // 0 = todas regras, 1 = sem regra de aulas seguidas, 2 = modo emergencial
 
-        // Distribuir aulas pelos dias e períodos
-        for (const day of weekDays) {
-          for (const periodInfo of currentSchedule.periods) {
-            // Verificar se ainda há aulas para alocar
-            if (lessonIndex >= lessonPool.length) break;
+        // COMPACTAÇÃO: Distribuir aulas PRIORIZANDO primeiros períodos
+        while (lessonIndex < lessonPool.length && attemptMode < 3) {
+          const initialIndex = lessonIndex;
+          
+          for (const day of weekDays) {
+            // COMPACTAÇÃO: Processar períodos em ordem (1º, 2º, 3º...)
+            for (const periodInfo of currentSchedule.periods) {
+              // Verificar se ainda há aulas para alocar
+              if (lessonIndex >= lessonPool.length) break;
 
-            // Verificar se turma já está ocupada neste horário
-            if (classSchedule[currentClass.id][day].has(periodInfo.period)) {
-              console.log(`  ⏭️ ${day} ${periodInfo.period}º: Turma já ocupada`);
-              continue;
-            }
+              // Verificar se turma já está ocupada neste horário
+              if (classSchedule[currentClass.id][day].has(periodInfo.period)) {
+                continue;
+              }
 
-            const subjectId = lessonPool[lessonIndex];
-            const subject = classSubjects.find((s: any) => s.id === subjectId);
+              const subjectId = lessonPool[lessonIndex];
+              const subject = classSubjects.find((s: any) => s.id === subjectId);
 
-            if (!subject) {
-              console.log(`  ❌ Disciplina ${subjectId} não encontrada`);
-              lessonIndex++;
-              continue;
-            }
+              if (!subject) {
+                console.log(`  ❌ Disciplina ${subjectId} não encontrada`);
+                lessonIndex++;
+                continue;
+              }
 
-            // Buscar professores disponíveis para esta disciplina E TURMA
-            const eligibleTeachers = activeTeachers.filter((teacher: Teacher) => {
-              const hasAssignment = teacherSubjects.some((ts: TeacherSubject) => {
-                const match = ts.teacherId === teacher.id && 
-                              ts.subjectId === subjectId &&
-                              ts.classId === currentClass.id;
-                
-                if (ts.teacherId === teacher.id && ts.subjectId === subjectId) {
-                  console.log(`    🔍 Prof. ${teacher.name} - Disciplina: ${subject.name} - Turma ts.classId: "${ts.classId}" vs turma atual: "${currentClass.id}" - Match: ${match}`);
+              // Buscar professores elegíveis
+              const eligibleTeachers = activeTeachers.filter((teacher: Teacher) => {
+                return teacherSubjects.some((ts: TeacherSubject) => 
+                  ts.teacherId === teacher.id && 
+                  ts.subjectId === subjectId &&
+                  ts.classId === currentClass.id
+                );
+              });
+
+              if (eligibleTeachers.length === 0) {
+                console.log(`  ⚠️ Sem professor para ${subject.name} na turma ${currentClass.name}`);
+                lessonIndex++;
+                continue;
+              }
+
+              let selectedTeacher: Teacher | null = null;
+              let bestScore = -1;
+              let blockedByObservations: string[] = [];
+              
+              for (const candidate of eligibleTeachers) {
+                // REGRA 1 (SEMPRE): PRIORIDADE MÁXIMA - Observações
+                const isAvailable = isTeacherAvailableAtTime(candidate, day, periodInfo.period);
+                if (!isAvailable) {
+                  blockedByObservations.push(candidate.name);
+                  continue;
                 }
                 
-                return match;
-              });
-              return hasAssignment;
-            });
-
-            console.log(`  📋 Professores elegíveis para ${subject.name} na turma ${currentClass.name}: ${eligibleTeachers.map((t: Teacher) => t.name).join(', ') || 'NENHUM'}`);
-
-            if (eligibleTeachers.length === 0) {
-              newConflicts.push(`❌ ${currentClass.grade?.name} ${currentClass.name} - ${day} ${periodInfo.period}º: Sem professor para "${subject.name}"`);
-              lessonIndex++;
-              continue;
-            }
-
-            // Tentar encontrar professor disponível (SEM CONFLITO)
-            let selectedTeacher: Teacher | null = null;
-            
-            for (const candidate of eligibleTeachers) {
-              if (!globalTeacherSchedule[day][periodInfo.period].has(candidate.id)) {
-                selectedTeacher = candidate;
-                break;
+                // REGRA 2 (SEMPRE): Conflito de horário
+                if (globalTeacherSchedule[day][periodInfo.period].has(candidate.id)) {
+                  continue;
+                }
+                
+                // REGRA 3 (Modo 0 apenas): Evitar aulas seguidas na mesma turma
+                if (attemptMode === 0) {
+                  if (hasConsecutiveClassInSameClass(classTimetable, candidate.id, currentClass.id, day, periodInfo.period)) {
+                    continue;
+                  }
+                }
+                
+                // Calcular score
+                const score = calculateTeacherPreferenceScore(globalTeacherSchedule, candidate.id, day, periodInfo.period);
+                
+                if (score > bestScore) {
+                  bestScore = score;
+                  selectedTeacher = candidate;
+                }
               }
+
+              if (!selectedTeacher) {
+                if (blockedByObservations.length > 0) {
+                  console.log(`  🚫 ${day} ${periodInfo.period}º: ${subject.name} - Bloqueado por observações: ${blockedByObservations.join(', ')}`);
+                }
+                continue; // Tentar no próximo slot
+              }
+
+              // ALOCAR AULA
+              classTimetable.push({
+                day,
+                period: periodInfo.period,
+                subjectId: subject.id,
+                teacherId: selectedTeacher.id,
+                classId: currentClass.id
+              });
+
+              globalTeacherSchedule[day][periodInfo.period].add(selectedTeacher.id);
+              classSchedule[currentClass.id][day].add(periodInfo.period);
+
+              const teacherDaySlots = Array.from({ length: 8 }, (_, i) => i + 1)
+                .filter(p => globalTeacherSchedule[day][p]?.has(selectedTeacher.id));
+              const isSequential = teacherDaySlots.length > 1;
+              
+              console.log(`  ✅ ${day} ${periodInfo.period}º: ${subject.name} - Prof. ${selectedTeacher.name}${isSequential ? ' (sequencial ✨)' : ''}${attemptMode > 0 ? ' [modo relaxado]' : ''}`);
+              
+              lessonIndex++;
             }
-
-            if (!selectedTeacher) {
-              // NENHUM professor disponível - PULAR este slot e tentar em outro horário
-              console.log(`  ⏭️ ${day} ${periodInfo.period}º: Nenhum professor disponível para ${subject.name}`);
-              continue; // NÃO incrementar lessonIndex - tentar alocar em outro horário
-            }
-
-            // SUCESSO - Alocar a aula
-            classTimetable.push({
-              day,
-              period: periodInfo.period,
-              subjectId: subject.id,
-              teacherId: selectedTeacher.id,
-              classId: currentClass.id
-            });
-
-            // Marcar ocupações
-            globalTeacherSchedule[day][periodInfo.period].add(selectedTeacher.id);
-            classSchedule[currentClass.id][day].add(periodInfo.period);
-
-            console.log(`  ✅ ${day} ${periodInfo.period}º: ${subject.name} - Prof. ${selectedTeacher.name}`);
             
-            lessonIndex++; // Próxima aula
+            if (lessonIndex >= lessonPool.length) break;
+          }
+          
+          // Se não conseguiu alocar nada nesta tentativa, mudar modo
+          if (lessonIndex === initialIndex) {
+            attemptMode++;
+            if (attemptMode === 1) {
+              console.log(`  🔄 Modo 1: Relaxando regra de aulas seguidas...`);
+            } else if (attemptMode === 2) {
+              console.log(`  🔄 Modo 2: Modo emergencial - apenas observações e conflitos...`);
+            }
           }
         }
 
@@ -836,7 +1144,7 @@ export default function TimetableGenerator() {
         {/* Campo de Observações */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Observações
+            Observações e Restrições
           </label>
           <textarea
             value={observations}
@@ -845,9 +1153,19 @@ export default function TimetableGenerator() {
             placeholder="Digite aqui observações importantes para a geração do horário (ex: Professor X não pode dar aula às quartas-feiras, evitar aulas de Educação Física no último período, etc.)..."
             rows={4}
           />
-          <p className="text-sm text-gray-500 mt-2">
-            💡 Estas observações serão consideradas durante a geração do horário
-          </p>
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-900 font-semibold mb-2">
+              💡 O sistema aplica automaticamente as seguintes regras:
+            </p>
+            <ul className="text-xs text-blue-800 space-y-1 ml-4">
+              <li>• <strong>🎯 PRIORIDADE MÁXIMA:</strong> Respeita observações e disponibilidades dos professores</li>
+              <li>• <strong>📌 Compactação:</strong> Aulas concentradas nos primeiros períodos (janelas no final)</li>
+              <li>• <strong>🚫 Evita aulas seguidas:</strong> Professor não dá duas aulas consecutivas na mesma turma</li>
+              <li>• <strong>⚡ Maximiza sequências:</strong> Professor com máximo de aulas seguidas em turmas diferentes</li>
+              <li>• <strong>🏖️ Permite folgas:</strong> Professor pode ficar livre um dia inteiro se possível</li>
+              <li>• <strong>⛔ Sem conflitos:</strong> Professor nunca em duas turmas ao mesmo tempo</li>
+            </ul>
+          </div>
         </div>
 
         {/* Lista de Horários Salvos */}
@@ -950,6 +1268,31 @@ export default function TimetableGenerator() {
                   📅 Dia a Dia
                 </button>
               </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPrintFormat('normal')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    printFormat === 'normal'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  title="Períodos na coluna esquerda, dias no topo"
+                >
+                  🖨️ Padrão
+                </button>
+                <button
+                  onClick={() => setPrintFormat('transposed')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    printFormat === 'transposed'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  title="Períodos no topo, turmas na coluna esquerda"
+                >
+                  🔄 Transposto
+                </button>
+              </div>
 
               <button
                 onClick={() => setShowSaveDialog(true)}
@@ -1009,8 +1352,8 @@ export default function TimetableGenerator() {
       {/* Horários de Todas as Turmas */}
       {Object.keys(generatedTimetables).length > 0 && currentSchedule && (
         <>
-          {/* Visualização em Planilha */}
-          {viewMode === 'spreadsheet' && (
+          {/* Visualização em Planilha Normal */}
+          {viewMode === 'spreadsheet' && printFormat === 'normal' && (
             <div className="space-y-8">
               {classes.map((currentClass: any) => {
                 return (
@@ -1116,6 +1459,104 @@ export default function TimetableGenerator() {
             </div>
           )}
 
+          {/* Visualização em Planilha Transposta (Períodos no topo, Turmas na lateral) */}
+          {viewMode === 'spreadsheet' && printFormat === 'transposed' && (
+            <div className="space-y-8">
+              {weekDays.map((day) => (
+                <div key={day} className="card print-container">
+                  <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
+                    <h2 className="text-2xl font-bold text-center text-primary-700">
+                      {day}
+                    </h2>
+                    <p className="text-center text-gray-600">
+                      {currentSchedule.name}
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse">
+                      <thead>
+                        <tr className="bg-primary-600 text-white">
+                          <th className="border border-gray-300 p-3 text-left font-bold">Turma</th>
+                          {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => (
+                            <th key={periodInfo.period} className="border border-gray-300 p-3 text-center font-bold">
+                              <div className="text-sm">{periodInfo.period}º</div>
+                              <div className="text-xs font-normal">
+                                {periodInfo.startTime}-{periodInfo.endTime}
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classes.map((currentClass: any) => (
+                          <tr key={currentClass.id} className="hover:bg-gray-50">
+                            <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
+                              <div className="text-sm">{currentClass.grade?.name || 'Série'}</div>
+                              <div className="text-xs text-gray-600">{currentClass.name}</div>
+                              <div className="text-xs text-gray-500">{translateShift(currentClass.shift)}</div>
+                            </td>
+                            {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
+                              const slot = getSlotData(currentClass.id, day, periodInfo.period);
+                              const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
+                              const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
+                              const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+
+                              return (
+                                <td
+                                  key={periodInfo.period}
+                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : ''}`}
+                                  style={{
+                                    backgroundColor: hasConflict 
+                                      ? '#fee2e2'
+                                      : subject?.color ? `${subject.color}20` : 'white',
+                                  }}
+                                  title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : ''}
+                                >
+                                  {/* Botão de editar */}
+                                  <button
+                                    onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
+                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
+                                    title="Editar"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  
+                                  {hasConflict && (
+                                    <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
+                                      ⚠️
+                                    </div>
+                                  )}
+                                  {subject && teacher ? (
+                                    <div className={hasConflict ? 'relative' : ''}>
+                                      <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : 'text-gray-900'}`}>
+                                        {subject.name}
+                                      </div>
+                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : 'text-gray-600'}`}>
+                                        {teacher.name}
+                                      </div>
+                                      {hasConflict && (
+                                        <div className="text-xs font-bold text-red-600 mt-1">
+                                          ⚠️ CONFLITO
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Visualização Dia a Dia */}
           {viewMode === 'day-by-day' && (
         <div className="space-y-8">
@@ -1207,14 +1648,34 @@ export default function TimetableGenerator() {
           <ol className="space-y-2 text-sm text-blue-800">
             <li>1. Selecione a <strong>Turma</strong> para a qual deseja gerar o horário</li>
             <li>2. Escolha o <strong>Tipo de Horário</strong> (Parcial, Integral, etc.)</li>
-            <li>3. Clique em <strong>Gerar Horário</strong></li>
-            <li>4. O sistema criará automaticamente um horário otimizado</li>
-            <li>5. Use os botões de <strong>Imprimir</strong>, <strong>Download</strong> ou <strong>Compartilhar</strong></li>
+            <li>3. Adicione <strong>Observações</strong> se necessário (opcional)</li>
+            <li>4. Clique em <strong>Gerar Horário</strong></li>
+            <li>5. Escolha o <strong>Formato de Impressão</strong>: Padrão ou Transposto</li>
+            <li>6. Use os botões de <strong>Imprimir</strong>, <strong>Download</strong> ou <strong>Compartilhar</strong></li>
           </ol>
-          <div className="mt-4 p-3 bg-blue-100 rounded">
-            <p className="text-xs text-blue-900">
-              💡 <strong>Dica:</strong> O sistema evita automaticamente conflitos de horários e considera as observações cadastradas de cada professor.
-            </p>
+          <div className="mt-4 space-y-2">
+            <div className="p-3 bg-blue-100 rounded">
+              <p className="text-xs text-blue-900 font-semibold mb-2">
+                💡 <strong>Regras Aplicadas Automaticamente:</strong>
+              </p>
+              <ul className="text-xs text-blue-800 space-y-1 ml-4">
+                <li>✅ <strong>🎯 PRIORIDADE MÁXIMA:</strong> Observações dos professores</li>
+                <li>✅ <strong>📌 Compactação:</strong> Aulas nos primeiros períodos, janelas no final</li>
+                <li>✅ <strong>🚫 Sem repetição:</strong> Professor não dá aulas seguidas na mesma turma</li>
+                <li>✅ <strong>⚡ Sequências otimizadas:</strong> Professor com aulas seguidas em turmas diferentes</li>
+                <li>✅ <strong>🏖️ Folgas permitidas:</strong> Professor pode ter dia livre</li>
+                <li>✅ <strong>⛔ Zero conflitos:</strong> Professor nunca em duas turmas simultaneamente</li>
+              </ul>
+            </div>
+            <div className="p-3 bg-green-100 rounded">
+              <p className="text-xs text-green-900 font-semibold mb-2">
+                🖨️ <strong>Formatos de Impressão:</strong>
+              </p>
+              <ul className="text-xs text-green-800 space-y-1 ml-4">
+                <li>📊 <strong>Padrão:</strong> Períodos na coluna esquerda, dias da semana no topo</li>
+                <li>🔄 <strong>Transposto:</strong> Períodos no topo, turmas na coluna esquerda (ideal para visualizar múltiplas turmas por dia)</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}

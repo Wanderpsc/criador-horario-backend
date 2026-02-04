@@ -109,6 +109,10 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     console.log('📦 Dados recebidos:', JSON.stringify(req.body, null, 2));
     console.log('🔑 contractType:', req.body.contractType, '- Tipo:', typeof req.body.contractType);
     console.log('⏰ weeklyWorkload:', req.body.weeklyWorkload, '- Tipo:', typeof req.body.weeklyWorkload);
+    console.log('📅 availability:', req.body.availability ? 'SIM' : 'NÃO');
+    if (req.body.availability) {
+      console.log('📅 Availability DETALHADA:', JSON.stringify(req.body.availability, null, 2));
+    }
     
     const teacher = await Teacher.findOneAndUpdate(
       { _id: req.params.id, userId: req.user!.id },
@@ -118,7 +122,9 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     
     console.log('✅ Professor atualizado:', {
       contractType: teacher?.contractType,
-      weeklyWorkload: teacher?.weeklyWorkload
+      weeklyWorkload: teacher?.weeklyWorkload,
+      hasAvailability: !!teacher?.availability,
+      availability: teacher?.availability
     });
     
     if (!teacher) {
