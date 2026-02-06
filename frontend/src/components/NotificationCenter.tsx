@@ -175,7 +175,7 @@ export default function NotificationCenter() {
             </div>
 
             {/* Notifications List */}
-            <div className="overflow-y-auto max-h-[500px]">
+            <div className="overflow-y-auto max-h-[500px] bg-white">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   <Bell size={48} className="mx-auto mb-4 opacity-30" />
@@ -183,7 +183,7 @@ export default function NotificationCenter() {
                   <p className="text-sm">Você está em dia! 🎉</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-gray-200 bg-white">
                   {notifications
                     .filter(n => n._id) // Filtrar apenas notificações com ID válido
                     .map((notification) => {
@@ -212,7 +212,7 @@ export default function NotificationCenter() {
                               )}
                             </div>
                             
-                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                            <p className="text-sm text-gray-800 mb-2 line-clamp-2">
                               {notification.message}
                             </p>
 
