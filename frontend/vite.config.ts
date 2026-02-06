@@ -48,7 +48,7 @@ export default defineConfig(({ command }) => ({
     }
   ],
   // Base path - apenas para GitHub Pages, não para Surge
-  base: '/',
+  base: '/criador-horario-backend/',
   server: {
     port: 3001,
     host: true,
