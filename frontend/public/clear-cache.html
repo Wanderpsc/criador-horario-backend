@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limpando Cache e Service Workers</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      text-align: center;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 15px;
+      border-radius: 8px;
+      background: #f0f0f0;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .loading {
+      background: #fff3cd;
+      color: #856404;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #log {
+      text-align: left;
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧹 Limpeza Completa do Sistema</h1>
+  
+  <div id="status" class="status loading">
+    Preparando limpeza...
+  </div>
+
+  <div id="log"></div>
+
+  <button onclick="cleanEverything()">🔄 Limpar Tudo Novamente</button>
+  <button onclick="goToSite()">✅ Ir para o Site</button>
+
+  <script>
+    const log = (message) => {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `[${time}] ${message}<br>`;
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(message);
+    };
+
+    const updateStatus = (message, className = 'loading') => {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${className}`;
+    };
+
+    async function cleanEverything() {
+      log('🚀 Iniciando limpeza completa...');
+      updateStatus('Limpando...', 'loading');
+
+      // 1. Remover todos os Service Workers
+      if ('serviceWorker' in navigator) {
+        log('🔍 Buscando Service Workers...');
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          log(`📋 Encontrados ${registrations.length} Service Worker(s)`);
+          
+          for (let registration of registrations) {
+            log(`🗑️ Removendo: ${registration.scope}`);
+            await registration.unregister();
+            log(`✅ Removido com sucesso`);
+          }
+          
+          if (registrations.length === 0) {
+            log('✅ Nenhum Service Worker encontrado');
+          }
+        } catch (error) {
+          log(`❌ Erro ao remover Service Workers: ${error.message}`);
+        }
+      } else {
+        log('ℹ️ Service Workers não suportados neste navegador');
+      }
+
+      // 2. Limpar todo o Cache Storage
+      if ('caches' in window) {
+        log('🔍 Buscando caches...');
+        try {
+          const cacheNames = await caches.keys();
+          log(`📋 Encontrados ${cacheNames.length} cache(s)`);
+          
+          for (let cacheName of cacheNames) {
+            log(`🗑️ Deletando cache: ${cacheName}`);
+            await caches.delete(cacheName);
+            log(`✅ Cache deletado`);
+          }
+          
+          if (cacheNames.length === 0) {
+            log('✅ Nenhum cache encontrado');
+          }
+        } catch (error) {
+          log(`❌ Erro ao limpar caches: ${error.message}`);
+        }
+      } else {
+        log('ℹ️ Cache API não suportada neste navegador');
+      }
+
+      // 3. Limpar LocalStorage
+      try {
+        log('🗑️ Limpando LocalStorage...');
+        localStorage.clear();
+        log('✅ LocalStorage limpo');
+      } catch (error) {
+        log(`❌ Erro ao limpar LocalStorage: ${error.message}`);
+      }
+
+      // 4. Limpar SessionStorage
+      try {
+        log('🗑️ Limpando SessionStorage...');
+        sessionStorage.clear();
+        log('✅ SessionStorage limpo');
+      } catch (error) {
+        log(`❌ Erro ao limpar SessionStorage: ${error.message}`);
+      }
+
+      // 5. Limpar IndexedDB (se existir)
+      if ('indexedDB' in window) {
+        try {
+          log('🔍 Verificando IndexedDB...');
+          const databases = await indexedDB.databases();
+          for (let db of databases) {
+            if (db.name) {
+              log(`🗑️ Deletando database: ${db.name}`);
+              indexedDB.deleteDatabase(db.name);
+              log(`✅ Database deletado`);
+            }
+          }
+        } catch (error) {
+          log(`ℹ️ IndexedDB: ${error.message}`);
+        }
+      }
+
+      log('');
+      log('✅✅✅ LIMPEZA COMPLETA CONCLUÍDA! ✅✅✅');
+      log('');
+      log('Próximos passos:');
+      log('1. Feche TODAS as abas deste site');
+      log('2. Feche completamente o navegador');
+      log('3. Reabra o navegador');
+      log('4. Acesse: https://wanderpsc.github.io/criador-horario-backend/');
+      
+      updateStatus('✅ Limpeza concluída! Feche o navegador e reabra.', 'success');
+    }
+
+    function goToSite() {
+      window.location.href = 'https://wanderpsc.github.io/criador-horario-backend/';
+    }
+
+    // Executar limpeza automaticamente ao carregar
+    window.addEventListener('load', () => {
+      setTimeout(cleanEverything, 500);
+    });
+  </script>
+</body>
+</html>
