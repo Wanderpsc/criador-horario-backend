@@ -766,6 +766,11 @@ export default function EmergencySchedule() {
               // Se o substituto tinha aula própria, essa aula TAMBÉM precisa ser reposta
               if (substituteOriginSlot) {
                 console.log(`   → Substituto deixou aula vazia, adicionando para reposição`);
+                
+                // Verificar se o substituto também confirmou presença no sábado
+                const substituteIdStr = String(substituteOriginSlot.teacherId);
+                const substituteConfirmedSaturday = confirmedIdsAsStrings.includes(substituteIdStr);
+                
                 makeupClasses.push({
                   originalTeacherId: substituteOriginSlot.teacherId,
                   originalTeacherName: substituteOriginSlot.teacherName,
@@ -777,7 +782,8 @@ export default function EmergencySchedule() {
                   period: substituteOriginSlot.period,
                   originalDay: substituteOriginSlot.day,
                   makeupDay: 'Sábado',
-                  reason: 'Substituiu outro professor'
+                  reason: 'Substituiu outro professor',
+                  confirmedSaturday: substituteConfirmedSaturday // Flag para indicar presença confirmada
                 });
               }
               
