@@ -117,6 +117,7 @@ const allowedOrigins = [
   'http://localhost:3003',
   'https://criador-horario-aula.surge.sh',
   'https://horario-escolar.surge.sh',
+  'https://edusync-pro.surge.sh',
   'https://wanderpsc.github.io',
   'https://wanderpsc.github.io/criador-horario-backend',
   process.env.FRONTEND_URL

@@ -39,9 +39,6 @@ export default function NotificationCenter() {
     try {
       const response = await api.get('/notifications');
       const data = response.data.data || [];
-      console.log('🔔 Notificações recebidas:', data);
-      console.log('🔔 Total:', data.length);
-      console.log('🔔 Com _id:', data.filter((n: any) => n._id).length);
       setNotifications(data);
       setUnreadCount(data.filter((n: Notification) => !n.read).length);
     } catch (error: any) {
@@ -178,15 +175,15 @@ export default function NotificationCenter() {
             </div>
 
             {/* Notifications List */}
-            <div className="overflow-y-auto max-h-[500px] bg-white">
+            <div className="overflow-y-auto max-h-[500px]">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-500 bg-white">
+                <div className="p-8 text-center text-gray-500">
                   <Bell size={48} className="mx-auto mb-4 opacity-30" />
-                  <p className="font-medium text-gray-700">Nenhuma notificação</p>
-                  <p className="text-sm text-gray-600">Você está em dia! 🎉</p>
+                  <p className="font-medium">Nenhuma notificação</p>
+                  <p className="text-sm">Você está em dia! 🎉</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200 bg-white">
+                <div className="divide-y divide-gray-100">
                   {notifications
                     .filter(n => n._id) // Filtrar apenas notificações com ID válido
                     .map((notification) => {
@@ -194,8 +191,8 @@ export default function NotificationCenter() {
                     return (
                       <div
                         key={notification._id}
-                        className={`p-4 transition-colors hover:bg-gray-50 ${
-                          !notification.read ? 'bg-blue-50 hover:bg-blue-100' : 'bg-white'
+                        className={`p-4 transition-colors ${
+                          !notification.read ? 'bg-blue-50' : ''
                         }`}
                       >
                         <div className="flex gap-3">
@@ -206,28 +203,25 @@ export default function NotificationCenter() {
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <h4 className="font-bold text-base text-gray-900 leading-tight">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <h4 className="font-bold text-sm text-gray-900 truncate">
                                 {notification.title}
                               </h4>
                               {!notification.read && (
-                                <span className="flex-shrink-0 w-2.5 h-2.5 bg-blue-600 rounded-full mt-1"></span>
+                                <span className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full"></span>
                               )}
                             </div>
                             
-                            <p className="text-sm text-gray-700 mb-3 leading-relaxed">
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
                               {notification.message}
                             </p>
 
                             {/* Priority Badge */}
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${getPriorityBadge(notification.priority)}`}>
-                                {notification.priority === 'urgent' ? '🚨 Urgente' : 
-                                 notification.priority === 'high' ? '⚠️ Alta' :
-                                 notification.priority === 'medium' ? 'ℹ️ Média' : 
-                                 '📋 Baixa'}
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`text-xs px-2 py-1 rounded-full font-bold ${getPriorityBadge(notification.priority)}`}>
+                                {notification.priority.toUpperCase()}
                               </span>
-                              <span className="text-xs text-gray-600 font-medium">
+                              <span className="text-xs text-gray-500">
                                 {new Date(notification.createdAt).toLocaleDateString('pt-BR', {
                                   day: '2-digit',
                                   month: 'short',
@@ -242,7 +236,7 @@ export default function NotificationCenter() {
                               {!notification.read && (
                                 <button
                                   onClick={() => markAsRead(notification._id)}
-                                  className="text-xs text-blue-700 hover:text-blue-800 font-bold flex items-center gap-1 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors"
+                                  className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 px-2 py-1 hover:bg-blue-50 rounded transition-colors"
                                 >
                                   <Check size={14} />
                                   Marcar como lida
@@ -250,24 +244,24 @@ export default function NotificationCenter() {
                               )}
                               <button
                                 onClick={() => deleteNotification(notification._id)}
-                                className="text-xs text-red-700 hover:text-red-800 font-bold px-3 py-1.5 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+                                className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded transition-colors"
                               >
-                                🗑️ Apagar
+                                Apagar
                               </button>
                               {notification.actionUrl && (
                                 <a
                                   href={notification.actionUrl}
-                                  className="text-xs text-purple-700 hover:text-purple-800 font-bold px-3 py-1.5 bg-purple-100 hover:bg-purple-200 rounded-lg transition-colors"
+                                  className="text-xs text-purple-600 hover:text-purple-700 font-medium px-2 py-1 hover:bg-purple-50 rounded transition-colors"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  📎 Ver detalhes →
+                                  Ver detalhes →
                                 </a>
                               )}
                               <button
                                 onClick={() => setSelectedNotification(notification)}
-                                className="text-xs text-gray-700 hover:text-gray-800 font-bold px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors ml-auto"
+                                className="text-xs text-gray-600 hover:text-gray-700 font-medium px-2 py-1 hover:bg-gray-100 rounded transition-colors ml-auto"
                               >
-                                📖 Ler completo
+                                Ler completo →
                               </button>
                             </div>
                           </div>
