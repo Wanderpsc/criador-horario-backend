@@ -4,10 +4,11 @@
  */
 
 const CACHE_NAME = 'edusync-pro-v1';
+const BASE_PATH = '/criador-horario-backend';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/index.html`,
+  `${BASE_PATH}/manifest.json`
 ];
 
 // Instalação do Service Worker
@@ -17,7 +18,9 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('✅ Service Worker: Cache aberto');
-        return cache.addAll(urlsToCache);
+        return cache.addAll(urlsToCache).catch(err => {
+          console.warn('⚠️ Erro ao adicionar arquivos ao cache:', err);
+        });
       })
   );
   self.skipWaiting();

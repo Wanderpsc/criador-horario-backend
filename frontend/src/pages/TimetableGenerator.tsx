@@ -204,42 +204,32 @@ export default function TimetableGenerator() {
 
   // Função para verificar se professor está disponível baseado em observações (PRIORIDADE MÁXIMA)
   const isTeacherAvailableAtTime = (teacher: Teacher, day: string, period: number): boolean => {
-    console.log(`🔍 Verificando ${teacher.name} - ${day} período ${period}:`, {
-      hasAvailability: !!teacher.availability,
-      availabilityData: teacher.availability,
-      hasObservations: !!teacher.observations
-    });
 
     // PRIORIDADE ABSOLUTA: Verificar disponibilidade estruturada (checkboxes)
-    if (teacher.availability) {
+    // Mas só usar se foi REALMENTE configurada (tem pelo menos um dia com dados)
+    if (teacher.availability && Object.keys(teacher.availability).length > 0) {
       const dayLower = day.toLowerCase();
-      const isAvailable = teacher.availability[dayLower]?.[period];
       
-      console.log(`  📊 Availability check:`, {
-        day: dayLower,
-        period,
-        dayData: teacher.availability[dayLower],
-        isAvailable,
-        isDefined: isAvailable !== undefined
-      });
-      
-      // Se existe configuração para este dia/período, usar ela SEMPRE
-      if (isAvailable !== undefined) {
-        if (!isAvailable) {
-          console.log(`  🚫 BLOQUEADO por disponibilidade: ${teacher.name} não está disponível em ${dayLower} período ${period}`);
-        } else {
-          console.log(`  ✅ DISPONÍVEL por configuração: ${teacher.name} está disponível em ${dayLower} período ${period}`);
+      // Verificar se este dia específico foi configurado
+      if (teacher.availability[dayLower] && Object.keys(teacher.availability[dayLower]).length > 0) {
+        const isAvailable = teacher.availability[dayLower][period];
+        
+        console.log(`  📊 Availability check:`, {
+          day: dayLower,
+          period,
+          dayData: teacher.availability[dayLower],
+          isAvailable,
+          isDefined: isAvailable !== undefined
+        });
+        
+        // Se existe configuração para este dia/período, usar ela SEMPRE
+        if (isAvailable !== undefined) {
+          return isAvailable;
         }
-        return isAvailable;
       }
-      
-      // Se não há configuração específica para este dia/período, considerar indisponível por segurança
-      console.log(`  ⚠️ Sem configuração para ${dayLower} período ${period}, considerando INDISPONÍVEL`);
-      return false;
     }
 
     // PRIORIDADE 2: Se não tem disponibilidade estruturada, tentar parsear observações
-    console.log(`  📝 Usando observações (availability não configurada)`);
     if (!teacher.observations) return true;
     
     const obs = teacher.observations.toLowerCase();
@@ -596,8 +586,10 @@ export default function TimetableGenerator() {
           const initialIndex = lessonIndex;
           
           for (const day of weekDays) {
-            // COMPACTAÇÃO: Processar períodos em ordem (1º, 2º, 3º...)
-            for (const periodInfo of currentSchedule.periods) {
+            // COMPACTAÇÃO: Processar períodos em ordem CRESCENTE (1º, 2º, 3º... 10º)
+            const sortedPeriods = [...currentSchedule.periods].sort((a, b) => a.period - b.period);
+            
+            for (const periodInfo of sortedPeriods) {
               // Verificar se ainda há aulas para alocar
               if (lessonIndex >= lessonPool.length) break;
 

@@ -57,8 +57,13 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  // Base path para GitHub Pages
-  const basename = import.meta.env.MODE === 'production' ? '/criador-horario-backend' : '/';
+  console.log('🎨 App component carregado!');
+  console.log('🌍 Mode:', import.meta.env.MODE);
+  
+  // Sempre usar / como base (funciona tanto no Surge quanto local)
+  const basename = '/';
+  
+  console.log('📍 Basename:', basename);
   
   return (
     <BrowserRouter

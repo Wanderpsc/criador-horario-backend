@@ -15,45 +15,26 @@
   <meta name="apple-mobile-web-app-title" content="EduSync-PRO">
   
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="/criador-horario-backend/icon.svg">
-  <link rel="apple-touch-icon" href="/criador-horario-backend/icon-192.svg">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon-192.svg">
   
   <!-- PWA Manifest -->
-  <link rel="manifest" href="/criador-horario-backend/manifest.json">
+  <link rel="manifest" href="/manifest.json">
   
-  <!-- GitHub Pages SPA Redirect Fix -->
-  <script type="text/javascript">
-    // Single Page Apps for GitHub Pages
-    // https://github.com/rafgraph/spa-github-pages
-    // Restaura a rota salva pelo 404.html
-    (function(l) {
-      if (l.search[1] === '/' ) {
-        var decoded = l.search.slice(1).split('&').map(function(s) { 
-          return s.replace(/~and~/g, '&')
-        }).join('?');
-        window.history.replaceState(null, null,
-            l.pathname.slice(0, -1) + decoded + l.hash
-        );
-      }
-    }(window.location));
-  </script>
-  
-  <!-- Service Worker Registration -->
+  <!-- Service Worker Registration - DESABILITADO TEMPORARIAMENTE -->
   <script>
+    // Limpar Service Workers antigos
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/criador-horario-backend/sw.js')
-          .then(registration => {
-            console.log('✅ Service Worker registrado com sucesso:', registration.scope);
-          })
-          .catch(error => {
-            console.error('❌ Erro ao registrar Service Worker:', error);
-          });
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+          console.log('🗑️ Service Worker removido:', registration.scope);
+        }
       });
     }
   </script>
-  <script type="module" crossorigin src="/criador-horario-backend/assets/index-CQkDsmqw.js"></script>
-  <link rel="stylesheet" crossorigin href="/criador-horario-backend/assets/index-DAg1YSOJ.css">
+  <script type="module" crossorigin src="/assets/index-_kfeBgu4.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BuWRdrrJ.css">
 </head>
 <body>
   <div id="root"></div>

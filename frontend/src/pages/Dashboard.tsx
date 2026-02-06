@@ -586,7 +586,6 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {stats.teacherWorkload
                   .filter(t => t.totalLessons > 0)
-                  .slice(0, 9)
                   .map((teacher, index) => (
                     <div 
                       key={teacher.teacherId} 
@@ -630,20 +629,6 @@ export default function Dashboard() {
                     </div>
                   ))}
               </div>
-              
-              {stats.teacherWorkload.filter(t => t.totalLessons > 0).length > 9 && (
-                <div className="mt-4 text-center">
-                  <Link 
-                    to="/teacher-subjects" 
-                    className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-bold text-sm"
-                  >
-                    Ver todos os professores
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </div>
-              )}
               
               {stats.teacherWorkload.filter(t => t.totalLessons > 0).length === 0 && (
                 <div className="text-center py-8">

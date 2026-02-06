@@ -12,6 +12,8 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './index.css';
 
+console.log('🚀 Main.tsx carregado!');
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -21,11 +23,28 @@ const queryClient = new QueryClient({
   },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-      <Toaster position="top-right" />
-    </QueryClientProvider>
-  </React.StrictMode>
-);
+console.log('✅ QueryClient criado');
+
+try {
+  const root = document.getElementById('root');
+  console.log('📍 Root element:', root);
+  
+  if (!root) {
+    throw new Error('Root element not found!');
+  }
+  
+  console.log('🎨 Iniciando renderização...');
+  
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <App />
+        <Toaster position="top-right" />
+      </QueryClientProvider>
+    </React.StrictMode>
+  );
+  
+  console.log('✅ React renderizado com sucesso!');
+} catch (error) {
+  console.error('❌ Erro ao renderizar:', error);
+}

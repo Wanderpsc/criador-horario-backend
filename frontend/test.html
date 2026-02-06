@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      text-align: center;
+      max-width: 400px;
+    }
+    h1 { color: #333; margin-bottom: 20px; }
+    p { color: #666; margin-bottom: 10px; }
+    .status { color: #28a745; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔧 Teste de Carregamento</h1>
+    <p>Status: <span class="status">✅ HTML está carregando!</span></p>
+    <p id="jscheck">⏳ JavaScript: Aguardando...</p>
+    <p id="apicheck">⏳ API: Aguardando...</p>
+  </div>
+
+  <script>
+    // Teste 1: JavaScript básico
+    document.getElementById('jscheck').innerHTML = '✅ JavaScript: Funcionando!';
+    document.getElementById('jscheck').style.color = '#28a745';
+    
+    // Teste 2: API
+    fetch('https://criador-horario-backend-1.onrender.com/health')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('apicheck').innerHTML = '✅ API: Conectado! (' + data.message + ')';
+        document.getElementById('apicheck').style.color = '#28a745';
+      })
+      .catch(err => {
+        document.getElementById('apicheck').innerHTML = '❌ API: Erro - ' + err.message;
+        document.getElementById('apicheck').style.color = '#dc3545';
+      });
+
+    console.log('🔍 Teste de diagnóstico iniciado');
+    console.log('URL atual:', window.location.href);
+    console.log('User Agent:', navigator.userAgent);
+  </script>
+</body>
+</html>

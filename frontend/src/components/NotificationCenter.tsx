@@ -26,6 +26,7 @@ export default function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
     loadNotifications();
@@ -190,7 +191,7 @@ export default function NotificationCenter() {
                     return (
                       <div
                         key={notification._id}
-                        className={`p-4 hover:bg-gray-50 transition-colors ${
+                        className={`p-4 transition-colors ${
                           !notification.read ? 'bg-blue-50' : ''
                         }`}
                       >
@@ -231,29 +232,36 @@ export default function NotificationCenter() {
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                               {!notification.read && (
                                 <button
                                   onClick={() => markAsRead(notification._id)}
-                                  className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                                  className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 px-2 py-1 hover:bg-blue-50 rounded transition-colors"
                                 >
                                   <Check size={14} />
                                   Marcar como lida
                                 </button>
                               )}
+                              <button
+                                onClick={() => deleteNotification(notification._id)}
+                                className="text-xs text-red-600 hover:text-red-700 font-medium px-2 py-1 hover:bg-red-50 rounded transition-colors"
+                              >
+                                Apagar
+                              </button>
                               {notification.actionUrl && (
                                 <a
                                   href={notification.actionUrl}
-                                  className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                                  className="text-xs text-purple-600 hover:text-purple-700 font-medium px-2 py-1 hover:bg-purple-50 rounded transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   Ver detalhes →
                                 </a>
                               )}
                               <button
-                                onClick={() => deleteNotification(notification._id)}
-                                className="text-xs text-red-600 hover:text-red-700 font-medium ml-auto"
+                                onClick={() => setSelectedNotification(notification)}
+                                className="text-xs text-gray-600 hover:text-gray-700 font-medium px-2 py-1 hover:bg-gray-100 rounded transition-colors ml-auto"
                               >
-                                Remover
+                                Ler completo →
                               </button>
                             </div>
                           </div>
@@ -266,6 +274,107 @@ export default function NotificationCenter() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Notification Detail Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSelectedNotification(null)}
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            {/* Header */}
+            <div className={`bg-gradient-to-r ${getPriorityColor(selectedNotification.priority)} p-6 text-white`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                    {(() => {
+                      const Icon = getIcon(selectedNotification.type);
+                      return <Icon className="text-white" size={24} />;
+                    })()}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xl mb-1">
+                      {selectedNotification.title}
+                    </h3>
+                    <p className="text-sm opacity-90">
+                      {new Date(selectedNotification.createdAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedNotification(null)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-200px)]">
+              <div className="prose max-w-none">
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {selectedNotification.message}
+                </p>
+              </div>
+
+              {selectedNotification.metadata && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-bold text-sm text-gray-900 mb-2">Informações Adicionais</h4>
+                  <pre className="text-xs text-gray-600 overflow-x-auto">
+                    {JSON.stringify(selectedNotification.metadata, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="border-t border-gray-200 p-4 bg-gray-50">
+              <div className="flex items-center gap-3 justify-end">
+                {selectedNotification.actionUrl && (
+                  <a
+                    href={selectedNotification.actionUrl}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  >
+                    Ver detalhes
+                  </a>
+                )}
+                {!selectedNotification.read && (
+                  <button
+                    onClick={async () => {
+                      await markAsRead(selectedNotification._id);
+                      setSelectedNotification(null);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <Check size={18} />
+                    Marcar como lida
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    await deleteNotification(selectedNotification._id);
+                    setSelectedNotification(null);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Remover
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

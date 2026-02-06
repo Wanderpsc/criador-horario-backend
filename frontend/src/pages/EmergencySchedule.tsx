@@ -59,6 +59,8 @@ interface EmergencySlot extends TimeSlot {
   vacantReason?: string;
   // Flag para indicar se o período foi reordenado na compactação
   wasReordered?: boolean;
+  // Informações da turma
+  gradeName?: string;
 }
 
 interface OriginalSlot extends TimeSlot {
@@ -78,6 +80,7 @@ interface MakeupClass {
   originalDay: string;
   makeupDay: string;
   reason: string;
+  confirmedSaturday?: boolean; // Flag para indicar que o professor confirmou presença no sábado
 }
 
 export default function EmergencySchedule() {
@@ -88,6 +91,8 @@ export default function EmergencySchedule() {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedTimetableId, setSelectedTimetableId] = useState('');
   const [absentTeacherIds, setAbsentTeacherIds] = useState<string[]>([]);
+  const [confirmedSaturdayTeacherIds, setConfirmedSaturdayTeacherIds] = useState<string[]>([]); // Professores que confirmaram presença no sábado
+  const [saturdayRealized, setSaturdayRealized] = useState(false); // Se o sábado de reposição foi realizado
   const [reason, setReason] = useState('');
   const [originalSlots, setOriginalSlots] = useState<OriginalSlot[]>([]);
   const [emergencySlots, setEmergencySlots] = useState<EmergencySlot[]>([]);
@@ -200,7 +205,7 @@ export default function EmergencySchedule() {
   });
 
   // Buscar horários emergenciais salvos
-  const { data: savedEmergencySchedules = [] } = useQuery({
+  useQuery({
     queryKey: ['emergencySchedules'],
     queryFn: async () => {
       try {
@@ -257,7 +262,7 @@ export default function EmergencySchedule() {
     
     // Para cada turma, compactar seus períodos
     Object.values(slotsByClass).forEach((classData: any) => {
-      const { classId, className, gradeName, day, slots: classSlots } = classData;
+      const { className, gradeName, day, slots: classSlots } = classData;
       
       console.log(`\n📚 Compactando: ${gradeName} - ${className} (${day})`);
       console.log(`   Períodos originais: ${classSlots.length}`);
@@ -338,6 +343,24 @@ export default function EmergencySchedule() {
     }
 
     console.log('✅ Validações passaram, iniciando processamento...');
+    
+    // Mostrar resumo dos professores confirmados
+    if (confirmedSaturdayTeacherIds.length > 0) {
+      const confirmedNames = confirmedSaturdayTeacherIds.map(id => {
+        const teacher = teachers.find((t: Teacher) => t.id === id);
+        return teacher?.name || 'Desconhecido';
+      }).join(', ');
+      
+      toast.success(
+        `✅ ${confirmedSaturdayTeacherIds.length} professor(es) confirmado(s) para o sábado:\n${confirmedNames}`,
+        { duration: 5000 }
+      );
+      console.log(`✅ Professores confirmados para sábado (${confirmedSaturdayTeacherIds.length}):`, confirmedNames);
+    } else {
+      toast.warning('⚠️ Nenhum professor confirmou presença no sábado', { duration: 4000 });
+      console.log('⚠️ Nenhum professor confirmado para o sábado');
+    }
+    
     setGenerating(true);
     try {
       let realSlots: OriginalSlot[] = [];
@@ -553,8 +576,7 @@ export default function EmergencySchedule() {
           period: number, 
           day: string, 
           classId: string, 
-          excludeTeacherIds: string[],
-          emergencySlots: any[]
+          excludeTeacherIds: string[]
         ) => {
           // Buscar todos os slots do mesmo período e dia em OUTRAS turmas
           const occupiedTeachers = new Set<string>();
@@ -615,18 +637,33 @@ export default function EmergencySchedule() {
         console.log(`   - Slots afetados: ${realSlots.filter((s: any) => s.isAffected).length}`);
         console.log(`   - IDs de professores ausentes: ${JSON.stringify(absentTeacherIds)}`);
         
-        emergencySlots = realSlots.map((slot) => {
+        // 🎯 PRIMEIRO: Adicionar TODAS as aulas dos professores faltosos para reposição
+        console.log('📋 Adicionando TODAS as aulas dos professores faltosos para reposição...');
+        console.log(`📅 Professores com presença confirmada no sábado: ${confirmedSaturdayTeacherIds.length}`);
+        console.log(`📅 IDs confirmados:`, confirmedSaturdayTeacherIds);
+        console.log(`📅 IDs ausentes:`, absentTeacherIds);
+        
+        // Garantir que todos os IDs sejam strings
+        const confirmedIdsAsStrings = confirmedSaturdayTeacherIds.map(id => String(id));
+        
+        realSlots.forEach((slot) => {
           if (slot.isAffected) {
-            console.log(`🎯 Processando slot afetado:`, {
-              period: slot.period,
-              day: slot.day,
-              teacher: slot.teacherName,
-              subject: slot.subjectName,
-              class: slot.className
-            });
+            // Verificar se o professor confirmou presença no sábado (comparando como strings)
+            const slotTeacherIdStr = String(slot.teacherId);
+            const confirmedSaturday = confirmedIdsAsStrings.includes(slotTeacherIdStr);
             
-            // 🔴 IMPORTANTE: Aula do professor ausente SEMPRE precisa ser reposta
-            console.log(`   → Adicionando aula do professor ausente para reposição`);
+            console.log(`   🔍 Processando: ${slot.teacherName} (ID: ${slot.teacherId})`);
+            console.log(`      - ID como string: "${slotTeacherIdStr}"`);
+            console.log(`      - Confirmado? ${confirmedSaturday}`);
+            console.log(`      - Está em confirmedSaturdayTeacherIds? ${confirmedSaturdayTeacherIds.includes(slot.teacherId)}`);
+            console.log(`      - Está em confirmedIdsAsStrings? ${confirmedIdsAsStrings.includes(slotTeacherIdStr)}`);
+            
+            if (confirmedSaturday) {
+              console.log(`   ✅ ${slot.teacherName} - ${slot.subjectName} - ${slot.className} (${slot.period}º horário) - CONFIRMADO SÁBADO`);
+            } else {
+              console.log(`   ⚠️ ${slot.teacherName} - ${slot.subjectName} - ${slot.className} (${slot.period}º horário) - NÃO CONFIRMADO`);
+            }
+            
             makeupClasses.push({
               originalTeacherId: slot.teacherId,
               originalTeacherName: slot.teacherName,
@@ -638,15 +675,80 @@ export default function EmergencySchedule() {
               period: slot.period,
               originalDay: slot.day,
               makeupDay: 'Sábado',
-              reason: 'Professor ausente'
+              reason: 'Professor ausente',
+              confirmedSaturday: confirmedSaturday // Flag para indicar presença confirmada
+            });
+          }
+        });
+        
+        console.log(`📊 Total de aulas dos professores faltosos para reposição: ${makeupClasses.length}`);
+        const confirmedCount = makeupClasses.filter(m => m.confirmedSaturday).length;
+        const notConfirmedCount = makeupClasses.filter(m => !m.confirmedSaturday).length;
+        console.log(`✅ Aulas confirmadas para sábado: ${confirmedCount}`);
+        console.log(`⚠️ Aulas NÃO confirmadas: ${notConfirmedCount}`);
+        
+        // Log detalhado das aulas confirmadas
+        console.log('📋 DETALHAMENTO DAS AULAS CONFIRMADAS:');
+        makeupClasses.forEach((mc, idx) => {
+          console.log(`   ${idx + 1}. ${mc.originalTeacherName} (ID: ${mc.originalTeacherId})`);
+          console.log(`      - Disciplina: ${mc.subjectName}`);
+          console.log(`      - Turma: ${mc.className}`);
+          console.log(`      - Confirmado? ${mc.confirmedSaturday ? '✅ SIM' : '❌ NÃO'}`);
+        });
+        
+        // Alerta visual com resumo
+        const confirmedTeachersMap = new Map();
+        makeupClasses.forEach(mc => {
+          if (mc.confirmedSaturday) {
+            if (!confirmedTeachersMap.has(mc.originalTeacherName)) {
+              confirmedTeachersMap.set(mc.originalTeacherName, 0);
+            }
+            confirmedTeachersMap.set(mc.originalTeacherName, confirmedTeachersMap.get(mc.originalTeacherName) + 1);
+          }
+        });
+        
+        const notConfirmedTeachersMap = new Map();
+        makeupClasses.forEach(mc => {
+          if (!mc.confirmedSaturday) {
+            if (!notConfirmedTeachersMap.has(mc.originalTeacherName)) {
+              notConfirmedTeachersMap.set(mc.originalTeacherName, 0);
+            }
+            notConfirmedTeachersMap.set(mc.originalTeacherName, notConfirmedTeachersMap.get(mc.originalTeacherName) + 1);
+          }
+        });
+        
+        let summaryMessage = '';
+        if (confirmedTeachersMap.size > 0) {
+          summaryMessage += '✅ CONFIRMADOS PARA SÁBADO:\n';
+          confirmedTeachersMap.forEach((count, name) => {
+            summaryMessage += `   • ${name}: ${count} aula(s)\n`;
+          });
+        }
+        if (notConfirmedTeachersMap.size > 0) {
+          summaryMessage += '\n⚠️ DÉBITOS PENDENTES:\n';
+          notConfirmedTeachersMap.forEach((count, name) => {
+            summaryMessage += `   • ${name}: ${count} aula(s)\n`;
+          });
+        }
+        
+        toast.success(summaryMessage, { duration: 8000 });
+        
+        // 🎯 SEGUNDO: Processar substituições para o horário emergencial
+        emergencySlots = realSlots.map((slot) => {
+          if (slot.isAffected) {
+            console.log(`🎯 Processando slot afetado:`, {
+              period: slot.period,
+              day: slot.day,
+              teacher: slot.teacherName,
+              subject: slot.subjectName,
+              class: slot.className
             });
             
             const availableTeacher = findAvailableTeacher(
               slot.period, 
               slot.day, 
               slot.classId || '',
-              absentTeacherIds,
-              emergencySlots
+              absentTeacherIds
             );
             
             if (availableTeacher) {
@@ -776,7 +878,7 @@ export default function EmergencySchedule() {
         }, {});
         
         console.log(`🏫 Total de turmas: ${Object.keys(slotsByClass).length}`);
-        Object.entries(slotsByClass).forEach(([classId, slots]: [string, any]) => {
+        Object.entries(slotsByClass).forEach(([_, slots]: [string, any]) => {
           const slot = slots[0];
           console.log(`   - ${slot.gradeName} - ${slot.className}: ${slots.length} períodos`);
         });
@@ -1027,22 +1129,6 @@ export default function EmergencySchedule() {
     }
   };
 
-  const handleNotifyVacancy = async (period: number) => {
-    try {
-      await api.post('/live-messages/alert-vacant', {
-        classId: selectedClass,
-        className: classes.find((c: any) => c._id === selectedClass)?.name,
-        period,
-        day: currentDay,
-        reason: reason || 'Horário vago',
-      });
-
-      toast.success(`✅ Alerta de vaga no ${period}º horário enviado!`);
-    } catch (error) {
-      toast.error('Erro ao enviar alerta');
-    }
-  };
-
   const getTeacherName = (teacherId: string) => {
     return teachers.find((t: any) => t.id === teacherId)?.name || 'N/A';
   };
@@ -1132,6 +1218,7 @@ export default function EmergencySchedule() {
         originalSlots,
         emergencySlots,
         makeupClasses,
+        saturdayRealized, // Estado do checkbox de sábado realizado
         affectedSlotsCount: originalSlots.filter((s: any) => s.isAffected).length,
         affectedClasses: [...new Set(emergencySlots.map(s => s.classId))].filter(Boolean),
       };
@@ -1630,6 +1717,24 @@ export default function EmergencySchedule() {
                 </div>
               )}
             </div>
+            
+            {/* Aviso importante sobre múltiplos dias */}
+            <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <div className="flex items-start gap-3">
+                <Info className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h4 className="font-bold text-blue-900 mb-2">📌 Informação Importante sobre Reposição</h4>
+                  <p className="text-sm text-blue-800 mb-2">
+                    O sistema considera apenas as aulas <strong>do dia selecionado</strong> para reposição no sábado.
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Se um professor faltou em <strong>vários dias</strong>, você precisa gerar um horário emergencial 
+                    para <strong>cada dia de falta</strong>. As aulas de todos os dias aparecerão no sábado de reposição 
+                    somente se você gerar o horário para cada data.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="mt-4">
               <div>
@@ -1693,6 +1798,64 @@ export default function EmergencySchedule() {
                     </div>
                   </div>
                 )}
+                
+                {/* Professores que confirmaram presença no sábado */}
+                {absentTeacherIds.length > 0 && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-3 text-green-700">
+                      <span className="inline-flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Professores que confirmaram presença no sábado
+                      </span>
+                    </label>
+                    <p className="text-xs text-gray-600 mb-3">
+                      Marque os professores faltosos que confirmaram presença para o sábado de reposição. 
+                      Suas aulas aparecerão no horário do sábado.
+                    </p>
+                    
+                    <div className="border border-green-300 rounded-lg p-4 bg-green-50">
+                      {absentTeacherIds.length === 0 ? (
+                        <p className="text-gray-500 text-sm">Selecione professores faltosos primeiro</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {absentTeacherIds.map(tid => {
+                            const teacher = teachers.find((t: Teacher) => t.id === tid);
+                            if (!teacher) return null;
+                            return (
+                              <label
+                                key={tid}
+                                className="flex items-center gap-3 p-2 hover:bg-green-100 rounded cursor-pointer transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={confirmedSaturdayTeacherIds.includes(tid)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setConfirmedSaturdayTeacherIds([...confirmedSaturdayTeacherIds, tid]);
+                                      console.log('✅ Professor confirmou sábado:', teacher.name);
+                                    } else {
+                                      setConfirmedSaturdayTeacherIds(confirmedSaturdayTeacherIds.filter(id => id !== tid));
+                                      console.log('❌ Professor NÃO confirmou sábado:', teacher.name);
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                />
+                                <span className="text-sm text-gray-700 flex-1">{teacher.name}</span>
+                                {confirmedSaturdayTeacherIds.includes(tid) && (
+                                  <span className="text-xs bg-green-600 text-white px-2 py-1 rounded-full">
+                                    ✓ Confirmado
+                                  </span>
+                                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1711,6 +1874,38 @@ export default function EmergencySchedule() {
                 />
               </div>
             </div>
+            
+            {/* Resumo antes de gerar */}
+            {absentTeacherIds.length > 0 && selectedClass && selectedTimetableId && (
+              <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg">
+                <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                  📊 Resumo da Geração
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <p className="text-gray-700">
+                    <strong>📅 Data:</strong> {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-gray-700">
+                    <strong>👥 Professores ausentes:</strong> {absentTeacherIds.length}
+                  </p>
+                  {confirmedSaturdayTeacherIds.length > 0 ? (
+                    <p className="text-green-700 font-medium">
+                      <strong>✅ Confirmados para sábado:</strong> {confirmedSaturdayTeacherIds.length} professor(es)
+                    </p>
+                  ) : (
+                    <p className="text-orange-700 font-medium">
+                      <strong>⚠️ Atenção:</strong> Nenhum professor confirmou presença no sábado
+                    </p>
+                  )}
+                  <div className="mt-3 p-3 bg-white border border-blue-200 rounded">
+                    <p className="text-xs text-gray-600">
+                      💡 <strong>Dica:</strong> Apenas as aulas do dia <strong>{currentDay}</strong> irão para o sábado de reposição. 
+                      Se o professor faltou em outros dias, gere um horário separado para cada data.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={() => {
@@ -1742,6 +1937,95 @@ export default function EmergencySchedule() {
                   ? `Gerar Horário Emergencial (${classes.length} turmas)`
                   : 'Gerar Horário Emergencial'
               }
+            </button>
+
+            {/* Botão REGENERAR HORÁRIO COMPLETO */}
+            <button
+              type="button"
+              onClick={async () => {
+                if (!selectedClass || absentTeacherIds.length === 0 || !selectedTimetableId) {
+                  toast.error('Selecione turma, professores ausentes e horário base');
+                  return;
+                }
+                
+                const absentNames = absentTeacherIds
+                  .map(id => teachers.find((t: Teacher) => t.id === id)?.name || 'Desconhecido')
+                  .join(', ');
+                
+                const message = `🔄 Regenerar horário COMPLETO excluindo: ${absentNames}?\n\n` +
+                  `Isso vai criar um NOVO horário do zero, redistribuindo todas as aulas SEM esses professores.\n\n` +
+                  `⚠️ O horário original permanecerá intacto.`;
+                
+                if (!confirm(message)) return;
+                
+                setGenerating(true);
+                try {
+                  toast.loading('🔄 Gerando horário completo sem os professores faltosos...', { duration: 3000 });
+                  
+                  // Buscar horário base completo
+                  const fullTimetableResponse = await api.get(`/generated-timetables/full/${selectedTimetableId}`);
+                  const originalTimetable = fullTimetableResponse.data?.data || fullTimetableResponse.data;
+                  
+                  if (!originalTimetable || !originalTimetable.timetable) {
+                    toast.error('Horário base não encontrado');
+                    setGenerating(false);
+                    return;
+                  }
+                  
+                  // Buscar configuração do schedule
+                  await api.get(`/schedules/${originalTimetable.scheduleId}`);
+                  
+                  // Criar horário emergencial baseado no original mas SEM os professores faltosos
+                  const emergencyTimetable: { [classId: string]: EmergencySlot[] } = {};
+                  
+                  // Para cada turma, pegar apenas as aulas que NÃO são dos professores faltosos
+                  Object.keys(originalTimetable.timetable).forEach(classId => {
+                    const classSlots = originalTimetable.timetable[classId] || [];
+                    
+                    emergencyTimetable[classId] = classSlots
+                      .filter((slot: any) => !absentTeacherIds.includes(slot.teacherId))
+                      .map((slot: any) => ({
+                        ...slot,
+                        isModified: false,
+                        isVacant: false
+                      }));
+                  });
+                  
+                  // Converter para formato de exibição
+                  const allSlots: EmergencySlot[] = [];
+                  Object.entries(emergencyTimetable).forEach(([classId, slots]) => {
+                    const classInfo = classes.find((c: Class) => (c.id || c._id) === classId);
+                    slots.forEach(slot => {
+                      allSlots.push({
+                        ...slot,
+                        className: classInfo?.name || 'Desconhecida',
+                        gradeName: classInfo?.grade?.name || ''
+                      });
+                    });
+                  });
+                  
+                  setEmergencySlots(allSlots);
+                  setEmergencyScheduleDate(selectedDate);
+                  
+                  toast.success(`✅ Horário emergencial gerado! ${allSlots.length} aulas mantidas (professores faltosos removidos)`);
+                } catch (error: any) {
+                  console.error('Erro ao regenerar:', error);
+                  toast.error('Erro ao regenerar horário');
+                } finally {
+                  setGenerating(false);
+                }
+              }}
+              disabled={
+                generating ||
+                !selectedClass || 
+                absentTeacherIds.length === 0 ||
+                !selectedTimetableId
+              }
+              className="btn bg-orange-600 hover:bg-orange-700 text-white w-full mt-2"
+              title="Regenera um horário NOVO do zero, excluindo os professores faltosos"
+            >
+              <RefreshCw size={20} className={generating ? 'animate-spin' : ''} />
+              {generating ? 'Regenerando...' : '🔄 Regenerar Horário Completo (Novo)'}
             </button>
 
             {/* Botões de ação após gerar */}
@@ -2257,53 +2541,223 @@ export default function EmergencySchedule() {
           )}
 
           {/* Painel de Reposição no Sábado */}
-          {(() => {
-            console.log('🔍 Renderizando painel de reposição...');
-            console.log('   makeupClasses.length:', makeupClasses.length);
-            console.log('   makeupClasses:', makeupClasses);
-            return null;
-          })()}
           {makeupClasses.length > 0 && (
-            <div className="card bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 mt-6 page-break-before print-container">
+            <div className={`card ${saturdayRealized ? 'bg-gradient-to-br from-green-100 to-emerald-100 border-4 border-green-500' : 'bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300'} mt-6 page-break-before print-container`}>
+              {saturdayRealized && (
+                <div className="mb-4 p-3 bg-green-600 text-white rounded-lg flex items-center gap-3">
+                  <span className="text-2xl">✅</span>
+                  <div>
+                    <p className="font-bold text-lg">Sábado Realizado com Sucesso!</p>
+                    <p className="text-sm">As aulas confirmadas foram dadas e os débitos foram baixados.</p>
+                  </div>
+                </div>
+              )}
               <h3 className="font-bold text-xl mb-4 text-purple-800 flex items-center gap-2">
                 📅 Aulas para Reposição no Sábado
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                {makeupClasses.length} aula(s) precisam ser repostas no sábado. Data da reposição a ser agendada.
+                {makeupClasses.length} aula(s) precisam ser repostas no sábado.
               </p>
               
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="bg-purple-600 text-white">
-                      <th className="border border-gray-300 p-2 text-left">Professor</th>
-                      <th className="border border-gray-300 p-2 text-left">Disciplina</th>
-                      <th className="border border-gray-300 p-2 text-left">Turma</th>
-                      <th className="border border-gray-300 p-2 text-center">Dia Original</th>
-                      <th className="border border-gray-300 p-2 text-center">Horário</th>
-                      <th className="border border-gray-300 p-2 text-left">Motivo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {makeupClasses.map((makeup, index) => (
-                      <tr key={index} className="hover:bg-purple-100">
-                        <td className="border border-gray-300 p-2">{makeup.originalTeacherName}</td>
-                        <td className="border border-gray-300 p-2">{makeup.subjectName}</td>
-                        <td className="border border-gray-300 p-2">{makeup.gradeName} - {makeup.className}</td>
-                        <td className="border border-gray-300 p-2 text-center">{makeup.originalDay}</td>
-                        <td className="border border-gray-300 p-2 text-center">{makeup.period}º horário</td>
-                        <td className="border border-gray-300 p-2">{makeup.reason}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Professores com presença confirmada */}
+              {makeupClasses.filter(m => m.confirmedSaturday).length > 0 && (
+                <>
+                  <h4 className="font-bold text-lg mb-3 text-green-700 flex items-center gap-2">
+                    ✅ Horário do Sábado ({makeupClasses.filter(m => m.confirmedSaturday).length} aula(s))
+                  </h4>
+                  <p className="text-sm text-green-600 mb-3">
+                    Professores com presença confirmada - essas aulas entram no horário oficial do sábado
+                  </p>
+                  
+                  {/* Horário em formato de grade */}
+                  <div className="overflow-x-auto mb-6">
+                    {(() => {
+                      // Agrupar aulas confirmadas por período
+                      const confirmedClasses = makeupClasses.filter(m => m.confirmedSaturday);
+                      const periods = [...new Set(confirmedClasses.map(m => m.period))].sort((a, b) => a - b);
+                      
+                      return (
+                        <table className="min-w-full border-collapse text-sm">
+                          <thead>
+                            <tr className="bg-green-600 text-white">
+                              <th className="border border-gray-300 p-2 text-center w-24">Horário</th>
+                              <th className="border border-gray-300 p-2 text-left">Turmas / Professores / Disciplinas</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {periods.map(period => {
+                              const periodClasses = confirmedClasses.filter(m => m.period === period);
+                              return (
+                                <tr key={period} className="hover:bg-green-50">
+                                  <td className="border border-gray-300 p-2 text-center font-bold bg-green-100">
+                                    {period}º
+                                  </td>
+                                  <td className="border border-gray-300 p-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                      {periodClasses.map((makeup, idx) => (
+                                        <div key={idx} className="bg-white border border-green-300 rounded p-2 shadow-sm">
+                                          <div className="font-bold text-green-700 text-xs mb-1">
+                                            {makeup.gradeName} - {makeup.className}
+                                          </div>
+                                          <div className="text-sm font-medium text-gray-800">
+                                            {makeup.subjectName}
+                                          </div>
+                                          <div className="text-xs text-gray-600 mt-1">
+                                            👨‍🏫 {makeup.originalTeacherName}
+                                          </div>
+                                          <div className="text-xs text-gray-500 mt-1">
+                                            📅 Origem: {makeup.originalDay}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
+                  </div>
+                  
+                  {/* Lista detalhada alternativa */}
+                  <details className="mb-6">
+                    <summary className="cursor-pointer text-sm text-green-700 font-medium hover:text-green-800">
+                      📋 Ver lista detalhada
+                    </summary>
+                    <div className="overflow-x-auto mt-3">
+                      <table className="min-w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-green-600 text-white">
+                            <th className="border border-gray-300 p-2 text-left">Professor</th>
+                            <th className="border border-gray-300 p-2 text-left">Disciplina</th>
+                            <th className="border border-gray-300 p-2 text-left">Turma</th>
+                            <th className="border border-gray-300 p-2 text-center">Dia Original</th>
+                            <th className="border border-gray-300 p-2 text-center">Horário</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {makeupClasses
+                            .filter(m => m.confirmedSaturday)
+                            .map((makeup, index) => (
+                              <tr key={index} className="hover:bg-green-100">
+                                <td className="border border-gray-300 p-2 font-medium">{makeup.originalTeacherName}</td>
+                                <td className="border border-gray-300 p-2">{makeup.subjectName}</td>
+                                <td className="border border-gray-300 p-2">{makeup.gradeName} - {makeup.className}</td>
+                                <td className="border border-gray-300 p-2 text-center">{makeup.originalDay}</td>
+                                <td className="border border-gray-300 p-2 text-center">{makeup.period}º horário</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                </>
+              )}
+              
+              {/* Professores SEM presença confirmada (débitos pendentes) */}
+              {makeupClasses.filter(m => !m.confirmedSaturday).length > 0 && (
+                <>
+                  <h4 className="font-bold text-lg mb-3 text-orange-700 flex items-center gap-2">
+                    ⚠️ Débitos Pendentes ({makeupClasses.filter(m => !m.confirmedSaturday).length} aula(s))
+                  </h4>
+                  <p className="text-sm text-orange-600 mb-3">
+                    Professores que ainda não confirmaram presença no sábado
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-orange-600 text-white">
+                          <th className="border border-gray-300 p-2 text-left">Professor</th>
+                          <th className="border border-gray-300 p-2 text-left">Disciplina</th>
+                          <th className="border border-gray-300 p-2 text-left">Turma</th>
+                          <th className="border border-gray-300 p-2 text-center">Dia Original</th>
+                          <th className="border border-gray-300 p-2 text-center">Horário</th>
+                          <th className="border border-gray-300 p-2 text-left">Motivo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {makeupClasses
+                          .filter(m => !m.confirmedSaturday)
+                          .map((makeup, index) => (
+                            <tr key={index} className="hover:bg-orange-100">
+                              <td className="border border-gray-300 p-2">{makeup.originalTeacherName}</td>
+                              <td className="border border-gray-300 p-2">{makeup.subjectName}</td>
+                              <td className="border border-gray-300 p-2">{makeup.gradeName} - {makeup.className}</td>
+                              <td className="border border-gray-300 p-2 text-center">{makeup.originalDay}</td>
+                              <td className="border border-gray-300 p-2 text-center">{makeup.period}º horário</td>
+                              <td className="border border-gray-300 p-2">{makeup.reason}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
               
               <div className="mt-4 p-3 bg-purple-100 rounded-lg">
                 <p className="text-sm font-semibold text-purple-900">
-                  💡 <strong>Importante:</strong> As aulas acima devem ser agendadas para reposição em um sábado letivo.
+                  💡 <strong>Importante:</strong> As aulas confirmadas já entram no horário oficial do sábado. 
+                  Os débitos pendentes precisam de confirmação de presença dos professores.
                 </p>
               </div>
+              
+              {/* Checkbox para confirmar que o sábado foi realizado */}
+              {makeupClasses.filter(m => m.confirmedSaturday).length > 0 && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-400 rounded-lg">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saturdayRealized}
+                      onChange={(e) => {
+                        setSaturdayRealized(e.target.checked);
+                        if (e.target.checked) {
+                          toast.success(
+                            '✅ Sábado marcado como realizado!\n\n' +
+                            `${makeupClasses.filter(m => m.confirmedSaturday).length} aula(s) será(ão) baixada(s) dos débitos dos professores.\n\n` +
+                            '💾 Lembre-se de SALVAR o horário para registrar esta alteração!',
+                            { duration: 6000 }
+                          );
+                        } else {
+                          toast.info('Sábado desmarcado como realizado.', { duration: 3000 });
+                        }
+                      }}
+                      className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1"
+                    />
+                    <div className="flex-1">
+                      <span className="text-base font-bold text-green-800">
+                        ✅ Sábado de Reposição foi Realizado
+                      </span>
+                      <p className="text-sm text-gray-700 mt-1">
+                        Marque esta opção para confirmar que o sábado aconteceu e dar baixa nas {makeupClasses.filter(m => m.confirmedSaturday).length} aula(s) devida(s) dos professores.
+                      </p>
+                      {saturdayRealized && (
+                        <div className="mt-3 p-3 bg-white border border-green-300 rounded">
+                          <p className="text-sm font-medium text-green-700">
+                            ✓ As seguintes aulas serão baixadas dos débitos:
+                          </p>
+                          <ul className="mt-2 space-y-1">
+                            {Array.from(
+                              makeupClasses
+                                .filter(m => m.confirmedSaturday)
+                                .reduce((acc, m) => {
+                                  const key = m.originalTeacherName;
+                                  acc.set(key, (acc.get(key) || 0) + 1);
+                                  return acc;
+                                }, new Map())
+                            ).map(([teacher, count]) => (
+                              <li key={teacher} className="text-sm text-gray-700">
+                                • {teacher}: {count} aula(s)
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              )}
             </div>
           )}
 

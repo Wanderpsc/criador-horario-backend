@@ -9,6 +9,17 @@ export default defineConfig(({ command }) => ({
     {
       name: 'copy-404',
       closeBundle() {
+        // Copia index.html para 200.html (Surge SPA support)
+        try {
+          copyFileSync(
+            resolve(__dirname, 'dist/index.html'),
+            resolve(__dirname, 'dist/200.html')
+          );
+          console.log('✅ 200.html copiado para dist/ (Surge SPA)');
+        } catch (error) {
+          console.error('⚠️ Erro ao copiar 200.html:', error);
+        }
+        
         // Copia 404.html para o dist após o build (GitHub Pages SPA fix)
         try {
           copyFileSync(
@@ -36,8 +47,8 @@ export default defineConfig(({ command }) => ({
       }
     }
   ],
-  // Base path para GitHub Pages
-  base: command === 'build' ? '/criador-horario-backend/' : '/',
+  // Base path - apenas para GitHub Pages, não para Surge
+  base: '/',
   server: {
     port: 3001,
     host: true,

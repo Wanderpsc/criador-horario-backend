@@ -47,8 +47,15 @@ export default function Login() {
       console.error('❌ Erro ao fazer login:', error);
       console.error('❌ Response:', error.response?.data);
       
+      // Tratamento especial para rate limiting (muitas tentativas)
+      if (error.response?.status === 429) {
+        toast.error(
+          '🔒 Muitas tentativas de login. Por segurança, aguarde 15 minutos antes de tentar novamente.',
+          { duration: 8000 }
+        );
+      }
       // Tratamento especial para contas pendentes de aprovação
-      if (error.response?.status === 403) {
+      else if (error.response?.status === 403) {
         const data = error.response?.data;
         
         if (data?.status === 'pending_approval') {
@@ -61,7 +68,13 @@ export default function Login() {
           toast.error(data?.message || 'Acesso negado');
         }
       } else {
-        toast.error(error.response?.data?.message || 'Erro ao fazer login');
+        const errorMessage = error.response?.data?.message || 'Erro ao fazer login';
+        // Se a mensagem contém "tentativas" ou "minutos", é rate limiting
+        if (errorMessage.toLowerCase().includes('tentativas') || errorMessage.toLowerCase().includes('minutos')) {
+          toast.error('🔒 ' + errorMessage, { duration: 8000 });
+        } else {
+          toast.error(errorMessage);
+        }
       }
     } finally {
       setLoading(false);

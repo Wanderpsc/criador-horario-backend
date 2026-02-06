@@ -13,8 +13,29 @@ Sistema web completo para criação automática de horários escolares com preve
 - ✅ Evita mesmo professor no mesmo horário
 - ✅ Evita mesma matéria no mesmo horário  
 - ✅ Evita aulas seguidas da mesma matéria
-- ✅ Respeita disponibilidade dos professores
+- ✅ **Respeita observações e disponibilidade dos professores** (NOVO!)
 - ✅ Considera carga horária dos componentes curriculares
+- ✅ **Múltiplos formatos de impressão: Normal e Transposto** (NOVO!)
+
+---
+
+## 🎉 Novidades - Fevereiro 2026
+
+### 🔥 Respeito Automático às Observações dos Professores
+O sistema agora analisa automaticamente as observações cadastradas no campo "Observações de Disponibilidade" e **evita alocar professores** em horários onde eles não estão disponíveis.
+
+**Exemplos reconhecidos:**
+- "Não pode dar aula às quartas-feiras" → Professor não será alocado às quartas
+- "Evitar último período" → Professor não será alocado no último horário
+- Combinações de múltiplas restrições
+
+### 🖨️ Novo Formato de Impressão Transposto
+Além do formato tradicional, agora você pode imprimir com:
+- **Períodos no topo** e **turmas na lateral**
+- Ideal para visualizar todas as turmas de um dia específico
+- Perfeito para coordenação e gestão de espaços
+
+📖 **Veja o guia completo:** [GUIA_USUARIO_NOVAS_FUNCIONALIDADES.md](GUIA_USUARIO_NOVAS_FUNCIONALIDADES.md)
 
 ---
 
