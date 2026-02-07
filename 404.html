@@ -7,27 +7,19 @@
     
     <!-- GitHub Pages SPA Redirect -->
     <script type="text/javascript">
-      // GitHub Pages Redirect para SPA
-      // Converte /criador-horario-backend/login em /criador-horario-backend/?/login
-      (function(){
-        var pathSegmentsToKeep = 1; // Mantém /criador-horario-backend/
-        
-        var l = window.location;
-        var segments = l.pathname.split('/').filter(Boolean);
-        
-        // Se temos mais segmentos que o base path, redireciona
-        if (segments.length > pathSegmentsToKeep) {
-          var basePath = '/' + segments.slice(0, pathSegmentsToKeep).join('/');
-          var route = '/' + segments.slice(pathSegmentsToKeep).join('/');
-          
-          l.replace(
-            l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-            basePath + '/?/' + route.slice(1).replace(/&/g, '~and~') +
-            (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-            l.hash
-          );
-        }
-      })();
+      // Single Page Apps for GitHub Pages
+      // https://github.com/rafgraph/spa-github-pages
+      // Salva a rota no sessionStorage e redireciona para index.html
+      var pathSegmentsToKeep = 1; // Para /criador-horario-backend/
+      
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
     </script>
   </head>
   <body>
