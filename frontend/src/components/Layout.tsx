@@ -210,6 +210,16 @@ export default function Layout() {
             subtitle: 'Emergência e Reposição'
           },
           { 
+            icon: CheckCircle, 
+            label: 'Controle de Frequência', 
+            path: '/teacher-attendance',
+            description: '✅ Registre presença e acompanhe carga horária dos professores',
+            color: 'green',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Ponto e Relatórios'
+          },
+          { 
             icon: Tv, 
             label: 'Painel de Avisos (TV)', 
             path: '/display-panel-config',
