@@ -80,7 +80,6 @@ interface MakeupClass {
   originalDay: string;
   makeupDay: string;
   reason: string;
-  confirmedSaturday?: boolean; // Flag para indicar que o professor confirmou presença no sábado
 }
 
 export default function EmergencySchedule() {
@@ -91,7 +90,6 @@ export default function EmergencySchedule() {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedTimetableId, setSelectedTimetableId] = useState('');
   const [absentTeacherIds, setAbsentTeacherIds] = useState<string[]>([]);
-  const [confirmedSaturdayTeacherIds, setConfirmedSaturdayTeacherIds] = useState<string[]>([]); // Professores que confirmaram presença no sábado
   const [saturdayRealized, setSaturdayRealized] = useState(false); // Se o sábado de reposição foi realizado
   const [reason, setReason] = useState('');
   const [originalSlots, setOriginalSlots] = useState<OriginalSlot[]>([]);
@@ -343,23 +341,6 @@ export default function EmergencySchedule() {
     }
 
     console.log('✅ Validações passaram, iniciando processamento...');
-    
-    // Mostrar resumo dos professores confirmados
-    if (confirmedSaturdayTeacherIds.length > 0) {
-      const confirmedNames = confirmedSaturdayTeacherIds.map(id => {
-        const teacher = teachers.find((t: Teacher) => t.id === id);
-        return teacher?.name || 'Desconhecido';
-      }).join(', ');
-      
-      toast.success(
-        `✅ ${confirmedSaturdayTeacherIds.length} professor(es) confirmado(s) para o sábado:\n${confirmedNames}`,
-        { duration: 5000 }
-      );
-      console.log(`✅ Professores confirmados para sábado (${confirmedSaturdayTeacherIds.length}):`, confirmedNames);
-    } else {
-      toast.warning('⚠️ Nenhum professor confirmou presença no sábado', { duration: 4000 });
-      console.log('⚠️ Nenhum professor confirmado para o sábado');
-    }
     
     setGenerating(true);
     try {
@@ -639,30 +620,11 @@ export default function EmergencySchedule() {
         
         // 🎯 PRIMEIRO: Adicionar TODAS as aulas dos professores faltosos para reposição
         console.log('📋 Adicionando TODAS as aulas dos professores faltosos para reposição...');
-        console.log(`📅 Professores com presença confirmada no sábado: ${confirmedSaturdayTeacherIds.length}`);
-        console.log(`📅 IDs confirmados:`, confirmedSaturdayTeacherIds);
         console.log(`📅 IDs ausentes:`, absentTeacherIds);
-        
-        // Garantir que todos os IDs sejam strings
-        const confirmedIdsAsStrings = confirmedSaturdayTeacherIds.map(id => String(id));
         
         realSlots.forEach((slot) => {
           if (slot.isAffected) {
-            // Verificar se o professor confirmou presença no sábado (comparando como strings)
-            const slotTeacherIdStr = String(slot.teacherId);
-            const confirmedSaturday = confirmedIdsAsStrings.includes(slotTeacherIdStr);
-            
-            console.log(`   🔍 Processando: ${slot.teacherName} (ID: ${slot.teacherId})`);
-            console.log(`      - ID como string: "${slotTeacherIdStr}"`);
-            console.log(`      - Confirmado? ${confirmedSaturday}`);
-            console.log(`      - Está em confirmedSaturdayTeacherIds? ${confirmedSaturdayTeacherIds.includes(slot.teacherId)}`);
-            console.log(`      - Está em confirmedIdsAsStrings? ${confirmedIdsAsStrings.includes(slotTeacherIdStr)}`);
-            
-            if (confirmedSaturday) {
-              console.log(`   ✅ ${slot.teacherName} - ${slot.subjectName} - ${slot.className} (${slot.period}º horário) - CONFIRMADO SÁBADO`);
-            } else {
-              console.log(`   ⚠️ ${slot.teacherName} - ${slot.subjectName} - ${slot.className} (${slot.period}º horário) - NÃO CONFIRMADO`);
-            }
+            console.log(`   ✅ ${slot.teacherName} - ${slot.subjectName} - ${slot.className} (${slot.period}º horário)`);
             
             makeupClasses.push({
               originalTeacherId: slot.teacherId,
@@ -675,63 +637,14 @@ export default function EmergencySchedule() {
               period: slot.period,
               originalDay: slot.day,
               makeupDay: 'Sábado',
-              reason: 'Professor ausente',
-              confirmedSaturday: confirmedSaturday // Flag para indicar presença confirmada
+              reason: 'Professor ausente'
             });
           }
         });
         
         console.log(`📊 Total de aulas dos professores faltosos para reposição: ${makeupClasses.length}`);
-        const confirmedCount = makeupClasses.filter(m => m.confirmedSaturday).length;
-        const notConfirmedCount = makeupClasses.filter(m => !m.confirmedSaturday).length;
-        console.log(`✅ Aulas confirmadas para sábado: ${confirmedCount}`);
-        console.log(`⚠️ Aulas NÃO confirmadas: ${notConfirmedCount}`);
         
-        // Log detalhado das aulas confirmadas
-        console.log('📋 DETALHAMENTO DAS AULAS CONFIRMADAS:');
-        makeupClasses.forEach((mc, idx) => {
-          console.log(`   ${idx + 1}. ${mc.originalTeacherName} (ID: ${mc.originalTeacherId})`);
-          console.log(`      - Disciplina: ${mc.subjectName}`);
-          console.log(`      - Turma: ${mc.className}`);
-          console.log(`      - Confirmado? ${mc.confirmedSaturday ? '✅ SIM' : '❌ NÃO'}`);
-        });
-        
-        // Alerta visual com resumo
-        const confirmedTeachersMap = new Map();
-        makeupClasses.forEach(mc => {
-          if (mc.confirmedSaturday) {
-            if (!confirmedTeachersMap.has(mc.originalTeacherName)) {
-              confirmedTeachersMap.set(mc.originalTeacherName, 0);
-            }
-            confirmedTeachersMap.set(mc.originalTeacherName, confirmedTeachersMap.get(mc.originalTeacherName) + 1);
-          }
-        });
-        
-        const notConfirmedTeachersMap = new Map();
-        makeupClasses.forEach(mc => {
-          if (!mc.confirmedSaturday) {
-            if (!notConfirmedTeachersMap.has(mc.originalTeacherName)) {
-              notConfirmedTeachersMap.set(mc.originalTeacherName, 0);
-            }
-            notConfirmedTeachersMap.set(mc.originalTeacherName, notConfirmedTeachersMap.get(mc.originalTeacherName) + 1);
-          }
-        });
-        
-        let summaryMessage = '';
-        if (confirmedTeachersMap.size > 0) {
-          summaryMessage += '✅ CONFIRMADOS PARA SÁBADO:\n';
-          confirmedTeachersMap.forEach((count, name) => {
-            summaryMessage += `   • ${name}: ${count} aula(s)\n`;
-          });
-        }
-        if (notConfirmedTeachersMap.size > 0) {
-          summaryMessage += '\n⚠️ DÉBITOS PENDENTES:\n';
-          notConfirmedTeachersMap.forEach((count, name) => {
-            summaryMessage += `   • ${name}: ${count} aula(s)\n`;
-          });
-        }
-        
-        toast.success(summaryMessage, { duration: 8000 });
+        toast.success(`📋 ${makeupClasses.length} aula(s) programada(s) para reposição no sábado`, { duration: 5000 });
         
         // 🎯 SEGUNDO: Processar substituições para o horário emergencial
         emergencySlots = realSlots.map((slot) => {
@@ -767,10 +680,6 @@ export default function EmergencySchedule() {
               if (substituteOriginSlot) {
                 console.log(`   → Substituto deixou aula vazia, adicionando para reposição`);
                 
-                // Verificar se o substituto também confirmou presença no sábado
-                const substituteIdStr = String(substituteOriginSlot.teacherId);
-                const substituteConfirmedSaturday = confirmedIdsAsStrings.includes(substituteIdStr);
-                
                 makeupClasses.push({
                   originalTeacherId: substituteOriginSlot.teacherId,
                   originalTeacherName: substituteOriginSlot.teacherName,
@@ -782,8 +691,7 @@ export default function EmergencySchedule() {
                   period: substituteOriginSlot.period,
                   originalDay: substituteOriginSlot.day,
                   makeupDay: 'Sábado',
-                  reason: 'Substituiu outro professor',
-                  confirmedSaturday: substituteConfirmedSaturday // Flag para indicar presença confirmada
+                  reason: 'Substituiu outro professor'
                 });
               }
               
@@ -1804,64 +1712,6 @@ export default function EmergencySchedule() {
                     </div>
                   </div>
                 )}
-                
-                {/* Professores que confirmaram presença no sábado */}
-                {absentTeacherIds.length > 0 && (
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium mb-3 text-green-700">
-                      <span className="inline-flex items-center gap-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Professores que confirmaram presença no sábado
-                      </span>
-                    </label>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Marque os professores faltosos que confirmaram presença para o sábado de reposição. 
-                      Suas aulas aparecerão no horário do sábado.
-                    </p>
-                    
-                    <div className="border border-green-300 rounded-lg p-4 bg-green-50">
-                      {absentTeacherIds.length === 0 ? (
-                        <p className="text-gray-500 text-sm">Selecione professores faltosos primeiro</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {absentTeacherIds.map(tid => {
-                            const teacher = teachers.find((t: Teacher) => t.id === tid);
-                            if (!teacher) return null;
-                            return (
-                              <label
-                                key={tid}
-                                className="flex items-center gap-3 p-2 hover:bg-green-100 rounded cursor-pointer transition-colors"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={confirmedSaturdayTeacherIds.includes(tid)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setConfirmedSaturdayTeacherIds([...confirmedSaturdayTeacherIds, tid]);
-                                      console.log('✅ Professor confirmou sábado:', teacher.name);
-                                    } else {
-                                      setConfirmedSaturdayTeacherIds(confirmedSaturdayTeacherIds.filter(id => id !== tid));
-                                      console.log('❌ Professor NÃO confirmou sábado:', teacher.name);
-                                    }
-                                  }}
-                                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                />
-                                <span className="text-sm text-gray-700 flex-1">{teacher.name}</span>
-                                {confirmedSaturdayTeacherIds.includes(tid) && (
-                                  <span className="text-xs bg-green-600 text-white px-2 py-1 rounded-full">
-                                    ✓ Confirmado
-                                  </span>
-                                )}
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -1894,15 +1744,6 @@ export default function EmergencySchedule() {
                   <p className="text-gray-700">
                     <strong>👥 Professores ausentes:</strong> {absentTeacherIds.length}
                   </p>
-                  {confirmedSaturdayTeacherIds.length > 0 ? (
-                    <p className="text-green-700 font-medium">
-                      <strong>✅ Confirmados para sábado:</strong> {confirmedSaturdayTeacherIds.length} professor(es)
-                    </p>
-                  ) : (
-                    <p className="text-orange-700 font-medium">
-                      <strong>⚠️ Atenção:</strong> Nenhum professor confirmou presença no sábado
-                    </p>
-                  )}
                   <div className="mt-3 p-3 bg-white border border-blue-200 rounded">
                     <p className="text-xs text-gray-600">
                       💡 <strong>Dica:</strong> Apenas as aulas do dia <strong>{currentDay}</strong> irão para o sábado de reposição. 
@@ -2566,10 +2407,10 @@ export default function EmergencySchedule() {
               </p>
               
               {/* Professores com presença confirmada */}
-              {makeupClasses.filter(m => m.confirmedSaturday).length > 0 && (
+              {makeupClasses.length > 0 && (
                 <>
                   <h4 className="font-bold text-lg mb-3 text-green-700 flex items-center gap-2">
-                    ✅ Horário do Sábado ({makeupClasses.filter(m => m.confirmedSaturday).length} aula(s))
+                    ✅ Horário do Sábado ({makeupClasses.length} aula(s))
                   </h4>
                   <p className="text-sm text-green-600 mb-3">
                     Professores com presença confirmada - essas aulas entram no horário oficial do sábado
@@ -2579,7 +2420,7 @@ export default function EmergencySchedule() {
                   <div className="overflow-x-auto mb-6">
                     {(() => {
                       // Agrupar aulas confirmadas por período
-                      const confirmedClasses = makeupClasses.filter(m => m.confirmedSaturday);
+                      const confirmedClasses = makeupClasses;
                       const periods = [...new Set(confirmedClasses.map(m => m.period))].sort((a, b) => a - b);
                       
                       return (
@@ -2645,7 +2486,7 @@ export default function EmergencySchedule() {
                         </thead>
                         <tbody>
                           {makeupClasses
-                            .filter(m => m.confirmedSaturday)
+                            
                             .map((makeup, index) => (
                               <tr key={index} className="hover:bg-green-100">
                                 <td className="border border-gray-300 p-2 font-medium">{makeup.originalTeacherName}</td>
@@ -2663,10 +2504,10 @@ export default function EmergencySchedule() {
               )}
               
               {/* Professores SEM presença confirmada (débitos pendentes) */}
-              {makeupClasses.filter(m => !m.confirmedSaturday).length > 0 && (
+              {makeupClasses.length > 0 && (
                 <>
                   <h4 className="font-bold text-lg mb-3 text-orange-700 flex items-center gap-2">
-                    ⚠️ Débitos Pendentes ({makeupClasses.filter(m => !m.confirmedSaturday).length} aula(s))
+                    ⚠️ Débitos Pendentes ({makeupClasses.length} aula(s))
                   </h4>
                   <p className="text-sm text-orange-600 mb-3">
                     Professores que ainda não confirmaram presença no sábado
@@ -2685,7 +2526,7 @@ export default function EmergencySchedule() {
                       </thead>
                       <tbody>
                         {makeupClasses
-                          .filter(m => !m.confirmedSaturday)
+                          
                           .map((makeup, index) => (
                             <tr key={index} className="hover:bg-orange-100">
                               <td className="border border-gray-300 p-2">{makeup.originalTeacherName}</td>
@@ -2710,7 +2551,7 @@ export default function EmergencySchedule() {
               </div>
               
               {/* Checkbox para confirmar que o sábado foi realizado */}
-              {makeupClasses.filter(m => m.confirmedSaturday).length > 0 && (
+              {makeupClasses.length > 0 && (
                 <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-400 rounded-lg">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
@@ -2721,7 +2562,7 @@ export default function EmergencySchedule() {
                         if (e.target.checked) {
                           toast.success(
                             '✅ Sábado marcado como realizado!\n\n' +
-                            `${makeupClasses.filter(m => m.confirmedSaturday).length} aula(s) será(ão) baixada(s) dos débitos dos professores.\n\n` +
+                            `${makeupClasses.length} aula(s) será(ão) baixada(s) dos débitos dos professores.\n\n` +
                             '💾 Lembre-se de SALVAR o horário para registrar esta alteração!',
                             { duration: 6000 }
                           );
@@ -2736,7 +2577,7 @@ export default function EmergencySchedule() {
                         ✅ Sábado de Reposição foi Realizado
                       </span>
                       <p className="text-sm text-gray-700 mt-1">
-                        Marque esta opção para confirmar que o sábado aconteceu e dar baixa nas {makeupClasses.filter(m => m.confirmedSaturday).length} aula(s) devida(s) dos professores.
+                        Marque esta opção para confirmar que o sábado aconteceu e dar baixa nas {makeupClasses.length} aula(s) devida(s) dos professores.
                       </p>
                       {saturdayRealized && (
                         <div className="mt-3 p-3 bg-white border border-green-300 rounded">
@@ -2746,7 +2587,7 @@ export default function EmergencySchedule() {
                           <ul className="mt-2 space-y-1">
                             {Array.from(
                               makeupClasses
-                                .filter(m => m.confirmedSaturday)
+                                
                                 .reduce((acc, m) => {
                                   const key = m.originalTeacherName;
                                   acc.set(key, (acc.get(key) || 0) + 1);
@@ -2879,3 +2720,4 @@ export default function EmergencySchedule() {
     </div>
   );
 }
+
