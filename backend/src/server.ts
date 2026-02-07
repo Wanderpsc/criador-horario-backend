@@ -160,19 +160,6 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' })); // Aumentar limite para horários grandes
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// 🔥 MIDDLEWARE DE DEBUG - SEMPRE EXECUTA
-app.use((req, res, next) => {
-  if (req.path.includes('/admin/schools') && req.method === 'GET') {
-    console.log('\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
-    console.log('🚨 MIDDLEWARE: Requisição para /admin/schools');
-    console.log('🚨 Path completo:', req.path);
-    console.log('🚨 URL completa:', req.url);
-    console.log('🚨 Método:', req.method);
-    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
-  }
-  next();
-});
-
 // Middleware de auditoria (deve vir antes das rotas)
 app.use(auditMiddleware);
 

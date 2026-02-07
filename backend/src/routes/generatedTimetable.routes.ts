@@ -5,14 +5,18 @@ import { auth, AuthRequest } from '../middleware/auth';
 const router = Router();
 
 // Salvar ou atualizar horários
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
+    
     console.log('📥 POST /generated-timetables recebido');
     console.log('📥 req.body:', JSON.stringify(req.body, null, 2).substring(0, 500));
     
     const { scheduleId, timetables, title } = req.body;
 
     console.log('📝 Salvando horários:', { 
+      schoolId,
       scheduleId, 
       title, 
       numClasses: Object.keys(timetables || {}).length,
@@ -29,8 +33,12 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Deletar horários existentes com mesmo scheduleId e title
-    const deleted = await GeneratedTimetable.deleteMany({ scheduleId, title });
+    // ✅ Deletar apenas horários da mesma escola
+    const deleted = await GeneratedTimetable.deleteMany({ 
+      scheduleId, 
+      title,
+      school: schoolId 
+    });
     console.log(`🗑️  Deletados ${deleted.deletedCount} registros antigos com título "${title}"`);
 
     const savedTimetables = [];
@@ -42,7 +50,8 @@ router.post('/', async (req, res) => {
         scheduleId,
         classId,
         slots,
-        title
+        title,
+        school: schoolId  // ✅ Associar à escola
       });
       await timetable.save();
       savedTimetables.push(timetable);
@@ -67,11 +76,13 @@ router.post('/', async (req, res) => {
 });
 
 // Listar todos os horários salvos agrupados por título
-router.get('/list/:scheduleId', async (req, res) => {
+router.get('/list/:scheduleId', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { scheduleId } = req.params;
 
-    const timetables = await GeneratedTimetable.find({ scheduleId })
+    const timetables = await GeneratedTimetable.find({ scheduleId, school: schoolId })
       .sort({ createdAt: -1 });
 
     // Agrupar por título (cada título representa um conjunto de horários)
@@ -155,12 +166,14 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 });
 
 // Buscar TODOS os horários salvos (para uso no EmergencySchedule com "Todas as Turmas")
-router.get('/all', async (req, res) => {
+router.get('/all', auth, async (req: AuthRequest, res) => {
   try {
-    console.log('🔍 Buscando TODOS os horários salvos');
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
+    console.log('🔍 Buscando horários salvos da escola:', schoolId);
 
-    // Buscar todos os horários, agrupados por title
-    const timetables = await GeneratedTimetable.find()
+    // Buscar apenas horários da escola do usuário
+    const timetables = await GeneratedTimetable.find({ school: schoolId })
       .sort({ createdAt: -1 })
       .limit(50); // Limitar aos 50 mais recentes
 
@@ -273,14 +286,16 @@ router.get('/all', async (req, res) => {
 });
 
 // Buscar horários por classId (para uso no EmergencySchedule)
-router.get('/by-class/:classId', async (req, res) => {
+router.get('/by-class/:classId', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { classId } = req.params;
     
-    console.log('🔍 Buscando horários para classId:', classId);
+    console.log('🔍 Buscando horários para classId:', classId, 'escola:', schoolId);
 
-    // Buscar todos os horários dessa turma, ordenados por data mais recente
-    const timetables = await GeneratedTimetable.find({ classId })
+    // Buscar apenas horários da escola do usuário
+    const timetables = await GeneratedTimetable.find({ classId, school: schoolId })
       .sort({ createdAt: -1 })
       .limit(10); // Limitar aos 10 mais recentes
 
@@ -324,13 +339,15 @@ router.get('/by-class/:classId', async (req, res) => {
 // ⚠️ ROTAS ESPECÍFICAS DEVEM VIR ANTES DE ROTAS COM PARÂMETROS ⚠️
 
 // Rota otimizada: buscar apenas metadados dos horários (sem popular slots)
-router.get('/metadata', async (req, res) => {
+router.get('/metadata', auth, async (req: AuthRequest, res) => {
   console.log('🎯 ROTA /metadata CHAMADA!');
   try {
-    console.log('📋 Buscando metadados dos horários (otimizado)');
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
+    console.log('📋 Buscando metadados dos horários da escola:', schoolId);
 
-    // Buscar apenas campos necessários, sem os slots completos
-    const timetables = await GeneratedTimetable.find()
+    // Buscar apenas campos necessários, sem os slots completos, da escola do usuário
+    const timetables = await GeneratedTimetable.find({ school: schoolId })
       .select('_id title scheduleId classId createdAt')
       .sort({ createdAt: -1 })
       .lean(); // lean() para documentos mais leves
@@ -413,13 +430,15 @@ router.get('/metadata', async (req, res) => {
 });
 
 // Buscar horário completo por ID (com todos os dados populados)
-router.get('/full/:id', async (req, res) => {
+router.get('/full/:id', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { id } = req.params;
-    console.log('🔍 Buscando horário completo para ID:', id);
+    console.log('🔍 Buscando horário completo para ID:', id, 'escola:', schoolId);
 
-    // Buscar primeiro registro para pegar o título
-    const firstTimetable = await GeneratedTimetable.findById(id);
+    // Buscar primeiro registro para pegar o título e validar propriedade
+    const firstTimetable = await GeneratedTimetable.findOne({ _id: id, school: schoolId });
     
     if (!firstTimetable) {
       return res.status(404).json({ 
@@ -431,8 +450,8 @@ router.get('/full/:id', async (req, res) => {
     const title = firstTimetable.title;
     console.log(`📖 Título encontrado: "${title}"`);
 
-    // Buscar TODOS os horários com mesmo título (todas as turmas)
-    const timetables = await GeneratedTimetable.find({ title });
+    // Buscar TODOS os horários com mesmo título da mesma escola (todas as turmas)
+    const timetables = await GeneratedTimetable.find({ title, school: schoolId });
     console.log(`📚 Encontrados ${timetables.length} horários com título "${title}"`);
 
     // Importar models necessários
@@ -511,13 +530,15 @@ router.get('/full/:id', async (req, res) => {
 });
 
 // Buscar horários por scheduleId
-router.get('/:scheduleId', async (req, res) => {
+router.get('/:scheduleId', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { scheduleId } = req.params;
     
-    console.log('🔍 Buscando horários para scheduleId:', scheduleId);
+    console.log('🔍 Buscando horários para scheduleId:', scheduleId, 'escola:', schoolId);
 
-    const timetables = await GeneratedTimetable.find({ scheduleId });
+    const timetables = await GeneratedTimetable.find({ scheduleId, school: schoolId });
     
     console.log(`📚 Encontrados ${timetables.length} timetables`);
 
@@ -587,12 +608,14 @@ router.get('/:scheduleId', async (req, res) => {
 });
 
 // Atualizar um slot específico
-router.put('/:scheduleId/:classId', async (req, res) => {
+router.put('/:scheduleId/:classId', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { scheduleId, classId } = req.params;
     const { day, period, subjectId, teacherId } = req.body;
 
-    const timetable = await GeneratedTimetable.findOne({ scheduleId, classId });
+    const timetable = await GeneratedTimetable.findOne({ scheduleId, classId, school: schoolId });
 
     if (!timetable) {
       return res.status(404).json({ 
@@ -632,11 +655,13 @@ router.put('/:scheduleId/:classId', async (req, res) => {
 });
 
 // Deletar horários de um schedule
-router.delete('/:scheduleId', async (req, res) => {
+router.delete('/:scheduleId', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { scheduleId } = req.params;
 
-    await GeneratedTimetable.deleteMany({ scheduleId });
+    await GeneratedTimetable.deleteMany({ scheduleId, school: schoolId });
 
     res.json({ 
       success: true, 
@@ -687,11 +712,13 @@ router.delete('/by-title/:title', auth, async (req: AuthRequest, res) => {
   }
 });
 
-router.delete('/:scheduleId/by-title/:title', async (req, res) => {
+router.delete('/:scheduleId/by-title/:title', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { scheduleId, title } = req.params;
 
-    await GeneratedTimetable.deleteMany({ scheduleId, title });
+    await GeneratedTimetable.deleteMany({ scheduleId, title, school: schoolId });
 
     res.json({ 
       success: true, 
@@ -708,13 +735,15 @@ router.delete('/:scheduleId/by-title/:title', async (req, res) => {
 });
 
 // Carregar horários por título
-router.get('/:scheduleId/by-title/:title', async (req, res) => {
+router.get('/:scheduleId/by-title/:title', auth, async (req: AuthRequest, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { scheduleId, title } = req.params;
 
-    console.log('📖 Carregando horários:', { scheduleId, title });
+    console.log('📖 Carregando horários:', { scheduleId, title, schoolId });
 
-    const timetables = await GeneratedTimetable.find({ scheduleId, title });
+    const timetables = await GeneratedTimetable.find({ scheduleId, title, school: schoolId });
 
     console.log(`📦 Encontrados ${timetables.length} registros`);
 

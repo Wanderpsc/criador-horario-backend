@@ -16,6 +16,7 @@ export interface IGeneratedTimetable extends mongoose.Document {
   slots: ITimetableSlot[];
   title: string;
   userId?: string;
+  school?: string; // ✅ Adicionar schoolId para isolamento
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,7 +42,12 @@ const generatedTimetableSchema = new mongoose.Schema({
   },
   slots: [timetableSlotSchema],
   title: { type: String, required: true },
-  userId: { type: String, required: false }
+  userId: { type: String, required: false },
+  school: { 
+    type: String, 
+    required: false,  // Opcional para compatibilidade com dados antigos
+    index: true  // ✅ Indexar para performance nas queries
+  }
 }, {
   timestamps: true
 });

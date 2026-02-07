@@ -353,11 +353,13 @@ Errors: ${error.errors ? JSON.stringify(error.errors, null, 2) : 'N/A'}
 });
 
 // Buscar horários emergenciais por data e turma
-router.get('/by-date', async (req, res) => {
+router.get('/by-date', auth, async (req, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { date, classId } = req.query;
 
-    const query: any = {};
+    const query: any = { school: schoolId }; // ✅ Filtrar por escola
     if (date) query.date = new Date(date as string);
     if (classId) query.classId = classId;
 
@@ -378,10 +380,23 @@ router.get('/by-date', async (req, res) => {
 });
 
 // Buscar débitos de um professor
-router.get('/debts/:teacherId', async (req, res) => {
+router.get('/debts/:teacherId', auth, async (req, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { teacherId } = req.params;
     const { isPaid } = req.query;
+
+    // ✅ Verificar se o professor pertence à mesma escola
+    const Teacher = require('../models/Teacher').default;
+    const teacher = await Teacher.findOne({ _id: teacherId, school: schoolId });
+    
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: 'Professor não encontrado ou não pertence a esta escola'
+      });
+    }
 
     const query: any = { teacherId };
     if (isPaid !== undefined) {
@@ -411,8 +426,10 @@ router.get('/debts/:teacherId', async (req, res) => {
 });
 
 // Marcar horas como pagas
-router.patch('/debts/:debtId/pay', async (req, res) => {
+router.patch('/debts/:debtId/pay', auth, async (req, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { debtId } = req.params;
     const { hoursPaid } = req.body;
 
@@ -421,6 +438,17 @@ router.patch('/debts/:debtId/pay', async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Débito não encontrado'
+      });
+    }
+
+    // ✅ Verificar se o professor do débito pertence à mesma escola
+    const Teacher = require('../models/Teacher').default;
+    const teacher = await Teacher.findOne({ _id: debt.teacherId, school: schoolId });
+    
+    if (!teacher) {
+      return res.status(403).json({
+        success: false,
+        message: 'Acesso negado: professor não pertence a esta escola'
       });
     }
 
@@ -449,20 +477,25 @@ router.patch('/debts/:debtId/pay', async (req, res) => {
 });
 
 // Excluir horário emergencial
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { id } = req.params;
     console.log('🗑️ Tentando excluir horário emergencial:', id);
 
-    const schedule = await EmergencySchedule.findByIdAndDelete(id);
+    // ✅ Buscar e verificar propriedade antes de deletar
+    const schedule = await EmergencySchedule.findOne({ _id: id, school: schoolId });
     
     if (!schedule) {
-      console.log('❌ Horário não encontrado:', id);
+      console.log('❌ Horário não encontrado ou não pertence a esta escola:', id);
       return res.status(404).json({
         success: false,
-        message: 'Horário emergencial não encontrado'
+        message: 'Horário emergencial não encontrado ou acesso negado'
       });
     }
+
+    await EmergencySchedule.findByIdAndDelete(id);
 
     console.log('✅ Horário excluído com sucesso:', id);
     res.json({
@@ -480,8 +513,10 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/emergency-schedules/teacher-debts/:teacherId/pay - Dar baixa em débitos (reposição realizada)
-router.post('/teacher-debts/:teacherId/pay', async (req, res) => {
+router.post('/teacher-debts/:teacherId/pay', auth, async (req, res) => {
   try {
+    // ✅ ISOLAMENTO DE DADOS POR ESCOLA
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { teacherId } = req.params;
     const { date, hoursRepaid, details } = req.body;
 
@@ -490,6 +525,17 @@ router.post('/teacher-debts/:teacherId/pay', async (req, res) => {
       hoursRepaid,
       details
     });
+
+    // ✅ Verificar se o professor pertence à mesma escola
+    const Teacher = require('../models/Teacher').default;
+    const teacher = await Teacher.findOne({ _id: teacherId, school: schoolId });
+    
+    if (!teacher) {
+      return res.status(404).json({
+        success: false,
+        message: 'Professor não encontrado ou não pertence a esta escola'
+      });
+    }
 
     // Buscar débitos pendentes do professor
     const debts = await TeacherDebtRecord.find({
