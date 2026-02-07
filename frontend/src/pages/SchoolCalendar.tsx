@@ -191,19 +191,14 @@ const SchoolCalendar: React.FC = () => {
     return schoolDays.find(day => day.date === dateStr);
   };
 
-  const getDayTypeColor = (dayType: string) => {
-    switch (dayType) {
-      case 'regular':
-        return 'bg-blue-100 border-blue-300';
-      case 'saturday':
-        return 'bg-purple-100 border-purple-300';
-      case 'holiday':
-        return 'bg-red-100 border-red-300';
-      case 'recess':
-        return 'bg-yellow-100 border-yellow-300';
-      default:
-        return 'bg-gray-100 border-gray-300';
-    }
+  const getDayTypeColor = (dayType: string, isCompleted: boolean) => {
+    const base = {
+      regular: isCompleted ? 'bg-blue-200 border-blue-500' : 'bg-blue-100 border-blue-400',
+      saturday: isCompleted ? 'bg-purple-200 border-purple-500' : 'bg-purple-100 border-purple-400',
+      holiday: 'bg-red-100 border-red-400',
+      recess: 'bg-yellow-100 border-yellow-400'
+    };
+    return base[dayType as keyof typeof base] || 'bg-gray-100 border-gray-300';
   };
 
   const getDayTypeLabel = (dayType: string) => {
@@ -332,12 +327,12 @@ const SchoolCalendar: React.FC = () => {
             return (
               <div
                 key={index}
-                className={`min-h-24 border rounded-lg p-2 ${
+                className={`min-h-32 border-2 rounded-lg p-2 transition-all ${
                   isEmpty
-                    ? 'bg-gray-50'
+                    ? 'bg-gray-50 border-gray-200'
                     : schoolDay
-                    ? getDayTypeColor(schoolDay.dayType)
-                    : 'bg-white hover:bg-gray-50'
+                    ? getDayTypeColor(schoolDay.dayType, schoolDay.isCompleted)
+                    : 'bg-white hover:bg-blue-50 border-gray-200 hover:border-blue-300'
                 }`}
               >
                 {!isEmpty && (
@@ -356,15 +351,25 @@ const SchoolCalendar: React.FC = () => {
                     </div>
 
                     {schoolDay && (
-                      <div className="text-xs">
-                        <div className="font-medium mb-1">{getDayTypeLabel(schoolDay.dayType)}</div>
+                      <div className="text-xs space-y-1">
+                        <div className="font-bold text-sm">{getDayTypeLabel(schoolDay.dayType)}</div>
+                        
+                        {/* Observações do dia */}
+                        {schoolDay.notes && (
+                          <div className="bg-white bg-opacity-70 p-1 rounded border border-gray-300">
+                            <div className="text-gray-700 text-xs italic">
+                              📝 {schoolDay.notes}
+                            </div>
+                          </div>
+                        )}
+                        
                         {schoolDay.dayType === 'saturday' && schoolDay.followWeekday && (
-                          <div className="text-blue-700 font-medium mb-1">
-                            Segue: {getWeekdayLabel(schoolDay.followWeekday)}
+                          <div className="text-purple-800 font-medium">
+                            📅 Segue: {getWeekdayLabel(schoolDay.followWeekday)}
                           </div>
                         )}
                         {schoolDay.schedule && (
-                          <div className="text-gray-600 truncate">{schoolDay.schedule.name}</div>
+                          <div className="text-gray-700 font-medium truncate">⏰ {schoolDay.schedule.name}</div>
                         )}
                         
                         {/* Informação sobre horário emergencial ou normal */}
@@ -411,13 +416,17 @@ const SchoolCalendar: React.FC = () => {
                           }
                         })()}
                         
-                        <div className="flex gap-1 mt-2">
+                        <div className="flex gap-1 mt-2 flex-wrap">
                           <button
                             onClick={() => handleToggleCompleted(schoolDay)}
-                            className="p-1 bg-white rounded hover:bg-gray-100"
+                            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              schoolDay.isCompleted
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                            }`}
                             title={schoolDay.isCompleted ? 'Marcar pendente' : 'Marcar cumprido'}
                           >
-                            <Check className="w-3 h-3" />
+                            {schoolDay.isCompleted ? '✓ Cumprido' : '○ Pendente'}
                           </button>
                           <button
                             onClick={() => {
@@ -431,13 +440,15 @@ const SchoolCalendar: React.FC = () => {
                               });
                               setShowModal(true);
                             }}
-                            className="p-1 bg-white rounded hover:bg-gray-100"
+                            className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            title="Editar dia"
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => handleDelete(schoolDay.id)}
-                            className="p-1 bg-white rounded hover:bg-gray-100"
+                            className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                            title="Excluir dia"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -484,9 +495,9 @@ const SchoolCalendar: React.FC = () => {
                             });
                             setShowModal(true);
                           }}
-                          className="text-xs text-gray-400 hover:text-gray-600"
+                          className="w-full px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium transition-colors"
                         >
-                          + Adicionar
+                          + Adicionar Dia Letivo
                         </button>
                       </>
                     )}
@@ -499,43 +510,83 @@ const SchoolCalendar: React.FC = () => {
       </div>
 
       {/* Legend */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <h3 className="font-semibold mb-2">Legenda:</h3>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-blue-100 border-2 border-blue-300 rounded"></div>
-            <span className="text-sm">Dia Regular</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-purple-100 border-2 border-purple-300 rounded"></div>
-            <span className="text-sm">Sábado Letivo</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded"></div>
-            <span className="text-sm">Feriado</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-300 rounded"></div>
-            <span className="text-sm">Recesso</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-600" />
-            <span className="text-sm">Dia Cumprido</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="px-2 py-1 bg-red-50 border border-red-200 rounded text-xs text-red-700 font-bold">
-              <AlertTriangle className="w-3 h-3 inline mr-1" />
-              EMERGENCIAL
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+          <FileText className="w-5 h-5" />
+          Legenda do Calendário
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Tipos de Dia */}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-gray-700">Tipos de Dia:</h4>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-blue-100 border-2 border-blue-400 rounded"></div>
+              <span className="text-sm">Dia Regular (Pendente)</span>
             </div>
-            <span className="text-sm">Horário Emergencial</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="px-2 py-1 bg-green-50 border border-green-200 rounded text-xs text-green-700 font-medium">
-              <Check className="w-3 h-3 inline mr-1" />
-              NORMAL
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-blue-200 border-2 border-blue-500 rounded"></div>
+              <span className="text-sm">Dia Regular (Cumprido)</span>
             </div>
-            <span className="text-sm">Horário Normal</span>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-purple-100 border-2 border-purple-400 rounded"></div>
+              <span className="text-sm">Sábado Letivo (Pendente)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-purple-200 border-2 border-purple-500 rounded"></div>
+              <span className="text-sm">Sábado Letivo (Cumprido)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-red-100 border-2 border-red-400 rounded"></div>
+              <span className="text-sm">Feriado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+              <span className="text-sm">Recesso</span>
+            </div>
           </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-gray-700">Status:</h4>
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium">
+                ✓ Cumprido
+              </div>
+              <span className="text-sm">Dia letivo cumprido</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs font-medium">
+                ○ Pendente
+              </div>
+              <span className="text-sm">Dia letivo pendente</span>
+            </div>
+          </div>
+
+          {/* Horários */}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-gray-700">Horários:</h4>
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-1 bg-red-50 border border-red-200 rounded text-xs text-red-700 font-bold">
+                <AlertTriangle className="w-3 h-3 inline mr-1" />
+                EMERGENCIAL
+              </div>
+              <span className="text-sm">Horário emergencial ativo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="px-2 py-1 bg-green-50 border border-green-200 rounded text-xs text-green-700 font-medium">
+                <Check className="w-3 h-3 inline mr-1" />
+                NORMAL
+              </div>
+              <span className="text-sm">Horário normal</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+          <p className="text-sm text-blue-800">
+            <strong>💡 Dica:</strong> Clique em qualquer dia para adicionar ou editar informações. 
+            Use as observações para registrar motivos de feriados, recessos ou eventos especiais.
+          </p>
         </div>
       </div>
 
@@ -621,15 +672,20 @@ const SchoolCalendar: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Observações
+                  Observações <span className="text-gray-500 text-xs">(aparecerá no calendário)</span>
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={e => setFormData({ ...formData, notes: e.target.value })}
                   className="w-full border rounded-lg px-3 py-2"
                   rows={3}
-                  placeholder="Observações sobre este dia..."
+                  placeholder="Ex: Feriado Nacional - Independência do Brasil
+Ex: Recesso Escolar - Carnaval
+Ex: Dia Letivo - Reposição de falta"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Dica: Use para informar o motivo de feriados, recessos ou observações importantes.
+                </p>
               </div>
             </div>
 
