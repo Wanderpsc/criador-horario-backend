@@ -584,9 +584,11 @@ const SchoolCalendar: React.FC = () => {
                         <button
                           onClick={() => {
                             setEditingDay(null);
+                            const dateStr = date.toISOString().split('T')[0];
+                            const isSaturday = date.getDay() === 6;
                             setFormData({
-                              date: date.toISOString().split('T')[0],
-                              dayType: 'regular',
+                              date: dateStr,
+                              dayType: isSaturday ? 'saturday' : 'regular',
                               scheduleId: '',
                               notes: '',
                               followWeekday: '',
@@ -775,7 +777,15 @@ const SchoolCalendar: React.FC = () => {
                 <input
                   type="date"
                   value={formData.date}
-                  onChange={e => setFormData({ ...formData, date: e.target.value })}
+                  onChange={e => {
+                    const selectedDate = new Date(e.target.value + 'T00:00:00');
+                    const isSaturday = selectedDate.getDay() === 6;
+                    setFormData({ 
+                      ...formData, 
+                      date: e.target.value,
+                      dayType: isSaturday ? 'saturday' : formData.dayType === 'saturday' ? 'regular' : formData.dayType
+                    });
+                  }}
                   className="w-full border rounded-lg px-3 py-2"
                   required
                 />
