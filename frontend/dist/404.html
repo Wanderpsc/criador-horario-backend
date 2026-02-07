@@ -5,24 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Redirecionando...</title>
     
-    <!-- GitHub Pages SPA Redirect -->
+    <!-- GitHub Pages SPA Redirect - Versão Simples e Robusta -->
     <script type="text/javascript">
-      // Single Page Apps for GitHub Pages
-      // https://github.com/rafgraph/spa-github-pages
-      // Salva a rota no sessionStorage e redireciona para index.html
-      var pathSegmentsToKeep = 1; // Para /criador-horario-backend/
-      
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      (function() {
+        var l = window.location;
+        var path = l.pathname;
+        
+        // Para rotas do repositório: /criador-horario-backend/xxx
+        // Converte para: /criador-horario-backend/?/xxx
+        if (path && path !== '/' && path !== '/criador-horario-backend/' && path !== '/criador-horario-backend') {
+          // Remove o base path /criador-horario-backend/ do início
+          var route = path.replace('/criador-horario-backend/', '').replace('/criador-horario-backend', '');
+          
+          // Redireciona para o índice com a rota codificada
+          var redirect = l.protocol + '//' + l.hostname + 
+                        '/criador-horario-backend/?/' + route.replace(/&/g, '~and~') +
+                        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+                        l.hash;
+          
+          console.log('🔄 404.html redirect:', path, '→', redirect);
+          l.replace(redirect);
+        }
+      })();
     </script>
   </head>
   <body>
-    <p style="text-align: center; padding: 50px; font-family: Arial;">Redirecionando...</p>
+    <p style="text-align: center; padding: 50px; font-family: Arial; color: #666;">
+      Carregando...
+    </p>
   </body>
 </html>

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { copyFileSync } from 'fs';
+import { copyFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 export default defineConfig(({ command }) => ({
@@ -31,6 +31,17 @@ export default defineConfig(({ command }) => ({
           console.error('⚠️ Erro ao copiar 404.html:', error);
         }
         
+        // Cria arquivo .nojekyll (GitHub Pages - desabilita Jekyll)
+        try {
+          writeFileSync(
+            resolve(__dirname, 'dist/.nojekyll'),
+            ''
+          );
+          console.log('✅ .nojekyll criado em dist/');
+        } catch (error) {
+          console.error('⚠️ Erro ao criar .nojekyll:', error);
+        }
+        
         // Copia arquivos PWA para o dist
         const pwaFiles = ['manifest.json', 'sw.js', 'icon.svg', 'icon-192.svg', 'icon-512.svg'];
         pwaFiles.forEach(file => {
@@ -47,8 +58,8 @@ export default defineConfig(({ command }) => ({
       }
     }
   ],
-  // Base path - apenas para GitHub Pages, não para Surge
-  base: '/criador-horario-backend/',
+  // Base path removido - Surge.sh serve do root
+  // base: '/criador-horario-backend/',
   server: {
     port: 3001,
     host: true,
