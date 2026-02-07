@@ -81,7 +81,7 @@ app.use(helmet({
 // Rate Limiting: Previne ataques de força bruta
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // Limite de 100 requisições por IP
+  max: 1000, // Limite de 1000 requisições por IP (aumentado para produção)
   message: 'Muitas requisições deste IP, tente novamente em 15 minutos.',
   standardHeaders: true,
   legacyHeaders: false,
