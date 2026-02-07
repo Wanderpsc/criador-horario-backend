@@ -25,7 +25,6 @@ import DisplayPanel from './pages/DisplayPanel';
 import DisplayPanelConfig from './pages/DisplayPanelConfig';
 import LiveMessaging from './pages/LiveMessaging';
 import EmergencySchedule from './pages/EmergencySchedule';
-import MakeupSaturdays from './pages/MakeupSaturdays';
 import SalesDashboard from './pages/SalesDashboard';
 import PlansManagement from './pages/PlansManagement';
 import LeadsManagement from './pages/LeadsManagement';
@@ -107,7 +106,6 @@ function App() {
           <Route path="whatsapp-settings" element={<ClientRoute><WhatsAppSettings /></ClientRoute>} />
           <Route path="live-messaging" element={<LiveMessaging />} />
           <Route path="emergency-schedule" element={<ClientRoute><EmergencySchedule /></ClientRoute>} />
-          <Route path="makeup-saturdays" element={<ClientRoute><MakeupSaturdays /></ClientRoute>} />
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><SchoolSettings /></ClientRoute>} />

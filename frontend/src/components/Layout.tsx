@@ -201,23 +201,13 @@ export default function Layout() {
           },
           { 
             icon: Zap, 
-            label: 'Horário Emergencial', 
+            label: 'Horário Emergencial e de Sábado de Reposição', 
             path: '/emergency-schedule',
-            description: '🚨 Crie horários provisórios quando professor faltar',
+            description: '🚨 Crie horários provisórios e sábados de reposição',
             color: 'red',
             badge: 'NOVO',
             highlight: true,
-            subtitle: 'Substituições Rápidas'
-          },
-          { 
-            icon: Calendar, 
-            label: 'Sábados de Reposição', 
-            path: '/makeup-saturdays',
-            description: '📅 Gere automaticamente horários de reposição para sábados',
-            color: 'blue',
-            badge: 'NOVO',
-            highlight: true,
-            subtitle: 'Reposição de Aulas'
+            subtitle: 'Emergência e Reposição'
           },
           { 
             icon: Tv, 

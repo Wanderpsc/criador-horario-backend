@@ -1320,10 +1320,10 @@ export default function EmergencySchedule() {
       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded no-print">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-red-800">
           <AlertTriangle className="text-red-600" />
-          Horário Emergencial
+          Horário Emergencial e de Sábado de Reposição
         </h1>
         <p className="text-red-700 mt-2">
-          Crie horários provisórios rapidamente quando houver ausência de professor
+          Crie horários provisórios para ausências e gerencie sábados de reposição
         </p>
       </div>
 
@@ -1758,7 +1758,7 @@ export default function EmergencySchedule() {
                     title="Imprimir Horário Emergencial (cada turma em página separada)"
                   >
                     <Printer size={18} />
-                    📋 Horário Emergencial
+                    📋 Emergencial
                   </button>
                   
                   <button
