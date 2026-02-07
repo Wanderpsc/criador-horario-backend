@@ -51,10 +51,20 @@ const SchoolCalendar: React.FC = () => {
 
   const loadData = async () => {
     try {
-      if (!user) return;
+      if (!user) {
+        console.log('❌ loadData: Usuário não autenticado');
+        return;
+      }
 
       // Usar schoolId se existir, senão usar o próprio ID do usuário (para escolas)
       const schoolId = user.schoolId || (user.role === 'school' ? user.id : null);
+
+      console.log('🔍 loadData - Debug:', { 
+        userId: user.id, 
+        userRole: user.role, 
+        userSchoolId: user.schoolId, 
+        calculatedSchoolId: schoolId 
+      });
 
       if (!schoolId) {
         toast.error('Usuário sem escola associada');
@@ -63,6 +73,12 @@ const SchoolCalendar: React.FC = () => {
 
       const startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
       const endDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+
+      console.log('📅 Buscando dados do calendário:', {
+        schoolId,
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      });
 
       const [daysRes, schedulesRes, statsRes, emergencyRes] = await Promise.all([
         schoolDayAPI.getAll(schoolId, {
@@ -76,6 +92,8 @@ const SchoolCalendar: React.FC = () => {
         }),
         emergencyScheduleAPI.getAll(),
       ]);
+      
+      console.log('✅ Dados carregados com sucesso');
 
       setSchoolDays(daysRes.data.data || []);
       setSchedules(schedulesRes.data.data || []);
@@ -98,8 +116,14 @@ const SchoolCalendar: React.FC = () => {
       });
       setEmergencySchedules(monthEmergencies);
     } catch (error: any) {
-      console.error('Erro ao carregar calendário:', error);
-      toast.error('Erro ao carregar calendário: ' + (error.response?.data?.message || error.message));
+      console.error('❌ Erro ao carregar calendário:', error);
+      console.error('❌ URL da requisição:', error.config?.url);
+      console.error('❌ Status:', error.response?.status);
+      console.error('❌ Data:', error.response?.data);
+      console.error('❌ Headers:', error.response?.headers);
+      
+      const errorMsg = error.response?.data?.message || error.message || 'Erro desconhecido';
+      toast.error('Erro ao carregar calendário: ' + errorMsg);
     }
   };
 
