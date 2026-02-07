@@ -34,7 +34,7 @@ O **Sistema de Relatórios de Frequência** foi desenvolvido para fornecer uma v
 
 ### URL Direta
 ```
-https://criador-horario-aula.surge.sh/teacher-frequency-report
+https://wanderpsc.github.io/criador-horario-backend/teacher-frequency-report
 ```
 
 ---

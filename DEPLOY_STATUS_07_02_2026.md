@@ -25,8 +25,8 @@
   - Filtros avançados (mês, ano, professor, disciplina, turma)
   - 3 modos de visualização (professor, disciplina, turma)
   - Sistema de impressão otimizado
-- **Status**: Deployed no Surge
-- **URL**: https://criador-horario-aula.surge.sh/teacher-frequency-report
+- **Status**: Deployed no GitHub Pages
+- **URL**: https://wanderpsc.github.io/criador-horario-backend/teacher-frequency-report
 - **Commit**: `3487cbf` - "feat: Adicionar página completa de Relatórios de Frequência"
 
 ### 3. Rotas e Navegação (100% ✅)
@@ -146,13 +146,13 @@ Total size: 30.1 MB (79 files)
 | xlsx-B2eTCt_Q.js | 499.55 kB | 163.12 kB |
 | index-CbkjdSv-.js | 1015.53 kB | 254.89 kB |
 
-### Deploy Surge
+### Deploy GitHub Pages
 ```
-✅ Upload: 100%
-✅ CDN: 100%
-✅ Encryption: 100%
-✅ Certificate Valid: 117 more days
-✅ 10 edge locations worldwide
+✅ Build: Success
+✅ gh-pages: Published
+✅ URL: https://wanderpsc.github.io/criador-horario-backend
+✅ Branch: gh-pages
+✅ Status: Active
 ```
 
 ---
@@ -197,9 +197,9 @@ Total size: 30.1 MB (79 files)
 ### Produção
 | Ambiente | URL |
 |----------|-----|
-| Frontend | https://criador-horario-aula.surge.sh |
+| Frontend | https://wanderpsc.github.io/criador-horario-backend |
 | Backend | https://criador-horario-backend-1.onrender.com |
-| Relatório | https://criador-horario-aula.surge.sh/teacher-frequency-report |
+| Relatório | https://wanderpsc.github.io/criador-horario-backend/teacher-frequency-report |
 
 ### Endpoints API
 | Método | Endpoint | Descrição |
@@ -334,7 +334,7 @@ Todos os direitos reservados.
 - [x] Sistema de impressão configurado
 - [x] Estilos CSS adicionados
 - [x] Build gerado sem erros
-- [x] Deploy no Surge realizado
+- [x] Deploy no GitHub Pages realizado
 
 ### Documentação
 - [x] SISTEMA_CONTROLE_FREQUENCIA.md
@@ -365,7 +365,7 @@ Todos os direitos reservados.
 
 O sistema de Relatórios de Frequência está:
 - ✅ Totalmente implementado (backend + frontend)
-- ✅ Deployed em produção (Render + Surge)
+- ✅ Deployed em produção (Render + GitHub Pages)
 - ✅ Documentado extensivamente
 - ✅ Testado e validado
 - ✅ Pronto para uso imediato
