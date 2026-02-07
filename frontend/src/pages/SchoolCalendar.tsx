@@ -26,6 +26,96 @@ interface Statistics {
   completionRate: number;
 }
 
+// Lista de observações pré-definidas (ordenadas alfabeticamente, sem duplicatas)
+const PREDEFINED_NOTES = [
+  '1º SIMULA + SAEB',
+  '1º SIMULA X - ENEM',
+  '1º SIMULA X SAEB',
+  '1º SIMULADO ENEM',
+  '1° SIMULADO SAEB',
+  '1° MINITESTE',
+  '1ª RECUPERAÇÃO PARALELA',
+  '2º SIMULA + SAEB',
+  '2º SIMULA X - ENEM',
+  '2º SIMULA X SAEB',
+  '2º SIMULADO ENEM',
+  '2° MINITESTE',
+  '2ª RECUPERAÇÃO PARALELA',
+  '3º SIMULA + SAEB',
+  '3º SIMULA X - ENEM',
+  '3º SIMULA X SAEB',
+  '3º SIMULADO ENEM',
+  '3° SIMULADO SAEB',
+  '3° MINITESTE',
+  '3ª RECUPERAÇÃO PARALELA',
+  '4º SIMULA + SAEB',
+  '4° SIMULADO SAEB',
+  '4° MINITESTE',
+  '5º SIMULA + SAEB',
+  '5° MINITESTE',
+  '6º SIMULA + SAEB',
+  '6° MINITESTE',
+  '7° MINITESTE',
+  '8° MINITESTE',
+  '9° MINITESTE',
+  '10° MINITESTE',
+  'ASSEMBLEIA ESCOLAR',
+  'AVALIAÇÃO DIAGNÓSTICA DE ENTRADA',
+  'CARNAVAL',
+  'CONFRATERNIZAÇÃO UNIVERSAL',
+  'CONFIRMAÇÃO DA MATRÍCULA PRESENCIAL',
+  'CORPUS CHRISTI',
+  'DIA DA INDEPENDÊNCIA DO BRASIL',
+  'DIA DE FINADOS',
+  'DIA DO PIAUÍ',
+  'DIA DO PROFESSOR',
+  'DIA DO SERVIDOR PÚBLICO',
+  'DIA DO TRABALHO',
+  'DIA NACIONAL DE ZUMBI E DA CONSCIÊNCIA NEGRA',
+  'DIRETRIZES GERAIS: CONSCIENTIZAÇÃO DO CURRÍCULO',
+  'FERIADO MUNICIPAL',
+  'FERIADOS / DIAS SANTIFICADOS',
+  'FÉRIAS COLETIVAS',
+  'INÍCIO DAS AULAS 1º PERÍODO',
+  'INÍCIO DO 1º TRIMESTRE',
+  'INÍCIO DO 2º TRIMESTRE',
+  'INÍCIO DO 3º TRIMESTRE',
+  'LANÇAMENTO FINAL NO iSEDUC',
+  'MINITESTE',
+  'NATAL',
+  'NM1-1ºT',
+  'NM1-2ºT',
+  'NM1-3ºT',
+  'NM2-1ºT',
+  'NM2-2ºT',
+  'NM2-3ºT',
+  'NM3-1ºT',
+  'NM3-2ºT',
+  'NM3-3ºT',
+  'NOSSA SENHORA APARECIDA',
+  'NOSSA SENHORA DA CONCEIÇÃO',
+  'PAIXÃO DE CRISTO',
+  'PLANEJAMENTO PEDAGÓGICO',
+  'PROCLAMAÇÃO DA REPÚBLICA',
+  'PROVAS FINAIS',
+  'QUIZ ACELERA - LP e MAT',
+  'QUIZ FÍSICA',
+  'RECUPERAÇÃO FINAL',
+  'REPOSIÇÃO DE AULAS',
+  'REUNIÃO DO COMITÊ DE MEDIAÇÃO DE CONFLITO ESCOLAR',
+  'REUNIÃO ORDINÁRIA DO CONSELHO DE CLASSE',
+  'REUNIÃO ORDINÁRIA DO CONSELHO ESCOLAR',
+  'SÁBADO LETIVO',
+  'SEMANA PRESENTE',
+  'SIMULADO SAEB',
+  'TÉRMINO DAS ATIVIDADES 1º PERÍODO',
+  'TÉRMINO DAS ATIVIDADES 2º PERÍODO',
+  'TÉRMINO DO 1º TRIMESTRE',
+  'TÉRMINO DO 2º TRIMESTRE',
+  'TÉRMINO DO 3º TRIMESTRE',
+  'TIRADENTES'
+];
+
 const SchoolCalendar: React.FC = () => {
   const { user } = useAuthStore();
   const [schoolDays, setSchoolDays] = useState<SchoolDay[]>([]);
@@ -35,6 +125,8 @@ const SchoolCalendar: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingDay, setEditingDay] = useState<SchoolDay | null>(null);
   const [emergencySchedules, setEmergencySchedules] = useState<any[]>([]);
+  const [searchNote, setSearchNote] = useState('');
+  const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     date: '',
     dayType: 'regular' as const,
@@ -171,6 +263,8 @@ const SchoolCalendar: React.FC = () => {
       setShowModal(false);
       setEditingDay(null);
       setFormData({ date: '', dayType: 'regular', scheduleId: '', notes: '', followWeekday: '' });
+      setSelectedNotes([]);
+      setSearchNote('');
       loadData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erro ao salvar dia letivo');
@@ -349,6 +443,8 @@ const SchoolCalendar: React.FC = () => {
           onClick={() => {
             setEditingDay(null);
             setFormData({ date: '', dayType: 'regular', scheduleId: '', notes: '', followWeekday: '' });
+            setSelectedNotes([]);
+            setSearchNote('');
             setShowModal(true);
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -529,11 +625,15 @@ const SchoolCalendar: React.FC = () => {
                           <button
                             onClick={() => {
                               setEditingDay(schoolDay);
+                              const notes = schoolDay.notes || '';
+                              const notesArray = notes.split('\n').map(n => n.trim()).filter(n => n);
+                              setSelectedNotes(notesArray);
+                              setSearchNote('');
                               setFormData({
                                 date: schoolDay.date,
                                 dayType: schoolDay.dayType as 'regular',
                                 scheduleId: schoolDay.scheduleId || '',
-                                notes: schoolDay.notes || '',
+                                notes: notes,
                                 followWeekday: schoolDay.followWeekday || '',
                               });
                               setShowModal(true);
@@ -586,6 +686,8 @@ const SchoolCalendar: React.FC = () => {
                             setEditingDay(null);
                             const dateStr = date.toISOString().split('T')[0];
                             const isSaturday = date.getDay() === 6;
+                            setSelectedNotes([]);
+                            setSearchNote('');
                             setFormData({
                               date: dateStr,
                               dayType: isSaturday ? 'saturday' : 'regular',
@@ -852,20 +954,90 @@ const SchoolCalendar: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Observações <span className="text-gray-500 text-xs">(aparecerá no calendário)</span>
                 </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2"
-                  rows={3}
-                  placeholder="Ex: Feriado Nacional - Independência do Brasil
-Ex: Recesso Escolar - Carnaval
-Ex: Dia Letivo - Reposição de falta"
+                
+                {/* Campo de busca */}
+                <input
+                  type="text"
+                  value={searchNote}
+                  onChange={e => setSearchNote(e.target.value)}
+                  placeholder="🔍 Buscar observação..."
+                  className="w-full border rounded-lg px-3 py-2 mb-3 text-sm"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  💡 Dica: Use para informar o motivo de feriados, recessos ou observações importantes.
+                
+                {/* Container de checkboxes com scroll */}
+                <div className="border rounded-lg p-3 max-h-60 overflow-y-auto bg-gray-50 mb-3">
+                  <div className="space-y-2">
+                    {PREDEFINED_NOTES
+                      .filter(note => 
+                        note.toLowerCase().includes(searchNote.toLowerCase())
+                      )
+                      .map(note => (
+                        <label key={note} className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded">
+                          <input
+                            type="checkbox"
+                            checked={selectedNotes.includes(note)}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                const newNotes = [...selectedNotes, note];
+                                setSelectedNotes(newNotes);
+                                setFormData({ ...formData, notes: newNotes.join('\\n') });
+                              } else {
+                                const newNotes = selectedNotes.filter(n => n !== note);
+                                setSelectedNotes(newNotes);
+                                setFormData({ ...formData, notes: newNotes.join('\\n') });
+                              }
+                            }}
+                            className="mt-0.5 w-4 h-4 text-blue-600 rounded"
+                          />
+                          <span className="text-sm text-gray-700">{note}</span>
+                        </label>
+                      ))
+                    }
+                    {searchNote && PREDEFINED_NOTES.filter(note => 
+                      note.toLowerCase().includes(searchNote.toLowerCase())
+                    ).length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        Nenhuma observação encontrada
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Observações selecionadas */}
+                {selectedNotes.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-blue-900 mb-2">
+                      ✓ Observações selecionadas ({selectedNotes.length}):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedNotes.map(note => (
+                        <span
+                          key={note}
+                          className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                        >
+                          {note}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newNotes = selectedNotes.filter(n => n !== note);
+                              setSelectedNotes(newNotes);
+                              setFormData({ ...formData, notes: newNotes.join('\\n') });
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-bold"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Marque as observações relevantes. Elas aparecerão no calendário.
                 </p>
               </div>
             </div>
@@ -881,6 +1053,8 @@ Ex: Dia Letivo - Reposição de falta"
                 onClick={() => {
                   setShowModal(false);
                   setEditingDay(null);
+                  setSelectedNotes([]);
+                  setSearchNote('');
                 }}
                 className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
               >
