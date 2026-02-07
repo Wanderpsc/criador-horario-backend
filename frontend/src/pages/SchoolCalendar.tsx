@@ -202,13 +202,17 @@ const SchoolCalendar: React.FC = () => {
   };
 
   const getDayTypeColor = (dayType: string, isCompleted: boolean) => {
-    const base = {
-      regular: isCompleted ? 'bg-blue-200 border-blue-500' : 'bg-blue-100 border-blue-400',
-      saturday: isCompleted ? 'bg-purple-200 border-purple-500' : 'bg-purple-100 border-purple-400',
-      holiday: 'bg-red-100 border-red-400',
-      recess: 'bg-yellow-100 border-yellow-400'
+    const colors = {
+      regular: isCompleted 
+        ? 'bg-blue-300 border-blue-600 shadow-md' 
+        : 'bg-blue-50 border-blue-300',
+      saturday: isCompleted 
+        ? 'bg-purple-300 border-purple-600 shadow-md' 
+        : 'bg-purple-50 border-purple-300',
+      holiday: 'bg-red-200 border-red-500 shadow-sm',
+      recess: 'bg-yellow-200 border-yellow-500 shadow-sm'
     };
-    return base[dayType as keyof typeof base] || 'bg-gray-100 border-gray-300';
+    return colors[dayType as keyof typeof colors] || 'bg-gray-100 border-gray-300';
   };
 
   const getDayTypeLabel = (dayType: string) => {
@@ -530,27 +534,27 @@ const SchoolCalendar: React.FC = () => {
           <div className="space-y-2">
             <h4 className="font-semibold text-sm text-gray-700">Tipos de Dia:</h4>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-blue-100 border-2 border-blue-400 rounded"></div>
+              <div className="w-8 h-8 bg-blue-50 border-2 border-blue-300 rounded"></div>
               <span className="text-sm">Dia Regular (Pendente)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-blue-200 border-2 border-blue-500 rounded"></div>
-              <span className="text-sm">Dia Regular (Cumprido)</span>
+              <div className="w-8 h-8 bg-blue-300 border-2 border-blue-600 rounded shadow-md"></div>
+              <span className="text-sm font-semibold">Dia Regular (Cumprido)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-purple-100 border-2 border-purple-400 rounded"></div>
+              <div className="w-8 h-8 bg-purple-50 border-2 border-purple-300 rounded"></div>
               <span className="text-sm">Sábado Letivo (Pendente)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-purple-200 border-2 border-purple-500 rounded"></div>
-              <span className="text-sm">Sábado Letivo (Cumprido)</span>
+              <div className="w-8 h-8 bg-purple-300 border-2 border-purple-600 rounded shadow-md"></div>
+              <span className="text-sm font-semibold">Sábado Letivo (Cumprido)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-red-100 border-2 border-red-400 rounded"></div>
+              <div className="w-8 h-8 bg-red-200 border-2 border-red-500 rounded shadow-sm"></div>
               <span className="text-sm">Feriado</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-yellow-100 border-2 border-yellow-400 rounded"></div>
+              <div className="w-8 h-8 bg-yellow-200 border-2 border-yellow-500 rounded shadow-sm"></div>
               <span className="text-sm">Recesso</span>
             </div>
           </div>
