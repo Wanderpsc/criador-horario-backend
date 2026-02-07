@@ -54,7 +54,7 @@ export default function TeacherAttendance() {
   const queryClient = useQueryClient();
 
   // Buscar professores
-  const { data: teachersData } = useQuery({
+  const { data: teachersData, isLoading: loadingTeachers, error: teachersError } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
       const response = await api.get('/teachers');
@@ -63,6 +63,41 @@ export default function TeacherAttendance() {
   });
 
   const teachers: Teacher[] = teachersData || [];
+
+  // Loading state
+  if (loadingTeachers) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (teachersError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg max-w-md">
+          <div className="flex items-center gap-3 mb-3">
+            <AlertCircle className="text-red-500" size={24} />
+            <h2 className="text-xl font-bold text-red-800">Erro ao carregar dados</h2>
+          </div>
+          <p className="text-red-700 mb-4">
+            Não foi possível carregar os dados dos professores. Verifique sua conexão ou tente novamente.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+          >
+            Recarregar Página
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Buscar horário base para o dia
   const { data: timetableData } = useQuery({
