@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -47,33 +47,71 @@ import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore();
-  return token ? <>{children}</> : <Navigate to="/login" />;
+  const { token, user, isHydrated } = useAuthStore();
+  
+  // Aguardar rehydratação do Zustand persist
+  if (!isHydrated) {
+    console.log('⏳ Aguardando rehydratação do Zustand...');
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      Carregando...
+    </div>;
+  }
+  
+  console.log('🔒 PrivateRoute - Token:', token ? 'EXISTS' : 'NULL');
+  console.log('👤 PrivateRoute - User:', user ? user.email : 'NULL');
+  
+  if (!token || !user) {
+    console.log('❌ Sem autenticação, redirecionando para /login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthStore();
-  return (user?.role === 'admin' || user?.role === 'super-admin') ? <>{children}</> : <Navigate to="/dashboard" />;
+  const { user, isHydrated } = useAuthStore();
+  
+  if (!isHydrated) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      Carregando...
+    </div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return (user.role === 'admin' || user.role === 'super-admin') 
+    ? <>{children}</> 
+    : <Navigate to="/dashboard" replace />;
 }
 
 function ClientRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthStore();
-  return (user?.role !== 'admin' && user?.role !== 'super-admin') ? <>{children}</> : <Navigate to="/admin-dashboard" />;
+  const { user, isHydrated } = useAuthStore();
+  
+  if (!isHydrated) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      Carregando...
+    </div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return (user.role !== 'admin' && user.role !== 'super-admin') 
+    ? <>{children}</> 
+    : <Navigate to="/admin-dashboard" replace />;
 }
 
 function App() {
   console.log('🎨 App component carregado!');
   console.log('🌍 Mode:', import.meta.env.MODE);
-  
-  // Basename para GitHub Pages
-  const basename = '/criador-horario-backend/';
-  
-  console.log('📍 Basename:', basename);
+  console.log('🔗 Usando HashRouter para GitHub Pages');
   
   return (
     <ErrorBoundary>
-      <BrowserRouter
-        basename={basename}
+      <HashRouter
         future={{
           v7_startTransition: true,
           v7_relativeSplatPath: true
@@ -139,7 +177,7 @@ function App() {
         <Route path="/display-panel" element={<DisplayPanel />} />
         <Route path="/display-panel/:scheduleId" element={<DisplayPanel />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
     </ErrorBoundary>
   );
 }

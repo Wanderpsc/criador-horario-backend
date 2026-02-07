@@ -568,18 +568,22 @@ export default function Login() {
       const response = await api.post('/auth/login', { email, password });
       console.log('✅ Resposta do servidor:', response.data);
       
+      // Salvar autenticação
       setAuth(response.data.token, response.data.user);
       console.log('✅ Token salvo no store');
       
       toast.success('Login realizado com sucesso!');
       
+      // Aguardar um momento para o Zustand persist salvar no localStorage
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Redirecionar baseado no tipo de usuário
       if (response.data.user.role === 'admin' || response.data.user.role === 'super-admin') {
         console.log('➡️ Redirecionando para /admin-dashboard');
-        navigate('/admin-dashboard');
+        navigate('/admin-dashboard', { replace: true });
       } else {
         console.log('➡️ Redirecionando para /dashboard');
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (error: any) {
       console.error('❌ Erro ao fazer login:', error);

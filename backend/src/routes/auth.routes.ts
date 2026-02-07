@@ -175,9 +175,14 @@ router.post('/login',
         schoolUser.lastLogin = new Date();
         await schoolUser.save();
 
-        // Gerar token JWT
+        // Gerar token JWT com type='school-user' para diferenciação no middleware
         const token = jwt.sign(
-          { id: schoolUser._id, role: schoolUser.role, schoolId: schoolUser.schoolId },
+          { 
+            userId: schoolUser._id, 
+            type: 'school-user',
+            role: schoolUser.role, 
+            schoolId: schoolUser.schoolId 
+          },
           (process.env.JWT_SECRET || 'secret') as jwt.Secret,
           { expiresIn: '7d' }
         );
