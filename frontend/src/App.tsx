@@ -92,7 +92,7 @@ function App() {
           </PrivateRoute>
         }>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard" element={<ClientRoute><Dashboard /></ClientRoute>} />
           <Route path="teachers" element={<ClientRoute><Teachers /></ClientRoute>} />
           <Route path="subjects" element={<ClientRoute><Subjects /></ClientRoute>} />
           <Route path="teacher-subjects" element={<ClientRoute><TeacherSubjectAssociation /></ClientRoute>} />
