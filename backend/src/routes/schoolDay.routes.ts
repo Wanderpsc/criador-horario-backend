@@ -72,14 +72,20 @@ router.get('/school/:schoolId/statistics', auth, async (req: Request, res: Respo
 
     const schoolDays = await SchoolDay.find(query);
 
+    const totalDays = schoolDays.length;
+    const completedDays = schoolDays.filter((d) => d.isCompleted).length;
+    const remainingDays = totalDays - completedDays;
+    const completionRate = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
+
     const statistics = {
-      totalDays: schoolDays.length,
-      completedDays: schoolDays.filter((d) => d.isCompleted).length,
-      pendingDays: schoolDays.filter((d) => !d.isCompleted).length,
+      totalDays,
+      completedDays,
+      remainingDays,
       regularDays: schoolDays.filter((d) => d.dayType === 'regular').length,
       saturdayDays: schoolDays.filter((d) => d.dayType === 'saturday').length,
       holidays: schoolDays.filter((d) => d.dayType === 'holiday').length,
-      recessDays: schoolDays.filter((d) => d.dayType === 'recess').length
+      recessDays: schoolDays.filter((d) => d.dayType === 'recess').length,
+      completionRate
     };
 
     res.json({ data: statistics });

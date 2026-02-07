@@ -213,6 +213,7 @@ router.post('/login',
           name: user.name,
           email: user.email,
           role: user.role,
+          schoolId: user.role === 'school' ? user._id.toString() : undefined,
           schoolName: user.schoolName
         }
       });
