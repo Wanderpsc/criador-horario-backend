@@ -85,9 +85,20 @@ const SchoolCalendar: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      // Validar campos obrigatórios
+      if (!formData.date || !formData.dayType) {
+        toast.error('Data e Tipo são obrigatórios');
+        return;
+      }
+
+      if (!user?.schoolId) {
+        toast.error('Usuário sem escola associada');
+        return;
+      }
+
       const data = {
-        schoolId: user!.schoolId,
         ...formData,
+        schoolId: user.schoolId,
         scheduleId: formData.scheduleId || undefined,
         followWeekday: formData.followWeekday || undefined,
       };
