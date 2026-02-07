@@ -29,7 +29,8 @@ import {
   Mail,
   TrendingUp,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import { useState } from 'react';
 import NotificationCenter from './NotificationCenter';
