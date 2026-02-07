@@ -21,6 +21,23 @@
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
   
+  <!-- GitHub Pages SPA Redirect Handler -->
+  <script type="text/javascript">
+    // Single Page Apps for GitHub Pages
+    // https://github.com/rafgraph/spa-github-pages
+    // Este script processa o redirecionamento do 404.html
+    (function(l) {
+      if (l.search[1] === '/' ) {
+        var decoded = l.search.slice(1).split('&').map(function(s) { 
+          return s.replace(/~and~/g, '&')
+        }).join('?');
+        window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+        );
+      }
+    }(window.location))
+  </script>
+  
   <!-- Service Worker Registration - DESABILITADO TEMPORARIAMENTE -->
   <script>
     // Limpar Service Workers antigos
