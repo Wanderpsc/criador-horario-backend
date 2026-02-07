@@ -26,6 +26,7 @@ export default function SchoolUserLogin() {
 
     try {
       console.log('🔐 Tentando login com:', email);
+      console.log('📡 Chamando rota: POST /api/school-users/login');
       
       const response = await api.post('/school-users/login', {
         email: email.trim(),
@@ -33,14 +34,28 @@ export default function SchoolUserLogin() {
       });
 
       console.log('✅ Login bem-sucedido:', response.data);
+      console.log('👤 Usuário retornado:', response.data.user);
+      console.log('🔑 Role do usuário:', response.data.user.role);
 
       const { token, user } = response.data;
 
+      // ⚠️ VERIFICAÇÃO CRÍTICA: O role deve ser "admin" ou "user", NUNCA "school"
+      if (user.role === 'school') {
+        console.error('❌ ERRO: Backend retornou role "school" - usuário errado!');
+        console.error('   Email esperado na collection schoolusers, mas retornou da collection users');
+        toast.error('Erro no login: Usuário incorreto retornado. Contate o suporte.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Validação OK - Role é:', user.role);
+
       // ⚠️ IMPORTANTE: Limpar qualquer sessão antiga antes de salvar a nova
-      localStorage.removeItem('token'); // Token do login principal
-      localStorage.removeItem('user'); // User do login principal
+      console.log('🧹 Limpando localStorage...');
+      localStorage.clear();
       
       // Salvar no store e localStorage
+      console.log('💾 Salvando novo usuário...');
       setAuth(token, user);
       localStorage.setItem('school_user_token', token);
       localStorage.setItem('school_user', JSON.stringify(user));
@@ -48,7 +63,7 @@ export default function SchoolUserLogin() {
       console.log('✅ Usuário salvo:', user);
       console.log('✅ Role salvo:', user.role);
 
-      toast.success(`Bem-vindo(a), ${user.name}!`);
+      toast.success(`Bem-vindo(a), ${user.name}! (${user.role})`);
 
       // Redirecionar para dashboard
       navigate('/dashboard');
