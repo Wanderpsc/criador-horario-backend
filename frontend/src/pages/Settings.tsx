@@ -58,14 +58,16 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const authUser = useAuthStore(state => state.user);
-  const isAdmin = authUser?.role === 'admin';
+  
+  // Dono da escola (role: 'school') ou admin da escola (role: 'admin') podem gerenciar usuários
+  const canManageUsers = authUser?.role === 'admin' || authUser?.role === 'school';
   
   // Debug - ver o que está no authUser
   React.useEffect(() => {
     console.log('👤 Auth User:', authUser);
     console.log('🔑 Role:', authUser?.role);
-    console.log('✅ Is Admin:', isAdmin);
-  }, [authUser, isAdmin]);
+    console.log('✅ Can Manage Users:', canManageUsers);
+  }, [authUser, canManageUsers]);
   
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -260,17 +262,17 @@ export default function Settings() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Alerta de permissões */}
-      {!isAdmin && (
+      {!canManageUsers && (
         <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
           <div className="flex items-center">
             <AlertCircle className="text-yellow-400 mr-3" size={24} />
             <div>
               <h3 className="text-sm font-medium text-yellow-800">
-                Apenas administradores podem criar usuários
+                Apenas o dono da escola ou administradores podem criar usuários
               </h3>
               <p className="text-sm text-yellow-700 mt-1">
                 Você está logado como: <strong>{authUser?.name}</strong> ({authUser?.email})<br/>
-                Role: <strong>"{authUser?.role}"</strong> {authUser?.role !== 'admin' && '(precisa ser "admin")'}
+                Role: <strong>"{authUser?.role}"</strong> {authUser?.role !== 'admin' && authUser?.role !== 'school' && '(precisa ser "admin" ou "school")'}
               </p>
             </div>
           </div>
@@ -287,7 +289,7 @@ export default function Settings() {
             Controle completo de usuários e permissões do sistema
           </p>
         </div>
-        {isAdmin && (
+        {canManageUsers && (
           <button
             onClick={handleCreateUser}
             className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition flex items-center gap-2"

@@ -147,17 +147,27 @@ router.get('/', auth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Criar novo usuário (apenas admin)
+// Criar novo usuário (apenas admin ou dono da escola)
 router.post('/', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, password, role, permissions } = req.body;
     const schoolId = req.user!.schoolId;
     const creatorId = req.user!.userId;
+    const creatorRole = req.user!.role;
 
-    // Verificar se o criador é admin
-    const creator = await SchoolUser.findById(creatorId);
-    if (!creator || creator.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem criar usuários' });
+    // Verificar se o criador é admin (SchoolUser) ou dono da escola (role: 'school')
+    if (creatorRole !== 'admin' && creatorRole !== 'school') {
+      return res.status(403).json({ error: 'Apenas administradores ou donos da escola podem criar usuários' });
+    }
+
+    // Se for role 'school', buscar o ID da escola (creatorId é o ID do User, não SchoolUser)
+    // Se for role 'admin', buscar na SchoolUser
+    const creator = creatorRole === 'admin' 
+      ? await SchoolUser.findById(creatorId)
+      : { _id: creatorId, role: 'school', name: req.user!.name };
+    
+    if (!creator) {
+      return res.status(403).json({ error: 'Criador não encontrado' });
     }
 
     // Verificar se já existe usuário com este email nesta escola
@@ -216,18 +226,26 @@ router.post('/', auth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Atualizar usuário (apenas admin)
+// Atualizar usuário (apenas admin ou dono da escola)
 router.put('/:id', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { name, email, role, permissions, isActive, password } = req.body;
     const schoolId = req.user!.schoolId;
     const updaterId = req.user!.userId;
+    const updaterRole = req.user!.role;
 
-    // Verificar se o atualizador é admin
-    const updater = await SchoolUser.findById(updaterId);
-    if (!updater || updater.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem atualizar usuários' });
+    // Verificar se o atualizador é admin ou dono da escola
+    if (updaterRole !== 'admin' && updaterRole !== 'school') {
+      return res.status(403).json({ error: 'Apenas administradores ou donos da escola podem atualizar usuários' });
+    }
+
+    const updater = updaterRole === 'admin'
+      ? await SchoolUser.findById(updaterId)
+      : { _id: updaterId, role: 'school', name: req.user!.name, email: req.user!.email };
+
+    if (!updater) {
+      return res.status(403).json({ error: 'Atualizador não encontrado' });
     }
 
     const user = await SchoolUser.findOne({ _id: id, schoolId });
@@ -296,17 +314,25 @@ router.put('/:id', auth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Deletar usuário (apenas admin)
+// Excluir usuário (apenas admin ou dono da escola)
 router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const schoolId = req.user!.schoolId;
     const deleterId = req.user!.userId;
+    const deleterRole = req.user!.role;
 
-    // Verificar se o deletador é admin
-    const deleter = await SchoolUser.findById(deleterId);
-    if (!deleter || deleter.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem deletar usuários' });
+    // Verificar se o deletador é admin ou dono da escola
+    if (deleterRole !== 'admin' && deleterRole !== 'school') {
+      return res.status(403).json({ error: 'Apenas administradores ou donos da escola podem excluir usuários' });
+    }
+
+    const deleter = deleterRole === 'admin'
+      ? await SchoolUser.findById(deleterId)
+      : { _id: deleterId, role: 'school', name: req.user!.name, email: req.user!.email };
+
+    if (!deleter) {
+      return res.status(403).json({ error: 'Deletador não encontrado' });
     }
 
     const user = await SchoolUser.findOne({ _id: id, schoolId });
@@ -354,18 +380,26 @@ router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Resetar senha (admin pode resetar senha de qualquer usuário)
+// Resetar senha (admin ou dono da escola pode resetar senha de qualquer usuário)
 router.post('/:id/reset-password', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
     const schoolId = req.user!.schoolId;
     const adminId = req.user!.userId;
+    const adminRole = req.user!.role;
 
-    // Verificar se é admin
-    const admin = await SchoolUser.findById(adminId);
-    if (!admin || admin.role !== 'admin') {
-      return res.status(403).json({ error: 'Apenas administradores podem resetar senhas' });
+    // Verificar se é admin ou dono da escola
+    if (adminRole !== 'admin' && adminRole !== 'school') {
+      return res.status(403).json({ error: 'Apenas administradores ou donos da escola podem resetar senhas' });
+    }
+
+    const admin = adminRole === 'admin'
+      ? await SchoolUser.findById(adminId)
+      : { _id: adminId, role: 'school', name: req.user!.name, email: req.user!.email };
+
+    if (!admin) {
+      return res.status(403).json({ error: 'Requisitante não encontrado' });
     }
 
     const user = await SchoolUser.findOne({ _id: id, schoolId });
