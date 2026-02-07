@@ -60,8 +60,8 @@ function App() {
   console.log('🎨 App component carregado!');
   console.log('🌍 Mode:', import.meta.env.MODE);
   
-  // Sempre usar / como base (funciona tanto no Surge quanto local)
-  const basename = '/';
+  // Basename para GitHub Pages
+  const basename = '/criador-horario-backend/';
   
   console.log('📍 Basename:', basename);
   
