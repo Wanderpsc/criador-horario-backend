@@ -201,7 +201,12 @@ const SchoolCalendar: React.FC = () => {
     return schoolDays.find(day => day.date === dateStr);
   };
 
-  const getDayTypeColor = (dayType: string, isCompleted: boolean) => {
+  const getDayTypeColor = (dayType: string, isCompleted: boolean, isPast: boolean) => {
+    // Se o dia já passou e não foi cumprido, deixar mais escuro/opaco
+    if (isPast && !isCompleted && (dayType === 'regular' || dayType === 'saturday')) {
+      return 'bg-gray-300 border-gray-600 opacity-80';
+    }
+    
     const colors = {
       regular: isCompleted 
         ? 'bg-blue-300 border-blue-600 shadow-md' 
@@ -256,6 +261,51 @@ const SchoolCalendar: React.FC = () => {
     });
   };
 
+  // Calcular estatísticas do mês atual
+  const getMonthStatistics = () => {
+    const monthDays = schoolDays.filter(day => {
+      const dayDate = new Date(day.date);
+      return dayDate.getMonth() === selectedMonth.getMonth() &&
+             dayDate.getFullYear() === selectedMonth.getFullYear();
+    });
+
+    const regularDays = monthDays.filter(d => d.dayType === 'regular').length;
+    const saturdayDays = monthDays.filter(d => d.dayType === 'saturday').length;
+    const totalSchoolDays = regularDays + saturdayDays;
+    const completedSchoolDays = monthDays.filter(d => 
+      (d.dayType === 'regular' || d.dayType === 'saturday') && d.isCompleted
+    ).length;
+
+    return { regularDays, saturdayDays, totalSchoolDays, completedSchoolDays };
+  };
+
+  // Calcular estatísticas acumuladas do ano até o mês atual
+  const getYearToDateStatistics = () => {
+    const yearStart = new Date(selectedMonth.getFullYear(), 0, 1);
+    const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+
+    const ytdDays = schoolDays.filter(day => {
+      const dayDate = new Date(day.date);
+      return dayDate >= yearStart && dayDate <= monthEnd;
+    });
+
+    const regularDays = ytdDays.filter(d => d.dayType === 'regular').length;
+    const saturdayDays = ytdDays.filter(d => d.dayType === 'saturday').length;
+    const totalSchoolDays = regularDays + saturdayDays;
+
+    return { regularDays, saturdayDays, totalSchoolDays };
+  };
+
+  // Verificar se um dia já passou
+  const isDayPast = (date: Date): boolean => {
+    if (date.getTime() === 0) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate < today;
+  };
+
   const previousMonth = () => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1));
   };
@@ -286,22 +336,31 @@ const SchoolCalendar: React.FC = () => {
 
       {/* Statistics Cards */}
       {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-            <div className="text-sm text-gray-600">Total de Dias Letivos</div>
+            <div className="text-sm text-gray-600">Total de Dias Letivos (Ano)</div>
             <div className="text-2xl font-bold text-gray-900">{statistics.totalDays}</div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-            <div className="text-sm text-gray-600">Dias Cumpridos</div>
-            <div className="text-2xl font-bold text-gray-900">{statistics.completedDays}</div>
+            <div className="text-sm text-gray-600">Dias Trabalhados</div>
+            <div className="text-2xl font-bold text-green-700">{statistics.completedDays}</div>
+            <div className="text-xs text-gray-500 mt-1">✓ Cumpridos no ano</div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-orange-500">
-            <div className="text-sm text-gray-600">Dias Restantes</div>
-            <div className="text-2xl font-bold text-gray-900">{statistics.remainingDays}</div>
+            <div className="text-sm text-gray-600">Dias Faltantes</div>
+            <div className="text-2xl font-bold text-orange-700">{statistics.remainingDays}</div>
+            <div className="text-xs text-gray-500 mt-1">○ Restantes no ano</div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
             <div className="text-sm text-gray-600">Taxa de Conclusão</div>
             <div className="text-2xl font-bold text-gray-900">{statistics.completionRate}%</div>
+          </div>
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-4 rounded-lg shadow text-white">
+            <div className="text-sm font-semibold opacity-90">Total Letivo (Ano)</div>
+            <div className="text-3xl font-bold">{(statistics.regularDays || 0) + (statistics.saturdayDays || 0)}</div>
+            <div className="text-xs mt-1 opacity-80">
+              {statistics.regularDays || 0} regulares + {statistics.saturdayDays || 0} sábados
+            </div>
           </div>
         </div>
       )}
@@ -337,6 +396,7 @@ const SchoolCalendar: React.FC = () => {
           {getDaysInMonth().map((date, index) => {
             const schoolDay = getSchoolDayForDate(date);
             const isEmpty = date.getTime() === 0;
+            const isPast = isDayPast(date);
 
             return (
               <div
@@ -345,7 +405,7 @@ const SchoolCalendar: React.FC = () => {
                   isEmpty
                     ? 'bg-gray-50 border-gray-200'
                     : schoolDay
-                    ? getDayTypeColor(schoolDay.dayType, schoolDay.isCompleted)
+                    ? getDayTypeColor(schoolDay.dayType, schoolDay.isCompleted, isPast)
                     : 'bg-white hover:bg-blue-50 border-gray-200 hover:border-blue-300'
                 }`}
               >
@@ -523,12 +583,79 @@ const SchoolCalendar: React.FC = () => {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <FileText className="w-5 h-5" />
-          Legenda do Calendário
-        </h3>
+      {/* Contadores e Legend */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Contador do Mês Atual */}
+        <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+          <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+            <Calendar className="w-6 h-6" />
+            Dias Letivos - {selectedMonth.toLocaleDateString('pt-BR', { month: 'long' })}
+          </h3>
+          <div className="space-y-3">
+            <div className="bg-white bg-opacity-20 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Dias Regulares:</span>
+                <span className="text-2xl font-bold">{getMonthStatistics().regularDays}</span>
+              </div>
+            </div>
+            <div className="bg-white bg-opacity-20 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Sábados Letivos:</span>
+                <span className="text-2xl font-bold">{getMonthStatistics().saturdayDays}</span>
+              </div>
+            </div>
+            <div className="bg-white bg-opacity-30 rounded-lg p-3 border-2 border-white">
+              <div className="flex justify-between items-center">
+                <span className="font-bold">Total do Mês:</span>
+                <span className="text-3xl font-bold">{getMonthStatistics().totalSchoolDays}</span>
+              </div>
+            </div>
+            <div className="bg-green-500 bg-opacity-40 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Cumpridos no Mês:</span>
+                <span className="text-xl font-bold">{getMonthStatistics().completedSchoolDays}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contador Acumulado do Ano */}
+        <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-lg p-6 text-white">
+          <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+            <FileText className="w-6 h-6" />
+            Acumulado até {selectedMonth.toLocaleDateString('pt-BR', { month: 'long' })}
+          </h3>
+          <div className="space-y-3">
+            <div className="bg-white bg-opacity-20 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Dias Regulares:</span>
+                <span className="text-2xl font-bold">{getYearToDateStatistics().regularDays}</span>
+              </div>
+            </div>
+            <div className="bg-white bg-opacity-20 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Sábados Letivos:</span>
+                <span className="text-2xl font-bold">{getYearToDateStatistics().saturdayDays}</span>
+              </div>
+            </div>
+            <div className="bg-white bg-opacity-30 rounded-lg p-3 border-2 border-white">
+              <div className="flex justify-between items-center">
+                <span className="font-bold">Total Acumulado:</span>
+                <span className="text-3xl font-bold">{getYearToDateStatistics().totalSchoolDays}</span>
+              </div>
+            </div>
+            <div className="text-xs bg-white bg-opacity-20 rounded p-2 mt-2">
+              📊 Soma de janeiro até {selectedMonth.toLocaleDateString('pt-BR', { month: 'long' })}
+            </div>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Legenda do Calendário
+          </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Tipos de Dia */}
           <div className="space-y-2">
@@ -556,6 +683,10 @@ const SchoolCalendar: React.FC = () => {
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-yellow-200 border-2 border-yellow-500 rounded shadow-sm"></div>
               <span className="text-sm">Recesso</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gray-300 border-2 border-gray-600 rounded opacity-80"></div>
+              <span className="text-sm">Dia Passado (Não Cumprido)</span>
             </div>
           </div>
 
@@ -600,7 +731,9 @@ const SchoolCalendar: React.FC = () => {
           <p className="text-sm text-blue-800">
             <strong>💡 Dica:</strong> Clique em qualquer dia para adicionar ou editar informações. 
             Use as observações para registrar motivos de feriados, recessos ou eventos especiais.
+            Dias passados que não foram cumpridos aparecem em cinza automaticamente.
           </p>
+        </div>
         </div>
       </div>
 
