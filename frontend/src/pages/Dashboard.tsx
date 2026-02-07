@@ -46,10 +46,18 @@ export default function Dashboard() {
     if (user?.role === 'admin' || user?.role === 'super-admin') {
       console.log('🔄 Dashboard - Redirecionando admin para admin-dashboard...');
       navigate('/admin-dashboard', { replace: true });
+      return; // Para evitar executar código adicional
     }
   }, [user, navigate]);
 
   useEffect(() => {
+    // Não buscar stats se for admin (será redirecionado)
+    if (!user || user.role === 'admin' || user.role === 'super-admin') {
+      console.log('⏭️ Dashboard - Pulando fetch de stats (usuário admin ou não definido)');
+      setLoading(false);
+      return;
+    }
+
     const fetchStats = async () => {
       try {
         console.log('📊 Dashboard - Buscando estatísticas...');
@@ -78,9 +86,7 @@ export default function Dashboard() {
       }
     };
 
-    if (user && user.role !== 'admin' && user.role !== 'super-admin') {
-      fetchStats();
-    }
+    fetchStats();
   }, [user]);
 
   const statsDisplay = [
