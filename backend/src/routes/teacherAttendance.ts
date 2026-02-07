@@ -206,10 +206,12 @@ router.get('/absent-teachers', auth, async (req: AuthRequest, res) => {
 });
 
 // Deletar registro de frequência por teacherId e data
-router.delete('/by-teacher-date', auth, async (req: AuthRequest, res) => {
+router.delete('/teacher/:teacherId/date/:date', auth, async (req: AuthRequest, res) => {
   try {
-    const { teacherId, date } = req.query;
+    const { teacherId, date } = req.params;
     const schoolId = req.user?.schoolId;
+
+    console.log('🗑️ DELETE attendance:', { teacherId, date, schoolId });
 
     if (!schoolId) {
       return res.status(400).json({ message: 'School ID não encontrado' });
@@ -226,13 +228,15 @@ router.delete('/by-teacher-date', auth, async (req: AuthRequest, res) => {
     });
 
     if (!attendance) {
+      console.log('⚠️ Registro não encontrado:', { teacherId, date, schoolId });
       return res.status(404).json({ message: 'Registro não encontrado' });
     }
 
+    console.log('✅ Registro deletado:', attendance._id);
     res.json({ message: 'Registro deletado com sucesso', attendance });
-  } catch (error) {
-    console.error('Erro ao deletar frequência:', error);
-    res.status(500).json({ message: 'Erro ao deletar frequência' });
+  } catch (error: any) {
+    console.error('❌ Erro ao deletar frequência:', error);
+    res.status(500).json({ message: 'Erro ao deletar frequência', error: error.message });
   }
 });
 

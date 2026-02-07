@@ -211,9 +211,8 @@ export default function TeacherAttendance() {
       );
 
       if (existingRecord) {
-        await api.delete('/teacher-attendance/by-teacher-date', {
-          params: { teacherId, date: selectedDate }
-        });
+        console.log('🗑️ Deletando registro:', { teacherId, date: selectedDate });
+        await api.delete(`/teacher-attendance/teacher/${teacherId}/date/${selectedDate}`);
         
         toast.success('🗑️ Registro de frequência removido');
         queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
