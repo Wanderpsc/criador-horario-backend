@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
@@ -91,6 +91,22 @@ export default function TeacherAttendance() {
   });
 
   const teachers: Teacher[] = teachersData || [];
+
+  // Carregar registros existentes quando a data mudar
+  useEffect(() => {
+    if (attendanceRecords && Array.isArray(attendanceRecords)) {
+      const recordsMap: { [key: string]: AttendanceRecord } = {};
+      
+      attendanceRecords.forEach((record: AttendanceRecord) => {
+        if (record.date === selectedDate) {
+          recordsMap[record.teacherId] = record;
+        }
+      });
+      
+      setAttendanceData(recordsMap);
+      console.log('📋 Registros carregados para', selectedDate, ':', Object.keys(recordsMap).length, 'professor(es)');
+    }
+  }, [attendanceRecords, selectedDate]);
 
   // Loading state - APÓS todos os hooks
   if (loadingTeachers) {
