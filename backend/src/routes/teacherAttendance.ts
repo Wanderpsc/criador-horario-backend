@@ -178,6 +178,64 @@ router.delete('/:id', auth, async (req: AuthRequest, res) => {
   }
 });
 
+// Obter professores ausentes de uma data específica
+router.get('/absent-teachers', auth, async (req: AuthRequest, res) => {
+  try {
+    const { date } = req.query;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    if (!date) {
+      return res.status(400).json({ message: 'Data não fornecida' });
+    }
+
+    const absentRecords = await TeacherAttendance.find({
+      schoolId,
+      date,
+      status: 'absent'
+    });
+
+    res.json(absentRecords);
+  } catch (error) {
+    console.error('Erro ao buscar professores ausentes:', error);
+    res.status(500).json({ message: 'Erro ao buscar professores ausentes' });
+  }
+});
+
+// Deletar registro de frequência por teacherId e data
+router.delete('/by-teacher-date', auth, async (req: AuthRequest, res) => {
+  try {
+    const { teacherId, date } = req.query;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    if (!teacherId || !date) {
+      return res.status(400).json({ message: 'teacherId e date são obrigatórios' });
+    }
+
+    const attendance = await TeacherAttendance.findOneAndDelete({
+      schoolId,
+      teacherId,
+      date
+    });
+
+    if (!attendance) {
+      return res.status(404).json({ message: 'Registro não encontrado' });
+    }
+
+    res.json({ message: 'Registro deletado com sucesso', attendance });
+  } catch (error) {
+    console.error('Erro ao deletar frequência:', error);
+    res.status(500).json({ message: 'Erro ao deletar frequência' });
+  }
+});
+
 // Obter estatísticas de frequência
 router.get('/statistics', auth, async (req: AuthRequest, res) => {
   try {

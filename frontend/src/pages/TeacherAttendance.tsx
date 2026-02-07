@@ -13,7 +13,9 @@ import {
   Printer,
   Download,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  Eraser,
+  Trash2
 } from 'lucide-react';
 
 interface Teacher {
@@ -175,6 +177,38 @@ export default function TeacherAttendance() {
         timestamp: new Date().toISOString()
       }
     }));
+  };
+
+  // Limpar marcação (excluir registro)
+  const handleClearAttendance = async (teacherId: string) => {
+    try {
+      // Remover do estado local
+      setAttendanceData(prev => {
+        const newData = { ...prev };
+        delete newData[teacherId];
+        return newData;
+      });
+
+      // Se já foi salvo no banco, deletar
+      const existingRecord = attendanceRecords?.find(
+        (r: AttendanceRecord) => r.teacherId === teacherId && r.date === selectedDate
+      );
+
+      if (existingRecord) {
+        await api.delete('/teacher-attendance/by-teacher-date', {
+          params: { teacherId, date: selectedDate }
+        });
+        
+        toast.success('🗑️ Registro de frequência removido');
+        queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+        refetchAttendance();
+      } else {
+        toast.success('✨ Marcação limpa');
+      }
+    } catch (error: any) {
+      console.error('Erro ao limpar frequência:', error);
+      toast.error('Erro ao limpar registro: ' + (error.response?.data?.message || error.message));
+    }
   };
 
   // Salvar frequência do dia
@@ -380,6 +414,13 @@ export default function TeacherAttendance() {
                       >
                         <XCircle size={16} className="inline mr-1" />
                         Ausente
+                      </button>
+                      <button
+                        onClick={() => handleClearAttendance(teacher.id)}
+                        className="px-3 py-2 rounded-md font-medium text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                        title="Limpar marcação"
+                      >
+                        <Eraser size={16} className="inline" />
                       </button>
                     </div>
                   </div>

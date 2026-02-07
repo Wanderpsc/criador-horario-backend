@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
-import { AlertTriangle, Calendar, Clock, User, Zap, RefreshCw, Save, Printer, List, Bell, Send, Eye, FileText, Trash2, Info } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, User, Zap, RefreshCw, Save, Printer, List, Bell, Send, Eye, FileText, Trash2, Info, CheckCircle } from 'lucide-react';
 
 interface Class {
   _id?: string;
@@ -151,6 +151,31 @@ export default function EmergencySchedule() {
     },
   });
   const teachers = Array.isArray(teachersData) ? teachersData : [];
+
+  // Buscar professores ausentes automaticamente quando a data é selecionada
+  const { data: absentTeachersData } = useQuery({
+    queryKey: ['absent-teachers', selectedDate],
+    queryFn: async () => {
+      if (!selectedDate) return [];
+      try {
+        const response = await api.get('/teacher-attendance/absent-teachers', {
+          params: { date: selectedDate }
+        });
+        const absentRecords = response.data || [];
+        console.log('👥 Professores ausentes encontrados:', absentRecords.length);
+        
+        // Atualizar automaticamente os professores ausentes selecionados
+        const absentIds = absentRecords.map((r: any) => r.teacherId);
+        setAbsentTeacherIds(absentIds);
+        
+        return absentRecords;
+      } catch (error) {
+        console.error('Erro ao buscar professores ausentes:', error);
+        return [];
+      }
+    },
+    enabled: !!selectedDate
+  });
 
   // Buscar Componente Curriculars
   const { data: subjectsData } = useQuery({
@@ -1562,6 +1587,23 @@ export default function EmergencySchedule() {
                   <User className="inline mr-2" size={18} />
                   Professor(es) Ausente(s)
                 </label>
+                
+                {/* Aviso de importação automática */}
+                {absentTeachersData && absentTeachersData.length > 0 && (
+                  <div className="mb-3 p-3 bg-green-50 border-l-4 border-green-500 rounded">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          ✅ {absentTeachersData.length} professor(es) ausente(s) importado(s) automaticamente
+                        </p>
+                        <p className="text-xs text-green-700 mt-1">
+                          Os professores marcados como ausentes no Controle de Frequência foram carregados automaticamente.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-white">
                   {teachers.length === 0 ? (
