@@ -60,6 +60,13 @@ export default function Settings() {
   const authUser = useAuthStore(state => state.user);
   const isAdmin = authUser?.role === 'admin';
   
+  // Debug - ver o que está no authUser
+  React.useEffect(() => {
+    console.log('👤 Auth User:', authUser);
+    console.log('🔑 Role:', authUser?.role);
+    console.log('✅ Is Admin:', isAdmin);
+  }, [authUser, isAdmin]);
+  
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
@@ -262,7 +269,8 @@ export default function Settings() {
                 Apenas administradores podem criar usuários
               </h3>
               <p className="text-sm text-yellow-700 mt-1">
-                Você está logado como: <strong>{authUser?.name}</strong> ({authUser?.email}) - Role: <strong>{authUser?.role}</strong>
+                Você está logado como: <strong>{authUser?.name}</strong> ({authUser?.email})<br/>
+                Role: <strong>"{authUser?.role}"</strong> {authUser?.role !== 'admin' && '(precisa ser "admin")'}
               </p>
             </div>
           </div>
