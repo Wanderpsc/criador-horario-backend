@@ -381,11 +381,11 @@ const SchoolCalendar: React.FC = () => {
 
   // Calcular estatísticas do mês atual
   const getMonthStatistics = () => {
-    const monthDays = schoolDays.filter(day => {
-      const dayDate = new Date(day.date);
-      return dayDate.getMonth() === selectedMonth.getMonth() &&
-             dayDate.getFullYear() === selectedMonth.getFullYear();
-    });
+    const year = selectedMonth.getFullYear();
+    const month = String(selectedMonth.getMonth() + 1).padStart(2, '0');
+    const yearMonthPrefix = `${year}-${month}`;
+
+    const monthDays = schoolDays.filter(day => day.date.startsWith(yearMonthPrefix));
 
     const regularDays = monthDays.filter(d => d.dayType === 'regular').length;
     const saturdayDays = monthDays.filter(d => d.dayType === 'saturday').length;
@@ -399,12 +399,12 @@ const SchoolCalendar: React.FC = () => {
 
   // Calcular estatísticas acumuladas do ano até o mês atual
   const getYearToDateStatistics = () => {
-    const yearStart = new Date(selectedMonth.getFullYear(), 0, 1);
-    const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth() + 1;
 
     const ytdDays = schoolDays.filter(day => {
-      const dayDate = new Date(day.date);
-      return dayDate >= yearStart && dayDate <= monthEnd;
+      const [dayYear, dayMonth] = day.date.split('-').map(Number);
+      return dayYear === year && dayMonth <= month;
     });
 
     const regularDays = ytdDays.filter(d => d.dayType === 'regular').length;
