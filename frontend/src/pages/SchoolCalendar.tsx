@@ -51,16 +51,26 @@ const SchoolCalendar: React.FC = () => {
 
   const loadData = async () => {
     try {
+      if (!user) return;
+
+      // Usar schoolId se existir, senão usar o próprio ID do usuário (para escolas)
+      const schoolId = user.schoolId || (user.role === 'school' ? user.id : null);
+
+      if (!schoolId) {
+        toast.error('Usuário sem escola associada');
+        return;
+      }
+
       const startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
       const endDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
 
       const [daysRes, schedulesRes, statsRes, emergencyRes] = await Promise.all([
-        schoolDayAPI.getAll(user!.schoolId!, {
+        schoolDayAPI.getAll(schoolId, {
           startDate: startDate.toISOString().split('T')[0],
           endDate: endDate.toISOString().split('T')[0],
         }),
-        scheduleAPI.getAll(user!.schoolId!),
-        schoolDayAPI.getStatistics(user!.schoolId!, {
+        scheduleAPI.getAll(schoolId),
+        schoolDayAPI.getStatistics(schoolId, {
           startDate: `${selectedMonth.getFullYear()}-01-01`,
           endDate: `${selectedMonth.getFullYear()}-12-31`,
         }),
@@ -91,14 +101,22 @@ const SchoolCalendar: React.FC = () => {
         return;
       }
 
-      if (!user?.schoolId) {
+      if (!user) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
+      // Usar schoolId se existir, senão usar o próprio ID do usuário (para escolas)
+      const schoolId = user.schoolId || (user.role === 'school' ? user.id : null);
+
+      if (!schoolId) {
         toast.error('Usuário sem escola associada');
         return;
       }
 
       const data = {
         ...formData,
-        schoolId: user.schoolId,
+        schoolId,
         scheduleId: formData.scheduleId || undefined,
         followWeekday: formData.followWeekday || undefined,
       };
