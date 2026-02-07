@@ -119,6 +119,7 @@ const PREDEFINED_NOTES = [
 const SchoolCalendar: React.FC = () => {
   const { user } = useAuthStore();
   const [schoolDays, setSchoolDays] = useState<SchoolDay[]>([]);
+  const [yearSchoolDays, setYearSchoolDays] = useState<SchoolDay[]>([]); // Todos os dias do ano para cálculos acumulados
   const [schedules, setSchedules] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -172,10 +173,14 @@ const SchoolCalendar: React.FC = () => {
         endDate: endDate.toISOString().split('T')[0]
       });
 
-      const [daysRes, schedulesRes, statsRes, emergencyRes] = await Promise.all([
+      const [daysRes, yearDaysRes, schedulesRes, statsRes, emergencyRes] = await Promise.all([
         schoolDayAPI.getAll(schoolId, {
           startDate: startDate.toISOString().split('T')[0],
           endDate: endDate.toISOString().split('T')[0],
+        }),
+        schoolDayAPI.getAll(schoolId, {
+          startDate: `${selectedMonth.getFullYear()}-01-01`,
+          endDate: `${selectedMonth.getFullYear()}-12-31`,
         }),
         scheduleAPI.getAll(),
         schoolDayAPI.getStatistics(schoolId, {
@@ -188,6 +193,7 @@ const SchoolCalendar: React.FC = () => {
       console.log('✅ Dados carregados com sucesso');
 
       setSchoolDays(daysRes.data.data || []);
+      setYearSchoolDays(yearDaysRes.data.data || []);
       setSchedules(schedulesRes.data.data || []);
       setStatistics(statsRes.data.data || {
         totalDays: 0,
@@ -402,7 +408,7 @@ const SchoolCalendar: React.FC = () => {
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth() + 1;
 
-    const ytdDays = schoolDays.filter(day => {
+    const ytdDays = yearSchoolDays.filter(day => {
       const [dayYear, dayMonth] = day.date.split('-').map(Number);
       return dayYear === year && dayMonth <= month;
     });
