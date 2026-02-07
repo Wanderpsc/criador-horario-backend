@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, Plus, Edit2, Trash2, Key, CheckCircle, XCircle, 
-  Shield, Save, X, Eye, EyeOff, FileText, Download, Filter 
+  Shield, Save, X, Eye, EyeOff, FileText, Download, Filter, AlertCircle 
 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
 
 interface Permission {
   create?: boolean;
@@ -54,6 +56,10 @@ const permissionLabels: { [key: string]: string } = {
 
 export default function Settings() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const authUser = useAuthStore(state => state.user);
+  const isAdmin = authUser?.role === 'admin';
+  
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
@@ -246,6 +252,23 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Alerta de permissões */}
+      {!isAdmin && (
+        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-yellow-400 mr-3" size={24} />
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">
+                Apenas administradores podem criar usuários
+              </h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                Você está logado como: <strong>{authUser?.name}</strong> ({authUser?.email}) - Role: <strong>{authUser?.role}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
@@ -256,13 +279,15 @@ export default function Settings() {
             Controle completo de usuários e permissões do sistema
           </p>
         </div>
-        <button
-          onClick={handleCreateUser}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Novo Usuário
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleCreateUser}
+            className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Novo Usuário
+          </button>
+        )}
       </div>
 
       {/* Lista de usuários */}
@@ -582,7 +607,7 @@ export default function Settings() {
             </p>
           </div>
           <button
-            onClick={() => window.location.href = '/audit-logs'}
+            onClick={() => navigate('/audit-logs')}
             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
           >
             <FileText size={18} />
