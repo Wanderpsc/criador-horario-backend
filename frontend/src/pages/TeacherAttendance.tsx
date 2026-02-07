@@ -62,9 +62,35 @@ export default function TeacherAttendance() {
     }
   });
 
+  // Buscar horário base para o dia
+  const { data: timetableData } = useQuery({
+    queryKey: ['timetable-for-attendance', selectedDate],
+    queryFn: async () => {
+      const response = await api.get('/timetables');
+      return response.data;
+    }
+  });
+
+  // Buscar registros de frequência
+  const { data: attendanceRecords, refetch: refetchAttendance } = useQuery({
+    queryKey: ['attendance-records', selectedDate, startDate, endDate, reportType],
+    queryFn: async () => {
+      const params: any = {};
+      if (reportType === 'daily') {
+        params.date = selectedDate;
+      } else {
+        params.startDate = startDate || selectedDate;
+        params.endDate = endDate || selectedDate;
+      }
+      const response = await api.get('/teacher-attendance', { params });
+      return response.data;
+    },
+    enabled: !!selectedDate
+  });
+
   const teachers: Teacher[] = teachersData || [];
 
-  // Loading state
+  // Loading state - APÓS todos os hooks
   if (loadingTeachers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -98,32 +124,6 @@ export default function TeacherAttendance() {
       </div>
     );
   }
-
-  // Buscar horário base para o dia
-  const { data: timetableData } = useQuery({
-    queryKey: ['timetable-for-attendance', selectedDate],
-    queryFn: async () => {
-      const response = await api.get('/timetables');
-      return response.data;
-    }
-  });
-
-  // Buscar registros de frequência
-  const { data: attendanceRecords, refetch: refetchAttendance } = useQuery({
-    queryKey: ['attendance-records', selectedDate, startDate, endDate, reportType],
-    queryFn: async () => {
-      const params: any = {};
-      if (reportType === 'daily') {
-        params.date = selectedDate;
-      } else {
-        params.startDate = startDate || selectedDate;
-        params.endDate = endDate || selectedDate;
-      }
-      const response = await api.get('/teacher-attendance', { params });
-      return response.data;
-    },
-    enabled: !!selectedDate
-  });
 
   // Calcular classes agendadas para cada professor no dia
   const getScheduledClasses = (teacherId: string) => {
