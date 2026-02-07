@@ -402,6 +402,52 @@ export default function Layout() {
         </div>
       </header>
 
+      {/* Barra de Acesso Rápido */}
+      <div className="bg-white border-b border-gray-200 shadow-sm py-2 px-4 no-print sticky top-0 z-10">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <span className="text-xs font-semibold text-gray-500 whitespace-nowrap mr-2">
+            🚀 ACESSO RÁPIDO:
+          </span>
+          
+          {navigation
+            .filter(item => !item.divider && item.path !== '/admin' && item.path !== '/settings')
+            .map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? 'bg-primary-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
+                  }`}
+                  title={item.description}
+                >
+                  <Icon size={14} />
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                      item.badge === 'NOVO' ? 'bg-green-500 text-white' :
+                      item.badge === 'IA' ? 'bg-yellow-500 text-black' :
+                      'bg-blue-500 text-white'
+                    }`}>
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.step && (
+                    <span className="ml-1 w-4 h-4 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full">
+                      {item.step}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+        </div>
+      </div>
+
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div

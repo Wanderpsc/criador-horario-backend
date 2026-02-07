@@ -27,6 +27,9 @@ import LiveMessaging from './pages/LiveMessaging';
 import EmergencySchedule from './pages/EmergencySchedule';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
+import SchoolUserLogin from './pages/SchoolUserLogin';
+import Settings from './pages/Settings';
+import AuditLogs from './pages/AuditLogs';
 import SalesDashboard from './pages/SalesDashboard';
 import PlansManagement from './pages/PlansManagement';
 import LeadsManagement from './pages/LeadsManagement';
@@ -78,6 +81,7 @@ function App() {
       >
         <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/school-user-login" element={<SchoolUserLogin />} />
         <Route path="/register" element={<Register />} />
         <Route path="/register-school" element={<SchoolRegister />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -114,7 +118,8 @@ function App() {
           <Route path="teacher-frequency-report" element={<ClientRoute><TeacherFrequencyReport /></ClientRoute>} />
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
-          <Route path="settings" element={<ClientRoute><SchoolSettings /></ClientRoute>} />
+          <Route path="settings" element={<ClientRoute><Settings /></ClientRoute>} />
+          <Route path="audit-logs" element={<ClientRoute><AuditLogs /></ClientRoute>} />
           <Route path="timetables" element={<ClientRoute><Timetables /></ClientRoute>} />
           
           {/* Admin Routes */}
