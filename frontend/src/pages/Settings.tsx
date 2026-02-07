@@ -281,7 +281,6 @@ handleChangeMyPassword = () => {
     });
   };
 
-  const 
   const handleResetPassword = (user: SchoolUser) => {
     setSelectedUser(user);
     setNewPassword('');
@@ -709,7 +708,51 @@ handleChangeMyPassword = () => {
 
       {/* Modal de Reset de Senha */}
       {showResetPasswordModal && selectedUser && (
-        
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <Key className="text-primary-600" />
+              Resetar Senha
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Resetar senha de: <strong>{selectedUser.name}</strong>
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="Nova senha (mínimo 6 caracteres)"
+                minLength={6}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleConfirmResetPassword}
+                disabled={resetPasswordMutation.isPending}
+                className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
+              >
+                <Key size={18} />
+                Resetar
+              </button>
+              <button
+                onClick={() => {
+                  setShowResetPasswordModal(false);
+                  setNewPassword('');
+                }}
+                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center justify-center gap-2"
+              >
+                <X size={18} />
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Alterar Minha Senha */}
       {showMyPasswordModal && (
@@ -773,50 +816,6 @@ handleChangeMyPassword = () => {
                 onClick={() => {
                   setShowMyPasswordModal(false);
                   setMyPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center justify-center gap-2"
-              >
-                <X size={18} />
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-              <Key className="text-primary-600" />
-              Resetar Senha
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Resetar senha de: <strong>{selectedUser.name}</strong>
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder="Nova senha (mínimo 6 caracteres)"
-                minLength={6}
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleConfirmResetPassword}
-                disabled={resetPasswordMutation.isPending}
-                className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
-              >
-                <Key size={18} />
-                Resetar
-              </button>
-              <button
-                onClick={() => {
-                  setShowResetPasswordModal(false);
-                  setNewPassword('');
                 }}
                 className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center justify-center gap-2"
               >
