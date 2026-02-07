@@ -13,6 +13,7 @@ import Class from '../models/Class';
 import SchoolDay from '../models/SchoolDay';
 import Schedule from '../models/Schedule';
 import GeneratedTimetable from '../models/GeneratedTimetable';
+import TeacherAttendance from '../models/TeacherAttendance';
 
 const router = express.Router();
 
@@ -156,6 +157,13 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         dayType: { $in: ['regular', 'saturday'] }
       });
 
+      // Buscar registros de frequência do mês
+      const attendanceRecords = await TeacherAttendance.find({
+        schoolId,
+        teacherId: teacher._id,
+        date: { $gte: startDate, $lte: endDate }
+      });
+
       const subjectClassDetails = [];
       let totalPredicted = 0;
       let totalGiven = 0;
@@ -170,7 +178,16 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         const totalWeeks = Math.max(1, Math.floor(schoolDays.length / 5));
         const predicted = weeklyClasses * totalWeeks;
 
+        // Somar aulas dadas baseado nos registros de frequência
+        const given = attendanceRecords.reduce((sum, record) => {
+          return sum + (record.givenClasses || 0);
+        }, 0);
+
+        const deficit = predicted > given ? predicted - given : 0;
+        const surplus = given > predicted ? given - predicted : 0;
+
         totalPredicted += predicted;
+        totalGiven += given;
 
         subjectClassDetails.push({
           subjectId: subject._id,
@@ -178,13 +195,14 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           classId: classObj._id,
           className: classObj.name,
           predictedClasses: predicted,
-          givenClasses: 0, // TODO: Integrar com registros de frequência
-          deficit: predicted, // Temporário
-          surplus: 0
+          givenClasses: given,
+          deficit,
+          surplus
         });
       }
 
-      const totalDeficit = totalPredicted - totalGiven;
+      const totalDeficit = totalPredicted > totalGiven ? totalPredicted - totalGiven : 0;
+      const totalSurplus = totalGiven > totalPredicted ? totalGiven - totalPredicted : 0;
 
       reports.push({
         teacherId: teacher._id,
@@ -193,7 +211,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         totalPredictedClasses: totalPredicted,
         totalGivenClasses: totalGiven,
         totalDeficit,
-        totalSurplus: totalDeficit < 0 ? Math.abs(totalDeficit) : 0,
+        totalSurplus,
         subjectClassDetails
       });
     }
