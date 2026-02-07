@@ -26,6 +26,7 @@ import DisplayPanelConfig from './pages/DisplayPanelConfig';
 import LiveMessaging from './pages/LiveMessaging';
 import EmergencySchedule from './pages/EmergencySchedule';
 import TeacherAttendance from './pages/TeacherAttendance';
+import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
 import SalesDashboard from './pages/SalesDashboard';
 import PlansManagement from './pages/PlansManagement';
 import LeadsManagement from './pages/LeadsManagement';
@@ -110,6 +111,7 @@ function App() {
           <Route path="live-messaging" element={<LiveMessaging />} />
           <Route path="emergency-schedule" element={<ClientRoute><EmergencySchedule /></ClientRoute>} />
           <Route path="teacher-attendance" element={<ClientRoute><TeacherAttendance /></ClientRoute>} />
+          <Route path="teacher-frequency-report" element={<ClientRoute><TeacherFrequencyReport /></ClientRoute>} />
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><SchoolSettings /></ClientRoute>} />

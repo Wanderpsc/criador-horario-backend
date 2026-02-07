@@ -30,7 +30,8 @@ import {
   TrendingUp,
   FileText,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  BarChart3
 } from 'lucide-react';
 import { useState } from 'react';
 import NotificationCenter from './NotificationCenter';
@@ -219,6 +220,16 @@ export default function Layout() {
             badge: 'NOVO',
             highlight: true,
             subtitle: 'Ponto e Relatórios'
+          },
+          { 
+            icon: BarChart3, 
+            label: 'Relatórios de Frequência', 
+            path: '/teacher-frequency-report',
+            description: '📊 Visualize déficits e saldos de aulas por professor',
+            color: 'blue',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Análise de Déficits'
           },
           { 
             icon: Tv, 

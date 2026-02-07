@@ -137,4 +137,63 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* Estilos específicos para relatórios */
+  .bg-white {
+    background-color: white !important;
+  }
+
+  .bg-gray-50 {
+    background-color: #f9fafb !important;
+  }
+
+  .bg-red-100 {
+    background-color: #fee2e2 !important;
+  }
+
+  .bg-purple-100 {
+    background-color: #f3e8ff !important;
+  }
+
+  .bg-green-100 {
+    background-color: #dcfce7 !important;
+  }
+
+  .text-red-600, .text-red-700, .text-red-800 {
+    color: #dc2626 !important;
+  }
+
+  .text-purple-600, .text-purple-700, .text-purple-800 {
+    color: #9333ea !important;
+  }
+
+  .text-green-600, .text-green-700, .text-green-800 {
+    color: #16a34a !important;
+  }
+
+  .shadow {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Cards de estatísticas na impressão */
+  .border-l-4 {
+    border-left-width: 4px !important;
+  }
+
+  .border-blue-500 {
+    border-left-color: #3b82f6 !important;
+  }
+
+  .border-green-500 {
+    border-left-color: #22c55e !important;
+  }
+
+  .border-red-500 {
+    border-left-color: #ef4444 !important;
+  }
+
+  .border-purple-500 {
+    border-left-color: #a855f7 !important;
+  }
 }
