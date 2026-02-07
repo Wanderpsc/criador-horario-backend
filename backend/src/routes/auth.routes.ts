@@ -436,4 +436,66 @@ router.post('/reset-password/:token',
   }
 );
 
+// Alterar senha do usuário logado (User principal - dono da escola)
+router.post('/change-password', async (req: any, res: any) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    // Pegar userId do token (precisamos do auth middleware)
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Token não fornecido' });
+    }
+
+    const token = authHeader.substring(7);
+    let decoded: any;
+    
+    try {
+      decoded = jwt.verify(token, (process.env.JWT_SECRET || 'secret') as jwt.Secret);
+    } catch (error) {
+      return res.status(401).json({ message: 'Token inválido' });
+    }
+
+    // Validação
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Senha atual e nova senha são obrigatórias' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Nova senha deve ter no mínimo 6 caracteres' });
+    }
+
+    // Buscar usuário na collection Users (role: 'school')
+    const userId = decoded.userId || decoded.id;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    // Verificar senha atual
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Senha atual incorreta' });
+    }
+
+    // Hash da nova senha
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Atualizar usando updateOne para evitar double-hashing do pre-save
+    await User.updateOne(
+      { _id: userId },
+      { $set: { password: hashedPassword } }
+    );
+
+    console.log('✅ Senha alterada com sucesso para usuário:', user.email);
+
+    return res.json({ message: 'Senha alterada com sucesso' });
+  } catch (error) {
+    console.error('❌ Erro ao alterar senha:', error);
+    return res.status(500).json({ message: 'Erro ao alterar senha' });
+  }
+});
+
 export default router;

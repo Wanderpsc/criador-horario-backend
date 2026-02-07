@@ -74,6 +74,7 @@ export default function Settings() {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SchoolUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showMyPasswordModal, setShowMyPasswordModal] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -85,6 +86,13 @@ export default function Settings() {
 
   const [newPassword, setNewPassword] = useState('');
   const [editingPermissions, setEditingPermissions] = useState<Permissions>({});
+  
+  // Minha senha
+  const [myPasswordData, setMyPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   // Fetch users
   const { data: users = [], isLoading } = useQuery<SchoolUser[]>({
@@ -154,6 +162,21 @@ export default function Settings() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erro ao resetar senha');
+    }
+  });
+
+  // Change my password mutation
+  const changeMyPasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      return await api.post('/auth/change-password', data);
+    },
+    onSuccess: () => {
+      toast.success('Sua senha foi alterada com sucesso!');
+      setShowMyPasswordModal(false);
+      setMyPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao alterar senha');
     }
   });
 
@@ -239,7 +262,26 @@ export default function Settings() {
       deleteUserMutation.mutate(user._id);
     }
   };
+handleChangeMyPassword = () => {
+    if (!myPasswordData.currentPassword) {
+      toast.error('Digite sua senha atual');
+      return;
+    }
+    if (!myPasswordData.newPassword || myPasswordData.newPassword.length < 6) {
+      toast.error('Nova senha deve ter no mínimo 6 caracteres');
+      return;
+    }
+    if (myPasswordData.newPassword !== myPasswordData.confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+    changeMyPasswordMutation.mutate({
+      currentPassword: myPasswordData.currentPassword,
+      newPassword: myPasswordData.newPassword
+    });
+  };
 
+  const 
   const handleResetPassword = (user: SchoolUser) => {
     setSelectedUser(user);
     setNewPassword('');
@@ -309,6 +351,31 @@ export default function Settings() {
               </p>
               <ul className="list-disc list-inside text-sm text-blue-700 mt-2 space-y-1">
                 <li><strong>Secretária:</strong> secretaria@ceti.com / SenhaSecretaria@2026</li>
+
+      {/* Card de Segurança - Minha Senha */}
+      <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Key className="text-orange-600" />
+              🔐 Minha Conta - Segurança
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Logado como: <strong>{authUser?.name}</strong> ({authUser?.email})
+            </p>
+            <p className="text-sm text-gray-600">
+              Altere sua senha de acesso a qualquer momento
+            </p>
+          </div>
+          <button
+            onClick={() => setShowMyPasswordModal(true)}
+            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
+          >
+            <Key size={20} />
+            Alterar Minha Senha
+          </button>
+        </div>
+      </div>
                 <li><strong>Coordenador:</strong> coordenador@ceti.com / SenhaCoordenador@2026</li>
                 <li><strong>Professor:</strong> professor@ceti.com / SenhaProfessor@2026</li>
               </ul>
@@ -642,7 +709,80 @@ export default function Settings() {
 
       {/* Modal de Reset de Senha */}
       {showResetPasswordModal && selectedUser && (
+        
+
+      {/* Modal de Alterar Minha Senha */}
+      {showMyPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <Key className="text-orange-600" />
+              🔐 Alterar Minha Senha
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Conta: <strong>{authUser?.name}</strong> ({authUser?.email})
+            </p>
+
+            <div className="space-y-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Senha Atual</label>
+                <input
+                  type="password"
+                  value={myPasswordData.currentPassword}
+                  onChange={(e) => setMyPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="Digite sua senha atual"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+                <input
+                  type="password"
+                  value={myPasswordData.newPassword}
+                  onChange={(e) => setMyPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="Nova senha (mínimo 6 caracteres)"
+                  minLength={6}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
+                <input
+                  type="password"
+                  value={myPasswordData.confirmPassword}
+                  onChange={(e) => setMyPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  placeholder="Digite novamente a nova senha"
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleChangeMyPassword}
+                disabled={changeMyPasswordMutation.isPending}
+                className="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2"
+              >
+                <Key size={18} />
+                {changeMyPasswordMutation.isPending ? 'Alterando...' : 'Alterar Senha'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowMyPasswordModal(false);
+                  setMyPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                }}
+                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center justify-center gap-2"
+              >
+                <X size={18} />
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
               <Key className="text-primary-600" />
