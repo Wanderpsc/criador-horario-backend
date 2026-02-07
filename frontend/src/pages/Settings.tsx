@@ -188,7 +188,20 @@ export default function Settings() {
 
   const handleSaveUser = () => {
     if (!formData.name || !formData.email) {
-      toast.error('Preen cha nome e e-mail');
+      toast.error('Preencha nome e e-mail');
+      return;
+    }
+
+    // Verificar se está tentando usar o email da escola logada
+    if (!selectedUser && formData.email.toLowerCase() === authUser?.email?.toLowerCase()) {
+      toast.error(
+        `❌ O email ${authUser.email} já é usado pela escola (você)!\n\n` +
+        `✅ Use emails únicos:\n` +
+        `• secretaria@ceti.com\n` +
+        `• coordenador@ceti.com\n` +
+        `• professor@ceti.com`,
+        { duration: 6000 }
+      );
       return;
     }
 
@@ -278,6 +291,43 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Instruções para o usuário */}
+      {canManageUsers && users.length === 0 && (
+        <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+          <div className="flex items-center">
+            <AlertCircle className="text-blue-400 mr-3" size={24} />
+            <div>
+              <h3 className="text-sm font-medium text-blue-800">
+                ℹ️ Como Criar Usuários da Escola
+              </h3>
+              <p className="text-sm text-blue-700 mt-2">
+                <strong>Você está logado como: {authUser?.name} ({authUser?.email})</strong>
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                Você já é o <strong>administrador principal</strong> da escola! Agora crie usuários para sua equipe:
+              </p>
+              <ul className="list-disc list-inside text-sm text-blue-700 mt-2 space-y-1">
+                <li><strong>Secretária:</strong> secretaria@ceti.com / SenhaSecretaria@2026</li>
+                <li><strong>Coordenador:</strong> coordenador@ceti.com / SenhaCoordenador@2026</li>
+                <li><strong>Professor:</strong> professor@ceti.com / SenhaProfessor@2026</li>
+              </ul>
+              <p className="text-sm text-blue-700 mt-2">
+                ⚠️ <strong>Não use o email {authUser?.email} novamente!</strong> Cada funcionário deve ter um email único.
+              </p>
+              <p className="text-sm text-blue-700 mt-2">
+                ✅ Depois de criar, você pode:
+              </p>
+              <ul className="list-disc list-inside text-sm text-blue-700 ml-4 space-y-1">
+                <li>🔑 <strong>Resetar senhas</strong> (ícone de chave)</li>
+                <li>🛡️ <strong>Configurar permissões</strong> (ícone de escudo) - escolha quais botões/páginas cada usuário pode acessar</li>
+                <li>✏️ <strong>Editar dados</strong> (ícone de lápis)</li>
+                <li>🗑️ <strong>Excluir usuários</strong> (ícone de lixeira)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -299,6 +349,40 @@ export default function Settings() {
           </button>
         )}
       </div>
+
+      {/* Card de Funcionalidades Disponíveis */}
+      {canManageUsers && users.length > 0 && (
+        <div className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-green-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Shield className="text-green-600" />
+            ✅ Funcionalidades Disponíveis para Gerenciamento
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <div className="flex items-start gap-2">
+                <Key className="text-orange-600 mt-1" size={20} />
+                <div>
+                  <h4 className="font-semibold text-gray-900">🔑 Resetar Senhas</h4>
+                  <p className="text-sm text-gray-600">
+                    Clique no ícone 🔑 (laranja) para definir uma nova senha para qualquer usuário
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <div className="flex items-start gap-2">
+                <Shield className="text-purple-600 mt-1" size={20} />
+                <div>
+                  <h4 className="font-semibold text-gray-900">🛡️ Configurar Permissões</h4>
+                  <p className="text-sm text-gray-600">
+                    Clique no ícone 🛡️ (roxo) para escolher quais páginas/botões cada usuário pode acessar
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lista de usuários */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -376,29 +460,29 @@ export default function Settings() {
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleEditUser(user)}
-                      className="text-blue-600 hover:text-blue-900"
-                      title="Editar"
+                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition"
+                      title="✏️ Editar dados do usuário"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button
                       onClick={() => handleEditPermissions(user)}
-                      className="text-purple-600 hover:text-purple-900"
-                      title="Permissões"
+                      className="p-2 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition"
+                      title="🛡️ Configurar Permissões (escolher quais páginas/botões pode acessar)"
                     >
                       <Shield size={18} />
                     </button>
                     <button
                       onClick={() => handleResetPassword(user)}
-                      className="text-orange-600 hover:text-orange-900"
-                      title="Resetar Senha"
+                      className="p-2 text-orange-600 hover:text-orange-900 hover:bg-orange-50 rounded-lg transition"
+                      title="🔑 Resetar Senha do usuário"
                     >
                       <Key size={18} />
                     </button>
                     <button
                       onClick={() => handleDeleteUser(user)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Excluir"
+                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition"
+                      title="🗑️ Excluir usuário"
                     >
                       <Trash2 size={18} />
                     </button>
