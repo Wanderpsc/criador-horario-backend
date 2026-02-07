@@ -2227,12 +2227,12 @@ export default function EmergencySchedule() {
               </div>
               
               {(() => {
-                // Agrupar slots por professor
+                // Agrupar slots por professor (excluindo janelas)
                 const slotsByTeacher: { [teacherId: string]: any[] } = {};
                 
                 emergencySlots.forEach(slot => {
-                  const tId = slot.teacherId || 'vacant';
-                  if (!slot.isVacant) {
+                  if (!slot.isVacant && slot.teacherId) {
+                    const tId = slot.teacherId;
                     if (!slotsByTeacher[tId]) {
                       slotsByTeacher[tId] = [];
                     }
@@ -2240,84 +2240,94 @@ export default function EmergencySchedule() {
                   }
                 });
                 
-                const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
                 const allPeriods = [1, 2, 3, 4, 5, 6, 7, 8];
                 
+                console.log('🔄 Visualização Transposta - Teachers:', Object.keys(slotsByTeacher).length);
+                console.log('🔄 Slots disponíveis:', emergencySlots.length);
+                
                 return (
-                  <div className="space-y-8">
-                    {Object.entries(slotsByTeacher).map(([teacherId, slots]) => {
-                      const teacherName = slots[0]?.teacherName || getTeacherName(teacherId);
-                      
-                      // Agrupar por dia
-                      const slotsByDay: { [day: string]: any[] } = {};
-                      weekDays.forEach(day => {
-                        slotsByDay[day] = slots.filter(s => s.day === day);
-                      });
-                      
-                      return (
-                        <div key={teacherId} className="bg-white rounded-lg p-6 shadow-md border-2 border-indigo-200">
-                          <h3 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                            👨‍🏫 {teacherName}
-                          </h3>
-                          
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full border-collapse">
-                              <thead>
-                                <tr className="bg-indigo-600 text-white">
-                                  <th className="border border-gray-300 p-3 text-left font-bold">Horário</th>
-                                  {weekDays.map((day) => (
-                                    <th key={day} className="border border-gray-300 p-3 text-center font-bold">
-                                      {day}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {allPeriods.map((period) => {
-                                  return (
-                                    <tr key={`teacher-${teacherId}-period-${period}`} className="hover:bg-indigo-50">
-                                      <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
-                                        <div className="text-sm">{period}º</div>
-                                      </td>
-                                      {weekDays.map((day) => {
-                                        const slot = slotsByDay[day]?.find(s => s.period === period);
-                                        
-                                        return (
-                                          <td
-                                            key={day}
-                                            className={`border border-gray-300 p-2 text-center ${
-                                              slot?.isModified ? 'bg-green-100' : ''
-                                            }`}
-                                          >
-                                            {slot ? (
-                                              <div>
-                                                <div className="font-bold text-xs text-indigo-800">
-                                                  {slot.gradeName} - {slot.className}
-                                                </div>
-                                                <div className="text-xs text-gray-700 mt-1">
-                                                  📚 {slot.subjectName || getSubjectName(slot.subjectId)}
-                                                </div>
-                                                {slot.isModified && (
-                                                  <div className="text-xs font-bold text-green-600 mt-1">
-                                                    ✓ SUBSTITUIÇÃO
-                                                  </div>
-                                                )}
+                  <div className="space-y-6">
+                    {Object.entries(slotsByTeacher).length === 0 ? (
+                      <div className="text-center p-8 bg-white rounded-lg">
+                        <p className="text-gray-600 text-lg">Nenhum professor com aulas neste horário emergencial.</p>
+                        <p className="text-sm text-gray-500 mt-2">Professores ausentes geram janelas (não aparecem aqui).</p>
+                      </div>
+                    ) : (
+                      Object.entries(slotsByTeacher).map(([teacherId, slots]) => {
+                        const teacherName = slots[0]?.teacherName || getTeacherName(teacherId);
+                        
+                        // Agrupar por período
+                        const slotsByPeriod: { [period: number]: any } = {};
+                        slots.forEach(slot => {
+                          slotsByPeriod[slot.period] = slot;
+                        });
+                        
+                        return (
+                          <div key={teacherId} className="bg-white rounded-lg p-5 shadow-md border-2 border-indigo-200">
+                            <h3 className="text-lg font-bold text-indigo-900 mb-3 flex items-center gap-2">
+                              👨‍🏫 {teacherName}
+                            </h3>
+                            
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full border-collapse">
+                                <thead>
+                                  <tr className="bg-indigo-600 text-white">
+                                    <th className="border border-gray-300 p-2 text-center font-bold w-24">Horário</th>
+                                    <th className="border border-gray-300 p-2 text-left font-bold">Turma</th>
+                                    <th className="border border-gray-300 p-2 text-left font-bold">Disciplina</th>
+                                    <th className="border border-gray-300 p-2 text-center font-bold">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {allPeriods.map((period) => {
+                                    const slot = slotsByPeriod[period];
+                                    
+                                    return (
+                                      <tr key={`teacher-${teacherId}-period-${period}`} className="hover:bg-indigo-50">
+                                        <td className="border border-gray-300 p-2 text-center bg-gray-100 font-semibold">
+                                          <div className="text-sm">{period}º</div>
+                                        </td>
+                                        {slot ? (
+                                          <>
+                                            <td className="border border-gray-300 p-2">
+                                              <div className="font-bold text-sm text-indigo-800">
+                                                {slot.gradeName} - {slot.className}
                                               </div>
-                                            ) : (
-                                              <span className="text-gray-400">-</span>
-                                            )}
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
+                                            </td>
+                                            <td className="border border-gray-300 p-2">
+                                              <div className="text-sm text-gray-700">
+                                                📚 {slot.subjectName || getSubjectName(slot.subjectId)}
+                                              </div>
+                                            </td>
+                                            <td className={`border border-gray-300 p-2 text-center ${
+                                              slot.isModified ? 'bg-green-100' : ''
+                                            }`}>
+                                              {slot.isModified ? (
+                                                <span className="text-xs font-bold text-green-600">
+                                                  ✓ SUBSTITUIÇÃO
+                                                </span>
+                                              ) : (
+                                                <span className="text-xs text-gray-500">Normal</span>
+                                              )}
+                                            </td>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <td colSpan={3} className="border border-gray-300 p-2 text-center text-gray-400">
+                                              -
+                                            </td>
+                                          </>
+                                        )}
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 );
               })()}
@@ -2482,12 +2492,56 @@ export default function EmergencySchedule() {
               {/* Professores SEM presença confirmada (débitos pendentes) */}
               {makeupClasses.length > 0 && (
                 <>
-                  <h4 className="font-bold text-lg mb-3 text-orange-700 flex items-center gap-2">
-                    ⚠️ Débitos Pendentes ({makeupClasses.length} aula(s))
-                  </h4>
-                  <p className="text-sm text-orange-600 mb-3">
-                    Professores que ainda não confirmaram presença no sábado
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-lg text-orange-700 flex items-center gap-2">
+                        ⚠️ Débitos Pendentes ({makeupClasses.length} aula(s))
+                      </h4>
+                      <p className="text-sm text-orange-600 mt-1">
+                        Professores que ainda não confirmaram presença no sábado
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const debtSection = document.querySelector('.card.bg-gradient-to-br.from-purple-50');
+                        if (debtSection) {
+                          const printContent = debtSection.innerHTML;
+                          const printWindow = window.open('', '', 'width=800,height=600');
+                          if (printWindow) {
+                            printWindow.document.write(`
+                              <html>
+                                <head>
+                                  <title>Débitos Pendentes - ${new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR')}</title>
+                                  <style>
+                                    body { font-family: Arial, sans-serif; padding: 20px; }
+                                    h3, h4 { color: #c2410c; margin-top: 20px; }
+                                    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                                    th, td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 12px; }
+                                    th { background-color: #ea580c; color: white; font-weight: bold; }
+                                    tr:nth-child(even) { background-color: #ffedd5; }
+                                    .no-print { display: none; }
+                                    @page { margin: 1.5cm; }
+                                  </style>
+                                </head>
+                                <body>
+                                  <h2>📋 Débitos Pendentes de Professores</h2>
+                                  <p><strong>Data:</strong> ${new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                  ${printContent}
+                                </body>
+                              </html>
+                            `);
+                            printWindow.document.close();
+                            printWindow.print();
+                          }
+                        }
+                      }}
+                      className="btn bg-orange-600 hover:bg-orange-700 text-white flex items-center gap-2 px-4 py-2 text-sm no-print"
+                      title="Imprimir lista de débitos pendentes"
+                    >
+                      <Printer size={18} />
+                      📄 Imprimir Débitos
+                    </button>
+                  </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full border-collapse text-sm">
                       <thead>
@@ -2902,15 +2956,56 @@ export default function EmergencySchedule() {
                 </ul>
               </div>
 
-              {/* Botão Imprimir */}
-              <button
-                onClick={handlePrintSaturday}
-                className="btn bg-purple-600 hover:bg-purple-700 text-white w-full mt-4 flex items-center justify-center gap-2"
-                title="Imprimir apenas o Horário do Sábado de Reposição"
-              >
-                <Printer size={20} />
-                🗓️ Imprimir Horário do Sábado
-              </button>
+              {/* Botões de Ação */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                <button
+                  onClick={async () => {
+                    if (!saturdayDate) {
+                      toast.error('Selecione a data do sábado');
+                      return;
+                    }
+                    if (saturdaySchedule.length === 0) {
+                      toast.error('Gere o horário do sábado primeiro');
+                      return;
+                    }
+                    
+                    try {
+                      const saturdayData = {
+                        date: saturdayDate,
+                        schedule: saturdaySchedule,
+                        selectedTeachers: Array.from(selectedTeachersForSaturday),
+                        makeupClasses: makeupClasses.filter(m => selectedTeachersForSaturday.has(m.originalTeacherId)),
+                        maxPeriods: saturdayMaxPeriods,
+                        startTime: saturdayStartTime,
+                        lessonDuration: saturdayLessonDuration,
+                        createdAt: new Date().toISOString()
+                      };
+                      
+                      console.log('💾 Salvando horário do sábado:', saturdayData);
+                      
+                      await api.post('/saturday-makeup', saturdayData);
+                      
+                      toast.success('✅ Horário do sábado salvo com sucesso!', { duration: 4000 });
+                    } catch (error: any) {
+                      console.error('Erro ao salvar horário do sábado:', error);
+                      toast.error(error.response?.data?.message || 'Erro ao salvar horário do sábado');
+                    }
+                  }}
+                  className="btn btn-success flex items-center justify-center gap-2"
+                >
+                  <Save size={20} />
+                  💾 Salvar Horário do Sábado
+                </button>
+                
+                <button
+                  onClick={handlePrintSaturday}
+                  className="btn bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-2"
+                  title="Imprimir apenas o Horário do Sábado de Reposição"
+                >
+                  <Printer size={20} />
+                  🗓️ Imprimir Horário do Sábado
+                </button>
+              </div>
             </div>
           )}
         </div>
