@@ -103,6 +103,17 @@ export default function EmergencySchedule() {
   const [isSendingNotifications, setIsSendingNotifications] = useState(false);
   const [showQuickAccess, setShowQuickAccess] = useState(true);
   const [customScheduleName, setCustomScheduleName] = useState(''); // Nome personalizado do horário
+  
+  // Estados para geração de horário do sábado
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [saturdayDate, setSaturdayDate] = useState('');
+  const [selectedTeachersForSaturday, setSelectedTeachersForSaturday] = useState<Set<string>>(new Set());
+  const [saturdaySchedule, setSaturdaySchedule] = useState<any[]>([]);
+  const [generatingSaturday, setGeneratingSaturday] = useState(false);
+  const [saturdayMaxPeriods, setSaturdayMaxPeriods] = useState(4);
+  const [saturdayStartTime, setSaturdayStartTime] = useState('08:00');
+  const [saturdayLessonDuration, setSaturdayLessonDuration] = useState(60);
 
   // Buscar turmas
   const { data: classesData } = useQuery({
@@ -2353,7 +2364,7 @@ export default function EmergencySchedule() {
                             { duration: 6000 }
                           );
                         } else {
-                          toast.info('Sábado desmarcado como realizado.', { duration: 3000 });
+                          toast('Sábado desmarcado como realizado.', { duration: 3000, icon: 'ℹ️' });
                         }
                       }}
                       className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-1"
@@ -2393,6 +2404,337 @@ export default function EmergencySchedule() {
               )}
             </div>
           )}
+
+      {/* SEÇÃO: GERAÇÃO DE HORÁRIO DO SÁBADO DE REPOSIÇÃO */}
+      {makeupClasses.length > 0 && (
+        <div className="mt-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-300">
+          <h2 className="text-2xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+            <Calendar className="text-blue-600" size={28} />
+            📅 Gerador de Horário do Sábado de Reposição
+          </h2>
+          
+          <p className="text-sm text-gray-700 mb-6">
+            Configure o período, selecione o sábado e confirme quais professores comparecerão para gerar o horário de reposição.
+          </p>
+
+          {/* Configurações do Período e Sábado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                📅 Data Inicial do Período
+              </label>
+              <input
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                📅 Data Final do Período
+              </label>
+              <input
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🗓️ Data do Sábado de Reposição
+              </label>
+              <input
+                type="date"
+                value={saturdayDate}
+                onChange={(e) => setSaturdayDate(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ⏱️ Quantidade de Aulas
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="8"
+                value={saturdayMaxPeriods}
+                onChange={(e) => setSaturdayMaxPeriods(parseInt(e.target.value))}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🕐 Horário de Início
+              </label>
+              <input
+                type="time"
+                value={saturdayStartTime}
+                onChange={(e) => setSaturdayStartTime(e.target.value)}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ⏳ Duração da Aula (min)
+              </label>
+              <input
+                type="number"
+                min="30"
+                max="120"
+                step="5"
+                value={saturdayLessonDuration}
+                onChange={(e) => setSaturdayLessonDuration(parseInt(e.target.value))}
+                className="input"
+              />
+            </div>
+          </div>
+
+          {/* Lista de Professores Faltosos para Confirmação */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-3">
+              ✅ Selecione os Professores que Confirmaram Presença no Sábado
+            </h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Marque os professores que poderão comparecer ao sábado de reposição:
+            </p>
+            
+            {/* Botões de ação rápida */}
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => {
+                  const allTeacherIds = new Set(makeupClasses.map(m => m.originalTeacherId));
+                  setSelectedTeachersForSaturday(allTeacherIds);
+                }}
+                className="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                ✓ Selecionar Todos
+              </button>
+              <button
+                onClick={() => setSelectedTeachersForSaturday(new Set())}
+                className="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                ✗ Limpar Seleção
+              </button>
+            </div>
+
+            {/* Lista de checkboxes de professores */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Array.from(
+                new Map(makeupClasses.map(m => [m.originalTeacherId, m.originalTeacherName]))
+              ).map(([teacherId, teacherName]) => {
+                const isSelected = selectedTeachersForSaturday.has(teacherId);
+                const teacherDebts = makeupClasses.filter(m => m.originalTeacherId === teacherId).length;
+                
+                return (
+                  <label
+                    key={teacherId}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border-2 ${
+                      isSelected
+                        ? 'bg-green-50 border-green-400 shadow-md'
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedTeachersForSaturday);
+                        if (e.target.checked) {
+                          newSet.add(teacherId);
+                        } else {
+                          newSet.delete(teacherId);
+                        }
+                        setSelectedTeachersForSaturday(newSet);
+                      }}
+                      className="w-5 h-5 text-green-600 rounded"
+                    />
+                    <div className="flex-1">
+                      <div className={`font-semibold text-sm ${isSelected ? 'text-green-800' : 'text-gray-800'}`}>
+                        {teacherName}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {teacherDebts} aula{teacherDebts > 1 ? 's' : ''} a repor
+                      </div>
+                    </div>
+                    {isSelected && <span className="text-green-600 text-xl">✓</span>}
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 p-3 bg-blue-100 border border-blue-300 rounded text-center">
+              <span className="font-bold text-blue-900">
+                {selectedTeachersForSaturday.size} de{' '}
+                {new Set(makeupClasses.map(m => m.originalTeacherId)).size} professores selecionados
+              </span>
+            </div>
+          </div>
+
+          {/* Botão Gerar Horário do Sábado */}
+          <button
+            onClick={async () => {
+              if (!saturdayDate) {
+                toast.error('Selecione a data do sábado de reposição');
+                return;
+              }
+              if (selectedTeachersForSaturday.size === 0) {
+                toast.error('Selecione pelo menos 1 professor');
+                return;
+              }
+
+              setGeneratingSaturday(true);
+              try {
+                // Filtrar aulas apenas dos professores confirmados
+                const confirmedClasses = makeupClasses.filter(m =>
+                  selectedTeachersForSaturday.has(m.originalTeacherId)
+                );
+
+                // Agrupar por período e distribuir
+                const scheduleByPeriod: { [period: number]: any[] } = {};
+                
+                confirmedClasses.forEach((makeup) => {
+                  if (!scheduleByPeriod[makeup.period]) {
+                    scheduleByPeriod[makeup.period] = [];
+                  }
+                  scheduleByPeriod[makeup.period].push(makeup);
+                });
+
+                // Gerar horários com base nos períodos disponíveis
+                const generatedSchedule: any[] = [];
+                let currentPeriod = 1;
+                
+                Object.keys(scheduleByPeriod)
+                  .sort((a, b) => parseInt(a) - parseInt(b))
+                  .forEach(period => {
+                    const classes = scheduleByPeriod[parseInt(period)];
+                    if (currentPeriod <= saturdayMaxPeriods) {
+                      const [hours, minutes] = saturdayStartTime.split(':').map(Number);
+                      const startMinutes = hours * 60 + minutes + (currentPeriod - 1) * saturdayLessonDuration;
+                      const endMinutes = startMinutes + saturdayLessonDuration;
+                      
+                      const startTime = `${String(Math.floor(startMinutes / 60)).padStart(2, '0')}:${String(startMinutes % 60).padStart(2, '0')}`;
+                      const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
+                      
+                      generatedSchedule.push({
+                        period: currentPeriod,
+                        startTime,
+                        endTime,
+                        classes
+                      });
+                      currentPeriod++;
+                    }
+                  });
+
+                setSaturdaySchedule(generatedSchedule);
+                toast.success(`✅ Horário do sábado gerado com ${generatedSchedule.length} período(s)!`);
+              } catch (error) {
+                console.error('Erro ao gerar horário do sábado:', error);
+                toast.error('Erro ao gerar horário do sábado');
+              } finally {
+                setGeneratingSaturday(false);
+              }
+            }}
+            disabled={generatingSaturday || !saturdayDate || selectedTeachersForSaturday.size === 0}
+            className="btn btn-primary w-full text-lg py-3 flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={24} className={generatingSaturday ? 'animate-spin' : ''} />
+            {generatingSaturday
+              ? 'Gerando...'
+              : `📅 Gerar Horário do Sábado (${selectedTeachersForSaturday.size} professores)`}
+          </button>
+
+          {/* Exibição do Horário Gerado */}
+          {saturdaySchedule.length > 0 && (
+            <div className="mt-6 bg-white rounded-lg p-6 border-2 border-green-400">
+              <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
+                ✅ Horário do Sábado -{' '}
+                {new Date(saturdayDate + 'T12:00:00').toLocaleDateString('pt-BR', {
+                  weekday: 'long',
+                  day: '2-digit',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+              </h3>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr className="bg-green-600 text-white">
+                      <th className="border border-gray-300 p-3 text-center w-32">Horário</th>
+                      <th className="border border-gray-300 p-3 text-left">Aulas / Professores / Turmas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {saturdaySchedule.map((slot, index) => (
+                      <tr key={index} className="hover:bg-green-50">
+                        <td className="border border-gray-300 p-3 text-center bg-green-100">
+                          <div className="font-bold text-green-900">{slot.period}º horário</div>
+                          <div className="text-sm text-gray-700">
+                            {slot.startTime} - {slot.endTime}
+                          </div>
+                        </td>
+                        <td className="border border-gray-300 p-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {slot.classes.map((cls: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-3 shadow-sm"
+                              >
+                                <div className="font-bold text-blue-800 text-sm mb-1">
+                                  {cls.gradeName} - {cls.className}
+                                </div>
+                                <div className="text-sm font-semibold text-gray-800">
+                                  📚 {cls.subjectName}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  👨‍🏫 {cls.originalTeacherName}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  📅 Reposição de: {cls.originalDay}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Resumo */}
+              <div className="mt-4 p-4 bg-green-50 border border-green-300 rounded">
+                <h4 className="font-bold text-green-900 mb-2">📊 Resumo do Sábado</h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• Total de períodos: {saturdaySchedule.length}</li>
+                  <li>
+                    • Total de aulas:{' '}
+                    {saturdaySchedule.reduce((sum, slot) => sum + slot.classes.length, 0)}
+                  </li>
+                  <li>• Professores participantes: {selectedTeachersForSaturday.size}</li>
+                  <li>
+                    • Horário: {saturdaySchedule[0]?.startTime} até{' '}
+                    {saturdaySchedule[saturdaySchedule.length - 1]?.endTime}
+                  </li>
+                </ul>
+              </div>
+
+              {/* Botão Imprimir */}
+              <button
+                onClick={() => window.print()}
+                className="btn bg-purple-600 hover:bg-purple-700 text-white w-full mt-4 flex items-center justify-center gap-2"
+              >
+                <Printer size={20} />
+                Imprimir Horário do Sábado
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Estilos de impressão */}
       <style>{`
