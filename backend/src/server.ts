@@ -48,7 +48,10 @@ import messageRoutes from './routes/message.routes';
 import invoiceRoutes from './routes/invoice.routes';
 import statsRoutes from './routes/stats.routes';
 import verifyRoutes from './routes/verify.routes';
+import schoolUsersRoutes from './routes/schoolUsers';
+import auditLogsRoutes from './routes/auditLogs';
 import { errorHandler } from './middleware/errorHandler';
+import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
 import { startCalendarAlertsCron } from './services/calendar.alerts.cron';
 import { COPYRIGHT, SECURITY_INFO } from './config/copyright';
@@ -170,6 +173,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middleware de auditoria (deve vir antes das rotas)
+app.use(auditMiddleware);
+
 // Rotas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit especial para autenticação
 app.use('/api/schools', schoolRoutes);
@@ -202,6 +208,8 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/verify', verifyRoutes);
+app.use('/api/school-users', schoolUsersRoutes);
+app.use('/api/audit-logs', auditLogsRoutes);
 
 // Rota de health check
 app.get('/api/health', (req, res) => {
