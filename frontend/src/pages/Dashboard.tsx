@@ -40,7 +40,11 @@ export default function Dashboard() {
 
   // Redirecionar administradores para o dashboard admin
   useEffect(() => {
+    console.log('🔍 Dashboard - User:', user);
+    console.log('🔍 Dashboard - Role:', user?.role);
+    
     if (user?.role === 'admin' || user?.role === 'super-admin') {
+      console.log('🔄 Dashboard - Redirecionando admin para admin-dashboard...');
       navigate('/admin-dashboard', { replace: true });
     }
   }, [user, navigate]);
@@ -48,14 +52,15 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        console.log('📊 Dashboard - Buscando estatísticas...');
         // Usar o novo endpoint de estatísticas
         const response = await api.get('/stats/dashboard');
         
-        console.log('📊 Estatísticas recebidas:', response.data);
+        console.log('✅ Estatísticas recebidas:', response.data);
         
         setStats(response.data);
       } catch (error) {
-        console.error('Erro ao buscar estatísticas:', error);
+        console.error('❌ Erro ao buscar estatísticas:', error);
         
         // Fallback para valores padrão em caso de erro
         setStats({
@@ -73,8 +78,10 @@ export default function Dashboard() {
       }
     };
 
-    fetchStats();
-  }, [user?.email]);
+    if (user && user.role !== 'admin' && user.role !== 'super-admin') {
+      fetchStats();
+    }
+  }, [user]);
 
   const statsDisplay = [
     { icon: Users, label: 'Professores', value: stats.teachers, color: 'bg-blue-500' },

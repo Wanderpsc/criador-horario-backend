@@ -46,28 +46,46 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔍 AdminDashboard - User:', user);
+    console.log('🔍 AdminDashboard - Role:', user?.role);
+    
     if (user?.role !== 'admin' && user?.role !== 'super-admin') {
+      console.log('❌ AdminDashboard - Acesso negado, redirecionando...');
       toast.error('Acesso restrito a administradores');
       navigate('/dashboard');
       return;
     }
+    
+    console.log('✅ AdminDashboard - Carregando estatísticas...');
     loadDashboardStats();
   }, [user, navigate]);
 
   const loadDashboardStats = async () => {
     try {
+      console.log('📊 Buscando estatísticas do admin...');
       const response = await api.get('/admin/dashboard-stats');
+      console.log('✅ Estatísticas recebidas:', response.data);
       setStats(response.data.data);
     } catch (error: any) {
-      console.error('Erro ao carregar estatísticas:', error);
+      console.error('❌ Erro ao carregar estatísticas:', error);
       toast.error('Erro ao carregar dados do dashboard');
     } finally {
       setLoading(false);
     }
   };
 
+  console.log('🎨 AdminDashboard - Renderizando... loading:', loading, 'user:', !!user);
+
   if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
-    return null;
+    console.log('⚠️ AdminDashboard - Retornando null (sem permissão)');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando permissões...</p>
+        </div>
+      </div>
+    );
   }
 
   const adminCards = [
