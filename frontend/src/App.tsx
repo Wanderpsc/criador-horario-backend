@@ -40,6 +40,7 @@ import PaymentsManagement from './pages/PaymentsManagement';
 import MessagesManagement from './pages/MessagesManagement';
 import InvoiceManagement from './pages/InvoiceManagement';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
@@ -66,14 +67,15 @@ function App() {
   console.log('📍 Basename:', basename);
   
   return (
-    <BrowserRouter
-      basename={basename}
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
-      <Routes>
+    <ErrorBoundary>
+      <BrowserRouter
+        basename={basename}
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/register-school" element={<SchoolRegister />} />
@@ -131,6 +133,7 @@ function App() {
         <Route path="/display-panel/:scheduleId" element={<DisplayPanel />} />
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
