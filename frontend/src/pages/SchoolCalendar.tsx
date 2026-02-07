@@ -89,10 +89,16 @@ const SchoolCalendar: React.FC = () => {
         schoolId: user!.schoolId,
         ...formData,
         scheduleId: formData.scheduleId || undefined,
+        followWeekday: formData.followWeekday || undefined,
       };
 
       if (editingDay) {
-        await schoolDayAPI.update(editingDay.id, formData);
+        const updateData = {
+          ...formData,
+          scheduleId: formData.scheduleId || undefined,
+          followWeekday: formData.followWeekday || undefined,
+        };
+        await schoolDayAPI.update(editingDay.id, updateData);
         toast.success('Dia letivo atualizado com sucesso!');
       } else {
         await schoolDayAPI.create(data);
@@ -101,7 +107,7 @@ const SchoolCalendar: React.FC = () => {
 
       setShowModal(false);
       setEditingDay(null);
-      setFormData({ date: '', dayType: 'regular', scheduleId: '', notes: '' });
+      setFormData({ date: '', dayType: 'regular', scheduleId: '', notes: '', followWeekday: '' });
       loadData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erro ao salvar dia letivo');

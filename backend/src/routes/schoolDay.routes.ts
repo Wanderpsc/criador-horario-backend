@@ -125,6 +125,11 @@ router.post('/', auth, async (req: Request, res: Response) => {
   try {
     const { schoolId, date, dayType, scheduleId, notes, followWeekday } = req.body;
 
+    // Validar dados obrigatórios
+    if (!schoolId || !date || !dayType) {
+      return res.status(400).json({ message: 'schoolId, date e dayType são obrigatórios' });
+    }
+
     // Verificar se já existe um dia letivo para esta data
     const existingDay = await SchoolDay.findOne({
       schoolId,
@@ -135,15 +140,26 @@ router.post('/', auth, async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Já existe um dia letivo cadastrado para esta data' });
     }
 
-    const schoolDay = new SchoolDay({
+    // Preparar dados (converter strings vazias para undefined)
+    const schoolDayData: any = {
       schoolId,
       date: new Date(date),
       dayType,
-      scheduleId: scheduleId || undefined,
-      notes: notes || undefined,
-      followWeekday: followWeekday || undefined,
       isCompleted: false
-    });
+    };
+
+    // Adicionar campos opcionais apenas se tiverem valor
+    if (scheduleId && scheduleId.trim() !== '') {
+      schoolDayData.scheduleId = scheduleId;
+    }
+    if (notes && notes.trim() !== '') {
+      schoolDayData.notes = notes;
+    }
+    if (followWeekday && followWeekday.trim() !== '') {
+      schoolDayData.followWeekday = followWeekday;
+    }
+
+    const schoolDay = new SchoolDay(schoolDayData);
 
     await schoolDay.save();
 
@@ -157,7 +173,15 @@ router.post('/', auth, async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Erro ao criar dia letivo:', error);
-    res.status(500).json({ message: 'Erro ao criar dia letivo', error: error.message });
+    console.error('Request body:', req.body);
+    res.status(500).json({ 
+      message: 'Erro ao criar dia letivo', 
+      error: error.message,
+      details: error.errors ? Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      })) : undefined
+    });
   }
 });
 
@@ -215,10 +239,18 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     }
 
     if (dayType !== undefined) schoolDay.dayType = dayType;
-    if (scheduleId !== undefined) schoolDay.scheduleId = scheduleId;
-    if (notes !== undefined) schoolDay.notes = notes;
-    if (followWeekday !== undefined) schoolDay.followWeekday = followWeekday;
     if (isCompleted !== undefined) schoolDay.isCompleted = isCompleted;
+    
+    // Tratar campos opcionais (converter strings vazias para undefined)
+    if (scheduleId !== undefined) {
+      schoolDay.scheduleId = (scheduleId && scheduleId.trim() !== '') ? scheduleId : undefined;
+    }
+    if (notes !== undefined) {
+      schoolDay.notes = (notes && notes.trim() !== '') ? notes : undefined;
+    }
+    if (followWeekday !== undefined) {
+      schoolDay.followWeekday = (followWeekday && followWeekday.trim() !== '') ? followWeekday : undefined;
+    }
 
     // Se mudou para tipo diferente de saturday, remover followWeekday
     if (dayType && dayType !== 'saturday') {
