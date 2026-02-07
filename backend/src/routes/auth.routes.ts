@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User';
+import SchoolUser from '../models/SchoolUser';
 import { sendPasswordResetEmail } from '../services/emailService';
 import { AutoBackupService } from '../services/auto-backup.service';
 
@@ -126,7 +127,7 @@ router.post('/register',
   }
 );
 
-// Login
+// Login - Verifica automaticamente schoolusers e users
 router.post('/login',
   [
     body('email').isEmail().withMessage('Email inválido'),
@@ -144,20 +145,71 @@ router.post('/login',
       }
 
       const { email, password } = req.body;
-      console.log('🔍 Procurando usuário:', email);
+      const emailLower = email.toLowerCase();
+      console.log('🔍 Procurando usuário:', emailLower);
 
-      const user = await User.findOne({ email });
-      console.log('👤 Usuário encontrado:', user ? 'SIM' : 'NÃO');
+      // 1️⃣ PRIORIDADE: Verificar primeiro na collection schoolusers (funcionários)
+      console.log('👥 Verificando schoolusers...');
+      const schoolUser = await SchoolUser.findOne({ email: emailLower });
+      
+      if (schoolUser) {
+        console.log('✅ Usuário encontrado em schoolusers (role: ' + schoolUser.role + ')');
+        
+        // Verificar senha
+        const isMatch = await bcrypt.compare(password, schoolUser.password);
+        if (!isMatch) {
+          console.log('❌ Senha incorreta');
+          return res.status(401).json({ message: 'Credenciais inválidas' });
+        }
+
+        // Verificar se está ativo
+        if (!schoolUser.isActive) {
+          console.log('⚠️ Usuário inativo');
+          return res.status(403).json({ 
+            message: 'Sua conta está inativa. Entre em contato com o administrador.',
+            status: 'inactive'
+          });
+        }
+
+        // Atualizar último login
+        schoolUser.lastLogin = new Date();
+        await schoolUser.save();
+
+        // Gerar token JWT
+        const token = jwt.sign(
+          { id: schoolUser._id, role: schoolUser.role, schoolId: schoolUser.schoolId },
+          (process.env.JWT_SECRET || 'secret') as jwt.Secret,
+          { expiresIn: '7d' }
+        );
+
+        console.log('✅ Login bem-sucedido (schooluser)');
+        
+        return res.json({
+          token,
+          user: {
+            id: schoolUser._id,
+            name: schoolUser.name,
+            email: schoolUser.email,
+            role: schoolUser.role,
+            schoolId: schoolUser.schoolId.toString(),
+            permissions: schoolUser.permissions
+          }
+        });
+      }
+
+      // 2️⃣ FALLBACK: Se não encontrou em schoolusers, verificar em users (escolas)
+      console.log('🏫 Verificando users (schools)...');
+      const user = await User.findOne({ email: emailLower });
       
       if (!user) {
-        console.log('❌ Usuário não encontrado');
+        console.log('❌ Usuário não encontrado em nenhuma collection');
         return res.status(401).json({ message: 'Credenciais inválidas' });
       }
 
-      console.log('🔐 Comparando senhas...');
+      console.log('✅ Usuário encontrado em users (role: ' + user.role + ')');
+
+      // Verificar senha
       const isMatch = await bcrypt.compare(password, user.password);
-      console.log('🔐 Senha válida:', isMatch ? 'SIM' : 'NÃO');
-      
       if (!isMatch) {
         console.log('❌ Senha incorreta');
         return res.status(401).json({ message: 'Credenciais inválidas' });
@@ -190,7 +242,6 @@ router.post('/login',
         });
       }
 
-      console.log('🎫 Gerando token JWT...');
       // Gerar token JWT
       const token = jwt.sign(
         { id: user._id, role: user.role },
@@ -198,7 +249,7 @@ router.post('/login',
         { expiresIn: '7d' }
       );
 
-      console.log('✅ Login bem-sucedido');
+      console.log('✅ Login bem-sucedido (school)');
       
       // Criar backup automático para clientes (não admin)
       if (user.role !== 'admin') {
