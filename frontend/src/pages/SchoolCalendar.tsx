@@ -77,9 +77,18 @@ const SchoolCalendar: React.FC = () => {
         emergencyScheduleAPI.getAll(),
       ]);
 
-      setSchoolDays(daysRes.data.data);
-      setSchedules(schedulesRes.data.data);
-      setStatistics(statsRes.data.data);
+      setSchoolDays(daysRes.data.data || []);
+      setSchedules(schedulesRes.data.data || []);
+      setStatistics(statsRes.data.data || {
+        totalDays: 0,
+        completedDays: 0,
+        remainingDays: 0,
+        regularDays: 0,
+        saturdayDays: 0,
+        holidays: 0,
+        recessDays: 0,
+        completionRate: 0
+      });
       
       // Filtrar horários emergenciais do mês atual
       const emergencyData = emergencyRes.data.data || [];
@@ -88,8 +97,9 @@ const SchoolCalendar: React.FC = () => {
         return scheduleDate >= startDate && scheduleDate <= endDate;
       });
       setEmergencySchedules(monthEmergencies);
-    } catch (error) {
-      toast.error('Erro ao carregar calendário');
+    } catch (error: any) {
+      console.error('Erro ao carregar calendário:', error);
+      toast.error('Erro ao carregar calendário: ' + (error.response?.data?.message || error.message));
     }
   };
 
