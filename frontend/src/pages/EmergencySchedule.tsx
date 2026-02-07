@@ -114,6 +114,10 @@ export default function EmergencySchedule() {
   const [saturdayMaxPeriods, setSaturdayMaxPeriods] = useState(4);
   const [saturdayStartTime, setSaturdayStartTime] = useState('08:00');
   const [saturdayLessonDuration, setSaturdayLessonDuration] = useState(60);
+  
+  // Estados para controle de impressão e visualização transposta
+  const [printMode, setPrintMode] = useState<'none' | 'emergency' | 'saturday'>('none');
+  const [showTransposed, setShowTransposed] = useState(false);
 
   // Buscar turmas
   const { data: classesData } = useQuery({
@@ -1064,14 +1068,30 @@ export default function EmergencySchedule() {
     }
   };
 
-  // Função para imprimir
-  const handlePrint = () => {
+  // Função para imprimir horário emergencial
+  const handlePrintEmergency = () => {
     if (emergencySlots.length === 0) {
       toast.error('Gere um horário emergencial primeiro!');
       return;
     }
-    
-    window.print();
+    setPrintMode('emergency');
+    setTimeout(() => {
+      window.print();
+      setPrintMode('none');
+    }, 100);
+  };
+  
+  // Função para imprimir horário do sábado
+  const handlePrintSaturday = () => {
+    if (saturdaySchedule.length === 0) {
+      toast.error('Gere um horário do sábado primeiro!');
+      return;
+    }
+    setPrintMode('saturday');
+    setTimeout(() => {
+      window.print();
+      setPrintMode('none');
+    }, 100);
   };
 
   // Função para visualizar horário salvo
@@ -1713,13 +1733,13 @@ export default function EmergencySchedule() {
                   </label>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 mt-4 no-print">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 no-print">
                   <button
                     onClick={handleSaveEmergencySchedule}
                     disabled={isSaving}
                     className="btn btn-success flex items-center justify-center gap-2"
                   >
-                    <Save size={20} className={isSaving ? 'animate-pulse' : ''} />
+                    <Save size={18} className={isSaving ? 'animate-pulse' : ''} />
                     {isSaving ? 'Salvando...' : 'Salvar'}
                   </button>
                   
@@ -1728,16 +1748,26 @@ export default function EmergencySchedule() {
                     disabled={isSendingNotifications}
                     className="btn btn-primary flex items-center justify-center gap-2"
                   >
-                    <Send size={20} className={isSendingNotifications ? 'animate-pulse' : ''} />
+                    <Send size={18} className={isSendingNotifications ? 'animate-pulse' : ''} />
                     {isSendingNotifications ? 'Enviando...' : 'Notificar'}
                   </button>
 
                   <button
-                    onClick={handlePrint}
-                    className="btn btn-outline flex items-center justify-center gap-2"
+                    onClick={handlePrintEmergency}
+                    className="btn bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-2"
+                    title="Imprimir Horário Emergencial (cada turma em página separada)"
                   >
-                    <Printer size={20} />
-                    Imprimir
+                    <Printer size={18} />
+                    📋 Horário Emergencial
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowTransposed(!showTransposed)}
+                    className="btn btn-outline flex items-center justify-center gap-2"
+                    title="Ver horários invertidos (professores/períodos)"
+                  >
+                    <RefreshCw size={18} />
+                    {showTransposed ? '📊 Normal' : '🔄 Transposto'}
                   </button>
                 </div>
               </>
@@ -2181,6 +2211,155 @@ export default function EmergencySchedule() {
                   );
                 });
               })()}
+            </div>
+          )}
+
+          {/* Visualização Transposta (por Professor) */}
+          {showTransposed && emergencySlots.length > 0 && (
+            <div className="card bg-gradient-to-br from-indigo-50 to-blue-50 border-2 border-indigo-300 mt-8 no-print">
+              <div className="mb-6 border-b-4 border-indigo-600 pb-4">
+                <h2 className="text-2xl font-bold text-center text-indigo-900 flex items-center justify-center gap-3">
+                  🔄 Visualização Transposta - Por Professor
+                </h2>
+                <p className="text-center text-gray-600 mt-2">
+                  Horários organizados por professor • {new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+              
+              {(() => {
+                // Agrupar slots por professor
+                const slotsByTeacher: { [teacherId: string]: any[] } = {};
+                
+                emergencySlots.forEach(slot => {
+                  const tId = slot.teacherId || 'vacant';
+                  if (!slot.isVacant) {
+                    if (!slotsByTeacher[tId]) {
+                      slotsByTeacher[tId] = [];
+                    }
+                    slotsByTeacher[tId].push(slot);
+                  }
+                });
+                
+                const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+                const allPeriods = [1, 2, 3, 4, 5, 6, 7, 8];
+                
+                return (
+                  <div className="space-y-8">
+                    {Object.entries(slotsByTeacher).map(([teacherId, slots]) => {
+                      const teacherName = slots[0]?.teacherName || getTeacherName(teacherId);
+                      
+                      // Agrupar por dia
+                      const slotsByDay: { [day: string]: any[] } = {};
+                      weekDays.forEach(day => {
+                        slotsByDay[day] = slots.filter(s => s.day === day);
+                      });
+                      
+                      return (
+                        <div key={teacherId} className="bg-white rounded-lg p-6 shadow-md border-2 border-indigo-200">
+                          <h3 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                            👨‍🏫 {teacherName}
+                          </h3>
+                          
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full border-collapse">
+                              <thead>
+                                <tr className="bg-indigo-600 text-white">
+                                  <th className="border border-gray-300 p-3 text-left font-bold">Horário</th>
+                                  {weekDays.map((day) => (
+                                    <th key={day} className="border border-gray-300 p-3 text-center font-bold">
+                                      {day}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {allPeriods.map((period) => {
+                                  return (
+                                    <tr key={`teacher-${teacherId}-period-${period}`} className="hover:bg-indigo-50">
+                                      <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
+                                        <div className="text-sm">{period}º</div>
+                                      </td>
+                                      {weekDays.map((day) => {
+                                        const slot = slotsByDay[day]?.find(s => s.period === period);
+                                        
+                                        return (
+                                          <td
+                                            key={day}
+                                            className={`border border-gray-300 p-2 text-center ${
+                                              slot?.isModified ? 'bg-green-100' : ''
+                                            }`}
+                                          >
+                                            {slot ? (
+                                              <div>
+                                                <div className="font-bold text-xs text-indigo-800">
+                                                  {slot.gradeName} - {slot.className}
+                                                </div>
+                                                <div className="text-xs text-gray-700 mt-1">
+                                                  📚 {slot.subjectName || getSubjectName(slot.subjectId)}
+                                                </div>
+                                                {slot.isModified && (
+                                                  <div className="text-xs font-bold text-green-600 mt-1">
+                                                    ✓ SUBSTITUIÇÃO
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ) : (
+                                              <span className="text-gray-400">-</span>
+                                            )}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => {
+                    const transposedView = document.querySelector('.card.bg-gradient-to-br.from-indigo-50');
+                    if (transposedView) {
+                      const printContent = transposedView.innerHTML;
+                      const printWindow = window.open('', '', 'width=800,height=600');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Horários Transpostos - Por Professor</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; }
+                                table { width: 100%; border-collapse: collapse; margin: 20px 0; page-break-inside: avoid; }
+                                th, td { border: 1px solid #333; padding: 8px; text-align: center; }
+                                th { background-color: #4338ca; color: white; font-weight: bold; }
+                                .bg-green-100 { background-color: #dcfce7; }
+                                .text-green-600 { color: #16a34a; font-weight: bold; }
+                                h3 { color: #312e81; margin-top: 30px; page-break-before: always; }
+                                h3:first-of-type { page-break-before: auto; }
+                                @page { margin: 1cm; }
+                              </style>
+                            </head>
+                            <body>${printContent}</body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
+                      }
+                    }
+                  }}
+                  className="btn bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 px-6 py-3"
+                >
+                  <Printer size={20} />
+                  🔄 Imprimir Horários Transpostos
+                </button>
+              </div>
             </div>
           )}
 
@@ -2725,11 +2904,12 @@ export default function EmergencySchedule() {
 
               {/* Botão Imprimir */}
               <button
-                onClick={() => window.print()}
+                onClick={handlePrintSaturday}
                 className="btn bg-purple-600 hover:bg-purple-700 text-white w-full mt-4 flex items-center justify-center gap-2"
+                title="Imprimir apenas o Horário do Sábado de Reposição"
               >
                 <Printer size={20} />
-                Imprimir Horário do Sábado
+                🗓️ Imprimir Horário do Sábado
               </button>
             </div>
           )}
@@ -2754,6 +2934,39 @@ export default function EmergencySchedule() {
             display: none !important;
           }
           
+          /* Controle de impressão específica - Horário Emergencial */
+          ${printMode === 'emergency' ? `
+            .emergency-schedule-view {
+              display: block !important;
+            }
+            .card.bg-gradient-to-br.from-blue-50,
+            .card.bg-gradient-to-br.from-purple-50,
+            .card.bg-gradient-to-br.from-green-100 {
+              display: none !important;
+            }
+            .emergency-schedule-view > div {
+              min-height: 95vh;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .emergency-schedule-view > div:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+          ` : ''}
+          
+          /* Controle de impressão específica - Horário do Sábado */
+          ${printMode === 'saturday' ? `
+            .card.bg-gradient-to-br.from-blue-50 {
+              display: block !important;
+            }
+            .emergency-schedule-view,
+            .card.bg-gradient-to-br.from-purple-50,
+            .card.bg-gradient-to-br.from-green-100 {
+              display: none !important;
+            }
+          ` : ''}
+          
           /* Quebra de página após cada turma */
           .page-break-after {
             page-break-after: always !important;
@@ -2777,7 +2990,6 @@ export default function EmergencySchedule() {
             break-inside: avoid;
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
           }
           
           .print-header {
@@ -2816,6 +3028,12 @@ export default function EmergencySchedule() {
             font-weight: bold;
           }
           
+          .bg-green-600 th,
+          tr.bg-green-600 {
+            background-color: #16a34a !important;
+            color: white !important;
+          }
+          
           /* Cores específicas para impressão */
           .bg-red-600 {
             background-color: #dc2626 !important;
@@ -2829,19 +3047,26 @@ export default function EmergencySchedule() {
             background-color: #9333ea !important;
           }
           
+          .bg-gray-600 {
+            background-color: #4b5563 !important;
+          }
+          
           .text-white {
             color: white !important;
           }
           
-          /* Margem das páginas */
-          @page {
-            margin: 1cm;
-            size: A4 portrait;
+          .bg-green-100 {
+            background-color: #dcfce7 !important;
           }
           
-          /* Garantir que cada turma ocupe página inteira */
-          .emergency-schedule-view > div {
-            min-height: 95vh;
+          .bg-red-100 {
+            background-color: #fee2e2 !important;
+          }
+          
+          /* Margem das páginas */
+          @page {
+            margin: 1.5cm;
+            size: A4 portrait;
           }
         }
       `}</style>
