@@ -85,7 +85,7 @@ const SchoolCalendar: React.FC = () => {
           startDate: startDate.toISOString().split('T')[0],
           endDate: endDate.toISOString().split('T')[0],
         }),
-        scheduleAPI.getAll(schoolId),
+        scheduleAPI.getAll(),
         schoolDayAPI.getStatistics(schoolId, {
           startDate: `${selectedMonth.getFullYear()}-01-01`,
           endDate: `${selectedMonth.getFullYear()}-12-31`,

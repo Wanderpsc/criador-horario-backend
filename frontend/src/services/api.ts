@@ -116,7 +116,7 @@ export const gradeAPI = {
 };
 
 export const scheduleAPI = {
-  getAll: (schoolId: string) => api.get(`/schedules/school/${schoolId}`),
+  getAll: () => api.get('/schedules'),
   getById: (id: string) => api.get(`/schedules/${id}`),
   create: (data: any) => api.post('/schedules', data),
   update: (id: string, data: any) => api.put(`/schedules/${id}`, data),
