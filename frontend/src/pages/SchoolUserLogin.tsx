@@ -36,10 +36,17 @@ export default function SchoolUserLogin() {
 
       const { token, user } = response.data;
 
+      // ⚠️ IMPORTANTE: Limpar qualquer sessão antiga antes de salvar a nova
+      localStorage.removeItem('token'); // Token do login principal
+      localStorage.removeItem('user'); // User do login principal
+      
       // Salvar no store e localStorage
       setAuth(token, user);
       localStorage.setItem('school_user_token', token);
       localStorage.setItem('school_user', JSON.stringify(user));
+
+      console.log('✅ Usuário salvo:', user);
+      console.log('✅ Role salvo:', user.role);
 
       toast.success(`Bem-vindo(a), ${user.name}!`);
 
