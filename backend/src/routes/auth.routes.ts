@@ -439,11 +439,14 @@ router.post('/reset-password/:token',
 // Alterar senha do usuário logado (User principal - dono da escola)
 router.post('/change-password', async (req: any, res: any) => {
   try {
+    console.log('🔐 POST /auth/change-password - Iniciando...');
+    
     const { currentPassword, newPassword } = req.body;
     
     // Pegar userId do token (precisamos do auth middleware)
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ Token não fornecido');
       return res.status(401).json({ message: 'Token não fornecido' });
     }
 
@@ -452,32 +455,46 @@ router.post('/change-password', async (req: any, res: any) => {
     
     try {
       decoded = jwt.verify(token, (process.env.JWT_SECRET || 'secret') as jwt.Secret);
+      console.log('🔓 Token decodificado:', { id: decoded.id, userId: decoded.userId, role: decoded.role });
     } catch (error) {
+      console.log('❌ Token inválido');
       return res.status(401).json({ message: 'Token inválido' });
     }
 
     // Validação
     if (!currentPassword || !newPassword) {
+      console.log('❌ Senhas não fornecidas');
       return res.status(400).json({ message: 'Senha atual e nova senha são obrigatórias' });
     }
 
     if (newPassword.length < 6) {
+      console.log('❌ Nova senha muito curta');
       return res.status(400).json({ message: 'Nova senha deve ter no mínimo 6 caracteres' });
     }
 
     // Buscar usuário na collection Users (role: 'school')
     const userId = decoded.userId || decoded.id;
+    console.log('🔍 Buscando usuário:', userId);
+    
     const user = await User.findById(userId);
     
     if (!user) {
+      console.log('❌ Usuário não encontrado:', userId);
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
+    console.log('✅ Usuário encontrado:', user.email);
+
     // Verificar senha atual
+    console.log('🔍 Verificando senha atual...');
     const isMatch = await bcrypt.compare(currentPassword, user.password);
+    
     if (!isMatch) {
+      console.log('❌ Senha atual incorreta');
       return res.status(401).json({ message: 'Senha atual incorreta' });
     }
+
+    console.log('✅ Senha atual correta, atualizando...');
 
     // Hash da nova senha
     const salt = await bcrypt.genSalt(10);
@@ -492,9 +509,10 @@ router.post('/change-password', async (req: any, res: any) => {
     console.log('✅ Senha alterada com sucesso para usuário:', user.email);
 
     return res.json({ message: 'Senha alterada com sucesso' });
-  } catch (error) {
-    console.error('❌ Erro ao alterar senha:', error);
-    return res.status(500).json({ message: 'Erro ao alterar senha' });
+  } catch (error: any) {
+    console.error('❌ Erro ao alterar senha:', error.message);
+    console.error('Stack:', error.stack);
+    return res.status(500).json({ message: `Erro ao alterar senha: ${error.message}` });
   }
 });
 

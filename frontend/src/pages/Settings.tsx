@@ -168,15 +168,20 @@ export default function Settings() {
   // Change my password mutation
   const changeMyPasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      console.log('🔐 Alterando senha...');
       return await api.post('/auth/change-password', data);
     },
     onSuccess: () => {
+      console.log('✅ Senha alterada com sucesso!');
       toast.success('Sua senha foi alterada com sucesso!');
       setShowMyPasswordModal(false);
       setMyPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Erro ao alterar senha');
+      console.error('❌ Erro ao alterar senha:', error);
+      console.error('Response:', error.response?.data);
+      const errorMessage = error.response?.data?.message || 'Erro ao alterar senha';
+      toast.error(errorMessage, { duration: 5000 });
     }
   });
 
