@@ -7,8 +7,25 @@ import User from '../models/User';
 import SchoolUser from '../models/SchoolUser';
 import { sendPasswordResetEmail } from '../services/emailService';
 import { AutoBackupService } from '../services/auto-backup.service';
+import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
+
+// Endpoint de teste para verificar autenticação
+router.get('/me', auth, async (req: AuthRequest, res: any) => {
+  try {
+    console.log('🔍 GET /auth/me - req.user:', req.user);
+    
+    return res.json({
+      success: true,
+      user: req.user,
+      message: 'Autenticação funcionando corretamente'
+    });
+  } catch (error: any) {
+    console.error('❌ Erro em /auth/me:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
 
 // Registro completo de escola
 router.post('/register-school', async (req: any, res: any) => {
