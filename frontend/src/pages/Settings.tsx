@@ -262,7 +262,8 @@ export default function Settings() {
       deleteUserMutation.mutate(user._id);
     }
   };
-handleChangeMyPassword = () => {
+
+  const handleChangeMyPassword = () => {
     if (!myPasswordData.currentPassword) {
       toast.error('Digite sua senha atual');
       return;
