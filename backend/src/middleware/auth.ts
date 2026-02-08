@@ -95,7 +95,7 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
       req.user = { 
         id: decoded.id, 
         userId: decoded.id,
-        role: decoded.role,
+        role: user.role, // ✅ Usar role do banco, não do token
         schoolId,
         name: user.name,
         email: user.email
