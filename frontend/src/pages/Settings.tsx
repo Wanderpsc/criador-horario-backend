@@ -321,7 +321,7 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Alerta de permissões */}
+      {/* Alerta de permissões - quando NÃO pode gerenciar */}
       {!canManageUsers && (
         <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
           <div className="flex items-center">
@@ -335,6 +335,50 @@ export default function Settings() {
                 Role: <strong>"{authUser?.role}"</strong> {authUser?.role !== 'admin' && authUser?.role !== 'school' && '(precisa ser "admin" ou "school")'}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmação de permissões - quando PODE gerenciar */}
+      {canManageUsers && (
+        <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4">
+          <div className="flex items-center">
+            <CheckCircle className="text-green-400 mr-3" size={24} />
+            <div>
+              <h3 className="text-sm font-medium text-green-800">
+                ✅ Você tem permissão completa para gerenciar usuários
+              </h3>
+              <p className="text-sm text-green-700 mt-1">
+                Logado como: <strong>{authUser?.name}</strong> ({authUser?.email}) - Role: <strong>"{authUser?.role}"</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Card de Segurança - Minha Senha */}
+      {canManageUsers && (
+        <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Key className="text-orange-600" />
+                🔐 Minha Conta - Segurança
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Logado como: <strong>{authUser?.name}</strong> ({authUser?.email})
+              </p>
+              <p className="text-sm text-gray-600">
+                Altere sua senha de acesso a qualquer momento
+              </p>
+            </div>
+            <button
+              onClick={() => setShowMyPasswordModal(true)}
+              className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
+            >
+              <Key size={20} />
+              Alterar Minha Senha
+            </button>
           </div>
         </div>
       )}
@@ -356,31 +400,6 @@ export default function Settings() {
               </p>
               <ul className="list-disc list-inside text-sm text-blue-700 mt-2 space-y-1">
                 <li><strong>Secretária:</strong> secretaria@ceti.com / SenhaSecretaria@2026</li>
-
-      {/* Card de Segurança - Minha Senha */}
-      <div className="mb-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Key className="text-orange-600" />
-              🔐 Minha Conta - Segurança
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Logado como: <strong>{authUser?.name}</strong> ({authUser?.email})
-            </p>
-            <p className="text-sm text-gray-600">
-              Altere sua senha de acesso a qualquer momento
-            </p>
-          </div>
-          <button
-            onClick={() => setShowMyPasswordModal(true)}
-            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
-          >
-            <Key size={20} />
-            Alterar Minha Senha
-          </button>
-        </div>
-      </div>
                 <li><strong>Coordenador:</strong> coordenador@ceti.com / SenhaCoordenador@2026</li>
                 <li><strong>Professor:</strong> professor@ceti.com / SenhaProfessor@2026</li>
               </ul>
