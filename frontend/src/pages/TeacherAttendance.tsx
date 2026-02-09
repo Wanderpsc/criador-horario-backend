@@ -16,7 +16,11 @@ import {
   AlertCircle,
   Eraser,
   BookOpen,
-  GraduationCap
+  GraduationCap,
+  Minimize2,
+  Maximize2,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 interface ClassAttendance {
@@ -518,7 +522,28 @@ export default function TeacherAttendance() {
 
         {/* Botão Expandir/Recolher Todos */}
         {mergedData.length > 0 && (
-          <div className="mb-4 flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+          <>
+            {/* Estatísticas dos professores */}
+            <div className="mb-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
+                <p className="text-xs text-blue-600 font-medium">TOTAL DE PROFESSORES</p>
+                <p className="text-2xl font-bold text-blue-900">{mergedData.length}</p>
+              </div>
+              <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded-lg">
+                <p className="text-xs text-green-600 font-medium">COM AULAS NESTE DIA</p>
+                <p className="text-2xl font-bold text-green-900">
+                  {mergedData.filter(t => t.totalScheduledClasses > 0).length}
+                </p>
+              </div>
+              <div className="bg-gray-50 border-l-4 border-gray-400 p-3 rounded-lg">
+                <p className="text-xs text-gray-600 font-medium">SEM AULAS NESTE DIA</p>
+                <p className="text-2xl font-bold text-gray-700">
+                  {mergedData.filter(t => t.totalScheduledClasses === 0).length}
+                </p>
+              </div>
+            </div>
+            
+            <div className="mb-4 flex items-center justify-between bg-blue-50 p-3 rounded-lg">
             <p className="text-sm text-blue-800 font-medium">
               💡 <strong>Clique nos cards dos professores</strong> para ver e marcar presença/ausência de cada aula individual
             </p>
@@ -539,17 +564,50 @@ export default function TeacherAttendance() {
               )}
             </button>
           </div>
+          </>
         )}
 
         {/* Lista de Professores com Aulas */}
         <div className="space-y-4">
           {mergedData.length === 0 ? (
-            <div className="text-center p-8 bg-gray-50 rounded-lg">
+            <div className="text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
               <AlertCircle className="mx-auto text-gray-400 mb-3" size={48} />
-              <p className="text-gray-600 font-semibold">Nenhuma aula agendada para este dia</p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-gray-600 font-semibold mb-2">Nenhuma aula agendada para este dia</p>
+              <p className="text-sm text-gray-500 mb-4">
                 {scheduledData?.message || 'Verifique se o dia está cadastrado no calendário escolar'}
               </p>
+              
+              {/* Se não há horários gerados, mostrar botão para criar */}
+              {scheduledData?.message && scheduledData.message.includes('Nenhum horário') && (
+                <div className="mt-4">
+                  <a
+                    href="/#/generate-timetable"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <Calendar size={20} />
+                    Ir para Gerar Horários
+                  </a>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Crie um horário primeiro para poder registrar a frequência dos professores
+                  </p>
+                </div>
+              )}
+              
+              {/* Se o dia não está no calendário, mostrar botão para cadastrar */}
+              {scheduledData?.warning && !scheduledData.message?.includes('Nenhum horário') && (
+                <div className="mt-4">
+                  <a
+                    href="/#/school-calendar"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    <Calendar size={20} />
+                    Cadastrar no Calendário Letivo
+                  </a>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Cadastre este dia no calendário para associar um horário específico
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             mergedData.map((teacher: AttendanceRecord) => {
@@ -585,62 +643,83 @@ export default function TeacherAttendance() {
                           <div>
                             <h3 className="font-bold text-lg text-gray-800">{teacher.teacherName}</h3>
                             <p className="text-sm text-gray-600">
-                              {teacher.totalScheduledClasses} aula(s) agendada(s) • 
-                              <span className="text-green-600 font-medium ml-1">{teacher.totalPresentClasses} presentes</span> • 
-                              <span className="text-red-600 font-medium ml-1">{teacher.totalAbsentClasses} ausentes</span> • 
-                              <span className="text-gray-500 ml-1">{teacher.totalPendingClasses} pendentes</span>
+                              {teacher.totalScheduledClasses === 0 ? (
+                                <span className="text-gray-500 font-medium">Sem aulas neste dia</span>
+                              ) : (
+                                <>
+                                  {teacher.totalScheduledClasses} aula(s) agendada(s) • 
+                                  <span className="text-green-600 font-medium ml-1">{teacher.totalPresentClasses} presentes</span> • 
+                                  <span className="text-red-600 font-medium ml-1">{teacher.totalAbsentClasses} ausentes</span> • 
+                                  <span className="text-gray-500 ml-1">{teacher.totalPendingClasses} pendentes</span>
+                                </>
+                              )}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMarkAllClasses(teacher, 'present');
-                          }}
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
-                          title="Marcar todas as aulas deste professor como presente"
-                        >
-                          <CheckCircle size={16} />
-                          Todas Presentes
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMarkAllClasses(teacher, 'absent');
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
-                          title="Marcar todas as aulas deste professor como ausente"
-                        >
-                          <XCircle size={16} />
-                          Todas Ausentes
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClearTeacherAttendance(teacher.teacherId);
-                          }}
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                          title="Limpar registros deste professor"
-                        >
-                          <Eraser size={16} />
-                        </button>
-                      </div>
+                      {/* Botões de ação - só mostrar se houver aulas */}
+                      {teacher.totalScheduledClasses > 0 && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAllClasses(teacher, 'present');
+                            }}
+                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                            title="Marcar todas as aulas deste professor como presente"
+                          >
+                            <CheckCircle size={16} />
+                            Todas Presentes
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAllClasses(teacher, 'absent');
+                            }}
+                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+                            title="Marcar todas as aulas deste professor como ausente"
+                          >
+                            <XCircle size={16} />
+                            Todas Ausentes
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleClearTeacherAttendance(teacher.teacherId);
+                            }}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                            title="Limpar registros deste professor"
+                          >
+                            <Eraser size={16} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Lista de Aulas (expandível) */}
                   {isExpanded && (
                     <div className="border-t-2 border-gray-200 bg-white p-4">
-                      <div className="mb-3 bg-blue-50 p-2 rounded">
-                        <p className="text-sm text-blue-800">
-                          📚 <strong>Marque a presença/ausência de cada aula individualmente:</strong>
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {teacher.classes.map((cls, index) => (
+                      {teacher.classes.length === 0 ? (
+                        <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                          <AlertCircle className="mx-auto text-gray-400 mb-2" size={40} />
+                          <p className="text-gray-600 font-medium">
+                            Este professor não tem aulas agendadas neste dia
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            De acordo com o horário base selecionado
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="mb-3 bg-blue-50 p-2 rounded">
+                            <p className="text-sm text-blue-800">
+                              📚 <strong>Marque a presença/ausência de cada aula individualmente:</strong>
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {teacher.classes.map((cls, index) => (
                           <div
                             key={`${cls.period}-${index}`}
                             className={`border-2 rounded-lg p-3 ${
@@ -700,6 +779,8 @@ export default function TeacherAttendance() {
                           </div>
                         ))}
                       </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

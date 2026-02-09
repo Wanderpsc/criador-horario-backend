@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import TeacherAttendance from '../models/TeacherAttendance';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 import SchoolDay from '../models/SchoolDay';
@@ -428,32 +429,43 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
         });
       }
 
-      // Organizar aulas por professor
-      const teacherClasses: { [key: string]: any } = {};
+      // Buscar todos os professores ativos da escola
+      const Teacher = mongoose.model('Teacher');
+      const allTeachers = await Teacher.find({ schoolId, isActive: true }).select('_id name');
+      
+      console.log('👨‍🏫 Total de professores ativos (sem calendário):', allTeachers.length);
 
+      // Organizar aulas por professor - inicializar todos os professores
+      const teacherClasses: { [key: string]: any } = {};
+      
+      // Inicializar todos os professores ativos
+      allTeachers.forEach((teacher: any) => {
+        teacherClasses[teacher._id.toString()] = {
+          teacherId: teacher._id.toString(),
+          teacherName: teacher.name,
+          classes: []
+        };
+      });
+
+      // Adicionar aulas do horário
       timetables.forEach((timetable: any) => {
         if (timetable.slots && Array.isArray(timetable.slots)) {
           timetable.slots.forEach((slot: any) => {
             if (slot.day === targetDay && slot.teacherId) {
-              if (!teacherClasses[slot.teacherId]) {
-                teacherClasses[slot.teacherId] = {
-                  teacherId: slot.teacherId,
-                  teacherName: slot.teacherName,
-                  classes: []
-                };
+              // Se o professor existe na lista
+              if (teacherClasses[slot.teacherId]) {
+                teacherClasses[slot.teacherId].classes.push({
+                  period: slot.period,
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                  subjectId: slot.subjectId,
+                  subjectName: slot.subjectName,
+                  classId: timetable.classId,
+                  className: timetable.name,
+                  grade: timetable.grade || 'N/A',
+                  status: 'pending'
+                });
               }
-
-              teacherClasses[slot.teacherId].classes.push({
-                period: slot.period,
-                startTime: slot.startTime,
-                endTime: slot.endTime,
-                subjectId: slot.subjectId,
-                subjectName: slot.subjectName,
-                classId: timetable.classId,
-                className: timetable.name,
-                grade: timetable.grade || 'N/A',
-                status: 'pending'
-              });
             }
           });
         }
@@ -530,32 +542,43 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     const timetables = await GeneratedTimetable.find(query);
     console.log('📚 Horários encontrados:', timetables.length);
 
-    // 4. ORGANIZAR AULAS POR PROFESSOR
+    // 4. BUSCAR TODOS OS PROFESSORES ATIVOS DA ESCOLA
+    const Teacher = mongoose.model('Teacher');
+    const allTeachers = await Teacher.find({ schoolId, isActive: true }).select('_id name');
+    
+    console.log('👨‍🏫 Total de professores ativos:', allTeachers.length);
+
+    // 5. ORGANIZAR AULAS POR PROFESSOR
     const teacherClasses: { [key: string]: any } = {};
 
+    // Inicializar todos os professores ativos (mesmo sem aulas)
+    allTeachers.forEach((teacher: any) => {
+      teacherClasses[teacher._id.toString()] = {
+        teacherId: teacher._id.toString(),
+        teacherName: teacher.name,
+        classes: []
+      };
+    });
+
+    // Adicionar aulas do horário
     timetables.forEach((timetable: any) => {
       if (timetable.slots && Array.isArray(timetable.slots)) {
         timetable.slots.forEach((slot: any) => {
           if (slot.day === targetDay && slot.teacherId) {
-            if (!teacherClasses[slot.teacherId]) {
-              teacherClasses[slot.teacherId] = {
-                teacherId: slot.teacherId,
-                teacherName: slot.teacherName,
-                classes: []
-              };
+            // Se o professor existe na lista
+            if (teacherClasses[slot.teacherId]) {
+              teacherClasses[slot.teacherId].classes.push({
+                period: slot.period,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                subjectId: slot.subjectId,
+                subjectName: slot.subjectName,
+                classId: timetable.classId,
+                className: timetable.name,
+                grade: timetable.grade || 'N/A',
+                status: 'pending'
+              });
             }
-
-            teacherClasses[slot.teacherId].classes.push({
-              period: slot.period,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
-              subjectId: slot.subjectId,
-              subjectName: slot.subjectName,
-              classId: timetable.classId,
-              className: timetable.name,
-              grade: timetable.grade || 'N/A',
-              status: 'pending'
-            });
           }
         });
       }
