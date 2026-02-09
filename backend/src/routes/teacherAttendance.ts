@@ -503,6 +503,18 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
 
       console.log('👨‍🏫 Professores encontrados (sem calendário):', Object.keys(teacherClasses).length);
 
+      // Períodos padrão
+      const defaultPeriods = [
+        { period: 1, startTime: '07:00', endTime: '07:50' },
+        { period: 2, startTime: '07:50', endTime: '08:40' },
+        { period: 3, startTime: '08:40', endTime: '09:30' },
+        { period: 4, startTime: '09:50', endTime: '10:40' },
+        { period: 5, startTime: '10:40', endTime: '11:30' },
+        { period: 6, startTime: '11:30', endTime: '12:20' },
+        { period: 7, startTime: '13:40', endTime: '14:30' },
+        { period: 8, startTime: '14:30', endTime: '15:20' }
+      ];
+
       return res.json({
         date,
         dayOfWeek: targetDay,
@@ -510,7 +522,8 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
         scheduleId: null,
         scheduleName: 'Horário Padrão (Dia não cadastrado no calendário)',
         message: 'Usando horário padrão do dia da semana. Cadastre este dia no Calendário Letivo para melhor controle.',
-        warning: true
+        warning: true,
+        allPeriods: defaultPeriods
       });
     }
 
@@ -682,7 +695,34 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     console.log('📊 Slots para', targetDay + ':', slotsForTargetDay);
     console.log('👨‍🏫 Professores com aulas neste dia:', Object.values(teacherClasses).filter((t: any) => t.classes.length > 0).length);
 
-    // 5. ORDENAR AULAS POR PERÍODO
+    // 5. BUSCAR CONFIGURAÇÃO DE PERÍODOS DO HORÁRIO
+    const Schedule = mongoose.model('Schedule');
+    let allPeriods: any[] = [];
+    
+    if (effectiveScheduleId) {
+      const schedule = await Schedule.findOne({ _id: effectiveScheduleId });
+      if (schedule && schedule.periods && schedule.periods.length > 0) {
+        allPeriods = schedule.periods;
+        console.log('📋 Encontrados', allPeriods.length, 'períodos no Schedule');
+      }
+    }
+    
+    // Se não encontrou períodos, usar padrão de 8 períodos
+    if (allPeriods.length === 0) {
+      allPeriods = [
+        { period: 1, startTime: '07:00', endTime: '07:50' },
+        { period: 2, startTime: '07:50', endTime: '08:40' },
+        { period: 3, startTime: '08:40', endTime: '09:30' },
+        { period: 4, startTime: '09:50', endTime: '10:40' },
+        { period: 5, startTime: '10:40', endTime: '11:30' },
+        { period: 6, startTime: '11:30', endTime: '12:20' },
+        { period: 7, startTime: '13:40', endTime: '14:30' },
+        { period: 8, startTime: '14:30', endTime: '15:20' }
+      ];
+      console.log('📋 Usando 8 períodos padrão');
+    }
+
+    // 6. ORDENAR AULAS POR PERÍODO
     Object.values(teacherClasses).forEach((teacher: any) => {
       teacher.classes.sort((a: any, b: any) => a.period - b.period);
     });
@@ -694,7 +734,8 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       dayOfWeek: targetDay,
       teachers: Object.values(teacherClasses),
       scheduleId: effectiveScheduleId,
-      scheduleName: effectiveScheduleId || 'Padrão'
+      scheduleName: effectiveScheduleId || 'Padrão',
+      allPeriods: allPeriods // NOVO: enviar todos os períodos
     });
   } catch (error) {
     console.error('❌ Erro ao buscar aulas agendadas:', error);

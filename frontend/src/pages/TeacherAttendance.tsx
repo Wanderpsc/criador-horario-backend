@@ -720,10 +720,42 @@ export default function TeacherAttendance() {
                               📚 <strong>Marque a presença/ausência de cada aula individualmente:</strong>
                             </p>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {teacher.classes.map((cls, index) => (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            {/* Mostrar TODOS os períodos do dia */}
+                            {(scheduledData?.allPeriods || []).map((period: any) => {
+                              // Buscar se o professor tem aula neste período
+                              const classInPeriod = teacher.classes.find((c: any) => c.period === period.period);
+                              
+                              if (!classInPeriod) {
+                                // Professor não tem aula neste período
+                                return (
+                                  <div
+                                    key={period.period}
+                                    className="border-2 rounded-lg p-3 bg-gray-50 border-gray-200 opacity-50"
+                                  >
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="bg-gray-400 text-white px-2 py-1 rounded text-sm font-bold">
+                                            {period.period}º
+                                          </span>
+                                          <Clock size={14} className="text-gray-400" />
+                                          <span className="text-sm text-gray-500">
+                                            {period.startTime} - {period.endTime}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 italic mt-2">Sem aula</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              // Professor TEM aula neste período
+                              const cls = classInPeriod;
+                              return (
                           <div
-                            key={`${cls.period}-${index}`}
+                            key={period.period}
                             className={`border-2 rounded-lg p-3 ${
                               cls.status === 'present'
                                 ? 'bg-green-50 border-green-400'
@@ -779,8 +811,9 @@ export default function TeacherAttendance() {
                               </button>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                              );
+                            })}
+                          </div>
                         </>
                       )}
                     </div>
