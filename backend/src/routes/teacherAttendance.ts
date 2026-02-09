@@ -1,5 +1,7 @@
 import express from 'express';
 import TeacherAttendance from '../models/TeacherAttendance';
+import GeneratedTimetable from '../models/GeneratedTimetable';
+import SchoolDay from '../models/SchoolDay';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -192,13 +194,30 @@ router.get('/absent-teachers', auth, async (req: AuthRequest, res) => {
       return res.status(400).json({ message: 'Data não fornecida' });
     }
 
-    const absentRecords = await TeacherAttendance.find({
+    // Buscar todos os registros do dia
+    const records = await TeacherAttendance.find({
       schoolId,
-      date,
-      status: 'absent'
+      date
     });
 
-    res.json(absentRecords);
+    // Filtrar professores com aulas ausentes
+    const absentTeachers = records
+      .filter(record => {
+        const hasAbsentClasses = record.classes && record.classes.some((c: any) => c.status === 'absent');
+        return hasAbsentClasses;
+      })
+      .map(record => {
+        const absentClasses = record.classes.filter((c: any) => c.status === 'absent');
+        return {
+          teacherId: record.teacherId,
+          teacherName: record.teacherName,
+          date: record.date,
+          totalAbsentClasses: absentClasses.length,
+          absentClasses: absentClasses
+        };
+      });
+
+    res.json(absentTeachers);
   } catch (error) {
     console.error('Erro ao buscar professores ausentes:', error);
     res.status(500).json({ message: 'Erro ao buscar professores ausentes' });
@@ -243,6 +262,335 @@ router.delete('/teacher/:teacherId/date/:date', auth, async (req: AuthRequest, r
 // Obter estatísticas de frequência
 router.get('/statistics', auth, async (req: AuthRequest, res) => {
   try {
+    const { startDate, endDate, teacherId, bySubject } = req.query;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    let query: any = { schoolId };
+
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    }
+
+    if (teacherId) {
+      query.teacherId = teacherId;
+    }
+
+    const records = await TeacherAttendance.find(query);
+
+    // Se bySubject=true, agrupar por disciplina/turma
+    if (bySubject === 'true') {
+      const subjectStats: { [key: string]: any } = {};
+
+      records.forEach(record => {
+        if (!record.classes || record.classes.length === 0) return;
+
+        record.classes.forEach((cls: any) => {
+          const key = `${cls.subjectId}_${cls.classId}`;
+
+          if (!subjectStats[key]) {
+            subjectStats[key] = {
+              subjectId: cls.subjectId,
+              subjectName: cls.subjectName,
+              classId: cls.classId,
+              className: cls.className,
+              grade: cls.grade,
+              teacherId: record.teacherId,
+              teacherName: record.teacherName,
+              scheduledClasses: 0,
+              givenClasses: 0,
+              absentClasses: 0,
+              pendingClasses: 0,
+              deficit: 0,
+              dates: []
+            };
+          }
+
+          subjectStats[key].scheduledClasses += 1;
+
+          if (cls.status === 'present') {
+            subjectStats[key].givenClasses += 1;
+          } else if (cls.status === 'absent') {
+            subjectStats[key].absentClasses += 1;
+            if (!subjectStats[key].dates.includes(record.date)) {
+              subjectStats[key].dates.push(record.date);
+            }
+          } else if (cls.status === 'pending') {
+            subjectStats[key].pendingClasses += 1;
+          }
+        });
+      });
+
+      // Calcular déficit
+      Object.values(subjectStats).forEach((stat: any) => {
+        stat.deficit = stat.scheduledClasses - stat.givenClasses;
+      });
+
+      return res.json(Object.values(subjectStats));
+    }
+
+    // Estatísticas por professor (padrão)
+    const statistics = records.reduce((acc: any, record) => {
+      if (!acc[record.teacherId]) {
+        acc[record.teacherId] = {
+          teacherId: record.teacherId,
+          teacherName: record.teacherName,
+          totalScheduledClasses: 0,
+          totalPresentClasses: 0,
+          totalAbsentClasses: 0,
+          totalPendingClasses: 0,
+          attendanceRate: 0,
+          workload: 0
+        };
+      }
+
+      acc[record.teacherId].totalScheduledClasses += record.totalScheduledClasses || 0;
+      acc[record.teacherId].totalPresentClasses += record.totalPresentClasses || 0;
+      acc[record.teacherId].totalAbsentClasses += record.totalAbsentClasses || 0;
+      acc[record.teacherId].totalPendingClasses += record.totalPendingClasses || 0;
+
+      return acc;
+    }, {});
+
+    // Calcular taxa de presença e carga horária
+    Object.values(statistics).forEach((stat: any) => {
+      if (stat.totalScheduledClasses > 0) {
+        stat.attendanceRate = (stat.totalPresentClasses / stat.totalScheduledClasses) * 100;
+        stat.workload = stat.totalPresentClasses * 0.833; // 50min por aula
+      }
+    });
+
+    res.json(Object.values(statistics));
+  } catch (error) {
+    console.error('Erro ao calcular estatísticas:', error);
+    res.status(500).json({ message: 'Erro ao calcular estatísticas' });
+  }
+});
+
+// Obter aulas agendadas para um dia específico
+router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
+  try {
+    const { date } = req.params;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    console.log('📅 Buscando aulas agendadas para:', date, 'schoolId:', schoolId);
+
+    // 1. VERIFICAR SE O DIA É LETIVO NO CALENDÁRIO
+    const schoolDay = await SchoolDay.findOne({
+      schoolId,
+      date: new Date(date + 'T12:00:00')
+    });
+
+    console.log('📅 SchoolDay encontrado:', schoolDay);
+
+    // Se não houver dia letivo cadastrado ou for feriado/recesso
+    if (!schoolDay || schoolDay.dayType === 'holiday' || schoolDay.dayType === 'recess') {
+      console.log('⚠️ Dia não letivo ou não cadastrado');
+      return res.json({
+        date,
+        dayOfWeek: '',
+        teachers: [],
+        message: schoolDay 
+          ? 'Dia não letivo (feriado ou recesso)' 
+          : 'Dia não cadastrado no calendário escolar'
+      });
+    }
+
+    // 2. DETERMINAR QUAL DIA DA SEMANA USAR
+    let targetDay: string;
+    
+    if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
+      // Sábado de reposição: seguir horário de outro dia
+      const weekdayMap: { [key: string]: string } = {
+        'monday': 'Segunda',
+        'tuesday': 'Terça',
+        'wednesday': 'Quarta',
+        'thursday': 'Quinta',
+        'friday': 'Sexta'
+      };
+      targetDay = weekdayMap[schoolDay.followWeekday];
+      console.log('🔄 Sábado de reposição - usando horário de:', targetDay);
+    } else {
+      // Dia regular: usar o dia da semana normal
+      const dateObj = new Date(date + 'T12:00:00');
+      const dayOfWeek = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+      const dayMap: { [key: string]: string } = {
+        'segunda-feira': 'Segunda',
+        'terça-feira': 'Terça',
+        'quarta-feira': 'Quarta',
+        'quinta-feira': 'Quinta',
+        'sexta-feira': 'Sexta',
+        'sábado': 'Sábado'
+      };
+      targetDay = dayMap[dayOfWeek.toLowerCase()];
+      console.log('📆 Dia regular:', targetDay);
+    }
+
+    // 3. BUSCAR HORÁRIOS (FILTRAR POR scheduleId SE ESPECIFICADO)
+    let query: any = { schoolId };
+    
+    if (schoolDay.scheduleId) {
+      query.scheduleId = schoolDay.scheduleId;
+      console.log('🎯 Usando scheduleId específico:', schoolDay.scheduleId);
+    }
+
+    const timetables = await GeneratedTimetable.find(query);
+    console.log('📚 Horários encontrados:', timetables.length);
+
+    // 4. ORGANIZAR AULAS POR PROFESSOR
+    const teacherClasses: { [key: string]: any } = {};
+
+    timetables.forEach((timetable: any) => {
+      if (timetable.slots && Array.isArray(timetable.slots)) {
+        timetable.slots.forEach((slot: any) => {
+          if (slot.day === targetDay && slot.teacherId) {
+            if (!teacherClasses[slot.teacherId]) {
+              teacherClasses[slot.teacherId] = {
+                teacherId: slot.teacherId,
+                teacherName: slot.teacherName,
+                classes: []
+              };
+            }
+
+            teacherClasses[slot.teacherId].classes.push({
+              period: slot.period,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              subjectId: slot.subjectId,
+              subjectName: slot.subjectName,
+              classId: timetable.classId,
+              className: timetable.name,
+              grade: timetable.grade || 'N/A',
+              status: 'pending'
+            });
+          }
+        });
+      }
+    });
+
+    // 5. ORDENAR AULAS POR PERÍODO
+    Object.values(teacherClasses).forEach((teacher: any) => {
+      teacher.classes.sort((a: any, b: any) => a.period - b.period);
+    });
+
+    console.log('👨‍🏫 Professores com aulas:', Object.keys(teacherClasses).length);
+
+    res.json({
+      date,
+      dayOfWeek: targetDay,
+      teachers: Object.values(teacherClasses),
+      scheduleId: schoolDay.scheduleId,
+      scheduleName: schoolDay.scheduleId || 'Padrão'
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar aulas agendadas:', error);
+    res.status(500).json({ message: 'Erro ao buscar aulas agendadas' });
+  }
+});
+
+// Atualizar status de uma aula específica
+router.put('/class-status', auth, async (req: AuthRequest, res) => {
+  try {
+    const { teacherId, date, period, status } = req.body;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    if (!teacherId || !date || period === undefined || !status) {
+      return res.status(400).json({ message: 'Dados incompletos' });
+    }
+
+    // Buscar ou criar registro de frequência
+    let attendance = await TeacherAttendance.findOne({
+      schoolId,
+      teacherId,
+      date
+    });
+
+    if (attendance) {
+      // Atualizar status da aula específica
+      const classIndex = attendance.classes.findIndex((c: any) => c.period === period);
+      if (classIndex !== -1) {
+        attendance.classes[classIndex].status = status;
+        attendance.classes[classIndex].markedAt = new Date();
+      }
+      await attendance.save();
+    }
+
+    res.json(attendance);
+  } catch (error: any) {
+    console.error('Erro ao atualizar status da aula:', error);
+    res.status(500).json({ 
+      message: 'Erro ao atualizar status da aula',
+      error: error.message 
+    });
+  }
+});
+
+// Criar/atualizar registro de frequência completo
+router.post('/daily-record', auth, async (req: AuthRequest, res) => {
+  try {
+    const { teacherId, teacherName, date, dayOfWeek, classes } = req.body;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    if (!teacherId || !date || !classes || !Array.isArray(classes)) {
+      return res.status(400).json({ message: 'Dados incompletos' });
+    }
+
+    // Buscar registro existente
+    let attendance = await TeacherAttendance.findOne({
+      schoolId,
+      teacherId,
+      date
+    });
+
+    if (attendance) {
+      // Atualizar registro existente
+      attendance.classes = classes as any;
+      attendance.dayOfWeek = dayOfWeek;
+      await attendance.save();
+    } else {
+      // Criar novo registro
+      attendance = new TeacherAttendance({
+        schoolId,
+        teacherId,
+        teacherName,
+        date,
+        dayOfWeek,
+        classes
+      });
+      await attendance.save();
+    }
+
+    res.json(attendance);
+  } catch (error: any) {
+    console.error('Erro ao salvar registro de frequência:', error);
+    res.status(500).json({ 
+      message: 'Erro ao salvar registro de frequência',
+      error: error.message 
+    });
+  }
+});
+
+// Buscar aulas ausentes para reposição
+router.get('/makeup-classes', auth, async (req: AuthRequest, res) => {
+  try {
     const { startDate, endDate, teacherId } = req.query;
     const schoolId = req.user?.schoolId;
 
@@ -265,35 +613,34 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
 
     const records = await TeacherAttendance.find(query);
 
-    // Calcular estatísticas
-    const statistics = records.reduce((acc: any, record) => {
-      if (!acc[record.teacherId]) {
-        acc[record.teacherId] = {
+    // Extrair aulas ausentes
+    const makeupClasses: any[] = [];
+
+    records.forEach(record => {
+      const absentClasses = record.classes ? record.classes.filter((c: any) => c.status === 'absent') : [];
+      
+      absentClasses.forEach((cls: any) => {
+        makeupClasses.push({
           teacherId: record.teacherId,
           teacherName: record.teacherName,
-          totalScheduledClasses: 0,
-          totalGivenClasses: 0,
-          totalAbsences: 0,
-          totalPresences: 0
-        };
-      }
+          date: record.date,
+          dayOfWeek: record.dayOfWeek,
+          period: cls.period,
+          startTime: cls.startTime,
+          endTime: cls.endTime,
+          subjectId: cls.subjectId,
+          subjectName: cls.subjectName,
+          classId: cls.classId,
+          className: cls.className,
+          grade: cls.grade
+        });
+      });
+    });
 
-      acc[record.teacherId].totalScheduledClasses += record.scheduledClasses;
-      acc[record.teacherId].totalGivenClasses += record.givenClasses;
-      
-      if (record.status === 'absent') {
-        acc[record.teacherId].totalAbsences++;
-      } else {
-        acc[record.teacherId].totalPresences++;
-      }
-
-      return acc;
-    }, {});
-
-    res.json(Object.values(statistics));
+    res.json(makeupClasses);
   } catch (error) {
-    console.error('Erro ao calcular estatísticas:', error);
-    res.status(500).json({ message: 'Erro ao calcular estatísticas' });
+    console.error('Erro ao buscar aulas para reposição:', error);
+    res.status(500).json({ message: 'Erro ao buscar aulas para reposição' });
   }
 });
 

@@ -193,8 +193,8 @@ router.post('/', auth, async (req: AuthRequest, res: Response) => {
     // Registrar no audit log
     await AuditLog.create({
       userId: creatorId,
-      userName: creator.name,
-      userEmail: creator.email,
+      userName: creator.name || req.user!.name,
+      userEmail: ('email' in creator) ? creator.email : req.user!.email,
       schoolId,
       action: 'create',
       resource: 'users',

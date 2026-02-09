@@ -64,9 +64,15 @@ export default function Settings() {
   
   // Debug - ver o que está no authUser
   React.useEffect(() => {
-    console.log('👤 Auth User:', authUser);
+    console.log('=== DEBUG SETTINGS ===');
+    console.log('👤 Auth User completo:', JSON.stringify(authUser, null, 2));
     console.log('🔑 Role:', authUser?.role);
+    console.log('📧 Email:', authUser?.email);
+    console.log('👥 Nome:', authUser?.name);
     console.log('✅ Can Manage Users:', canManageUsers);
+    console.log('🧪 Teste: role === "school"?', authUser?.role === 'school');
+    console.log('🧪 Teste: role === "admin"?', authUser?.role === 'admin');
+    console.log('======================');
   }, [authUser, canManageUsers]);
   
   const [showUserModal, setShowUserModal] = useState(false);

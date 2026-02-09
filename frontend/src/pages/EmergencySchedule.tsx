@@ -177,6 +177,45 @@ export default function EmergencySchedule() {
     enabled: !!selectedDate
   });
 
+  // Buscar aulas ausentes para reposição (quando tiver período definido)
+  useQuery({
+    queryKey: ['makeup-classes', startDateFilter, endDateFilter],
+    queryFn: async () => {
+      if (!startDateFilter || !endDateFilter) return [];
+      try {
+        const response = await api.get('/teacher-attendance/makeup-classes', {
+          params: {
+            startDate: startDateFilter,
+            endDate: endDateFilter
+          }
+        });
+        const classes = response.data || [];
+        console.log('📅 Aulas para reposição encontradas:', classes.length);
+        
+        // Atualizar makeupClasses com os dados da API
+        setMakeupClasses(classes.map((cls: any) => ({
+          originalTeacherId: cls.teacherId,
+          originalTeacherName: cls.teacherName,
+          subjectId: cls.subjectId,
+          subjectName: cls.subjectName,
+          classId: cls.classId,
+          className: cls.className,
+          gradeName: cls.grade,
+          period: cls.period,
+          originalDay: cls.dayOfWeek,
+          makeupDay: 'Sábado',
+          reason: 'Professor ausente'
+        })));
+        
+        return classes;
+      } catch (error) {
+        console.error('Erro ao buscar aulas para reposição:', error);
+        return [];
+      }
+    },
+    enabled: !!startDateFilter && !!endDateFilter
+  });
+
   // Buscar Componente Curriculars
   const { data: subjectsData } = useQuery({
     queryKey: ['subjects'],
@@ -1585,7 +1624,7 @@ export default function EmergencySchedule() {
               <div>
                 <label className="block text-sm font-medium mb-3">
                   <User className="inline mr-2" size={18} />
-                  Professor(es) Ausente(s)
+                  Professor(es) Ausente(s) e Aulas Ausentes
                 </label>
                 
                 {/* Aviso de importação automática */}
@@ -1598,10 +1637,50 @@ export default function EmergencySchedule() {
                           ✅ {absentTeachersData.length} professor(es) ausente(s) importado(s) automaticamente
                         </p>
                         <p className="text-xs text-green-700 mt-1">
-                          Os professores marcados como ausentes no Controle de Frequência foram carregados automaticamente.
+                          Os professores marcados com aulas ausentes no Controle de Frequência foram carregados automaticamente.
                         </p>
                       </div>
                     </div>
+                  </div>
+                )}
+                
+                {/* Exibir aulas ausentes por professor */}
+                {absentTeachersData && absentTeachersData.length > 0 && (
+                  <div className="space-y-3 mb-4">
+                    {absentTeachersData.map((record: any) => (
+                      <div key={record.teacherId} className="border-2 border-red-400 bg-red-50 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4 className="font-bold text-red-900">{record.teacherName}</h4>
+                            <p className="text-sm text-red-700">
+                              {record.totalAbsentClasses} aula(s) ausente(s) em {record.date}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {record.absentClasses && record.absentClasses.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-red-800 mb-2">Aulas Ausentes:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {record.absentClasses.map((cls: any, idx: number) => (
+                                <div key={idx} className="bg-white border border-red-300 rounded p-2">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold">
+                                      {cls.period}º
+                                    </span>
+                                    <span className="text-xs text-gray-600">
+                                      {cls.startTime} - {cls.endTime}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs font-semibold text-gray-800">{cls.subjectName}</p>
+                                  <p className="text-xs text-gray-600">{cls.className}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
                 

@@ -180,7 +180,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
 
         // Somar aulas dadas baseado nos registros de frequência
         const given = attendanceRecords.reduce((sum, record) => {
-          return sum + (record.givenClasses || 0);
+          return sum + (record.totalPresentClasses || 0);
         }, 0);
 
         const deficit = predicted > given ? predicted - given : 0;

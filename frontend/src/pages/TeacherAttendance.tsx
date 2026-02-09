@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
@@ -15,13 +15,21 @@ import {
   BarChart3,
   AlertCircle,
   Eraser,
-  Trash2
+  BookOpen,
+  GraduationCap
 } from 'lucide-react';
 
-interface Teacher {
-  id: string;
-  name: string;
-  subjects?: string[];
+interface ClassAttendance {
+  period: number;
+  startTime: string;
+  endTime: string;
+  subjectId: string;
+  subjectName: string;
+  classId: string;
+  className: string;
+  grade: string;
+  status: 'present' | 'absent' | 'pending';
+  markedAt?: Date;
 }
 
 interface AttendanceRecord {
@@ -29,22 +37,37 @@ interface AttendanceRecord {
   teacherId: string;
   teacherName: string;
   date: string;
-  status: 'present' | 'absent';
-  scheduledClasses: number;
-  givenClasses: number;
-  timestamp: string;
+  dayOfWeek: string;
+  classes: ClassAttendance[];
+  totalScheduledClasses: number;
+  totalPresentClasses: number;
+  totalAbsentClasses: number;
+  totalPendingClasses: number;
+  attendanceRate: number;
 }
 
 interface AttendanceReport {
   teacherId: string;
   teacherName: string;
   totalScheduledClasses: number;
-  totalGivenClasses: number;
-  totalAbsences: number;
+  totalPresentClasses: number;
+  totalAbsentClasses: number;
   attendanceRate: number;
-  deficit: number;
-  surplus: number;
-  workload: number; // horas semanais
+  workload: number;
+}
+
+interface SubjectDeficit {
+  subjectId: string;
+  subjectName: string;
+  classId: string;
+  className: string;
+  grade: string;
+  teacherId: string;
+  teacherName: string;
+  scheduledClasses: number;
+  givenClasses: number;
+  deficit: number; // aulas que faltaram
+  dates: string[]; // datas das faltas
 }
 
 export default function TeacherAttendance() {
@@ -52,28 +75,37 @@ export default function TeacherAttendance() {
   const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [attendanceData, setAttendanceData] = useState<{ [key: string]: AttendanceRecord }>({});
+  const [expandedTeachers, setExpandedTeachers] = useState<Set<string>>(new Set());
+  const [selectedTimetableId, setSelectedTimetableId] = useState<string>('auto');
   const queryClient = useQueryClient();
 
-  // Buscar professores
-  const { data: teachersData, isLoading: loadingTeachers, error: teachersError } = useQuery({
-    queryKey: ['teachers'],
+  // Buscar horários disponíveis
+  const { data: timetablesData } = useQuery({
+    queryKey: ['generated-timetables'],
     queryFn: async () => {
-      const response = await api.get('/teachers');
-      return response.data;
+      const response = await api.get('/generated-timetables');
+      return response.data || [];
     }
   });
 
-  // Buscar horário base para o dia
-  const { data: timetableData } = useQuery({
-    queryKey: ['timetable-for-attendance', selectedDate],
+  const availableTimetables = Array.isArray(timetablesData) ? timetablesData : [];
+
+  // Buscar aulas agendadas para o dia
+  const { data: scheduledData, isLoading: loadingScheduled, error: scheduledError } = useQuery({
+    queryKey: ['scheduled-classes', selectedDate],
     queryFn: async () => {
-      const response = await api.get('/timetables');
-      return response.data;
-    }
+      try {
+        const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}`);
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao buscar aulas agendadas:', error);
+        return { teachers: [], dayOfWeek: '', date: selectedDate };
+      }
+    },
+    enabled: !!selectedDate
   });
 
-  // Buscar registros de frequência
+  // Buscar registros de frequência já salvos
   const { data: attendanceRecords, refetch: refetchAttendance } = useQuery({
     queryKey: ['attendance-records', selectedDate, startDate, endDate, reportType],
     queryFn: async () => {
@@ -90,165 +122,121 @@ export default function TeacherAttendance() {
     enabled: !!selectedDate
   });
 
-  const teachers: Teacher[] = teachersData || [];
+  const teachers: any[] = scheduledData?.teachers || [];
 
-  // Carregar registros existentes quando a data mudar
-  useEffect(() => {
-    if (attendanceRecords && Array.isArray(attendanceRecords)) {
-      const recordsMap: { [key: string]: AttendanceRecord } = {};
-      
-      attendanceRecords.forEach((record: AttendanceRecord) => {
-        if (record.date === selectedDate) {
-          recordsMap[record.teacherId] = record;
-        }
-      });
-      
-      setAttendanceData(recordsMap);
-      console.log('📋 Registros carregados para', selectedDate, ':', Object.keys(recordsMap).length, 'professor(es)');
-    }
-  }, [attendanceRecords, selectedDate]);
+  // Mesclar dados agendados com registros salvos
+  const getMergedTeacherData = () => {
+    if (!teachers || teachers.length === 0) return [];
 
-  // Loading state - APÓS todos os hooks
-  if (loadingTeachers) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando dados...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (teachersError) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg max-w-md">
-          <div className="flex items-center gap-3 mb-3">
-            <AlertCircle className="text-red-500" size={24} />
-            <h2 className="text-xl font-bold text-red-800">Erro ao carregar dados</h2>
-          </div>
-          <p className="text-red-700 mb-4">
-            Não foi possível carregar os dados dos professores. Verifique sua conexão ou tente novamente.
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
-          >
-            Recarregar Página
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Calcular classes agendadas para cada professor no dia
-  const getScheduledClasses = (teacherId: string) => {
-    if (!timetableData || timetableData.length === 0) return 0;
-    
-    const dayOfWeek = new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long' });
-    const dayMap: { [key: string]: string } = {
-      'segunda-feira': 'Segunda',
-      'terça-feira': 'Terça',
-      'quarta-feira': 'Quarta',
-      'quinta-feira': 'Quinta',
-      'sexta-feira': 'Sexta',
-      'sábado': 'Sábado'
-    };
-    
-    const targetDay = dayMap[dayOfWeek.toLowerCase()];
-    let count = 0;
-    
-    timetableData.forEach((timetable: any) => {
-      if (timetable.slots) {
-        timetable.slots.forEach((slot: any) => {
-          if (slot.teacherId === teacherId && slot.day === targetDay) {
-            count++;
-          }
-        });
-      }
-    });
-    
-    return count;
-  };
-
-  // Marcar presença
-  const handleAttendanceChange = (teacherId: string, status: 'present' | 'absent') => {
-    const teacher = teachers.find(t => t.id === teacherId);
-    if (!teacher) return;
-
-    const scheduledClasses = getScheduledClasses(teacherId);
-    const givenClasses = status === 'present' ? scheduledClasses : 0;
-
-    setAttendanceData(prev => ({
-      ...prev,
-      [teacherId]: {
-        teacherId,
-        teacherName: teacher.name,
-        date: selectedDate,
-        status,
-        scheduledClasses,
-        givenClasses,
-        timestamp: new Date().toISOString()
-      }
-    }));
-  };
-
-  // Limpar marcação (excluir registro)
-  const handleClearAttendance = async (teacherId: string) => {
-    try {
-      // Remover do estado local
-      setAttendanceData(prev => {
-        const newData = { ...prev };
-        delete newData[teacherId];
-        return newData;
-      });
-
-      // Se já foi salvo no banco, deletar
-      const existingRecord = attendanceRecords?.find(
-        (r: AttendanceRecord) => r.teacherId === teacherId && r.date === selectedDate
+    return teachers.map(teacher => {
+      // Buscar registro salvo
+      const savedRecord = attendanceRecords?.find(
+        (r: AttendanceRecord) => r.teacherId === teacher.teacherId && r.date === selectedDate
       );
 
-      if (existingRecord) {
-        console.log('🗑️ Deletando registro:', { teacherId, date: selectedDate });
-        await api.delete(`/teacher-attendance/teacher/${teacherId}/date/${selectedDate}`);
-        
-        toast.success('🗑️ Registro de frequência removido');
-        queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
-        refetchAttendance();
-      } else {
-        toast.success('✨ Marcação limpa');
+      if (savedRecord) {
+        // Usar dados salvos
+        return savedRecord;
       }
-    } catch (error: any) {
-      console.error('Erro ao limpar frequência:', error);
-      toast.error('Erro ao limpar registro: ' + (error.response?.data?.message || error.message));
-    }
+
+      // Usar dados agendados com status pending
+      return {
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
+        date: selectedDate,
+        dayOfWeek: scheduledData?.dayOfWeek || '',
+        classes: teacher.classes || [],
+        totalScheduledClasses: teacher.classes?.length || 0,
+        totalPresentClasses: 0,
+        totalAbsentClasses: 0,
+        totalPendingClasses: teacher.classes?.length || 0,
+        attendanceRate: 0
+      };
+    });
   };
 
-  // Salvar frequência do dia
-  const handleSaveAttendance = async () => {
-    try {
-      const records = Object.values(attendanceData);
-      
-      if (records.length === 0) {
-        toast.error('Marque a presença de pelo menos um professor');
-        return;
-      }
+  const mergedData = getMergedTeacherData();
 
-      await api.post('/teacher-attendance/bulk', { records, date: selectedDate });
-      
-      toast.success(`✅ Frequência de ${records.length} professor(es) salva!`);
+  // Alternar expansão do professor
+  const toggleTeacherExpansion = (teacherId: string) => {
+    setExpandedTeachers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teacherId)) {
+        newSet.delete(teacherId);
+      } else {
+        newSet.add(teacherId);
+      }
+      return newSet;
+    });
+  };
+
+  // Marcar status de uma aula
+  const handleClassStatusChange = async (
+    teacherId: string,
+    period: number,
+    status: 'present' | 'absent'
+  ) => {
+    try {
+      await api.put('/teacher-attendance/class-status', {
+        teacherId,
+        date: selectedDate,
+        period,
+        status
+      });
+
+      toast.success(`✅ Aula marcada como ${status === 'present' ? 'presente' : 'ausente'}`);
       queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
       refetchAttendance();
-      setAttendanceData({});
     } catch (error: any) {
-      console.error('Erro ao salvar frequência:', error);
-      toast.error(error.response?.data?.message || 'Erro ao salvar frequência');
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status da aula');
     }
   };
 
-  // Gerar relatório
+  // Marcar todas as aulas do professor
+  const handleMarkAllClasses = async (
+    teacher: AttendanceRecord,
+    status: 'present' | 'absent'
+  ) => {
+    try {
+      const updatedClasses = teacher.classes.map(cls => ({
+        ...cls,
+        status,
+        markedAt: new Date()
+      }));
+
+      await api.post('/teacher-attendance/daily-record', {
+        teacherId: teacher.teacherId,
+        teacherName: teacher.teacherName,
+        date: selectedDate,
+        dayOfWeek: scheduledData?.dayOfWeek || new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long' }),
+        classes: updatedClasses
+      });
+
+      toast.success(`✅ Todas as aulas de ${teacher.teacherName} marcadas como ${status === 'present' ? 'presente' : 'ausente'}`);
+      queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      refetchAttendance();
+    } catch (error: any) {
+      console.error('Erro ao marcar todas as aulas:', error);
+      toast.error('Erro ao marcar aulas');
+    }
+  };
+
+  // Limpar registro do professor
+  const handleClearTeacherAttendance = async (teacherId: string) => {
+    try {
+      await api.delete(`/teacher-attendance/teacher/${teacherId}/date/${selectedDate}`);
+      
+      toast.success('🗑️ Registro de frequência removido');
+      queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      refetchAttendance();
+    } catch (error: any) {
+      console.error('Erro ao limpar frequência:', error);
+      toast.error('Erro ao limpar registro');
+    }
+  };
+
+  // Gerar relatório por professor
   const generateReport = (): AttendanceReport[] => {
     if (!attendanceRecords || attendanceRecords.length === 0) return [];
 
@@ -260,38 +248,91 @@ export default function TeacherAttendance() {
           teacherId: record.teacherId,
           teacherName: record.teacherName,
           totalScheduledClasses: 0,
-          totalGivenClasses: 0,
-          totalAbsences: 0,
+          totalPresentClasses: 0,
+          totalAbsentClasses: 0,
           attendanceRate: 0,
-          deficit: 0,
-          surplus: 0,
           workload: 0
         };
       }
 
-      reportMap[record.teacherId].totalScheduledClasses += record.scheduledClasses;
-      reportMap[record.teacherId].totalGivenClasses += record.givenClasses;
-      
-      if (record.status === 'absent') {
-        reportMap[record.teacherId].totalAbsences++;
-      }
+      reportMap[record.teacherId].totalScheduledClasses += Number(record.totalScheduledClasses) || 0;
+      reportMap[record.teacherId].totalPresentClasses += Number(record.totalPresentClasses) || 0;
+      reportMap[record.teacherId].totalAbsentClasses += Number(record.totalAbsentClasses) || 0;
     });
 
-    // Calcular métricas
-    Object.keys(reportMap).forEach(teacherId => {
-      const report = reportMap[teacherId];
-      report.attendanceRate = report.totalScheduledClasses > 0 
-        ? (report.totalGivenClasses / report.totalScheduledClasses) * 100 
-        : 0;
-      report.deficit = report.totalScheduledClasses - report.totalGivenClasses;
-      report.surplus = report.totalGivenClasses - report.totalScheduledClasses;
-      report.workload = report.totalGivenClasses * 0.833; // média 50min por aula
+    // Calcular métricas com validação
+    Object.values(reportMap).forEach(report => {
+      // Garantir que os valores são números válidos
+      report.totalScheduledClasses = Number(report.totalScheduledClasses) || 0;
+      report.totalPresentClasses = Number(report.totalPresentClasses) || 0;
+      report.totalAbsentClasses = Number(report.totalAbsentClasses) || 0;
+      
+      if (report.totalScheduledClasses > 0) {
+        report.attendanceRate = (report.totalPresentClasses / report.totalScheduledClasses) * 100;
+        report.workload = report.totalPresentClasses * 0.833; // 50min por aula
+      } else {
+        report.attendanceRate = 0;
+        report.workload = 0;
+      }
     });
 
     return Object.values(reportMap);
   };
 
+  // Gerar relatório de déficit por disciplina/turma
+  const generateSubjectDeficitReport = (): SubjectDeficit[] => {
+    if (!attendanceRecords || attendanceRecords.length === 0) return [];
+
+    const deficitMap: { [key: string]: SubjectDeficit } = {};
+
+    attendanceRecords.forEach((record: AttendanceRecord) => {
+      if (!record.classes || record.classes.length === 0) return;
+
+      record.classes.forEach((cls) => {
+        // Chave única: disciplina + turma
+        const key = `${cls.subjectId}_${cls.classId}`;
+
+        if (!deficitMap[key]) {
+          deficitMap[key] = {
+            subjectId: cls.subjectId,
+            subjectName: cls.subjectName,
+            classId: cls.classId,
+            className: cls.className,
+            grade: cls.grade,
+            teacherId: record.teacherId,
+            teacherName: record.teacherName,
+            scheduledClasses: 0,
+            givenClasses: 0,
+            deficit: 0,
+            dates: []
+          };
+        }
+
+        // Contar aulas agendadas e dadas
+        deficitMap[key].scheduledClasses += 1;
+        
+        if (cls.status === 'present') {
+          deficitMap[key].givenClasses += 1;
+        } else if (cls.status === 'absent') {
+          // Adicionar data da falta (sem duplicatas)
+          if (!deficitMap[key].dates.includes(record.date)) {
+            deficitMap[key].dates.push(record.date);
+          }
+        }
+      });
+    });
+
+    // Calcular déficit/saldo
+    Object.values(deficitMap).forEach(item => {
+      item.deficit = item.scheduledClasses - item.givenClasses;
+    });
+
+    // Ordenar por déficit (maior primeiro)
+    return Object.values(deficitMap).sort((a, b) => b.deficit - a.deficit);
+  };
+
   const report = generateReport();
+  const subjectDeficitReport = generateSubjectDeficitReport();
 
   // Imprimir relatório
   const handlePrint = () => {
@@ -305,15 +346,13 @@ export default function TeacherAttendance() {
       return;
     }
 
-    const headers = ['Professor', 'Aulas Previstas', 'Aulas Dadas', 'Faltas', 'Taxa de Presença (%)', 'Déficit', 'Saldo', 'Carga Horária (h)'];
+    const headers = ['Professor', 'Aulas Previstas', 'Aulas Dadas', 'Faltas', 'Taxa de Presença (%)', 'Carga Horária (h)'];
     const rows = report.map(r => [
       r.teacherName,
       r.totalScheduledClasses,
-      r.totalGivenClasses,
-      r.totalAbsences,
+      r.totalPresentClasses,
+      r.totalAbsentClasses,
       r.attendanceRate.toFixed(1),
-      r.deficit > 0 ? r.deficit : 0,
-      r.surplus > 0 ? r.surplus : 0,
       r.workload.toFixed(1)
     ]);
 
@@ -331,16 +370,49 @@ export default function TeacherAttendance() {
     toast.success('Relatório exportado com sucesso!');
   };
 
+  // Loading state
+  if (loadingScheduled) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (scheduledError && (!scheduledData || !scheduledData.teachers)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 bg-red-50 rounded-lg max-w-md">
+          <AlertCircle className="mx-auto text-red-500 mb-4" size={64} />
+          <h2 className="text-2xl font-bold text-red-900 mb-2">Erro ao carregar aulas</h2>
+          <p className="text-red-700 mb-4">
+            Não foi possível carregar as aulas agendadas. Verifique se existem horários cadastrados no sistema.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn btn-primary"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 p-6 rounded-lg no-print">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-blue-900">
           <CheckCircle className="text-blue-600" size={32} />
-          Controle de Frequência dos Professores
+          Controle de Frequência por Aula
         </h1>
         <p className="text-blue-700 mt-2">
-          Registre a presença diária e acompanhe relatórios de frequência e carga horária
+          Registre a presença de cada professor por aula individual do dia
         </p>
       </div>
 
@@ -351,109 +423,222 @@ export default function TeacherAttendance() {
           📝 Registro de Frequência Diária
         </h2>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            📅 Data do Registro
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="input max-w-xs"
-          />
-          <p className="text-sm text-gray-500 mt-1">
-            {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              day: '2-digit', 
-              month: 'long', 
-              year: 'numeric' 
-            })}
-          </p>
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              📅 Data do Registro
+            </label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="input w-full"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                day: '2-digit', 
+                month: 'long', 
+                year: 'numeric' 
+              })}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              📋 Horário Base para Cálculo de Déficit
+            </label>
+            <select
+              value={selectedTimetableId}
+              onChange={(e) => setSelectedTimetableId(e.target.value)}
+              className="input w-full"
+            >
+              <option value="auto">🤖 Automático (detectar do dia)</option>
+              {availableTimetables.map((timetable: any) => (
+                <option key={timetable.scheduleId} value={timetable.scheduleId}>
+                  {timetable.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              Usado para comparar aulas previstas vs dadas
+            </p>
+          </div>
         </div>
 
-        {/* Lista de Professores */}
-        <div className="space-y-3 mb-6">
-          <h3 className="font-bold text-lg text-gray-800 mb-3">👥 Professores</h3>
-          
-          {teachers.length === 0 ? (
+        {/* Mensagem informativa sobre o horário usado */}
+        {scheduledData?.scheduleId && (
+          <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+            <p className="text-sm text-blue-800">
+              📋 <strong>Horário em uso:</strong> {scheduledData.scheduleName}
+              {scheduledData.message && ` • ${scheduledData.message}`}
+            </p>
+          </div>
+        )}
+
+        {/* Alerta quando não há aulas */}
+        {scheduledData?.message && mergedData.length === 0 && (
+          <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+            <p className="text-sm text-yellow-800">
+              ⚠️ {scheduledData.message}
+            </p>
+          </div>
+        )}
+
+        {/* Lista de Professores com Aulas */}
+        <div className="space-y-4">
+          {mergedData.length === 0 ? (
             <div className="text-center p-8 bg-gray-50 rounded-lg">
               <AlertCircle className="mx-auto text-gray-400 mb-3" size={48} />
-              <p className="text-gray-600">Nenhum professor cadastrado</p>
+              <p className="text-gray-600 font-semibold">Nenhuma aula agendada para este dia</p>
+              <p className="text-sm text-gray-500 mt-2">
+                {scheduledData?.message || 'Verifique se o dia está cadastrado no calendário escolar'}
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {teachers.map((teacher) => {
-                const scheduledClasses = getScheduledClasses(teacher.id);
-                const attendance = attendanceData[teacher.id];
-                
-                return (
-                  <div
-                    key={teacher.id}
-                    className={`border-2 rounded-lg p-4 transition-all ${
-                      attendance?.status === 'present'
-                        ? 'bg-green-50 border-green-400'
-                        : attendance?.status === 'absent'
-                        ? 'bg-red-50 border-red-400'
-                        : 'bg-white border-gray-200 hover:border-blue-300'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-bold text-gray-800">{teacher.name}</h4>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {scheduledClasses} aula(s) prevista(s)
-                        </p>
-                      </div>
-                      <User className="text-gray-400" size={20} />
-                    </div>
+            mergedData.map((teacher: AttendanceRecord) => {
+              const isExpanded = expandedTeachers.has(teacher.teacherId);
+              const hasAbsent = teacher.totalAbsentClasses > 0;
+              const allPresent = teacher.totalPresentClasses === teacher.totalScheduledClasses;
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAttendanceChange(teacher.id, 'present')}
-                        className={`flex-1 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                          attendance?.status === 'present'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-green-100'
-                        }`}
-                      >
-                        <CheckCircle size={16} className="inline mr-1" />
-                        Presente
-                      </button>
-                      <button
-                        onClick={() => handleAttendanceChange(teacher.id, 'absent')}
-                        className={`flex-1 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                          attendance?.status === 'absent'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-red-100'
-                        }`}
-                      >
-                        <XCircle size={16} className="inline mr-1" />
-                        Ausente
-                      </button>
-                      <button
-                        onClick={() => handleClearAttendance(teacher.id)}
-                        className="px-3 py-2 rounded-md font-medium text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                        title="Limpar marcação"
-                      >
-                        <Eraser size={16} className="inline" />
-                      </button>
+              return (
+                <div
+                  key={teacher.teacherId}
+                  className={`border-2 rounded-lg overflow-hidden transition-all ${
+                    allPresent
+                      ? 'border-green-400 bg-green-50'
+                      : hasAbsent
+                      ? 'border-red-400 bg-red-50'
+                      : 'border-gray-300 bg-white'
+                  }`}
+                >
+                  {/* Cabeçalho do Professor */}
+                  <div
+                    className="p-4 cursor-pointer hover:bg-opacity-80"
+                    onClick={() => toggleTeacherExpansion(teacher.teacherId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <User className="text-gray-600" size={24} />
+                          <div>
+                            <h3 className="font-bold text-lg text-gray-800">{teacher.teacherName}</h3>
+                            <p className="text-sm text-gray-600">
+                              {teacher.totalScheduledClasses} aula(s) agendada(s) • 
+                              <span className="text-green-600 font-medium ml-1">{teacher.totalPresentClasses} presentes</span> • 
+                              <span className="text-red-600 font-medium ml-1">{teacher.totalAbsentClasses} ausentes</span> • 
+                              <span className="text-gray-500 ml-1">{teacher.totalPendingClasses} pendentes</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAllClasses(teacher, 'present');
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <CheckCircle size={16} />
+                          Todas Presentes
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAllClasses(teacher, 'absent');
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+                        >
+                          <XCircle size={16} />
+                          Todas Ausentes
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleClearTeacherAttendance(teacher.teacherId);
+                          }}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                          title="Limpar registros"
+                        >
+                          <Eraser size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Lista de Aulas (expandível) */}
+                  {isExpanded && (
+                    <div className="border-t-2 border-gray-200 bg-white p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {teacher.classes.map((cls, index) => (
+                          <div
+                            key={`${cls.period}-${index}`}
+                            className={`border-2 rounded-lg p-3 ${
+                              cls.status === 'present'
+                                ? 'bg-green-50 border-green-400'
+                                : cls.status === 'absent'
+                                ? 'bg-red-50 border-red-400'
+                                : 'bg-gray-50 border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-bold">
+                                    {cls.period}º
+                                  </span>
+                                  <Clock size={14} className="text-gray-500" />
+                                  <span className="text-sm text-gray-600">
+                                    {cls.startTime} - {cls.endTime}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <BookOpen size={14} className="text-blue-600" />
+                                  <p className="text-sm font-semibold text-gray-800">{cls.subjectName}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <GraduationCap size={14} className="text-purple-600" />
+                                  <p className="text-xs text-gray-600">{cls.className}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => handleClassStatusChange(teacher.teacherId, cls.period, 'present')}
+                                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                                  cls.status === 'present'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-green-100'
+                                }`}
+                              >
+                                <CheckCircle size={12} className="inline mr-1" />
+                                Presente
+                              </button>
+                              <button
+                                onClick={() => handleClassStatusChange(teacher.teacherId, cls.period, 'absent')}
+                                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                                  cls.status === 'absent'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-red-100'
+                                }`}
+                              >
+                                <XCircle size={12} className="inline mr-1" />
+                                Ausente
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
-
-        {/* Botão Salvar */}
-        <button
-          onClick={handleSaveAttendance}
-          disabled={Object.keys(attendanceData).length === 0}
-          className="btn btn-primary w-full md:w-auto flex items-center gap-2"
-        >
-          <FileText size={20} />
-          💾 Salvar Frequência do Dia ({Object.keys(attendanceData).length} registro(s))
-        </button>
       </div>
 
       {/* Seção de Relatórios */}
@@ -617,8 +802,6 @@ export default function TeacherAttendance() {
                     <th className="border border-gray-300 p-3 text-center font-bold">Aulas Dadas</th>
                     <th className="border border-gray-300 p-3 text-center font-bold">Faltas</th>
                     <th className="border border-gray-300 p-3 text-center font-bold">Taxa (%)</th>
-                    <th className="border border-gray-300 p-3 text-center font-bold">Déficit</th>
-                    <th className="border border-gray-300 p-3 text-center font-bold">Saldo</th>
                     <th className="border border-gray-300 p-3 text-center font-bold">Carga Horária (h)</th>
                   </tr>
                 </thead>
@@ -628,10 +811,10 @@ export default function TeacherAttendance() {
                       <td className="border border-gray-300 p-3 font-semibold">{r.teacherName}</td>
                       <td className="border border-gray-300 p-3 text-center">{r.totalScheduledClasses}</td>
                       <td className="border border-gray-300 p-3 text-center font-bold text-green-700">
-                        {r.totalGivenClasses}
+                        {r.totalPresentClasses}
                       </td>
                       <td className="border border-gray-300 p-3 text-center font-bold text-red-700">
-                        {r.totalAbsences}
+                        {r.totalAbsentClasses}
                       </td>
                       <td className="border border-gray-300 p-3 text-center">
                         <span className={`font-bold ${
@@ -641,20 +824,6 @@ export default function TeacherAttendance() {
                         }`}>
                           {r.attendanceRate.toFixed(1)}%
                         </span>
-                      </td>
-                      <td className="border border-gray-300 p-3 text-center">
-                        {r.deficit > 0 ? (
-                          <span className="font-bold text-red-600">-{r.deficit}</span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="border border-gray-300 p-3 text-center">
-                        {r.surplus > 0 ? (
-                          <span className="font-bold text-green-600">+{r.surplus}</span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
                       </td>
                       <td className="border border-gray-300 p-3 text-center font-semibold">
                         {r.workload.toFixed(1)}h
@@ -669,21 +838,15 @@ export default function TeacherAttendance() {
                       {report.reduce((sum, r) => sum + r.totalScheduledClasses, 0)}
                     </td>
                     <td className="border border-gray-300 p-3 text-center text-green-700">
-                      {report.reduce((sum, r) => sum + r.totalGivenClasses, 0)}
+                      {report.reduce((sum, r) => sum + r.totalPresentClasses, 0)}
                     </td>
                     <td className="border border-gray-300 p-3 text-center text-red-700">
-                      {report.reduce((sum, r) => sum + r.totalAbsences, 0)}
+                      {report.reduce((sum, r) => sum + r.totalAbsentClasses, 0)}
                     </td>
                     <td className="border border-gray-300 p-3 text-center">
                       {report.length > 0
                         ? ((report.reduce((sum, r) => sum + r.attendanceRate, 0) / report.length).toFixed(1))
                         : '0.0'}%
-                    </td>
-                    <td className="border border-gray-300 p-3 text-center text-red-600">
-                      -{report.reduce((sum, r) => sum + (r.deficit > 0 ? r.deficit : 0), 0)}
-                    </td>
-                    <td className="border border-gray-300 p-3 text-center text-green-600">
-                      +{report.reduce((sum, r) => sum + (r.surplus > 0 ? r.surplus : 0), 0)}
                     </td>
                     <td className="border border-gray-300 p-3 text-center">
                       {report.reduce((sum, r) => sum + r.workload, 0).toFixed(1)}h
@@ -710,7 +873,7 @@ export default function TeacherAttendance() {
                   <div>
                     <p className="text-sm text-green-700 font-medium">Aulas Dadas</p>
                     <p className="text-3xl font-bold text-green-900">
-                      {report.reduce((sum, r) => sum + r.totalGivenClasses, 0)}
+                      {report.reduce((sum, r) => sum + r.totalPresentClasses, 0)}
                     </p>
                   </div>
                   <CheckCircle className="text-green-600" size={40} />
@@ -722,7 +885,7 @@ export default function TeacherAttendance() {
                   <div>
                     <p className="text-sm text-red-700 font-medium">Total de Faltas</p>
                     <p className="text-3xl font-bold text-red-900">
-                      {report.reduce((sum, r) => sum + r.totalAbsences, 0)}
+                      {report.reduce((sum, r) => sum + r.totalAbsentClasses, 0)}
                     </p>
                   </div>
                   <XCircle className="text-red-600" size={40} />
@@ -741,6 +904,128 @@ export default function TeacherAttendance() {
                 </div>
               </div>
             </div>
+
+            {/* Tabela de Déficit por Disciplina/Turma */}
+            {subjectDeficitReport.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <BookOpen className="text-orange-600" size={24} />
+                  📊 Déficit/Saldo por Disciplina e Turma
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  O déficit/saldo é calculado por disciplina em cada turma, considerando as faltas do professor responsável.
+                </p>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-orange-600 to-red-600 text-white">
+                        <th className="border border-gray-300 p-3 text-left font-bold">Disciplina</th>
+                        <th className="border border-gray-300 p-3 text-left font-bold">Turma</th>
+                        <th className="border border-gray-300 p-3 text-left font-bold">Professor</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold">Previstas</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold">Dadas</th>
+                        <th className="border border-gray-300 p-3 text-center font-bold">Déficit</th>
+                        <th className="border border-gray-300 p-3 text-left font-bold">Datas das Faltas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subjectDeficitReport.map((item, index) => (
+                        <tr key={`${item.subjectId}_${item.classId}`} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                          <td className="border border-gray-300 p-3 font-semibold text-blue-800">
+                            {item.subjectName}
+                          </td>
+                          <td className="border border-gray-300 p-3">
+                            <div className="font-medium">{item.className}</div>
+                            <div className="text-xs text-gray-600">{item.grade}</div>
+                          </td>
+                          <td className="border border-gray-300 p-3 text-gray-700">
+                            {item.teacherName}
+                          </td>
+                          <td className="border border-gray-300 p-3 text-center">
+                            {item.scheduledClasses}
+                          </td>
+                          <td className="border border-gray-300 p-3 text-center font-bold text-green-700">
+                            {item.givenClasses}
+                          </td>
+                          <td className="border border-gray-300 p-3 text-center">
+                            {item.deficit > 0 ? (
+                              <span className="font-bold text-red-600 text-lg">
+                                -{item.deficit}
+                              </span>
+                            ) : item.deficit < 0 ? (
+                              <span className="font-bold text-green-600 text-lg">
+                                +{Math.abs(item.deficit)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="border border-gray-300 p-3">
+                            {item.dates.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {item.dates.map(date => (
+                                  <span key={date} className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                                    {new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">Sem faltas</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-orange-100 font-bold">
+                        <td colSpan={3} className="border border-gray-300 p-3">TOTAIS</td>
+                        <td className="border border-gray-300 p-3 text-center">
+                          {subjectDeficitReport.reduce((sum, item) => sum + item.scheduledClasses, 0)}
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center text-green-700">
+                          {subjectDeficitReport.reduce((sum, item) => sum + item.givenClasses, 0)}
+                        </td>
+                        <td className="border border-gray-300 p-3 text-center text-red-700">
+                          {subjectDeficitReport.reduce((sum, item) => sum + (item.deficit > 0 ? item.deficit : 0), 0)}
+                        </td>
+                        <td className="border border-gray-300 p-3"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Alertas de Déficit Crítico */}
+                {subjectDeficitReport.filter(item => item.deficit >= 2).length > 0 && (
+                  <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-600 rounded">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+                      <div>
+                        <p className="font-bold text-red-900 mb-2">
+                          ⚠️ Atenção: {subjectDeficitReport.filter(item => item.deficit >= 2).length} disciplina(s) com déficit crítico (≥2 aulas)
+                        </p>
+                        <ul className="text-sm text-red-800 space-y-1">
+                          {subjectDeficitReport
+                            .filter(item => item.deficit >= 2)
+                            .slice(0, 5)
+                            .map(item => (
+                              <li key={`${item.subjectId}_${item.classId}`}>
+                                • <strong>{item.subjectName}</strong> na turma <strong>{item.className}</strong>: 
+                                <span className="font-bold text-red-600"> {item.deficit} aulas em falta</span>
+                              </li>
+                            ))}
+                        </ul>
+                        {subjectDeficitReport.filter(item => item.deficit >= 2).length > 5 && (
+                          <p className="text-xs text-red-700 mt-2">
+                            ...e mais {subjectDeficitReport.filter(item => item.deficit >= 2).length - 5} disciplina(s)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

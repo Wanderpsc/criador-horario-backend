@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { copyFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
   plugins: [
     react(),
     {
@@ -58,8 +58,8 @@ export default defineConfig(({ command }) => ({
       }
     }
   ],
-  // Base path removido - Surge.sh serve do root
-  // base: '/criador-horario-backend/',
+  // Base path dinâmico: GitHub Pages usa subdiretório, Surge.sh serve do root
+  base: mode === 'github' ? '/criador-horario-backend/' : '/',
   server: {
     port: 3001,
     host: true,
