@@ -92,10 +92,11 @@ export default function TeacherAttendance() {
 
   // Buscar aulas agendadas para o dia
   const { data: scheduledData, isLoading: loadingScheduled, error: scheduledError } = useQuery({
-    queryKey: ['scheduled-classes', selectedDate],
+    queryKey: ['scheduled-classes', selectedDate, selectedTimetableId],
     queryFn: async () => {
       try {
-        const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}`);
+        const params = selectedTimetableId !== 'auto' ? `?scheduleId=${selectedTimetableId}` : '';
+        const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}${params}`);
         return response.data;
       } catch (error) {
         console.error('Erro ao buscar aulas agendadas:', error);
@@ -156,6 +157,18 @@ export default function TeacherAttendance() {
   };
 
   const mergedData = getMergedTeacherData();
+
+  // Expandir/Recolher todos os professores
+  const toggleAllTeachers = () => {
+    if (expandedTeachers.size === mergedData.length) {
+      // Se todos estão expandidos, recolher todos
+      setExpandedTeachers(new Set());
+    } else {
+      // Expandir todos
+      const allIds = mergedData.map(t => t.teacherId);
+      setExpandedTeachers(new Set(allIds));
+    }
+  };
 
   // Alternar expansão do professor
   const toggleTeacherExpansion = (teacherId: string) => {
@@ -476,12 +489,55 @@ export default function TeacherAttendance() {
           </div>
         )}
 
+        {/* Alerta de dia não cadastrado (mas com aulas disponíveis) */}
+        {scheduledData?.warning && mergedData.length > 0 && (
+          <div className="mb-4 p-4 bg-orange-50 border-l-4 border-orange-500 rounded">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="text-orange-600 mt-0.5 flex-shrink-0" size={20} />
+              <div>
+                <p className="text-sm text-orange-800 font-semibold mb-1">
+                  Atenção: {scheduledData.message}
+                </p>
+                <p className="text-xs text-orange-700">
+                  As aulas abaixo são baseadas no horário padrão da {scheduledData.dayOfWeek}. 
+                  Para melhor controle, cadastre este dia no <strong>Calendário Letivo</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Alerta quando não há aulas */}
         {scheduledData?.message && mergedData.length === 0 && (
           <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
             <p className="text-sm text-yellow-800">
               ⚠️ {scheduledData.message}
             </p>
+          </div>
+        )}
+
+        {/* Botão Expandir/Recolher Todos */}
+        {mergedData.length > 0 && (
+          <div className="mb-4 flex items-center justify-between bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium">
+              💡 <strong>Clique nos cards dos professores</strong> para ver e marcar presença/ausência de cada aula individual
+            </p>
+            <button
+              onClick={toggleAllTeachers}
+              className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+            >
+              {expandedTeachers.size === mergedData.length ? (
+                <>
+                  <Minimize2 size={16} />
+                  Recolher Todos
+                </>
+              ) : (
+                <>
+                  <Maximize2 size={16} />
+                  Expandir Todos
+                </>
+              )}
+            </button>
           </div>
         )}
 
@@ -514,10 +570,15 @@ export default function TeacherAttendance() {
                 >
                   {/* Cabeçalho do Professor */}
                   <div
-                    className="p-4 cursor-pointer hover:bg-opacity-80"
+                    className="p-4 cursor-pointer hover:bg-opacity-80 flex items-center gap-3"
                     onClick={() => toggleTeacherExpansion(teacher.teacherId)}
                   >
-                    <div className="flex items-center justify-between">
+                    {/* Ícone de Expansão */}
+                    <div className="text-blue-600">
+                      {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                    </div>
+
+                    <div className="flex items-center justify-between flex-1">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
                           <User className="text-gray-600" size={24} />
@@ -540,6 +601,7 @@ export default function TeacherAttendance() {
                             handleMarkAllClasses(teacher, 'present');
                           }}
                           className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                          title="Marcar todas as aulas deste professor como presente"
                         >
                           <CheckCircle size={16} />
                           Todas Presentes
@@ -550,6 +612,7 @@ export default function TeacherAttendance() {
                             handleMarkAllClasses(teacher, 'absent');
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+                          title="Marcar todas as aulas deste professor como ausente"
                         >
                           <XCircle size={16} />
                           Todas Ausentes
@@ -560,7 +623,7 @@ export default function TeacherAttendance() {
                             handleClearTeacherAttendance(teacher.teacherId);
                           }}
                           className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                          title="Limpar registros"
+                          title="Limpar registros deste professor"
                         >
                           <Eraser size={16} />
                         </button>
@@ -571,6 +634,11 @@ export default function TeacherAttendance() {
                   {/* Lista de Aulas (expandível) */}
                   {isExpanded && (
                     <div className="border-t-2 border-gray-200 bg-white p-4">
+                      <div className="mb-3 bg-blue-50 p-2 rounded">
+                        <p className="text-sm text-blue-800">
+                          📚 <strong>Marque a presença/ausência de cada aula individualmente:</strong>
+                        </p>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         {teacher.classes.map((cls, index) => (
                           <div

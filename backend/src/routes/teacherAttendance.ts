@@ -377,6 +377,7 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
 router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
   try {
     const { date } = req.params;
+    const { scheduleId } = req.query; // Permitir passar scheduleId via query
     const schoolId = req.user?.schoolId;
 
     if (!schoolId) {
@@ -393,23 +394,105 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
 
     console.log('📅 SchoolDay encontrado:', schoolDay);
 
-    // Se não houver dia letivo cadastrado ou for feriado/recesso
-    if (!schoolDay || schoolDay.dayType === 'holiday' || schoolDay.dayType === 'recess') {
-      console.log('⚠️ Dia não letivo ou não cadastrado');
+    // Se não houver dia letivo cadastrado, mas scheduleId foi passado, usar mesmo assim
+    if (!schoolDay && !scheduleId) {
+      console.log('⚠️ Dia não cadastrado no calendário e sem scheduleId na query');
+      
+      // PERMITIR BUSCAR MESMO SEM CALENDÁRIO - usar horário do dia da semana
+      const dateObj = new Date(date + 'T12:00:00');
+      const dayOfWeek = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+      const dayMap: { [key: string]: string } = {
+        'segunda-feira': 'Segunda',
+        'terça-feira': 'Terça',
+        'quarta-feira': 'Quarta',
+        'quinta-feira': 'Quinta',
+        'sexta-feira': 'Sexta',
+        'sábado': 'Sábado'
+      };
+      const targetDay = dayMap[dayOfWeek.toLowerCase()];
+
+      console.log('🔄 Usando horário padrão para:', targetDay);
+
+      // Buscar todos os horários da escola
+      const timetables = await GeneratedTimetable.find({ schoolId });
+      
+      if (timetables.length === 0) {
+        return res.json({
+          date,
+          dayOfWeek: targetDay,
+          teachers: [],
+          scheduleId: null,
+          scheduleName: 'Nenhum horário cadastrado',
+          message: 'Nenhum horário foi gerado ainda. Crie um horário em "Gerar Horários"',
+          warning: true
+        });
+      }
+
+      // Organizar aulas por professor
+      const teacherClasses: { [key: string]: any } = {};
+
+      timetables.forEach((timetable: any) => {
+        if (timetable.slots && Array.isArray(timetable.slots)) {
+          timetable.slots.forEach((slot: any) => {
+            if (slot.day === targetDay && slot.teacherId) {
+              if (!teacherClasses[slot.teacherId]) {
+                teacherClasses[slot.teacherId] = {
+                  teacherId: slot.teacherId,
+                  teacherName: slot.teacherName,
+                  classes: []
+                };
+              }
+
+              teacherClasses[slot.teacherId].classes.push({
+                period: slot.period,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                subjectId: slot.subjectId,
+                subjectName: slot.subjectName,
+                classId: timetable.classId,
+                className: timetable.name,
+                grade: timetable.grade || 'N/A',
+                status: 'pending'
+              });
+            }
+          });
+        }
+      });
+
+      // Ordenar aulas por período
+      Object.values(teacherClasses).forEach((teacher: any) => {
+        teacher.classes.sort((a: any, b: any) => a.period - b.period);
+      });
+
+      console.log('👨‍🏫 Professores encontrados (sem calendário):', Object.keys(teacherClasses).length);
+
+      return res.json({
+        date,
+        dayOfWeek: targetDay,
+        teachers: Object.values(teacherClasses),
+        scheduleId: null,
+        scheduleName: 'Horário Padrão (Dia não cadastrado no calendário)',
+        message: 'Usando horário padrão do dia da semana. Cadastre este dia no Calendário Letivo para melhor controle.',
+        warning: true
+      });
+    }
+
+    // Se for feriado/recesso
+    if (schoolDay && (schoolDay.dayType === 'holiday' || schoolDay.dayType === 'recess')) {
+      console.log('⚠️ Dia não letivo (feriado ou recesso)');
       return res.json({
         date,
         dayOfWeek: '',
         teachers: [],
-        message: schoolDay 
-          ? 'Dia não letivo (feriado ou recesso)' 
-          : 'Dia não cadastrado no calendário escolar'
+        message: 'Dia não letivo (feriado ou recesso)'
       });
     }
 
     // 2. DETERMINAR QUAL DIA DA SEMANA USAR
     let targetDay: string;
+    let effectiveScheduleId = scheduleId || schoolDay?.scheduleId; // Priorizar query param
     
-    if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
+    if (schoolDay?.dayType === 'saturday' && schoolDay.followWeekday) {
       // Sábado de reposição: seguir horário de outro dia
       const weekdayMap: { [key: string]: string } = {
         'monday': 'Segunda',
@@ -439,9 +522,9 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     // 3. BUSCAR HORÁRIOS (FILTRAR POR scheduleId SE ESPECIFICADO)
     let query: any = { schoolId };
     
-    if (schoolDay.scheduleId) {
-      query.scheduleId = schoolDay.scheduleId;
-      console.log('🎯 Usando scheduleId específico:', schoolDay.scheduleId);
+    if (effectiveScheduleId) {
+      query.scheduleId = effectiveScheduleId;
+      console.log('🎯 Usando scheduleId específico:', effectiveScheduleId);
     }
 
     const timetables = await GeneratedTimetable.find(query);
@@ -489,8 +572,8 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       date,
       dayOfWeek: targetDay,
       teachers: Object.values(teacherClasses),
-      scheduleId: schoolDay.scheduleId,
-      scheduleName: schoolDay.scheduleId || 'Padrão'
+      scheduleId: effectiveScheduleId,
+      scheduleName: effectiveScheduleId || 'Padrão'
     });
   } catch (error) {
     console.error('❌ Erro ao buscar aulas agendadas:', error);
