@@ -101,6 +101,8 @@ export default function TeacherAttendance() {
       try {
         const params = selectedTimetableId !== 'auto' ? `?scheduleId=${selectedTimetableId}` : '';
         const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}${params}`);
+        console.log('👨‍🏫 BACKEND RETORNOU:', response.data.teachers?.length || 0, 'professores para', selectedDate);
+        console.log('📋 Detalhes:', response.data);
         return response.data;
       } catch (error) {
         console.error('Erro ao buscar aulas agendadas:', error);
