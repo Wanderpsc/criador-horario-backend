@@ -415,9 +415,20 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       console.log('🔄 Usando horário padrão para:', targetDay);
 
       // Buscar todos os horários da escola
-      const timetables = await GeneratedTimetable.find({ schoolId });
+      // IMPORTANTE: O campo no modelo é 'school', não 'schoolId'
+      const timetables = await GeneratedTimetable.find({ school: schoolId });
+      
+      console.log('📚 Horários encontrados (sem calendário):', timetables.length);
       
       if (timetables.length === 0) {
+        // Tentar buscar SEM filtro para debug
+        const allTimetables = await GeneratedTimetable.find({}).limit(3);
+        console.log('🔍 Primeiros 3 horários no banco:', allTimetables.map((t: any) => ({
+          scheduleId: t.scheduleId,
+          title: t.title,
+          school: t.school || 'SEM CAMPO SCHOOL'
+        })));
+        
         return res.json({
           date,
           dayOfWeek: targetDay,
@@ -546,25 +557,39 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     }
 
     // 3. BUSCAR HORÁRIOS (FILTRAR POR scheduleId SE ESPECIFICADO)
-    let query: any = { schoolId };
+    // IMPORTANTE: O campo no modelo GeneratedTimetable é 'school', não 'schoolId'
+    let query: any = { school: schoolId };
     
     if (effectiveScheduleId) {
       query.scheduleId = effectiveScheduleId;
       console.log('🎯 Usando scheduleId específico:', effectiveScheduleId);
     } else {
       console.log('📋 Buscando TODOS os horários da escola (nenhum scheduleId especificado)');
+      console.log('📋 Query sendo usada:', query);
     }
 
     const timetables = await GeneratedTimetable.find(query);
     console.log('📚 Horários encontrados:', timetables.length);
     
     if (timetables.length > 0) {
-      console.log('📚 Primeiro horário:', {
+      console.log('📚 Detalhes do primeiro horário:', {
         scheduleId: timetables[0].scheduleId,
         title: timetables[0].title,
         classId: timetables[0].classId,
-        totalSlots: timetables[0].slots?.length || 0
+        totalSlots: timetables[0].slots?.length || 0,
+        schoolId: (timetables[0] as any).school || 'N/A'
       });
+    } else {
+      console.log('❌ NENHUM HORÁRIO ENCONTRADO! Query usada:', query);
+      console.log('❌ schoolId procurado:', schoolId);
+      
+      // Tentar buscar SEM filtro de school para debug
+      const allTimetables = await GeneratedTimetable.find({}).limit(3);
+      console.log('🔍 Primeiros 3 horários no banco (sem filtro):', allTimetables.map((t: any) => ({
+        scheduleId: t.scheduleId,
+        title: t.title,
+        school: t.school || 'SEM CAMPO SCHOOL'
+      })));
     }
 
     // 4. BUSCAR TODOS OS PROFESSORES ATIVOS DA ESCOLA
@@ -600,12 +625,30 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     // Adicionar aulas do horário
     let totalSlotsProcessed = 0;
     let slotsForTargetDay = 0;
+    const daysFound = new Set<string>();
     
-    timetables.forEach((timetable: any) => {
+    console.log('🔍 DIA PROCURADO (targetDay):', targetDay);
+    
+    timetables.forEach((timetable: any, timetableIndex: number) => {
       if (timetable.slots && Array.isArray(timetable.slots)) {
         totalSlotsProcessed += timetable.slots.length;
         
-        timetable.slots.forEach((slot: any) => {
+        // Log do primeiro slot de cada horário para debug
+        if (timetableIndex === 0 && timetable.slots.length > 0) {
+          console.log('📝 EXEMPLO DE SLOT:', {
+            day: timetable.slots[0].day,
+            period: timetable.slots[0].period,
+            teacherId: timetable.slots[0].teacherId,
+            teacherName: timetable.slots[0].teacherName
+          });
+        }
+        
+        timetable.slots.forEach((slot: any, slotIndex: number) => {
+          // Coletar todos os dias únicos encontrados
+          if (slot.day) {
+            daysFound.add(slot.day);
+          }
+          
           if (slot.day === targetDay) {
             slotsForTargetDay++;
             
@@ -635,6 +678,7 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     });
     
     console.log('📊 Total de slots processados:', totalSlotsProcessed);
+    console.log('📊 Dias encontrados nos slots:', Array.from(daysFound));
     console.log('📊 Slots para', targetDay + ':', slotsForTargetDay);
     console.log('👨‍🏫 Professores com aulas neste dia:', Object.values(teacherClasses).filter((t: any) => t.classes.length > 0).length);
 
