@@ -1446,11 +1446,11 @@ router.post('/payment', auth, async (req: AuthRequest, res) => {
 
     // Atualizar o status das aulas ausentes para "presente" (dando baixa)
     // Isso efetivamente "paga" as aulas ausentes
-    attendanceRecord.classes = attendanceRecord.classes.map((cls: any) => {
+    attendanceRecord.classes.forEach((cls: any) => {
       if (cls.status === 'absent') {
-        return { ...cls, status: 'present', markedAt: new Date() };
+        cls.status = 'present';
+        cls.markedAt = new Date();
       }
-      return cls;
     });
 
     // Recalcular estatísticas
