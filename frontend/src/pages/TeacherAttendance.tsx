@@ -20,7 +20,8 @@ import {
   Minimize2,
   Maximize2,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  DollarSign
 } from 'lucide-react';
 
 interface ClassAttendance {
@@ -81,6 +82,19 @@ export default function TeacherAttendance() {
   const [endDate, setEndDate] = useState('');
   const [expandedTeachers, setExpandedTeachers] = useState<Set<string>>(new Set());
   const [selectedTimetableId, setSelectedTimetableId] = useState<string>('auto');
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printOptions, setPrintOptions] = useState({
+    generalReport: true,
+    subjectReport: true,
+    teacherCards: false
+  });
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedTeacherForPayment, setSelectedTeacherForPayment] = useState<AttendanceRecord | null>(null);
+  const [selectedClassForPayment, setSelectedClassForPayment] = useState<ClassAttendance | null>(null);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
+  const [paymentReceiptData, setPaymentReceiptData] = useState<any>(null);
   const queryClient = useQueryClient();
 
   // Buscar horários disponíveis
@@ -93,6 +107,20 @@ export default function TeacherAttendance() {
   });
 
   const availableTimetables = Array.isArray(timetablesData) ? timetablesData : [];
+
+  // Buscar dados da escola para impressão
+  const { data: schoolData } = useQuery({
+    queryKey: ['school-info'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/school');
+        return response.data;
+      } catch (error) {
+        console.error('Erro ao buscar dados da escola:', error);
+        return { name: 'Escola', logo: '' };
+      }
+    }
+  });
 
   // Buscar aulas agendadas para o dia
   const { data: scheduledData, isLoading: loadingScheduled, error: scheduledError } = useQuery({
@@ -278,6 +306,63 @@ export default function TeacherAttendance() {
     }
   };
 
+  // Abrir modal de pagamento para aula individual
+  const handleOpenPaymentModalForClass = (teacher: AttendanceRecord, classData: ClassAttendance) => {
+    setSelectedTeacherForPayment(teacher);
+    setSelectedClassForPayment(classData);
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setReferenceDate(selectedDate);
+    setShowPaymentModal(true);
+  };
+
+  // Fechar modal de pagamento
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+    setSelectedTeacherForPayment(null);
+    setSelectedClassForPayment(null);
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setReferenceDate(selectedDate);
+  };
+
+  // Processar pagamento de aula individual
+  const handleProcessPayment = async () => {
+    if (!selectedTeacherForPayment || !selectedClassForPayment) return;
+
+    try {
+      const response = await api.post('/teacher-attendance/payment-class', {
+        teacherId: selectedTeacherForPayment.teacherId,
+        teacherName: selectedTeacherForPayment.teacherName,
+        paymentDate,
+        referenceDate,
+        period: selectedClassForPayment.period,
+        classData: selectedClassForPayment
+      });
+
+      // Preparar dados do recibo
+      setPaymentReceiptData({
+        paymentDate,
+        teacherName: selectedTeacherForPayment.teacherName,
+        classData: selectedClassForPayment,
+        receiptNumber: response.data.payment?._id || Date.now().toString(),
+        generatedAt: new Date().toLocaleString('pt-BR')
+      });
+
+      toast.success(`💰 Pagamento registrado para ${selectedClassForPayment.subjectName}`);
+      handleClosePaymentModal();
+      setShowPaymentReceipt(true);
+      queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      refetchAttendance();
+    } catch (error: any) {
+      console.error('Erro ao processar pagamento:', error);
+      toast.error(error.response?.data?.message || 'Erro ao processar pagamento');
+    }
+  };
+
+  // Imprimir recibo de pagamento
+  const handlePrintPaymentReceipt = () => {
+    window.print();
+  };
+
   // Gerar relatório por professor
   const generateReport = (): AttendanceReport[] => {
     if (!attendanceRecords || attendanceRecords.length === 0) return [];
@@ -376,9 +461,18 @@ export default function TeacherAttendance() {
   const report = generateReport();
   const subjectDeficitReport = generateSubjectDeficitReport();
 
-  // Imprimir relatório
-  const handlePrint = () => {
-    window.print();
+  // Abrir modal de seleção de impressão
+  const handleOpenPrintModal = () => {
+    setShowPrintModal(true);
+  };
+
+  // Confirmar e imprimir
+  const handleConfirmPrint = () => {
+    setShowPrintModal(false);
+    // Aguardar modal fechar antes de imprimir
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   // Exportar para CSV
@@ -447,6 +541,416 @@ export default function TeacherAttendance() {
 
   return (
     <div className="space-y-6">
+      {/* Estilos CSS para Impressão */}
+      <style>{`
+        @media print {
+          body { 
+            font-family: Arial, sans-serif; 
+            font-size: 11pt;
+            color: #000;
+          }
+          .no-print { display: none !important; }
+          .only-print { display: block !important; }
+          
+          /* Ocultar seções não selecionadas */
+          ${!printOptions.generalReport ? '.print-general-report { display: none !important; }' : ''}
+          ${!printOptions.subjectReport ? '.print-subject-report { display: none !important; }' : ''}
+          ${!printOptions.teacherCards ? '.print-teacher-cards { display: none !important; }' : ''}
+          
+          .card { 
+            box-shadow: none !important; 
+            border: 1px solid #ddd;
+            page-break-inside: avoid;
+          }
+          table { 
+            page-break-inside: auto;
+            width: 100%;
+            border-collapse: collapse;
+          }
+          tr { page-break-inside: avoid; }
+          th, td { 
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+          }
+          th { 
+            background-color: #f0f0f0 !important;
+            font-weight: bold;
+          }
+          
+          /* Cabeçalho da escola */
+          .print-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-bottom: 3px solid #000;
+            margin-bottom: 20px;
+          }
+          .print-header img {
+            max-height: 80px;
+            margin-right: 20px;
+          }
+          .print-header-text {
+            text-align: center;
+          }
+          .print-header-text h1 {
+            font-size: 18pt;
+            margin: 0 0 5px 0;
+            font-weight: bold;
+          }
+          .print-header-text p {
+            margin: 2px 0;
+            font-size: 10pt;
+            color: #333;
+          }
+          
+          /* Quebra de página entre seções */
+          .print-page-break {
+            page-break-before: always;
+          }
+          
+          /* Configuração da página */
+          @page {
+            margin: 1.5cm;
+            size: A4 landscape;
+          }
+          
+          /* Impressão de cores */
+          body {
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+          
+          /* Repetir cabeçalho da tabela */
+          thead {
+            display: table-header-group;
+          }
+          tfoot {
+            display: table-footer-group;
+          }
+        }
+        
+        .only-print { display: none; }
+      `}</style>
+
+      {/* Modal de Seleção de Impressão */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Printer className="text-purple-600" size={28} />
+              Opções de Impressão
+            </h3>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              Selecione os relatórios que deseja imprimir:
+            </p>
+            
+            <div className="space-y-4 mb-6">
+              {/* Relatório Geral */}
+              <label className="flex items-start gap-3 cursor-pointer p-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ borderColor: printOptions.generalReport ? '#3B82F6' : '#E5E7EB' }}>
+                <input
+                  type="checkbox"
+                  checked={printOptions.generalReport}
+                  onChange={(e) => setPrintOptions({...printOptions, generalReport: e.target.checked})}
+                  className="mt-1 w-5 h-5"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">Relatório Geral de Frequência</p>
+                  <p className="text-sm text-gray-600">Tabela resumida por professor com totais</p>
+                </div>
+              </label>
+              
+              {/* Relatório por Disciplina */}
+              <label className="flex items-start gap-3 cursor-pointer p-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ borderColor: printOptions.subjectReport ? '#3B82F6' : '#E5E7EB' }}>
+                <input
+                  type="checkbox"
+                  checked={printOptions.subjectReport}
+                  onChange={(e) => setPrintOptions({...printOptions, subjectReport: e.target.checked})}
+                  className="mt-1 w-5 h-5"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">Déficit/Saldo por Disciplina</p>
+                  <p className="text-sm text-gray-600">Detalhamento por disciplina e turma</p>
+                </div>
+              </label>
+              
+              {/* Cards dos Professores */}
+              <label className="flex items-start gap-3 cursor-pointer p-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ borderColor: printOptions.teacherCards ? '#3B82F6' : '#E5E7EB' }}>
+                <input
+                  type="checkbox"
+                  checked={printOptions.teacherCards}
+                  onChange={(e) => setPrintOptions({...printOptions, teacherCards: e.target.checked})}
+                  className="mt-1 w-5 h-5"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-800">Cards Individuais dos Professores</p>
+                  <p className="text-sm text-gray-600">Lista detalhada com todas as aulas do dia</p>
+                </div>
+              </label>
+            </div>
+            
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmPrint}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <Printer size={18} />
+                Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Pagamento de Aulas */}
+      {showPaymentModal && selectedTeacherForPayment && selectedClassForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <DollarSign className="text-green-600" size={28} />
+              Registrar Pagamento de Aula
+            </h3>
+            
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>Professor:</strong> {selectedTeacherForPayment.teacherName}
+              </p>
+              <p className="text-sm text-blue-800 mt-1">
+                <strong>Disciplina:</strong> {selectedClassForPayment.subjectName}
+              </p>
+              <p className="text-sm text-blue-800 mt-1">
+                <strong>Turma:</strong> {selectedClassForPayment.className}
+              </p>
+              <p className="text-sm text-blue-800 mt-1">
+                <strong>Período:</strong> {selectedClassForPayment.period}º - {selectedClassForPayment.startTime} às {selectedClassForPayment.endTime}
+              </p>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              {/* Data do Pagamento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📅 Data do Pagamento
+                </label>
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Quando o pagamento foi realizado
+                </p>
+              </div>
+              
+              {/* Data de Referência */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  📚 Data de Referência da Aula
+                </label>
+                <input
+                  type="date"
+                  value={referenceDate}
+                  onChange={(e) => setReferenceDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Data em que a aula ocorreu
+                </p>
+              </div>
+            </div>
+            
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleClosePaymentModal}
+                className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleProcessPayment}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+              >
+                <DollarSign size={18} />
+                Confirmar Pagamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Recibo de Pagamento */}
+      {showPaymentReceipt && paymentReceiptData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+            {/* Cabeçalho do Recibo */}
+            <div className="p-6 bg-gradient-to-r from-green-600 to-blue-600 text-white no-print">
+              <h3 className="text-2xl font-bold flex items-center gap-2">
+                <FileText size={28} />
+                Recibo de Pagamento de Aula
+              </h3>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handlePrintPaymentReceipt}
+                  className="px-4 py-2 bg-white text-green-600 rounded-lg hover:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                >
+                  <Printer size={18} />
+                  Imprimir Recibo
+                </button>
+                <button
+                  onClick={() => setShowPaymentReceipt(false)}
+                  className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors font-medium"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo do Recibo para Impressão */}
+            <div className="p-8" id="payment-receipt">
+              {/* Cabeçalho da Escola */}
+              <div className="text-center mb-6 border-b-2 border-gray-300 pb-4">
+                {schoolData?.logo && (
+                  <img src={schoolData.logo} alt="Logo" className="h-16 mx-auto mb-2" />
+                )}
+                <h1 className="text-2xl font-bold text-gray-800">{schoolData?.name || 'Sistema Escolar'}</h1>
+                <p className="text-sm text-gray-600 mt-1">Recibo de Pagamento de Aula</p>
+              </div>
+
+              {/* Informações do Recibo */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <p className="text-xs text-gray-500">Nº do Recibo</p>
+                  <p className="font-bold text-gray-800">#{paymentReceiptData.receiptNumber.slice(-8).toUpperCase()}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Data de Emissão</p>
+                  <p className="font-bold text-gray-800">{paymentReceiptData.generatedAt}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Data do Pagamento</p>
+                  <p className="font-bold text-gray-800">
+                    {new Date(paymentReceiptData.paymentDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Data da Aula</p>
+                  <p className="font-bold text-gray-800">
+                    {new Date(referenceDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Dados do Professor */}
+              <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
+                <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                  <User size={18} className="text-blue-600" />
+                  Dados do Professor
+                </h4>
+                <p className="text-sm text-gray-700">
+                  <strong>Nome:</strong> {paymentReceiptData.teacherName}
+                </p>
+              </div>
+
+              {/* Dados da Aula */}
+              <div className="bg-green-50 p-4 rounded-lg mb-6 border border-green-200">
+                <h4 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                  <BookOpen size={18} className="text-green-600" />
+                  Dados da Aula Paga
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                  <div>
+                    <strong>Disciplina:</strong> {paymentReceiptData.classData.subjectName}
+                  </div>
+                  <div>
+                    <strong>Turma:</strong> {paymentReceiptData.classData.className}
+                  </div>
+                  <div>
+                    <strong>Período:</strong> {paymentReceiptData.classData.period}º
+                  </div>
+                  <div>
+                    <strong>Horário:</strong> {paymentReceiptData.classData.startTime} - {paymentReceiptData.classData.endTime}
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmação */}
+              <div className="bg-gray-100 p-4 rounded-lg text-center border-2 border-gray-300">
+                <p className="text-sm text-gray-700 mb-2">
+                  ✅ <strong>Confirmo o pagamento da aula referente à data acima.</strong>
+                </p>
+                <p className="text-xs text-gray-500">
+                  Este recibo foi gerado automaticamente pelo sistema.
+                </p>
+              </div>
+
+              {/* Assinatura */}
+              <div className="mt-8 pt-6 border-t border-gray-300">
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="text-center">
+                    <div className="border-t border-gray-400 pt-2 mt-16">
+                      <p className="text-sm font-medium">Assinatura do Responsável</p>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-t border-gray-400 pt-2 mt-16">
+                      <p className="text-sm font-medium">Assinatura do Professor</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estilos para impressão do recibo */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #payment-receipt, #payment-receipt * {
+            visibility: visible;
+          }
+          #payment-receipt {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
+      {/* Cabeçalho para Impressão */}
+      <div className="only-print print-header">
+        {schoolData?.logo && (
+          <img src={schoolData.logo} alt="Logo da escola" />
+        )}
+        <div className="print-header-text">
+          <h1>{schoolData?.name || 'Sistema de Controle Escolar'}</h1>
+          <p><strong>Relatório de Frequência dos Professores</strong></p>
+          <p>Período: {reportType === 'daily' ? selectedDate : `${startDate} a ${endDate}`}</p>
+          <p>Gerado em: {new Date().toLocaleString('pt-BR')}</p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 p-6 rounded-lg no-print">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-blue-900">
@@ -459,7 +963,7 @@ export default function TeacherAttendance() {
       </div>
 
       {/* Seção de Registro Diário */}
-      <div className="card no-print">
+      <div className="card no-print print-teacher-cards">{/* Nota: print-teacher-cards controla se os cards dos professores serão impressos */}
         <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
           <Calendar className="text-blue-600" />
           📝 Registro de Frequência Diária
@@ -833,6 +1337,17 @@ export default function TeacherAttendance() {
                                 Ausente
                               </button>
                             </div>
+                            
+                            {/* Botão de Pagamento - apenas para aulas ausentes */}
+                            {cls.status === 'absent' && (
+                              <button
+                                onClick={() => handleOpenPaymentModalForClass(teacher, cls)}
+                                className="w-full mt-2 px-2 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded text-xs font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-1"
+                              >
+                                <DollarSign size={12} />
+                                Registrar Pagamento
+                              </button>
+                            )}
                           </div>
                               );
                             })}
@@ -961,11 +1476,11 @@ export default function TeacherAttendance() {
         {/* Botões de Ação */}
         <div className="flex gap-3 mb-6 no-print">
           <button
-            onClick={handlePrint}
+            onClick={handleOpenPrintModal}
             className="btn bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
           >
             <Printer size={20} />
-            Imprimir
+            Imprimir Relatórios
           </button>
           <button
             onClick={handleExportCSV}
@@ -976,7 +1491,8 @@ export default function TeacherAttendance() {
           </button>
         </div>
 
-        {/* Tabela de Relatório */}
+        {/* Tabela de Relatório Geral */}
+        <div className="print-general-report">
         {report.length === 0 ? (
           <div className="text-center p-12 bg-gray-50 rounded-lg">
             <FileText className="mx-auto text-gray-400 mb-4" size={64} />
@@ -987,6 +1503,11 @@ export default function TeacherAttendance() {
           </div>
         ) : (
           <>
+            {/* Título do Relatório Geral */}
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <User className="text-blue-600" size={24} />
+              Relatório Geral por Professor
+            </h3>
             {/* Cabeçalho do Relatório para Impressão */}
             <div className="only-print mb-6">
               <h2 className="text-2xl font-bold text-center mb-2">
@@ -1111,17 +1632,21 @@ export default function TeacherAttendance() {
                 </div>
               </div>
             </div>
+          </>
+        )}
+        </div>{/* Fim print-general-report */}
 
-            {/* Tabela de Déficit por Disciplina/Turma */}
-            {subjectDeficitReport.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <BookOpen className="text-orange-600" size={24} />
-                  📊 Déficit/Saldo por Disciplina e Turma
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  O déficit/saldo é calculado por disciplina em cada turma, considerando as faltas do professor responsável.
-                </p>
+        {/* Tabela de Déficit por Disciplina/Turma */}
+        <div className="print-subject-report">
+        {subjectDeficitReport.length > 0 && (
+          <div className="mt-8 print-page-break">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <BookOpen className="text-orange-600" size={24} />
+              📊 Déficit/Saldo por Disciplina e Turma
+            </h3>
+            <p className="text-sm text-gray-600 mb-4 no-print">
+              O déficit/saldo é calculado por disciplina em cada turma, considerando as faltas do professor responsável.
+            </p>
 
                 <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse">
@@ -1233,53 +1758,10 @@ export default function TeacherAttendance() {
                 )}
               </div>
             )}
-          </>
-        )}
+        </div>{/* Fim print-subject-report */}
       </div>
 
-      {/* Estilos de impressão */}
-      <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          
-          .only-print {
-            display: block !important;
-          }
-          
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          table {
-            page-break-inside: auto;
-          }
-          
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          
-          thead {
-            display: table-header-group;
-          }
-          
-          tfoot {
-            display: table-footer-group;
-          }
-          
-          @page {
-            margin: 1.5cm;
-            size: A4 landscape;
-          }
-        }
-        
-        .only-print {
-          display: none;
-        }
-      `}</style>
+      {/* Estilos de impressão (já definidos no topo, removendo duplicata) */}
     </div>
   );
 }
