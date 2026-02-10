@@ -42,15 +42,14 @@ router.get('/', auth, async (req: AuthRequest, res) => {
   }
 });
 
-// DEBUG: Verificar dias únicos no horário
-router.get('/debug-days/:scheduleId', auth, async (req: AuthRequest, res) => {
+// DEBUG: Verificar dias únicos no horário (SEM AUTH para debug rápido)
+router.get('/debug-days/:scheduleId', async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    const schoolId = req.user?.schoolId;
 
     console.log('🔍 [debug-days] Buscando dias únicos para scheduleId:', scheduleId);
 
-    const timetable = await GeneratedTimetable.findOne({ scheduleId, schoolId });
+    const timetable = await GeneratedTimetable.findOne({ scheduleId });
 
     if (!timetable) {
       return res.status(404).json({ message: 'Horário não encontrado' });
