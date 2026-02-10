@@ -46,21 +46,133 @@ async function calculateSchoolDaysInPeriod(
 }
 
 /**
- * Calcula aulas previstas baseado na carga horária semanal e dias letivos
- * @param weeklyHours - Carga horária semanal da disciplina (ex: 4 aulas/semana)
- * @param schoolDaysInPeriod - Quantidade de dias letivos no período
- * @param workingDaysPerWeek - Dias úteis por semana (padrão: 5)
- * @returns Número estimado de aulas previstas
+ * Calcula aulas previstas baseado na carga horária anual distribuída pelos dias letivos
+ * @param subjectId - ID da disciplina
+ * @param schoolId - ID da escola  
+ * @param startDate - Data inicial do período
+ * @param endDate - Data final do período
+ * @returns Número estimado de aulas previstas no período
  */
-function calculateExpectedClasses(
-  weeklyHours: number,
-  schoolDaysInPeriod: number,
-  workingDaysPerWeek: number = 5
-): number {
-  // Cálculo: (CargaHorária / 5 dias) × DiasLetivos
-  const dailyAverage = weeklyHours / workingDaysPerWeek;
-  const expectedClasses = Math.round(dailyAverage * schoolDaysInPeriod);
-  return expectedClasses;
+async function calculateExpectedClassesFromAnnualWorkload(
+  subjectId: string,
+  schoolId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  try {
+    const Subject = mongoose.model('Subject');
+    const subject = await Subject.findById(subjectId);
+    
+    if (!subject) return 0;
+
+    // Buscar carga horária anual (workload, workloadHours ou hours)
+    const annualWorkload = subject.workload || subject.workloadHours || subject.hours || 0;
+    
+    // Se não houver carga anual, usar weeklyHours como fallback
+    if (annualWorkload === 0 && subject.weeklyHours) {
+      // Assumir 40 semanas letivas por ano (padrão brasileiro: 200 dias / 5 dias = 40 semanas)
+      const estimatedAnnualWorkload = subject.weeklyHours * 40;
+      return await calculateWithWeeklyHours(estimatedAnnualWorkload, schoolId, startDate, endDate);
+    }
+    
+    if (annualWorkload === 0) return 0;
+
+    // Calcular total de dias letivos no ano
+    const year = new Date(startDate).getFullYear();
+    const yearStart = `${year}-01-01`;
+    const yearEnd = `${year}-12-31`;
+    const totalSchoolDaysInYear = await calculateSchoolDaysInPeriod(schoolId, yearStart, yearEnd);
+    
+    // Se não houver dias cadastrados no ano, usar 200 dias (padrão brasileiro)
+    const daysInYear = totalSchoolDaysInYear > 0 ? totalSchoolDaysInYear : 200;
+    
+    // Calcular dias letivos no período consultado
+    const schoolDaysInPeriod = await calculateSchoolDaysInPeriod(schoolId, startDate, endDate);
+    
+    // Cálculo proporcional: (CargaAnual / DiasAno) × DiasPeriodo
+    const expectedClasses = Math.round((annualWorkload / daysInYear) * schoolDaysInPeriod);
+    
+    return expectedClasses;
+  } catch (error) {
+    console.error('Erro ao calcular aulas previstas:', error);
+    return 0;
+  }
+}
+
+/**
+ * Calcula aulas previstas baseado no horário vigente (schedule/timetable)
+ * @param subjectId - ID da disciplina
+ * @param classId - ID da turma
+ * @param schoolId - ID da escola
+ * @param startDate - Data inicial do período
+ * @param endDate - Data final do período
+ * @returns Número de aulas previstas baseado no horário
+ */
+async function calculateExpectedClassesFromSchedule(
+  subjectId: string,
+  classId: string,
+  schoolId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  try {
+    const GeneratedTimetable = mongoose.model('GeneratedTimetable');
+    
+    // Buscar horário da turma
+    const timetable = await GeneratedTimetable.findOne({
+      school: schoolId,
+      classId: classId
+    }).sort({ createdAt: -1 }); // Pegar o mais recente
+    
+    if (!timetable || !timetable.slots) {
+      console.log('⚠️ Horário não encontrado, usando cálculo por carga anual');
+      return await calculateExpectedClassesFromAnnualWorkload(subjectId, schoolId, startDate, endDate);
+    }
+
+    // Contar quantas aulas da disciplina há no horário por semana
+    const slotsPerWeek = timetable.slots.filter((slot: any) => 
+      slot.subjectId && slot.subjectId.toString() === subjectId.toString()
+    ).length;
+    
+    if (slotsPerWeek === 0) {
+      console.log('⚠️ Disciplina não encontrada no horário, usando carga anual');
+      return await calculateExpectedClassesFromAnnualWorkload(subjectId, schoolId, startDate, endDate);
+    }
+
+    // Calcular dias letivos no período
+    const schoolDaysInPeriod = await calculateSchoolDaysInPeriod(schoolId, startDate, endDate);
+    
+    // Calcular número de semanas (assumindo 5 dias úteis por semana)
+    const weeks = schoolDaysInPeriod / 5;
+    
+    // Aulas previstas = aulas por semana × número de semanas
+    const expectedClasses = Math.round(slotsPerWeek * weeks);
+    
+    console.log(`📊 Disciplina ${subjectId} - ${slotsPerWeek} aulas/semana × ${weeks.toFixed(1)} semanas = ${expectedClasses} aulas`);
+    
+    return expectedClasses;
+  } catch (error) {
+    console.error('Erro ao calcular aulas previstas do horário:', error);
+    return await calculateExpectedClassesFromAnnualWorkload(subjectId, schoolId, startDate, endDate);
+  }
+}
+
+/**
+ * Helper: Calcula com base em weeklyHours quando não há workload anual
+ */
+async function calculateWithWeeklyHours(
+  annualWorkload: number,
+  schoolId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  const year = new Date(startDate).getFullYear();
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const totalSchoolDaysInYear = await calculateSchoolDaysInPeriod(schoolId, yearStart, yearEnd);
+  const daysInYear = totalSchoolDaysInYear > 0 ? totalSchoolDaysInYear : 200;
+  const schoolDaysInPeriod = await calculateSchoolDaysInPeriod(schoolId, startDate, endDate);
+  return Math.round((annualWorkload / daysInYear) * schoolDaysInPeriod);
 }
 
 /**
@@ -670,16 +782,22 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
       });
     });
 
-    // NOVO: Calcular scheduledClasses CORRETAMENTE baseado em carga horária
+    // NOVO: Calcular scheduledClasses CORRETAMENTE baseado no HORÁRIO VIGENTE
     for (const key in subjectStats) {
       const stat = subjectStats[key];
       
-      // Buscar carga horária da disciplina
+      // Buscar carga horária da disciplina (para referência)
       const weeklyHours = await getSubjectWeeklyHours(stat.subjectId);
       stat.weeklyHours = weeklyHours;
       
-      // Calcular aulas previstas com base na carga horária e dias letivos
-      stat.scheduledClasses = calculateExpectedClasses(weeklyHours, schoolDaysInPeriod);
+      // Calcular aulas previstas baseado no horário vigente da turma
+      stat.scheduledClasses = await calculateExpectedClassesFromSchedule(
+        stat.subjectId,
+        stat.classId,
+        schoolId,
+        startDate as string,
+        endDate as string
+      );
       
       // Calcular déficit
       stat.deficit = stat.scheduledClasses - stat.givenClasses;
@@ -779,17 +897,23 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
         });
       });
 
-      // NOVO: Calcular scheduledClasses CORRETAMENTE baseado em carga horária
+      // NOVO: Calcular scheduledClasses CORRETAMENTE baseado no HORÁRIO VIGENTE
       for (const key in subjectStats) {
         const stat = subjectStats[key];
         
-        // Buscar carga horária da disciplina
+        // Buscar carga horária da disciplina (para referência)
         const weeklyHours = await getSubjectWeeklyHours(stat.subjectId);
         stat.weeklyHours = weeklyHours;
         
-        // Calcular aulas previstas com base na carga horária e dias letivos
-        if (schoolDaysInPeriod > 0) {
-          stat.scheduledClasses = calculateExpectedClasses(weeklyHours, schoolDaysInPeriod);
+        // Calcular aulas previstas baseado no horário vigente da turma
+        if (schoolDaysInPeriod > 0 && startDate && endDate) {
+          stat.scheduledClasses = await calculateExpectedClassesFromSchedule(
+            stat.subjectId,
+            stat.classId,
+            schoolId,
+            startDate as string,
+            endDate as string
+          );
         } else {
           // Se não houver período definido, manter a contagem de aulas registradas
           stat.scheduledClasses = stat.givenClasses + stat.absentClasses + stat.pendingClasses;
