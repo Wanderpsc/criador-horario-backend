@@ -12,6 +12,76 @@ import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// ============================================================================
+// FUNÇÕES AUXILIARES PARA CÁLCULO CORRETO DE AULAS PREVISTAS
+// ============================================================================
+
+/**
+ * Calcula quantidade de dias letivos em um período baseado no calendário
+ * @param schoolId - ID da escola
+ * @param startDate - Data inicial (formato YYYY-MM-DD)
+ * @param endDate - Data final (formato YYYY-MM-DD)
+ * @returns Número de dias letivos no período
+ */
+async function calculateSchoolDaysInPeriod(
+  schoolId: string,
+  startDate: string,
+  endDate: string
+): Promise<number> {
+  try {
+    const schoolDays = await SchoolDay.find({
+      schoolId,
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      },
+      isSchoolDay: true // Apenas dias letivos
+    });
+
+    return schoolDays.length;
+  } catch (error) {
+    console.error('Erro ao calcular dias letivos:', error);
+    return 0;
+  }
+}
+
+/**
+ * Calcula aulas previstas baseado na carga horária semanal e dias letivos
+ * @param weeklyHours - Carga horária semanal da disciplina (ex: 4 aulas/semana)
+ * @param schoolDaysInPeriod - Quantidade de dias letivos no período
+ * @param workingDaysPerWeek - Dias úteis por semana (padrão: 5)
+ * @returns Número estimado de aulas previstas
+ */
+function calculateExpectedClasses(
+  weeklyHours: number,
+  schoolDaysInPeriod: number,
+  workingDaysPerWeek: number = 5
+): number {
+  // Cálculo: (CargaHorária / 5 dias) × DiasLetivos
+  const dailyAverage = weeklyHours / workingDaysPerWeek;
+  const expectedClasses = Math.round(dailyAverage * schoolDaysInPeriod);
+  return expectedClasses;
+}
+
+/**
+ * Obtém carga horária de uma disciplina específica
+ * @param subjectId - ID da disciplina
+ * @returns Carga horária semanal (weeklyHours)
+ */
+async function getSubjectWeeklyHours(subjectId: string): Promise<number> {
+  try {
+    const subject = await Subject.findById(subjectId).select('weeklyHours');
+    return subject?.weeklyHours || 2; // Padrão: 2 aulas/semana se não definido
+  } catch (error) {
+    console.error('Erro ao buscar carga horária da disciplina:', error);
+    return 2;
+  }
+}
+
+// ============================================================================
+// ENDPOINTS
+// ============================================================================
+
 // Buscar registros de frequência
 router.get('/', auth, async (req: AuthRequest, res) => {
   try {
@@ -550,6 +620,15 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
 
     const records = await TeacherAttendance.find(query);
 
+    // Calcular quantos dias letivos tem no período
+    const schoolDaysInPeriod = await calculateSchoolDaysInPeriod(
+      schoolId,
+      startDate as string,
+      endDate as string
+    );
+
+    console.log('📊 Dias letivos no período:', schoolDaysInPeriod);
+
     // Agrupar por disciplina/turma
     const subjectStats: { [key: string]: any } = {};
     const teacher = records.length > 0 ? records[0].teacherName : '';
@@ -567,17 +646,17 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
             classId: cls.classId,
             className: cls.className,
             grade: cls.grade,
-            scheduledClasses: 0,
+            scheduledClasses: 0, // Será calculado corretamente
             givenClasses: 0,
             absentClasses: 0,
             pendingClasses: 0,
             deficit: 0,
-            dates: []
+            dates: [],
+            weeklyHours: 0 // NOVO: armazenar carga horária
           };
         }
 
-        subjectStats[key].scheduledClasses += 1;
-
+        // Contar aulas dadas/ausentes/pendentes (continua igual)
         if (cls.status === 'present') {
           subjectStats[key].givenClasses += 1;
         } else if (cls.status === 'absent') {
@@ -591,15 +670,30 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
       });
     });
 
-    // Calcular déficit
-    Object.values(subjectStats).forEach((stat: any) => {
+    // NOVO: Calcular scheduledClasses CORRETAMENTE baseado em carga horária
+    for (const key in subjectStats) {
+      const stat = subjectStats[key];
+      
+      // Buscar carga horária da disciplina
+      const weeklyHours = await getSubjectWeeklyHours(stat.subjectId);
+      stat.weeklyHours = weeklyHours;
+      
+      // Calcular aulas previstas com base na carga horária e dias letivos
+      stat.scheduledClasses = calculateExpectedClasses(weeklyHours, schoolDaysInPeriod);
+      
+      // Calcular déficit
       stat.deficit = stat.scheduledClasses - stat.givenClasses;
-    });
+    }
 
     return res.json({
       teacherId,
       teacherName: teacher,
-      subjects: Object.values(subjectStats)
+      subjects: Object.values(subjectStats),
+      periodInfo: {
+        startDate,
+        endDate,
+        schoolDays: schoolDaysInPeriod
+      }
     });
   } catch (error) {
     console.error('Erro ao buscar relatório por disciplina:', error);
@@ -632,6 +726,16 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
 
     const records = await TeacherAttendance.find(query);
 
+    // Calcular quantos dias letivos tem no período
+    let schoolDaysInPeriod = 0;
+    if (startDate && endDate) {
+      schoolDaysInPeriod = await calculateSchoolDaysInPeriod(
+        schoolId,
+        startDate as string,
+        endDate as string
+      );
+    }
+
     // Se bySubject=true, agrupar por disciplina/turma
     if (bySubject === 'true') {
       const subjectStats: { [key: string]: any } = {};
@@ -651,17 +755,17 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
               grade: cls.grade,
               teacherId: record.teacherId,
               teacherName: record.teacherName,
-              scheduledClasses: 0,
+              scheduledClasses: 0, // Será calculado corretamente
               givenClasses: 0,
               absentClasses: 0,
               pendingClasses: 0,
               deficit: 0,
-              dates: []
+              dates: [],
+              weeklyHours: 0 // NOVO
             };
           }
 
-          subjectStats[key].scheduledClasses += 1;
-
+          // Contar aulas dadas/ausentes/pendentes
           if (cls.status === 'present') {
             subjectStats[key].givenClasses += 1;
           } else if (cls.status === 'absent') {
@@ -675,10 +779,25 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
         });
       });
 
-      // Calcular déficit
-      Object.values(subjectStats).forEach((stat: any) => {
+      // NOVO: Calcular scheduledClasses CORRETAMENTE baseado em carga horária
+      for (const key in subjectStats) {
+        const stat = subjectStats[key];
+        
+        // Buscar carga horária da disciplina
+        const weeklyHours = await getSubjectWeeklyHours(stat.subjectId);
+        stat.weeklyHours = weeklyHours;
+        
+        // Calcular aulas previstas com base na carga horária e dias letivos
+        if (schoolDaysInPeriod > 0) {
+          stat.scheduledClasses = calculateExpectedClasses(weeklyHours, schoolDaysInPeriod);
+        } else {
+          // Se não houver período definido, manter a contagem de aulas registradas
+          stat.scheduledClasses = stat.givenClasses + stat.absentClasses + stat.pendingClasses;
+        }
+        
+        // Calcular déficit
         stat.deficit = stat.scheduledClasses - stat.givenClasses;
-      });
+      }
 
       return res.json(Object.values(subjectStats));
     }
@@ -1049,16 +1168,19 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       };
     });
 
-    // Buscar informações de todas as disciplinas para garantir que temos os nomes
+    // Buscar informações de todas as disciplinas para garantir que temos os nomes E carga horária
     const allSubjectIds = [...new Set(
       timetables.flatMap((t: any) => 
         t.slots?.filter((s: any) => s.subjectId).map((s: any) => s.subjectId) || []
       )
     )];
-    const subjects = await Subject.find({ _id: { $in: allSubjectIds } }).select('_id name');
-    const subjectMap: { [key: string]: string } = {};
+    const subjects = await Subject.find({ _id: { $in: allSubjectIds } }).select('_id name weeklyHours');
+    const subjectMap: { [key: string]: { name: string; weeklyHours: number } } = {};
     subjects.forEach((subj: any) => {
-      subjectMap[subj._id.toString()] = subj.name;
+      subjectMap[subj._id.toString()] = {
+        name: subj.name,
+        weeklyHours: subj.weeklyHours || 2 // Default 2 se não especificado
+      };
     });
     console.log('📚 Disciplinas carregadas:', subjects.length);
 
@@ -1102,8 +1224,10 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
                 const startTime = slot.startTime || periodTimes.startTime;
                 const endTime = slot.endTime || periodTimes.endTime;
                 
-                // Buscar nome da disciplina se não estiver no slot
-                const subjectName = slot.subjectName || subjectMap[slot.subjectId] || 'Disciplina desconhecida';
+                // Buscar nome da disciplina E carga horária se não estiver no slot
+                const subjectInfo = subjectMap[slot.subjectId] || { name: 'Disciplina desconhecida', weeklyHours: 2 };
+                const subjectName = slot.subjectName || subjectInfo.name;
+                const weeklyHours = subjectInfo.weeklyHours;
                 
                 teacherClasses[slot.teacherId].classes.push({
                   period: slot.period,
@@ -1111,6 +1235,7 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
                   endTime,
                   subjectId: slot.subjectId,
                   subjectName,
+                  weeklyHours, // NOVO: adicionar carga horária semanal
                   classId: timetable.classId,
                   className: classInfo.name,
                   grade: classInfo.grade,
