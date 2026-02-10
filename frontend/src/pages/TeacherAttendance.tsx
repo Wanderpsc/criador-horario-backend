@@ -159,6 +159,42 @@ export default function TeacherAttendance() {
 
   const teachers: any[] = scheduledData?.teachers || [];
 
+  // Buscar relatórios com cálculo correto de aulas previstas
+  const { data: generalReportData } = useQuery({
+    queryKey: ['general-report', startDate, endDate, reportType],
+    queryFn: async () => {
+      const params: any = {};
+      if (reportType !== 'daily') {
+        params.startDate = startDate || selectedDate;
+        params.endDate = endDate || selectedDate;
+      } else {
+        params.startDate = selectedDate;
+        params.endDate = selectedDate;
+      }
+      const response = await api.get('/teacher-attendance/statistics', { params });
+      return response.data || [];
+    },
+    enabled: !!selectedDate
+  });
+
+  // Buscar relatório de déficit por disciplina com cálculo correto
+  const { data: subjectReportData } = useQuery({
+    queryKey: ['subject-report', startDate, endDate, reportType],
+    queryFn: async () => {
+      const params: any = { bySubject: 'true' };
+      if (reportType !== 'daily') {
+        params.startDate = startDate || selectedDate;
+        params.endDate = endDate || selectedDate;
+      } else {
+        params.startDate = selectedDate;
+        params.endDate = selectedDate;
+      }
+      const response = await api.get('/teacher-attendance/statistics', { params });
+      return response.data || [];
+    },
+    enabled: !!selectedDate
+  });
+
   // Mesclar dados agendados com registros salvos
   const getMergedTeacherData = () => {
     if (!teachers || teachers.length === 0) return [];
@@ -363,8 +399,14 @@ export default function TeacherAttendance() {
     window.print();
   };
 
-  // Gerar relatório por professor
+  // Gerar relatório por professor - AGORA USA DADOS DO BACKEND COM CÁLCULO CORRETO
   const generateReport = (): AttendanceReport[] => {
+    // Usar dados do backend que já vêm com aulas previstas calculadas corretamente
+    if (generalReportData && Array.isArray(generalReportData) && generalReportData.length > 0) {
+      return generalReportData;
+    }
+    
+    // Fallback: gerar localmente se não houver dados do backend
     if (!attendanceRecords || attendanceRecords.length === 0) return [];
 
     const reportMap: { [key: string]: AttendanceReport } = {};
@@ -406,8 +448,18 @@ export default function TeacherAttendance() {
     return Object.values(reportMap);
   };
 
-  // Gerar relatório de déficit por disciplina/turma
+  // Gerar relatório de déficit por disciplina/turma - AGORA USA DADOS DO BACKEND
   const generateSubjectDeficitReport = (): SubjectDeficit[] => {
+    // Usar dados do backend que já vêm com aulas previstas calculadas corretamente
+    if (subjectReportData && Array.isArray(subjectReportData) && subjectReportData.length > 0) {
+      return subjectReportData.map((item: any) => ({
+        ...item,
+        absentClasses: item.absentClasses || 0,
+        dates: item.dates || []
+      })).sort((a: SubjectDeficit, b: SubjectDeficit) => b.deficit - a.deficit);
+    }
+    
+    // Fallback: gerar localmente se não houver dados do backend
     if (!attendanceRecords || attendanceRecords.length === 0) return [];
 
     const deficitMap: { [key: string]: SubjectDeficit } = {};
@@ -1491,17 +1543,8 @@ export default function TeacherAttendance() {
           </button>
         </div>
 
-        {/* Tabela de Relatório Geral */}
+        {/* Tabela de Relatório Geral - SEMPRE VISÍVEL */}
         <div className="print-general-report">
-        {report.length === 0 ? (
-          <div className="text-center p-12 bg-gray-50 rounded-lg">
-            <FileText className="mx-auto text-gray-400 mb-4" size={64} />
-            <p className="text-gray-600 text-lg">Nenhum registro de frequência encontrado</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Registre a frequência dos professores para visualizar o relatório
-            </p>
-          </div>
-        ) : (
           <>
             {/* Título do Relatório Geral */}
             <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -1534,7 +1577,18 @@ export default function TeacherAttendance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.map((r, index) => (
+                  {report.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="border border-gray-300 p-8 text-center">
+                        <div className="text-gray-500">
+                          <FileText className="mx-auto mb-2 text-gray-400" size={48} />
+                          <p className="font-medium">Nenhum registro de frequência encontrado</p>
+                          <p className="text-sm mt-1">Registre a frequência dos professores para visualizar o relatório</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                  report.map((r, index) => (
                     <tr key={r.teacherId} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                       <td className="border border-gray-300 p-3 font-semibold">{r.teacherName}</td>
                       <td className="border border-gray-300 p-3 text-center">{r.totalScheduledClasses}</td>
@@ -1557,7 +1611,7 @@ export default function TeacherAttendance() {
                         {r.workload.toFixed(1)}h
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
                 <tfoot>
                   <tr className="bg-blue-100 font-bold">
@@ -1633,12 +1687,10 @@ export default function TeacherAttendance() {
               </div>
             </div>
           </>
-        )}
         </div>{/* Fim print-general-report */}
 
-        {/* Tabela de Déficit por Disciplina/Turma */}
+        {/* Tabela de Déficit por Disciplina/Turma - SEMPRE VISÍVEL */}
         <div className="print-subject-report">
-        {subjectDeficitReport.length > 0 && (
           <div className="mt-8 print-page-break">
             <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
               <BookOpen className="text-orange-600" size={24} />
@@ -1662,7 +1714,18 @@ export default function TeacherAttendance() {
                       </tr>
                     </thead>
                     <tbody>
-                      {subjectDeficitReport.map((item, index) => (
+                      {subjectDeficitReport.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="border border-gray-300 p-8 text-center">
+                            <div className="text-gray-500">
+                              <BookOpen className="mx-auto mb-2 text-gray-400" size={48} />
+                              <p className="font-medium">Nenhum déficit/saldo encontrado</p>
+                              <p className="text-sm mt-1">Registre a frequência dos professores para visualizar déficits por disciplina</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                      subjectDeficitReport.map((item, index) => (
                         <tr key={`${item.subjectId}_${item.classId}`} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                           <td className="border border-gray-300 p-3 font-semibold text-blue-800">
                             {item.subjectName}
@@ -1707,7 +1770,7 @@ export default function TeacherAttendance() {
                             )}
                           </td>
                         </tr>
-                      ))}
+                      )))}
                     </tbody>
                     <tfoot>
                       <tr className="bg-orange-100 font-bold">
@@ -1757,7 +1820,6 @@ export default function TeacherAttendance() {
                   </div>
                 )}
               </div>
-            )}
         </div>{/* Fim print-subject-report */}
       </div>
 
