@@ -298,18 +298,48 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       // Buscar informações das disciplinas e turmas
       console.log('🔍 [class-status] Buscando informações de disciplinas e turmas...');
       
+      // Buscar períodos do Schedule ou usar padrão
+      let allPeriods: any[] = [];
+      if (scheduleId) {
+        const scheduleDoc = await Schedule.findOne({ _id: scheduleId });
+        if (scheduleDoc && scheduleDoc.periods && scheduleDoc.periods.length > 0) {
+          allPeriods = scheduleDoc.periods;
+          console.log('📋 [class-status] Encontrados', allPeriods.length, 'períodos no Schedule');
+        }
+      }
+      
+      // Se não encontrou períodos, usar padrão de 8 períodos
+      if (allPeriods.length === 0) {
+        allPeriods = [
+          { period: 1, startTime: '07:00', endTime: '07:50' },
+          { period: 2, startTime: '07:50', endTime: '08:40' },
+          { period: 3, startTime: '08:40', endTime: '09:30' },
+          { period: 4, startTime: '09:50', endTime: '10:40' },
+          { period: 5, startTime: '10:40', endTime: '11:30' },
+          { period: 6, startTime: '11:30', endTime: '12:20' },
+          { period: 7, startTime: '13:40', endTime: '14:30' },
+          { period: 8, startTime: '14:30', endTime: '15:20' }
+        ];
+        console.log('📋 [class-status] Usando 8 períodos padrão');
+      }
+      
       const classesData = await Promise.all(
         teacherSlots.map(async (slot: any) => {
           try {
             const subject = await Subject.findById(slot.subjectId);
             const classInfo = await Class.findById(slot.classId);
             
-            console.log(`📚 [class-status] Slot período ${slot.period}: subject=${subject?.name}, class=${classInfo?.name}`);
+            // Buscar horários do período
+            const periodInfo = allPeriods.find((p: any) => p.period === slot.period);
+            const startTime = periodInfo?.startTime || '00:00';
+            const endTime = periodInfo?.endTime || '00:00';
+            
+            console.log(`📚 [class-status] Slot período ${slot.period}: subject=${subject?.name}, class=${classInfo?.name}, ${startTime}-${endTime}`);
             
             return {
               period: slot.period,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
+              startTime,
+              endTime,
               subjectId: slot.subjectId?.toString(),
               subjectName: subject?.name || 'Disciplina não encontrada',
               classId: slot.classId?.toString(),
