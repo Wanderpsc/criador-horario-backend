@@ -166,6 +166,7 @@ app.use(auditMiddleware);
 // Rotas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit especial para autenticação
 app.use('/api/schools', schoolRoutes);
+app.use('/api/school', schoolRoutes); // Atalho singular
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/schools', adminSchoolsRoutes);
 app.use('/api/credits', creditsRoutes);

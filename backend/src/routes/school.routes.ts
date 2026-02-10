@@ -12,6 +12,50 @@ import User from '../models/User';
 const router = express.Router();
 
 /**
+ * GET /api/schools ou /api/school
+ * Retorna os dados da escola logada (atalho para /profile)
+ */
+router.get('/', auth, async (req: any, res: Response) => {
+  try {
+    console.log('\n🔍 GET /api/schools - Escola solicitando seus dados');
+    console.log('   req.user:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      console.log('❌ User não autenticado ou sem userId');
+      return res.status(401).json({
+        success: false,
+        message: 'Não autenticado'
+      });
+    }
+    
+    const school = await User.findById(req.user.id).select('-password');
+    console.log('   Escola encontrada:', school ? `✅ ${school.schoolName || school.email}` : '❌ NÃO ENCONTRADA');
+    
+    if (!school) {
+      return res.status(404).json({
+        success: false,
+        message: 'Escola não encontrada'
+      });
+    }
+
+    // Retornar dados da escola
+    const schoolData = school.toObject();
+    return res.json({
+      ...schoolData,
+      name: schoolData.schoolName || schoolData.email || '',
+      email: schoolData.email || ''
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar dados da escola:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar dados da escola',
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/schools/profile
  * Retorna os dados da escola logada
  */
