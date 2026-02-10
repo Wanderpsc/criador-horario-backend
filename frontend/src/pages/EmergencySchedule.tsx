@@ -1622,22 +1622,48 @@ export default function EmergencySchedule() {
 
             <div className="mt-4">
               <div>
-                <label className="block text-sm font-medium mb-3">
-                  <User className="inline mr-2" size={18} />
-                  Professor(es) Ausente(s) e Aulas Ausentes
-                </label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium">
+                    <User className="inline mr-2" size={18} />
+                    Professor(es) Ausente(s) e Aulas Ausentes
+                  </label>
+                  <button
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['absent-teachers', selectedDate] })}
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
+                    title="Atualizar dados de frequência"
+                  >
+                    <RefreshCw size={14} />
+                    Atualizar Dados
+                  </button>
+                </div>
                 
-                {/* Aviso de importação automática */}
+                {/* Informação sobre importação automática */}
+                <div className="mb-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
+                  <div className="flex items-start gap-2">
+                    <Info className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">
+                        🔄 Importação Automática Ativada
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        Os professores e aulas ausentes são carregados automaticamente do <strong>Controle de Frequência</strong> 
+                        ({new Date(selectedDate).toLocaleDateString('pt-BR')}). Marque as faltas no módulo de frequência antes de gerar o horário emergencial.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Aviso de importação bem-sucedida */}
                 {absentTeachersData && absentTeachersData.length > 0 && (
                   <div className="mb-3 p-3 bg-green-50 border-l-4 border-green-500 rounded">
                     <div className="flex items-start gap-2">
                       <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
                       <div>
                         <p className="text-sm font-medium text-green-800">
-                          ✅ {absentTeachersData.length} professor(es) ausente(s) importado(s) automaticamente
+                          ✅ {absentTeachersData.length} professor(es) ausente(s) importado(s) com sucesso
                         </p>
                         <p className="text-xs text-green-700 mt-1">
-                          Os professores marcados com aulas ausentes no Controle de Frequência foram carregados automaticamente.
+                          Total de {absentTeachersData.reduce((sum: number, r: any) => sum + r.totalAbsentClasses, 0)} aula(s) ausente(s) detectadas.
                         </p>
                       </div>
                     </div>
@@ -1645,35 +1671,38 @@ export default function EmergencySchedule() {
                 )}
                 
                 {/* Exibir aulas ausentes por professor */}
-                {absentTeachersData && absentTeachersData.length > 0 && (
-                  <div className="space-y-3 mb-4">
+                {absentTeachersData && absentTeachersData.length > 0 ? (
+                  <div className="space-y-3">
                     {absentTeachersData.map((record: any) => (
-                      <div key={record.teacherId} className="border-2 border-red-400 bg-red-50 rounded-lg p-4">
+                      <div key={record.teacherId} className="border-2 border-red-400 bg-red-50 rounded-lg p-4 shadow-sm">
                         <div className="flex items-start justify-between mb-3">
                           <div>
-                            <h4 className="font-bold text-red-900">{record.teacherName}</h4>
-                            <p className="text-sm text-red-700">
-                              {record.totalAbsentClasses} aula(s) ausente(s) em {record.date}
+                            <h4 className="font-bold text-red-900 text-lg">{record.teacherName}</h4>
+                            <p className="text-sm text-red-700 font-medium">
+                              {record.totalAbsentClasses} aula(s) ausente(s)
                             </p>
                           </div>
+                          <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                            AUSENTE
+                          </span>
                         </div>
                         
                         {record.absentClasses && record.absentClasses.length > 0 && (
                           <div className="space-y-2">
-                            <p className="text-xs font-medium text-red-800 mb-2">Aulas Ausentes:</p>
+                            <p className="text-xs font-bold text-red-800 mb-2 uppercase">Detalhamento das Aulas:</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               {record.absentClasses.map((cls: any, idx: number) => (
-                                <div key={idx} className="bg-white border border-red-300 rounded p-2">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold">
-                                      {cls.period}º
+                                <div key={idx} className="bg-white border border-red-300 rounded-lg p-3 hover:shadow-md transition-shadow">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold">
+                                      {cls.period}º Período
                                     </span>
-                                    <span className="text-xs text-gray-600">
+                                    <span className="text-xs text-gray-600 font-medium">
                                       {cls.startTime} - {cls.endTime}
                                     </span>
                                   </div>
-                                  <p className="text-xs font-semibold text-gray-800">{cls.subjectName}</p>
-                                  <p className="text-xs text-gray-600">{cls.className}</p>
+                                  <p className="text-sm font-bold text-gray-900 mb-1">{cls.subjectName}</p>
+                                  <p className="text-xs text-gray-600 font-medium">{cls.className}</p>
                                 </div>
                               ))}
                             </div>
@@ -1682,61 +1711,23 @@ export default function EmergencySchedule() {
                       </div>
                     ))}
                   </div>
-                )}
-                
-                <div className="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-white">
-                  {teachers.length === 0 ? (
-                    <p className="text-gray-500 text-sm">Nenhum professor cadastrado</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {teachers.map((t: Teacher) => (
-                        <label
-                          key={t.id}
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={absentTeacherIds.includes(t.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setAbsentTeacherIds([...absentTeacherIds, t.id]);
-                                console.log('👨‍🏫 Professor adicionado:', t.name);
-                              } else {
-                                setAbsentTeacherIds(absentTeacherIds.filter(id => id !== t.id));
-                                console.log('👨‍🏫 Professor removido:', t.name);
-                              }
-                            }}
-                            className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                          />
-                          <span className="text-sm text-gray-700 flex-1">{t.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {absentTeacherIds.length > 0 && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm font-medium text-red-800 mb-2">
-                      {absentTeacherIds.length} professor(es) selecionado(s):
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
+                    <AlertTriangle className="mx-auto mb-3 text-gray-400" size={48} />
+                    <p className="text-gray-700 font-medium mb-2">
+                      Nenhum professor ausente registrado
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {absentTeacherIds.map(id => {
-                        const teacher = teachers.find((t: Teacher) => t.id === id);
-                        return (
-                          <span key={id} className="inline-flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                            {teacher?.name}
-                            <button
-                              onClick={() => setAbsentTeacherIds(absentTeacherIds.filter(tid => tid !== id))}
-                              className="hover:text-red-200 ml-1"
-                              title="Remover"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Para gerar um horário emergencial, primeiro marque as faltas no módulo 
+                      <strong> Controle de Frequência</strong> para a data selecionada ({new Date(selectedDate).toLocaleDateString('pt-BR')}).
+                    </p>
+                    <a
+                      href="/#/teacher-attendance"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      <User size={16} />
+                      Ir para Controle de Frequência
+                    </a>
                   </div>
                 )}
               </div>

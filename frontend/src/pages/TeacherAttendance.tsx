@@ -97,6 +97,56 @@ export default function TeacherAttendance() {
   const [paymentReceiptData, setPaymentReceiptData] = useState<any>(null);
   const queryClient = useQueryClient();
 
+  // Calcular datas automáticas baseado no tipo de relatório
+  const getDateRangeForReportType = () => {
+    const date = new Date(selectedDate + 'T12:00:00');
+    
+    switch (reportType) {
+      case 'daily':
+        return { start: selectedDate, end: selectedDate };
+      
+      case 'weekly': {
+        // Início da semana (domingo)
+        const startOfWeek = new Date(date);
+        startOfWeek.setDate(date.getDate() - date.getDay());
+        // Fim da semana (sábado)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        return {
+          start: startOfWeek.toISOString().split('T')[0],
+          end: endOfWeek.toISOString().split('T')[0]
+        };
+      }
+      
+      case 'monthly': {
+        // Primeiro dia do mês
+        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+        // Último dia do mês
+        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        return {
+          start: startOfMonth.toISOString().split('T')[0],
+          end: endOfMonth.toISOString().split('T')[0]
+        };
+      }
+      
+      case 'yearly': {
+        // Primeiro dia do ano
+        const startOfYear = new Date(date.getFullYear(), 0, 1);
+        // Último dia do ano
+        const endOfYear = new Date(date.getFullYear(), 11, 31);
+        return {
+          start: startOfYear.toISOString().split('T')[0],
+          end: endOfYear.toISOString().split('T')[0]
+        };
+      }
+      
+      default:
+        return { start: selectedDate, end: selectedDate };
+    }
+  };
+
+  const dateRange = getDateRangeForReportType();
+
   // Buscar horários disponíveis
   const { data: timetablesData } = useQuery({
     queryKey: ['generated-timetables'],
@@ -161,16 +211,13 @@ export default function TeacherAttendance() {
 
   // Buscar relatórios com cálculo correto de aulas previstas
   const { data: generalReportData } = useQuery({
-    queryKey: ['general-report', startDate, endDate, reportType],
+    queryKey: ['general-report', dateRange.start, dateRange.end, reportType, selectedDate],
     queryFn: async () => {
-      const params: any = {};
-      if (reportType !== 'daily') {
-        params.startDate = startDate || selectedDate;
-        params.endDate = endDate || selectedDate;
-      } else {
-        params.startDate = selectedDate;
-        params.endDate = selectedDate;
-      }
+      const params: any = {
+        startDate: dateRange.start,
+        endDate: dateRange.end
+      };
+      console.log('📊 Buscando relatório geral:', params);
       const response = await api.get('/teacher-attendance/statistics', { params });
       return response.data || [];
     },
@@ -179,16 +226,14 @@ export default function TeacherAttendance() {
 
   // Buscar relatório de déficit por disciplina com cálculo correto
   const { data: subjectReportData } = useQuery({
-    queryKey: ['subject-report', startDate, endDate, reportType],
+    queryKey: ['subject-report', dateRange.start, dateRange.end, reportType, selectedDate],
     queryFn: async () => {
-      const params: any = { bySubject: 'true' };
-      if (reportType !== 'daily') {
-        params.startDate = startDate || selectedDate;
-        params.endDate = endDate || selectedDate;
-      } else {
-        params.startDate = selectedDate;
-        params.endDate = selectedDate;
-      }
+      const params: any = { 
+        bySubject: 'true',
+        startDate: dateRange.start,
+        endDate: dateRange.end
+      };
+      console.log('📊 Buscando relatório por disciplina:', params);
       const response = await api.get('/teacher-attendance/statistics', { params });
       return response.data || [];
     },
@@ -998,7 +1043,7 @@ export default function TeacherAttendance() {
         <div className="print-header-text">
           <h1>{schoolData?.name || 'Sistema de Controle Escolar'}</h1>
           <p><strong>Relatório de Frequência dos Professores</strong></p>
-          <p>Período: {reportType === 'daily' ? selectedDate : `${startDate} a ${endDate}`}</p>
+          <p>Período: {reportType === 'daily' ? selectedDate : `${dateRange.start} a ${dateRange.end}`}</p>
           <p>Gerado em: {new Date().toLocaleString('pt-BR')}</p>
         </div>
       </div>
@@ -1557,7 +1602,7 @@ export default function TeacherAttendance() {
                 Relatório de Frequência dos Professores
               </h2>
               <p className="text-center text-gray-600">
-                Período: {reportType === 'daily' ? selectedDate : `${startDate} a ${endDate}`}
+                Período: {reportType === 'daily' ? selectedDate : `${dateRange.start} a ${dateRange.end}`}
               </p>
               <p className="text-center text-sm text-gray-500">
                 Gerado em: {new Date().toLocaleString('pt-BR')}
