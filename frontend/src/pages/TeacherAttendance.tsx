@@ -200,7 +200,8 @@ export default function TeacherAttendance() {
         teacherId,
         date: selectedDate,
         period,
-        status
+        status,
+        scheduleId: scheduledData?.scheduleId // ✅ Adicionar scheduleId específico
       };
       
       console.log('📤 [handleClassStatusChange] Enviando:', payload);

@@ -182,7 +182,7 @@ router.post('/', auth, async (req: AuthRequest, res) => {
 
 // Atualizar status de uma aula específica
 router.put('/class-status', auth, async (req: AuthRequest, res) => {
-  const { teacherId, date, period, status } = req.body;
+  const { teacherId, date, period, status, scheduleId } = req.body;
   const schoolId = req.user?.schoolId;
   
   try {
@@ -231,19 +231,32 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       const targetDate = new Date(date);
       const dayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
       
-      // Buscar horário gerado
-      const timetables = await GeneratedTimetable.find({ school: schoolId });
-      console.log(`📚 [class-status] Encontrados ${timetables.length} horários`);
-      
-      if (timetables.length === 0) {
-        return res.status(404).json({ 
-          message: 'Nenhum horário encontrado',
-          details: 'Não há horários gerados para buscar informações da aula'
-        });
+      // Buscar horário gerado específico (se fornecido) ou o mais recente
+      let timetable;
+      if (scheduleId) {
+        console.log(`📚 [class-status] Buscando horário específico: ${scheduleId}`);
+        timetable = await GeneratedTimetable.findOne({ scheduleId, school: schoolId });
+        if (!timetable) {
+          return res.status(404).json({ 
+            message: 'Horário não encontrado',
+            details: `Horário com ID ${scheduleId} não encontrado`
+          });
+        }
+      } else {
+        console.log(`📚 [class-status] Buscando horários da escola...`);
+        const timetables = await GeneratedTimetable.find({ school: schoolId });
+        console.log(`📚 [class-status] Encontrados ${timetables.length} horários`);
+        
+        if (timetables.length === 0) {
+          return res.status(404).json({ 
+            message: 'Nenhum horário encontrado',
+            details: 'Não há horários gerados para buscar informações da aula'
+          });
+        }
+        
+        // Usar o horário mais recente
+        timetable = timetables[timetables.length - 1];
       }
-      
-      // Usar o horário mais recente
-      const timetable = timetables[timetables.length - 1];
       
       console.log(`📅 [class-status] Data alvo: ${date}, Day of week calculado: ${dayOfWeek}`);
       console.log(`📊 [class-status] Timetable tem ${timetable.slots?.length || 0} slots`);
