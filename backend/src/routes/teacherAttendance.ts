@@ -1291,7 +1291,107 @@ router.get('/makeup-classes', auth, async (req: AuthRequest, res) => {
   }
 });
 
-// Registrar pagamento de aulas
+// Registrar pagamento de aula individual específica
+router.post('/payment-class', auth, async (req: AuthRequest, res) => {
+  try {
+    const { teacherId, teacherName, paymentDate, referenceDate, period, classData } = req.body;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    // Validação dos campos obrigatórios
+    if (!teacherId || !teacherName || !paymentDate || !referenceDate || !period || !classData) {
+      return res.status(400).json({ 
+        message: 'Campos obrigatórios ausentes',
+        required: ['teacherId', 'teacherName', 'paymentDate', 'referenceDate', 'period', 'classData']
+      });
+    }
+
+    // Buscar registro de frequência da data de referência
+    const attendanceRecord = await TeacherAttendance.findOne({
+      schoolId,
+      teacherId,
+      date: referenceDate
+    });
+
+    if (!attendanceRecord) {
+      return res.status(404).json({ 
+        message: 'Registro de frequência não encontrado para a data de referência especificada' 
+      });
+    }
+
+    // Encontrar a aula específica no período
+    const classIndex = attendanceRecord.classes.findIndex((c: any) => c.period === period);
+    
+    if (classIndex === -1) {
+      return res.status(404).json({ 
+        message: `Aula do período ${period} não encontrada no registro` 
+      });
+    }
+
+    const targetClass = attendanceRecord.classes[classIndex];
+
+    // Verificar se a aula está marcada como ausente
+    if (targetClass.status !== 'absent') {
+      return res.status(400).json({ 
+        message: 'Esta aula não está marcada como ausente',
+        currentStatus: targetClass.status
+      });
+    }
+
+    // Criar registro de pagamento
+    const payment = new TeacherPayment({
+      schoolId,
+      teacherId,
+      teacherName,
+      paymentDate,
+      referenceDate,
+      absentClasses: 1, // Apenas 1 aula sendo paga
+      status: 'paid',
+      notes: `Pagamento da aula: ${classData.subjectName} - ${classData.className} - Período ${period}`,
+      createdBy: req.user?.id || 'system',
+      timestamp: new Date()
+    });
+
+    await payment.save();
+
+    // Atualizar o status da aula específica para "presente" (dando baixa)
+    attendanceRecord.classes[classIndex].status = 'present';
+    attendanceRecord.classes[classIndex].markedAt = new Date();
+
+    // Recalcular estatísticas
+    attendanceRecord.totalPresentClasses = attendanceRecord.classes.filter((c: any) => c.status === 'present').length;
+    attendanceRecord.totalAbsentClasses = attendanceRecord.classes.filter((c: any) => c.status === 'absent').length;
+    attendanceRecord.totalPendingClasses = attendanceRecord.classes.filter((c: any) => c.status === 'pending').length;
+
+    if (attendanceRecord.totalScheduledClasses > 0) {
+      attendanceRecord.attendanceRate = (attendanceRecord.totalPresentClasses / attendanceRecord.totalScheduledClasses) * 100;
+    }
+
+    await attendanceRecord.save();
+
+    res.json({
+      message: 'Pagamento de aula registrado com sucesso',
+      payment,
+      updatedClass: attendanceRecord.classes[classIndex],
+      updatedAttendance: {
+        totalPresentClasses: attendanceRecord.totalPresentClasses,
+        totalAbsentClasses: attendanceRecord.totalAbsentClasses,
+        attendanceRate: attendanceRecord.attendanceRate
+      }
+    });
+  } catch (error: any) {
+    console.error('Erro ao registrar pagamento de aula:', error);
+    res.status(500).json({ 
+      message: 'Erro ao registrar pagamento de aula',
+      error: error.message 
+    });
+  }
+});
+
+// Registrar pagamento de aulas (múltiplas - endpoint legado)
 router.post('/payment', auth, async (req: AuthRequest, res) => {
   try {
     const { teacherId, teacherName, paymentDate, referenceDate, absentClasses } = req.body;
