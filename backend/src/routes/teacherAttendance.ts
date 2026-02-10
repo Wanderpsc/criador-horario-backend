@@ -42,6 +42,43 @@ router.get('/', auth, async (req: AuthRequest, res) => {
   }
 });
 
+// DEBUG: Verificar dias únicos no horário
+router.get('/debug-days/:scheduleId', auth, async (req: AuthRequest, res) => {
+  try {
+    const { scheduleId } = req.params;
+    const schoolId = req.user?.schoolId;
+
+    console.log('🔍 [debug-days] Buscando dias únicos para scheduleId:', scheduleId);
+
+    const timetable = await GeneratedTimetable.findOne({ scheduleId, schoolId });
+
+    if (!timetable) {
+      return res.status(404).json({ message: 'Horário não encontrado' });
+    }
+
+    const uniqueDays = [...new Set(timetable.slots.map((s: any) => s.day))];
+    const sampleSlots = timetable.slots.slice(0, 5).map((s: any) => ({
+      day: s.day,
+      dayType: typeof s.day,
+      period: s.period,
+      teacherId: s.teacherId
+    }));
+
+    console.log('🗓️ [debug-days] Dias únicos:', uniqueDays);
+    console.log('📋 [debug-days] Exemplo de slots:', sampleSlots);
+
+    res.json({
+      uniqueDays,
+      totalSlots: timetable.slots.length,
+      sampleSlots,
+      message: 'Use estes dias exatamente como aparecem no banco de dados'
+    });
+  } catch (error) {
+    console.error('❌ [debug-days] Erro:', error);
+    res.status(500).json({ message: 'Erro ao buscar dias' });
+  }
+});
+
 // Salvar múltiplos registros de frequência (bulk)
 router.post('/bulk', auth, async (req: AuthRequest, res) => {
   try {
