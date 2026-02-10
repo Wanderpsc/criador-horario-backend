@@ -7,6 +7,7 @@ import Subject from '../models/Subject';
 import Class from '../models/Class';
 import Teacher from '../models/Teacher';
 import Schedule from '../models/Schedule';
+import TeacherPayment from '../models/TeacherPayment';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -1287,6 +1288,93 @@ router.get('/makeup-classes', auth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Erro ao buscar aulas para reposição:', error);
     res.status(500).json({ message: 'Erro ao buscar aulas para reposição' });
+  }
+});
+
+// Registrar pagamento de aulas
+router.post('/payment', auth, async (req: AuthRequest, res) => {
+  try {
+    const { teacherId, teacherName, paymentDate, referenceDate, absentClasses } = req.body;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    // Validação dos campos obrigatórios
+    if (!teacherId || !teacherName || !paymentDate || !referenceDate || absentClasses === undefined) {
+      return res.status(400).json({ 
+        message: 'Campos obrigatórios ausentes',
+        required: ['teacherId', 'teacherName', 'paymentDate', 'referenceDate', 'absentClasses']
+      });
+    }
+
+    // Buscar registro de frequência da data de referência
+    const attendanceRecord = await TeacherAttendance.findOne({
+      schoolId,
+      teacherId,
+      date: referenceDate
+    });
+
+    if (!attendanceRecord) {
+      return res.status(404).json({ 
+        message: 'Registro de frequência não encontrado para a data de referência especificada' 
+      });
+    }
+
+    // Verificar se há aulas ausentes suficientes
+    if (attendanceRecord.totalAbsentClasses === 0) {
+      return res.status(400).json({ 
+        message: 'Não há aulas ausentes para dar baixa nesta data' 
+      });
+    }
+
+    // Criar registro de pagamento
+    const payment = new TeacherPayment({
+      schoolId,
+      teacherId,
+      teacherName,
+      paymentDate,
+      referenceDate,
+      absentClasses: attendanceRecord.totalAbsentClasses,
+      status: 'paid',
+      createdBy: req.user?.id || 'system',
+      timestamp: new Date()
+    });
+
+    await payment.save();
+
+    // Atualizar o status das aulas ausentes para "presente" (dando baixa)
+    // Isso efetivamente "paga" as aulas ausentes
+    attendanceRecord.classes = attendanceRecord.classes.map((cls: any) => {
+      if (cls.status === 'absent') {
+        return { ...cls, status: 'present', markedAt: new Date() };
+      }
+      return cls;
+    });
+
+    // Recalcular estatísticas
+    attendanceRecord.totalPresentClasses = attendanceRecord.classes.filter((c: any) => c.status === 'present').length;
+    attendanceRecord.totalAbsentClasses = attendanceRecord.classes.filter((c: any) => c.status === 'absent').length;
+    attendanceRecord.totalPendingClasses = attendanceRecord.classes.filter((c: any) => c.status === 'pending').length;
+
+    if (attendanceRecord.totalScheduledClasses > 0) {
+      attendanceRecord.attendanceRate = (attendanceRecord.totalPresentClasses / attendanceRecord.totalScheduledClasses) * 100;
+    }
+
+    await attendanceRecord.save();
+
+    res.json({
+      message: 'Pagamento registrado com sucesso',
+      payment,
+      updatedAttendance: attendanceRecord
+    });
+  } catch (error: any) {
+    console.error('Erro ao registrar pagamento:', error);
+    res.status(500).json({ 
+      message: 'Erro ao registrar pagamento',
+      error: error.message 
+    });
   }
 });
 
