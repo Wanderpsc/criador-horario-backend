@@ -221,10 +221,14 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
         });
       }
       
-      // Buscar todas as aulas do professor neste dia
+      // Logar todos os valores únicos de 'day' para debug
+      const uniqueDays = [...new Set(timetable.slots.map((s: any) => s.day))];
+      console.log(`🗓️ [class-status] Dias únicos encontrados nos slots:`, uniqueDays);
+      
+      // Buscar todas as aulas do professor neste dia (comparação case-insensitive)
       const teacherSlots = timetable.slots.filter((slot: any) => 
         slot.teacherId?.toString() === teacherId && 
-        slot.day === dayOfWeek
+        slot.day?.toLowerCase() === dayOfWeek.toLowerCase()
       );
       
       console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
