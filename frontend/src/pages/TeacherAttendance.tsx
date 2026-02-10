@@ -196,19 +196,29 @@ export default function TeacherAttendance() {
     status: 'present' | 'absent'
   ) => {
     try {
-      await api.put('/teacher-attendance/class-status', {
+      const payload = {
         teacherId,
         date: selectedDate,
         period,
         status
-      });
+      };
+      
+      console.log('📤 [handleClassStatusChange] Enviando:', payload);
+      
+      const response = await api.put('/teacher-attendance/class-status', payload);
+      
+      console.log('✅ [handleClassStatusChange] Resposta:', response.data);
 
       toast.success(`✅ Aula marcada como ${status === 'present' ? 'presente' : 'ausente'}`);
       queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
       refetchAttendance();
     } catch (error: any) {
-      console.error('Erro ao atualizar status:', error);
-      toast.error('Erro ao atualizar status da aula');
+      console.error('❌ [handleClassStatusChange] Erro completo:', error);
+      console.error('❌ [handleClassStatusChange] Resposta do erro:', error.response?.data);
+      console.error('❌ [handleClassStatusChange] Status:', error.response?.status);
+      
+      const errorMessage = error.response?.data?.message || error.response?.data?.details || 'Erro ao atualizar status da aula';
+      toast.error(errorMessage);
     }
   };
 

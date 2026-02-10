@@ -812,6 +812,18 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       // Usar o horário mais recente
       const timetable = timetables[timetables.length - 1];
       
+      console.log(`📅 [class-status] Data alvo: ${date}, Day of week calculado: ${dayOfWeek}`);
+      console.log(`📊 [class-status] Timetable tem ${timetable.slots?.length || 0} slots`);
+      
+      // Validar se timetable tem slots
+      if (!timetable.slots || timetable.slots.length === 0) {
+        console.error('❌ [class-status] Timetable não possui slots');
+        return res.status(404).json({ 
+          message: 'Horário sem aulas cadastradas',
+          details: 'O horário gerado não possui aulas cadastradas'
+        });
+      }
+      
       // Buscar todas as aulas do professor neste dia
       const teacherSlots = timetable.slots.filter((slot: any) => 
         slot.teacherId?.toString() === teacherId && 
@@ -819,6 +831,16 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       );
       
       console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
+      console.log(`🔍 [class-status] Exemplo de slot (se existir):`, teacherSlots[0]);
+      
+      // Se não encontrou aulas, retornar erro informativo
+      if (teacherSlots.length === 0) {
+        console.error(`❌ [class-status] Nenhuma aula encontrada para teacherId ${teacherId} no ${dayOfWeek}`);
+        return res.status(404).json({ 
+          message: 'Nenhuma aula encontrada',
+          details: `Professor não tem aulas agendadas para ${dayOfWeek} no horário selecionado`
+        });
+      }
       
       // Buscar informações das disciplinas e turmas
       const classesData = await Promise.all(
