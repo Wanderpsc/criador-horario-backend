@@ -231,54 +231,57 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       const targetDate = new Date(date);
       const dayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
       
-      // Buscar horário gerado específico (se fornecido) ou o mais recente
-      let timetable;
-      if (scheduleId) {
-        console.log(`📚 [class-status] Buscando horário específico: ${scheduleId}`);
-        timetable = await GeneratedTimetable.findOne({ scheduleId, school: schoolId });
-        if (!timetable) {
-          return res.status(404).json({ 
-            message: 'Horário não encontrado',
-            details: `Horário com ID ${scheduleId} não encontrado`
-          });
-        }
-      } else {
-        console.log(`📚 [class-status] Buscando horários da escola...`);
-        const timetables = await GeneratedTimetable.find({ school: schoolId });
-        console.log(`📚 [class-status] Encontrados ${timetables.length} horários`);
-        
-        if (timetables.length === 0) {
-          return res.status(404).json({ 
-            message: 'Nenhum horário encontrado',
-            details: 'Não há horários gerados para buscar informações da aula'
-          });
-        }
-        
-        // Usar o horário mais recente
-        timetable = timetables[timetables.length - 1];
+      // Buscar TODOS os horários da escola
+      console.log(`📚 [class-status] Buscando TODOS os horários da escola...`);
+      const allTimetables = await GeneratedTimetable.find({ school: schoolId });
+      console.log(`📚 [class-status] Encontrados ${allTimetables.length} horários`);
+      
+      if (allTimetables.length === 0) {
+        return res.status(404).json({ 
+          message: 'Nenhum horário encontrado',
+          details: 'Não há horários gerados para buscar informações da aula'
+        });
       }
       
-      console.log(`📅 [class-status] Data alvo: ${date}, Day of week calculado: ${dayOfWeek}`);
-      console.log(`📊 [class-status] Timetable tem ${timetable.slots?.length || 0} slots`);
+      // Agregar todos os slots de todos os horários
+      let allSlots: any[] = [];
+      allTimetables.forEach((t: any) => {
+        if (t.slots && Array.isArray(t.slots)) {
+          allSlots = [...allSlots, ...t.slots];
+        }
+      });
       
-      // Validar se timetable tem slots
-      if (!timetable.slots || timetable.slots.length === 0) {
-        console.error('❌ [class-status] Timetable não possui slots');
+      console.log(`📚 [class-status] Total de slots agregados: ${allSlots.length}`);
+      
+      console.log(`📅 [class-status] Data alvo: ${date}, Day of week calculado: ${dayOfWeek}`);
+      console.log(`📊 [class-status] Total de slots: ${allSlots.length}`);
+      
+      // Validar se há slots
+      if (allSlots.length === 0) {
+        console.error('❌ [class-status] Nenhum slot encontrado');
         return res.status(404).json({ 
           message: 'Horário sem aulas cadastradas',
-          details: 'O horário gerado não possui aulas cadastradas'
+          details: 'Os horários gerados não possuem aulas cadastradas'
         });
       }
       
       // Logar todos os valores únicos de 'day' para debug
-      const uniqueDays = [...new Set(timetable.slots.map((s: any) => s.day))];
+      const uniqueDays = [...new Set(allSlots.map((s: any) => s.day))];
       console.log(`🗓️ [class-status] Dias únicos encontrados nos slots:`, uniqueDays);
+      console.log(`👤 [class-status] Procurando teacherId: ${teacherId}`);
+      console.log(`📅 [class-status] Procurando dia: ${dayOfWeek}`);
       
       // Buscar todas as aulas do professor neste dia (comparação case-insensitive)
-      const teacherSlots = timetable.slots.filter((slot: any) => 
-        slot.teacherId?.toString() === teacherId && 
-        slot.day?.toLowerCase() === dayOfWeek.toLowerCase()
-      );
+      const teacherSlots = allSlots.filter((slot: any) => {
+        const matchTeacher = slot.teacherId?.toString() === teacherId;
+        const matchDay = slot.day?.toLowerCase() === dayOfWeek.toLowerCase();
+        
+        if (matchTeacher && !matchDay) {
+          console.log(`⚠️ [class-status] Professor encontrado mas dia diferente: ${slot.day}`);
+        }
+        
+        return matchTeacher && matchDay;
+      });
       
       console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
       console.log(`🔍 [class-status] Exemplo de slot (se existir):`, teacherSlots[0]);
