@@ -816,6 +816,40 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
         };
       });
 
+      // Buscar disciplinas para garantir que temos os nomes
+      const Subject = mongoose.model('Subject');
+      const allSubjectIds = [...new Set(
+        timetables.flatMap((t: any) => 
+          t.slots?.filter((s: any) => s.subjectId).map((s: any) => s.subjectId) || []
+        )
+      )];
+      const subjects = await Subject.find({ _id: { $in: allSubjectIds } }).select('_id name');
+      const subjectMap: { [key: string]: string } = {};
+      subjects.forEach((subj: any) => {
+        subjectMap[subj._id.toString()] = subj.name;
+      });
+
+      // Períodos padrão
+      const defaultPeriods = [
+        { period: 1, startTime: '07:00', endTime: '07:50' },
+        { period: 2, startTime: '07:50', endTime: '08:40' },
+        { period: 3, startTime: '08:40', endTime: '09:30' },
+        { period: 4, startTime: '09:50', endTime: '10:40' },
+        { period: 5, startTime: '10:40', endTime: '11:30' },
+        { period: 6, startTime: '11:30', endTime: '12:20' },
+        { period: 7, startTime: '13:40', endTime: '14:30' },
+        { period: 8, startTime: '14:30', endTime: '15:20' }
+      ];
+
+      // Criar mapa de períodos
+      const periodMap: { [key: number]: { startTime: string; endTime: string } } = {};
+      defaultPeriods.forEach((p: any) => {
+        periodMap[p.period] = {
+          startTime: p.startTime,
+          endTime: p.endTime
+        };
+      });
+
       // Adicionar aulas do horário
       timetables.forEach((timetable: any) => {
         if (timetable.slots && Array.isArray(timetable.slots)) {
@@ -825,12 +859,20 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
               if (teacherClasses[slot.teacherId]) {
                 const classInfo = classMap[timetable.classId] || { name: 'Turma desconhecida', grade: 'N/A' };
                 
+                // Buscar horários do período se não estiver no slot
+                const periodTimes = periodMap[slot.period] || { startTime: '00:00', endTime: '00:00' };
+                const startTime = slot.startTime || periodTimes.startTime;
+                const endTime = slot.endTime || periodTimes.endTime;
+                
+                // Buscar nome da disciplina se não estiver no slot
+                const subjectName = slot.subjectName || subjectMap[slot.subjectId] || 'Disciplina desconhecida';
+                
                 teacherClasses[slot.teacherId].classes.push({
                   period: slot.period,
-                  startTime: slot.startTime,
-                  endTime: slot.endTime,
+                  startTime,
+                  endTime,
                   subjectId: slot.subjectId,
-                  subjectName: slot.subjectName,
+                  subjectName,
                   classId: timetable.classId,
                   className: classInfo.name,
                   grade: classInfo.grade,
@@ -848,18 +890,6 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       });
 
       console.log('👨‍🏫 Professores encontrados (sem calendário):', Object.keys(teacherClasses).length);
-
-      // Períodos padrão
-      const defaultPeriods = [
-        { period: 1, startTime: '07:00', endTime: '07:50' },
-        { period: 2, startTime: '07:50', endTime: '08:40' },
-        { period: 3, startTime: '08:40', endTime: '09:30' },
-        { period: 4, startTime: '09:50', endTime: '10:40' },
-        { period: 5, startTime: '10:40', endTime: '11:30' },
-        { period: 6, startTime: '11:30', endTime: '12:20' },
-        { period: 7, startTime: '13:40', endTime: '14:30' },
-        { period: 8, startTime: '14:30', endTime: '15:20' }
-      ];
 
       return res.json({
         date,
@@ -981,6 +1011,56 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       };
     });
 
+    // 5. BUSCAR CONFIGURAÇÃO DE PERÍODOS DO HORÁRIO (MOVER PARA ANTES DO LOOP)
+    const Schedule = mongoose.model('Schedule');
+    const Subject = mongoose.model('Subject');
+    let allPeriods: any[] = [];
+    
+    if (effectiveScheduleId) {
+      const schedule = await Schedule.findOne({ _id: effectiveScheduleId });
+      if (schedule && schedule.periods && schedule.periods.length > 0) {
+        allPeriods = schedule.periods;
+        console.log('📋 Encontrados', allPeriods.length, 'períodos no Schedule');
+      }
+    }
+    
+    // Se não encontrou períodos, usar padrão de 8 períodos
+    if (allPeriods.length === 0) {
+      allPeriods = [
+        { period: 1, startTime: '07:00', endTime: '07:50' },
+        { period: 2, startTime: '07:50', endTime: '08:40' },
+        { period: 3, startTime: '08:40', endTime: '09:30' },
+        { period: 4, startTime: '09:50', endTime: '10:40' },
+        { period: 5, startTime: '10:40', endTime: '11:30' },
+        { period: 6, startTime: '11:30', endTime: '12:20' },
+        { period: 7, startTime: '13:40', endTime: '14:30' },
+        { period: 8, startTime: '14:30', endTime: '15:20' }
+      ];
+      console.log('📋 Usando 8 períodos padrão');
+    }
+
+    // Criar mapa de períodos para lookup rápido
+    const periodMap: { [key: number]: { startTime: string; endTime: string } } = {};
+    allPeriods.forEach((p: any) => {
+      periodMap[p.period] = {
+        startTime: p.startTime || '00:00',
+        endTime: p.endTime || '00:00'
+      };
+    });
+
+    // Buscar informações de todas as disciplinas para garantir que temos os nomes
+    const allSubjectIds = [...new Set(
+      timetables.flatMap((t: any) => 
+        t.slots?.filter((s: any) => s.subjectId).map((s: any) => s.subjectId) || []
+      )
+    )];
+    const subjects = await Subject.find({ _id: { $in: allSubjectIds } }).select('_id name');
+    const subjectMap: { [key: string]: string } = {};
+    subjects.forEach((subj: any) => {
+      subjectMap[subj._id.toString()] = subj.name;
+    });
+    console.log('📚 Disciplinas carregadas:', subjects.length);
+
     // Adicionar aulas do horário
     let totalSlotsProcessed = 0;
     let slotsForTargetDay = 0;
@@ -1016,12 +1096,20 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
               if (teacherClasses[slot.teacherId]) {
                 const classInfo = classMap[timetable.classId] || { name: 'Turma desconhecida', grade: 'N/A' };
                 
+                // Buscar horários do período se não estiver no slot
+                const periodTimes = periodMap[slot.period] || { startTime: '00:00', endTime: '00:00' };
+                const startTime = slot.startTime || periodTimes.startTime;
+                const endTime = slot.endTime || periodTimes.endTime;
+                
+                // Buscar nome da disciplina se não estiver no slot
+                const subjectName = slot.subjectName || subjectMap[slot.subjectId] || 'Disciplina desconhecida';
+                
                 teacherClasses[slot.teacherId].classes.push({
                   period: slot.period,
-                  startTime: slot.startTime,
-                  endTime: slot.endTime,
+                  startTime,
+                  endTime,
                   subjectId: slot.subjectId,
-                  subjectName: slot.subjectName,
+                  subjectName,
                   classId: timetable.classId,
                   className: classInfo.name,
                   grade: classInfo.grade,
@@ -1040,33 +1128,6 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     console.log('📊 Dias encontrados nos slots:', Array.from(daysFound));
     console.log('📊 Slots para', targetDay + ':', slotsForTargetDay);
     console.log('👨‍🏫 Professores com aulas neste dia:', Object.values(teacherClasses).filter((t: any) => t.classes.length > 0).length);
-
-    // 5. BUSCAR CONFIGURAÇÃO DE PERÍODOS DO HORÁRIO
-    const Schedule = mongoose.model('Schedule');
-    let allPeriods: any[] = [];
-    
-    if (effectiveScheduleId) {
-      const schedule = await Schedule.findOne({ _id: effectiveScheduleId });
-      if (schedule && schedule.periods && schedule.periods.length > 0) {
-        allPeriods = schedule.periods;
-        console.log('📋 Encontrados', allPeriods.length, 'períodos no Schedule');
-      }
-    }
-    
-    // Se não encontrou períodos, usar padrão de 8 períodos
-    if (allPeriods.length === 0) {
-      allPeriods = [
-        { period: 1, startTime: '07:00', endTime: '07:50' },
-        { period: 2, startTime: '07:50', endTime: '08:40' },
-        { period: 3, startTime: '08:40', endTime: '09:30' },
-        { period: 4, startTime: '09:50', endTime: '10:40' },
-        { period: 5, startTime: '10:40', endTime: '11:30' },
-        { period: 6, startTime: '11:30', endTime: '12:20' },
-        { period: 7, startTime: '13:40', endTime: '14:30' },
-        { period: 8, startTime: '14:30', endTime: '15:20' }
-      ];
-      console.log('📋 Usando 8 períodos padrão');
-    }
 
     // 6. ORDENAR AULAS POR PERÍODO
     Object.values(teacherClasses).forEach((teacher: any) => {
