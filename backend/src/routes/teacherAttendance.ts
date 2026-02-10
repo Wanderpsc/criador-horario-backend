@@ -140,7 +140,184 @@ router.post('/', auth, async (req: AuthRequest, res) => {
   }
 });
 
-// Atualizar registro de frequência
+// ================================
+// ROTAS PUT - ESPECÍFICAS PRIMEIRO
+// ================================
+
+// Atualizar status de uma aula específica
+router.put('/class-status', auth, async (req: AuthRequest, res) => {
+  const { teacherId, date, period, status } = req.body;
+  const schoolId = req.user?.schoolId;
+  
+  try {
+    console.log('📝 [class-status] Requisição recebida:', { teacherId, date, period, status, schoolId });
+
+    if (!schoolId) {
+      console.error('❌ [class-status] School ID não encontrado');
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    if (!teacherId || !date || period === undefined || !status) {
+      console.error('❌ [class-status] Dados incompletos:', { teacherId, date, period, status });
+      return res.status(400).json({ message: 'Dados incompletos' });
+    }
+
+    // Buscar ou criar registro de frequência
+    let attendance = await TeacherAttendance.findOne({
+      schoolId,
+      teacherId,
+      date
+    });
+
+    console.log('🔍 [class-status] Registro encontrado:', attendance ? 'SIM' : 'NÃO');
+
+    if (attendance) {
+      // Atualizar status da aula específica
+      const classIndex = attendance.classes.findIndex((c: any) => c.period === period);
+      console.log('🔍 [class-status] Índice da aula:', classIndex);
+      
+      if (classIndex !== -1) {
+        attendance.classes[classIndex].status = status;
+        attendance.classes[classIndex].markedAt = new Date();
+        await attendance.save();
+        console.log('✅ [class-status] Status atualizado com sucesso');
+      } else {
+        console.error('❌ [class-status] Aula não encontrada no registro para período:', period);
+        return res.status(404).json({ 
+          message: 'Aula não encontrada no registro',
+          details: `Período ${period} não está no registro de frequência`
+        });
+      }
+    } else {
+      // Registro não existe, buscar aula agendada e criar
+      console.log('📝 [class-status] Criando registro automático...');
+      
+      const targetDate = new Date(date);
+      const dayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
+      
+      // Buscar horário gerado
+      const timetables = await GeneratedTimetable.find({ school: schoolId });
+      console.log(`📚 [class-status] Encontrados ${timetables.length} horários`);
+      
+      if (timetables.length === 0) {
+        return res.status(404).json({ 
+          message: 'Nenhum horário encontrado',
+          details: 'Não há horários gerados para buscar informações da aula'
+        });
+      }
+      
+      // Usar o horário mais recente
+      const timetable = timetables[timetables.length - 1];
+      
+      console.log(`📅 [class-status] Data alvo: ${date}, Day of week calculado: ${dayOfWeek}`);
+      console.log(`📊 [class-status] Timetable tem ${timetable.slots?.length || 0} slots`);
+      
+      // Validar se timetable tem slots
+      if (!timetable.slots || timetable.slots.length === 0) {
+        console.error('❌ [class-status] Timetable não possui slots');
+        return res.status(404).json({ 
+          message: 'Horário sem aulas cadastradas',
+          details: 'O horário gerado não possui aulas cadastradas'
+        });
+      }
+      
+      // Buscar todas as aulas do professor neste dia
+      const teacherSlots = timetable.slots.filter((slot: any) => 
+        slot.teacherId?.toString() === teacherId && 
+        slot.day === dayOfWeek
+      );
+      
+      console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
+      console.log(`🔍 [class-status] Exemplo de slot (se existir):`, teacherSlots[0]);
+      
+      // Se não encontrou aulas, retornar erro informativo
+      if (teacherSlots.length === 0) {
+        console.error(`❌ [class-status] Nenhuma aula encontrada para teacherId ${teacherId} no ${dayOfWeek}`);
+        return res.status(404).json({ 
+          message: 'Nenhuma aula encontrada',
+          details: `Professor não tem aulas agendadas para ${dayOfWeek} no horário selecionado`
+        });
+      }
+      
+      // Buscar informações das disciplinas e turmas
+      console.log('🔍 [class-status] Buscando informações de disciplinas e turmas...');
+      
+      const classesData = await Promise.all(
+        teacherSlots.map(async (slot: any) => {
+          try {
+            const subject = await Subject.findById(slot.subjectId);
+            const classInfo = await Class.findById(slot.classId);
+            
+            console.log(`📚 [class-status] Slot período ${slot.period}: subject=${subject?.name}, class=${classInfo?.name}`);
+            
+            return {
+              period: slot.period,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              subjectId: slot.subjectId?.toString(),
+              subjectName: subject?.name || 'Disciplina não encontrada',
+              classId: slot.classId?.toString(),
+              className: classInfo?.name || 'Turma não encontrada',
+              grade: classInfo?.gradeId?.toString() || '',
+              status: slot.period === period ? status : 'pending',
+              markedAt: slot.period === period ? new Date() : undefined
+            };
+          } catch (slotError: any) {
+            console.error(`❌ [class-status] Erro ao processar slot:`, slotError);
+            throw slotError;
+          }
+        })
+      );
+      
+      console.log(`✅ [class-status] ${classesData.length} aulas processadas`);
+      
+      // Buscar nome do professor
+      const teacher = await Teacher.findById(teacherId);
+      console.log(`👨‍🏫 [class-status] Professor: ${teacher?.name || 'Não encontrado'}`);
+      
+      if (!teacher) {
+        console.error(`❌ [class-status] Professor não encontrado: ${teacherId}`);
+        return res.status(404).json({ 
+          message: 'Professor não encontrado',
+          details: `Não foi possível encontrar o professor com ID ${teacherId}`
+        });
+      }
+      
+      // Criar novo registro
+      attendance = new TeacherAttendance({
+        schoolId,
+        teacherId,
+        teacherName: teacher?.name || 'Professor não encontrado',
+        date,
+        dayOfWeek,
+        classes: classesData
+      });
+      
+      await attendance.save();
+      console.log('✅ [class-status] Registro criado com sucesso');
+    }
+
+    res.json(attendance);
+  } catch (error: any) {
+    console.error('❌ [class-status] Erro ao atualizar status da aula:', error);
+    console.error('❌ [class-status] Stack trace:', error.stack);
+    console.error('❌ [class-status] Detalhes do erro:', {
+      message: error.message,
+      name: error.name,
+      teacherId,
+      date,
+      period,
+      status
+    });
+    res.status(500).json({ 
+      message: 'Erro ao atualizar status da aula',
+      error: error.message,
+      details: error.stack
+    });
+  }
+});
+
+// Atualizar registro de frequência (rota genérica - DEVE VIR DEPOIS DAS ESPECÍFICAS)
 router.put('/:id', auth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
@@ -744,179 +921,6 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('❌ Erro ao buscar aulas agendadas:', error);
     res.status(500).json({ message: 'Erro ao buscar aulas agendadas' });
-  }
-});
-
-// Atualizar status de uma aula específica
-router.put('/class-status', auth, async (req: AuthRequest, res) => {
-  const { teacherId, date, period, status } = req.body;
-  const schoolId = req.user?.schoolId;
-  
-  try {
-    console.log('📝 [class-status] Requisição recebida:', { teacherId, date, period, status, schoolId });
-
-    if (!schoolId) {
-      console.error('❌ [class-status] School ID não encontrado');
-      return res.status(400).json({ message: 'School ID não encontrado' });
-    }
-
-    if (!teacherId || !date || period === undefined || !status) {
-      console.error('❌ [class-status] Dados incompletos:', { teacherId, date, period, status });
-      return res.status(400).json({ message: 'Dados incompletos' });
-    }
-
-    // Buscar ou criar registro de frequência
-    let attendance = await TeacherAttendance.findOne({
-      schoolId,
-      teacherId,
-      date
-    });
-
-    console.log('🔍 [class-status] Registro encontrado:', attendance ? 'SIM' : 'NÃO');
-
-    if (attendance) {
-      // Atualizar status da aula específica
-      const classIndex = attendance.classes.findIndex((c: any) => c.period === period);
-      console.log('🔍 [class-status] Índice da aula:', classIndex);
-      
-      if (classIndex !== -1) {
-        attendance.classes[classIndex].status = status;
-        attendance.classes[classIndex].markedAt = new Date();
-        await attendance.save();
-        console.log('✅ [class-status] Status atualizado com sucesso');
-      } else {
-        console.error('❌ [class-status] Aula não encontrada no registro para período:', period);
-        return res.status(404).json({ 
-          message: 'Aula não encontrada no registro',
-          details: `Período ${period} não está no registro de frequência`
-        });
-      }
-    } else {
-      // Registro não existe, buscar aula agendada e criar
-      console.log('📝 [class-status] Criando registro automático...');
-      
-      const targetDate = new Date(date);
-      const dayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
-      
-      // Buscar horário gerado
-      const timetables = await GeneratedTimetable.find({ school: schoolId });
-      console.log(`📚 [class-status] Encontrados ${timetables.length} horários`);
-      
-      if (timetables.length === 0) {
-        return res.status(404).json({ 
-          message: 'Nenhum horário encontrado',
-          details: 'Não há horários gerados para buscar informações da aula'
-        });
-      }
-      
-      // Usar o horário mais recente
-      const timetable = timetables[timetables.length - 1];
-      
-      console.log(`📅 [class-status] Data alvo: ${date}, Day of week calculado: ${dayOfWeek}`);
-      console.log(`📊 [class-status] Timetable tem ${timetable.slots?.length || 0} slots`);
-      
-      // Validar se timetable tem slots
-      if (!timetable.slots || timetable.slots.length === 0) {
-        console.error('❌ [class-status] Timetable não possui slots');
-        return res.status(404).json({ 
-          message: 'Horário sem aulas cadastradas',
-          details: 'O horário gerado não possui aulas cadastradas'
-        });
-      }
-      
-      // Buscar todas as aulas do professor neste dia
-      const teacherSlots = timetable.slots.filter((slot: any) => 
-        slot.teacherId?.toString() === teacherId && 
-        slot.day === dayOfWeek
-      );
-      
-      console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
-      console.log(`🔍 [class-status] Exemplo de slot (se existir):`, teacherSlots[0]);
-      
-      // Se não encontrou aulas, retornar erro informativo
-      if (teacherSlots.length === 0) {
-        console.error(`❌ [class-status] Nenhuma aula encontrada para teacherId ${teacherId} no ${dayOfWeek}`);
-        return res.status(404).json({ 
-          message: 'Nenhuma aula encontrada',
-          details: `Professor não tem aulas agendadas para ${dayOfWeek} no horário selecionado`
-        });
-      }
-      
-      // Buscar informações das disciplinas e turmas
-      console.log('🔍 [class-status] Buscando informações de disciplinas e turmas...');
-      
-      const classesData = await Promise.all(
-        teacherSlots.map(async (slot: any) => {
-          try {
-            const subject = await Subject.findById(slot.subjectId);
-            const classInfo = await Class.findById(slot.classId);
-            
-            console.log(`📚 [class-status] Slot período ${slot.period}: subject=${subject?.name}, class=${classInfo?.name}`);
-            
-            return {
-              period: slot.period,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
-              subjectId: slot.subjectId?.toString(),
-              subjectName: subject?.name || 'Disciplina não encontrada',
-              classId: slot.classId?.toString(),
-              className: classInfo?.name || 'Turma não encontrada',
-              grade: classInfo?.gradeId?.toString() || '',
-              status: slot.period === period ? status : 'pending',
-              markedAt: slot.period === period ? new Date() : undefined
-            };
-          } catch (slotError: any) {
-            console.error(`❌ [class-status] Erro ao processar slot:`, slotError);
-            throw slotError;
-          }
-        })
-      );
-      
-      console.log(`✅ [class-status] ${classesData.length} aulas processadas`);
-      
-      // Buscar nome do professor
-      const teacher = await Teacher.findById(teacherId);
-      console.log(`👨‍🏫 [class-status] Professor: ${teacher?.name || 'Não encontrado'}`);
-      
-      if (!teacher) {
-        console.error(`❌ [class-status] Professor não encontrado: ${teacherId}`);
-        return res.status(404).json({ 
-          message: 'Professor não encontrado',
-          details: `Não foi possível encontrar o professor com ID ${teacherId}`
-        });
-      }
-      
-      // Criar novo registro
-      attendance = new TeacherAttendance({
-        schoolId,
-        teacherId,
-        teacherName: teacher?.name || 'Professor não encontrado',
-        date,
-        dayOfWeek,
-        classes: classesData
-      });
-      
-      await attendance.save();
-      console.log('✅ [class-status] Registro criado com sucesso');
-    }
-
-    res.json(attendance);
-  } catch (error: any) {
-    console.error('❌ [class-status] Erro ao atualizar status da aula:', error);
-    console.error('❌ [class-status] Stack trace:', error.stack);
-    console.error('❌ [class-status] Detalhes do erro:', {
-      message: error.message,
-      name: error.name,
-      teacherId,
-      date,
-      period,
-      status
-    });
-    res.status(500).json({ 
-      message: 'Erro ao atualizar status da aula',
-      error: error.message,
-      details: error.stack
-    });
   }
 });
 
