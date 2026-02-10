@@ -1095,12 +1095,38 @@ router.post('/daily-record', auth, async (req: AuthRequest, res) => {
     const { teacherId, teacherName, date, dayOfWeek, classes } = req.body;
     const schoolId = req.user?.schoolId;
 
+    console.log('\n📝 POST /daily-record - Salvando registro diário');
+    console.log('   teacherId:', teacherId);
+    console.log('   teacherName:', teacherName);
+    console.log('   date:', date);
+    console.log('   dayOfWeek:', dayOfWeek);
+    console.log('   schoolId:', schoolId);
+    console.log('   classes:', JSON.stringify(classes, null, 2));
+
     if (!schoolId) {
       return res.status(400).json({ message: 'School ID não encontrado' });
     }
 
     if (!teacherId || !date || !classes || !Array.isArray(classes)) {
+      console.error('❌ Dados incompletos:', { teacherId, date, hasClasses: !!classes, isArray: Array.isArray(classes) });
       return res.status(400).json({ message: 'Dados incompletos' });
+    }
+
+    // Validar cada aula
+    for (let i = 0; i < classes.length; i++) {
+      const cls = classes[i];
+      const requiredFields = ['period', 'startTime', 'endTime', 'subjectId', 'subjectName', 'classId', 'className', 'grade'];
+      const missingFields = requiredFields.filter(field => !cls[field]);
+      
+      if (missingFields.length > 0) {
+        console.error(`❌ Aula ${i} está faltando campos:`, missingFields);
+        console.error(`   Dados da aula:`, JSON.stringify(cls, null, 2));
+        return res.status(400).json({ 
+          message: `Aula ${i + 1} está faltando campos obrigatórios: ${missingFields.join(', ')}`,
+          missingFields,
+          classData: cls
+        });
+      }
     }
 
     // Buscar registro existente
@@ -1112,11 +1138,14 @@ router.post('/daily-record', auth, async (req: AuthRequest, res) => {
 
     if (attendance) {
       // Atualizar registro existente
+      console.log('   ✏️ Atualizando registro existente');
       attendance.classes = classes as any;
       attendance.dayOfWeek = dayOfWeek;
+      attendance.teacherName = teacherName; // Atualizar nome caso tenha mudado
       await attendance.save();
     } else {
       // Criar novo registro
+      console.log('   ➕ Criando novo registro');
       attendance = new TeacherAttendance({
         schoolId,
         teacherId,
@@ -1128,12 +1157,18 @@ router.post('/daily-record', auth, async (req: AuthRequest, res) => {
       await attendance.save();
     }
 
+    console.log('   ✅ Registro salvo com sucesso, ID:', attendance._id);
     res.json(attendance);
   } catch (error: any) {
-    console.error('Erro ao salvar registro de frequência:', error);
+    console.error('❌ Erro ao salvar registro de frequência:', error);
+    console.error('   Stack:', error.stack);
     res.status(500).json({ 
       message: 'Erro ao salvar registro de frequência',
-      error: error.message 
+      error: error.message,
+      details: error.errors ? Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      })) : undefined
     });
   }
 });
