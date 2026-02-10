@@ -494,6 +494,85 @@ router.delete('/teacher/:teacherId/date/:date', auth, async (req: AuthRequest, r
   }
 });
 
+// Buscar estatísticas detalhadas por disciplina/turma de um professor
+router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { startDate, endDate } = req.query;
+    const schoolId = req.user?.schoolId;
+
+    if (!schoolId) {
+      return res.status(400).json({ message: 'School ID não encontrado' });
+    }
+
+    let query: any = { schoolId, teacherId };
+
+    if (startDate && endDate) {
+      query.date = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    }
+
+    const records = await TeacherAttendance.find(query);
+
+    // Agrupar por disciplina/turma
+    const subjectStats: { [key: string]: any } = {};
+    const teacher = records.length > 0 ? records[0].teacherName : '';
+
+    records.forEach(record => {
+      if (!record.classes || record.classes.length === 0) return;
+
+      record.classes.forEach((cls: any) => {
+        const key = `${cls.subjectId}_${cls.classId}`;
+
+        if (!subjectStats[key]) {
+          subjectStats[key] = {
+            subjectId: cls.subjectId,
+            subjectName: cls.subjectName,
+            classId: cls.classId,
+            className: cls.className,
+            grade: cls.grade,
+            scheduledClasses: 0,
+            givenClasses: 0,
+            absentClasses: 0,
+            pendingClasses: 0,
+            deficit: 0,
+            dates: []
+          };
+        }
+
+        subjectStats[key].scheduledClasses += 1;
+
+        if (cls.status === 'present') {
+          subjectStats[key].givenClasses += 1;
+        } else if (cls.status === 'absent') {
+          subjectStats[key].absentClasses += 1;
+          if (!subjectStats[key].dates.includes(record.date)) {
+            subjectStats[key].dates.push(record.date);
+          }
+        } else if (cls.status === 'pending') {
+          subjectStats[key].pendingClasses += 1;
+        }
+      });
+    });
+
+    // Calcular déficit
+    Object.values(subjectStats).forEach((stat: any) => {
+      stat.deficit = stat.scheduledClasses - stat.givenClasses;
+    });
+
+    return res.json({
+      teacherId,
+      teacherName: teacher,
+      subjects: Object.values(subjectStats)
+    });
+  } catch (error) {
+    console.error('Erro ao buscar relatório por disciplina:', error);
+    res.status(500).json({ message: 'Erro ao buscar relatório por disciplina' });
+  }
+});
+
 // Obter estatísticas de frequência
 router.get('/statistics', auth, async (req: AuthRequest, res) => {
   try {

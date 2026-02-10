@@ -168,20 +168,74 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       let totalPredicted = 0;
       let totalGiven = 0;
 
+      // Buscar horários gerados para contar aulas previstas
+      const timetables = await GeneratedTimetable.find({ school: schoolId });
+      
       for (const ts of teacherSubjects) {
         const subject: any = ts.subjectId;
         const classObj: any = ts.classId;
 
         if (!subject || !classObj) continue;
 
-        const weeklyClasses = ts.weeklyHours || 2; // Padrão 2 aulas/semana
-        const totalWeeks = Math.max(1, Math.floor(schoolDays.length / 5));
-        const predicted = weeklyClasses * totalWeeks;
+        // CONTAR AULAS PREVISTAS por disciplina/turma no calendário letivo
+        let predicted = 0;
+        
+        for (const schoolDay of schoolDays) {
+          const dateObj = new Date(schoolDay.date);
+          let targetDay: string;
+          
+          // Se for sábado de reposição, usar o dia que ele segue
+          if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
+            const weekdayMap: { [key: string]: string } = {
+              'monday': 'Segunda',
+              'tuesday': 'Terça',
+              'wednesday': 'Quarta',
+              'thursday': 'Quinta',
+              'friday': 'Sexta'
+            };
+            targetDay = weekdayMap[schoolDay.followWeekday];
+          } else {
+            // Dia normal
+            const dayOfWeek = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+            const dayMap: { [key: string]: string } = {
+              'segunda-feira': 'Segunda',
+              'terça-feira': 'Terça',
+              'quarta-feira': 'Quarta',
+              'quinta-feira': 'Quinta',
+              'sexta-feira': 'Sexta',
+              'sábado': 'Sábado'
+            };
+            targetDay = dayMap[dayOfWeek.toLowerCase()];
+          }
+          
+          // Contar aulas do professor nesta disciplina/turma neste dia
+          for (const timetable of timetables) {
+            if (timetable.slots && timetable.classId.toString() === classObj._id.toString()) {
+              const classesInDay = timetable.slots.filter((slot: any) => 
+                slot.day === targetDay &&
+                slot.teacherId === teacher._id.toString() &&
+                slot.subjectId === subject._id.toString()
+              ).length;
+              
+              predicted += classesInDay;
+            }
+          }
+        }
 
-        // Somar aulas dadas baseado nos registros de frequência
-        const given = attendanceRecords.reduce((sum, record) => {
-          return sum + (record.totalPresentClasses || 0);
-        }, 0);
+        // CONTAR AULAS DADAS por disciplina/turma nos registros de frequência
+        let given = 0;
+        
+        for (const record of attendanceRecords) {
+          if (record.classes && Array.isArray(record.classes)) {
+            const classesGiven = record.classes.filter((cls: any) => 
+              cls.status === 'present' &&
+              cls.subjectId === subject._id.toString() &&
+              cls.classId === classObj._id.toString()
+            ).length;
+            
+            given += classesGiven;
+          }
+        }
 
         const deficit = predicted > given ? predicted - given : 0;
         const surplus = given > predicted ? given - predicted : 0;
