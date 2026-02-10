@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
@@ -145,7 +145,11 @@ export default function TeacherAttendance() {
     }
   };
 
-  const dateRange = getDateRangeForReportType();
+  const dateRange = useMemo(() => {
+    const result = getDateRangeForReportType();
+    console.log('🔄 DateRange recalculado:', { reportType, selectedDate, result });
+    return result;
+  }, [reportType, selectedDate]);
 
   // Buscar horários disponíveis
   const { data: timetablesData } = useQuery({
@@ -221,7 +225,9 @@ export default function TeacherAttendance() {
       const response = await api.get('/teacher-attendance/statistics', { params });
       return response.data || [];
     },
-    enabled: !!selectedDate
+    enabled: !!selectedDate,
+    staleTime: 0,
+    gcTime: 0
   });
 
   // Buscar relatório de déficit por disciplina com cálculo correto
@@ -237,7 +243,9 @@ export default function TeacherAttendance() {
       const response = await api.get('/teacher-attendance/statistics', { params });
       return response.data || [];
     },
-    enabled: !!selectedDate
+    enabled: !!selectedDate,
+    staleTime: 0,
+    gcTime: 0
   });
 
   // Mesclar dados agendados com registros salvos
