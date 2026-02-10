@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 import TeacherAttendance from '../models/TeacherAttendance';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 import SchoolDay from '../models/SchoolDay';
+import Subject from '../models/Subject';
+import Class from '../models/Class';
+import Teacher from '../models/Teacher';
+import Schedule from '../models/Schedule';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -749,11 +753,15 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
     const { teacherId, date, period, status } = req.body;
     const schoolId = req.user?.schoolId;
 
+    console.log('📝 [class-status] Requisição recebida:', { teacherId, date, period, status, schoolId });
+
     if (!schoolId) {
+      console.error('❌ [class-status] School ID não encontrado');
       return res.status(400).json({ message: 'School ID não encontrado' });
     }
 
     if (!teacherId || !date || period === undefined || !status) {
+      console.error('❌ [class-status] Dados incompletos:', { teacherId, date, period, status });
       return res.status(400).json({ message: 'Dados incompletos' });
     }
 
@@ -764,19 +772,95 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       date
     });
 
+    console.log('🔍 [class-status] Registro encontrado:', attendance ? 'SIM' : 'NÃO');
+
     if (attendance) {
       // Atualizar status da aula específica
       const classIndex = attendance.classes.findIndex((c: any) => c.period === period);
+      console.log('🔍 [class-status] Índice da aula:', classIndex);
+      
       if (classIndex !== -1) {
         attendance.classes[classIndex].status = status;
         attendance.classes[classIndex].markedAt = new Date();
+        await attendance.save();
+        console.log('✅ [class-status] Status atualizado com sucesso');
+      } else {
+        console.error('❌ [class-status] Aula não encontrada no registro para período:', period);
+        return res.status(404).json({ 
+          message: 'Aula não encontrada no registro',
+          details: `Período ${period} não está no registro de frequência`
+        });
       }
+    } else {
+      // Registro não existe, buscar aula agendada e criar
+      console.log('📝 [class-status] Criando registro automático...');
+      
+      const targetDate = new Date(date);
+      const dayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
+      
+      // Buscar horário gerado
+      const timetables = await GeneratedTimetable.find({ school: schoolId });
+      console.log(`📚 [class-status] Encontrados ${timetables.length} horários`);
+      
+      if (timetables.length === 0) {
+        return res.status(404).json({ 
+          message: 'Nenhum horário encontrado',
+          details: 'Não há horários gerados para buscar informações da aula'
+        });
+      }
+      
+      // Usar o horário mais recente
+      const timetable = timetables[timetables.length - 1];
+      
+      // Buscar todas as aulas do professor neste dia
+      const teacherSlots = timetable.slots.filter((slot: any) => 
+        slot.teacherId?.toString() === teacherId && 
+        slot.day === dayOfWeek
+      );
+      
+      console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
+      
+      // Buscar informações das disciplinas e turmas
+      const classesData = await Promise.all(
+        teacherSlots.map(async (slot: any) => {
+          const subject = await Subject.findById(slot.subjectId);
+          const classInfo = await Class.findById(slot.classId);
+          
+          return {
+            period: slot.period,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            subjectId: slot.subjectId?.toString(),
+            subjectName: subject?.name || 'Disciplina não encontrada',
+            classId: slot.classId?.toString(),
+            className: classInfo?.name || 'Turma não encontrada',
+            grade: classInfo?.gradeId?.toString() || '',
+            status: slot.period === period ? status : 'pending',
+            markedAt: slot.period === period ? new Date() : undefined
+          };
+        })
+      );
+      
+      // Buscar nome do professor
+      const teacher = await Teacher.findById(teacherId);
+      
+      // Criar novo registro
+      attendance = new TeacherAttendance({
+        schoolId,
+        teacherId,
+        teacherName: teacher?.name || 'Professor não encontrado',
+        date,
+        dayOfWeek,
+        classes: classesData
+      });
+      
       await attendance.save();
+      console.log('✅ [class-status] Registro criado com sucesso');
     }
 
     res.json(attendance);
   } catch (error: any) {
-    console.error('Erro ao atualizar status da aula:', error);
+    console.error('❌ [class-status] Erro ao atualizar status da aula:', error);
     res.status(500).json({ 
       message: 'Erro ao atualizar status da aula',
       error: error.message 
