@@ -92,6 +92,8 @@ async function calculateExpectedClassesFromAnnualWorkload(
     // Cálculo proporcional: (CargaAnual / DiasAno) × DiasPeriodo
     const expectedClasses = Math.round((annualWorkload / daysInYear) * schoolDaysInPeriod);
     
+    console.log(`📊 [CARGA ANUAL] Disciplina ${subjectId}: ${annualWorkload} aulas/ano ÷ ${daysInYear} dias × ${schoolDaysInPeriod} dias = ${expectedClasses} aulas`);
+    
     return expectedClasses;
   } catch (error) {
     console.error('Erro ao calcular aulas previstas:', error);
@@ -764,7 +766,8 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
             pendingClasses: 0,
             deficit: 0,
             dates: [],
-            weeklyHours: 0 // NOVO: armazenar carga horária
+            weeklyHours: 0,
+            annualWorkload: 0 // NOVO: carga horária anual
           };
         }
 
@@ -782,18 +785,22 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
       });
     });
 
-    // NOVO: Calcular scheduledClasses CORRETAMENTE baseado no HORÁRIO VIGENTE
+    // NOVO: Calcular scheduledClasses baseado na CARGA HORÁRIA ANUAL
     for (const key in subjectStats) {
       const stat = subjectStats[key];
       
-      // Buscar carga horária da disciplina (para referência)
-      const weeklyHours = await getSubjectWeeklyHours(stat.subjectId);
-      stat.weeklyHours = weeklyHours;
+      // Buscar informações da disciplina
+      const Subject = mongoose.model('Subject');
+      const subject = await Subject.findById(stat.subjectId);
       
-      // Calcular aulas previstas baseado no horário vigente da turma
-      stat.scheduledClasses = await calculateExpectedClassesFromSchedule(
+      if (subject) {
+        stat.annualWorkload = subject.workload || subject.workloadHours || subject.hours || 0;
+        stat.weeklyHours = subject.weeklyHours || 0;
+      }
+      
+      // Calcular aulas previstas BASEADO NA CARGA HORÁRIA ANUAL
+      stat.scheduledClasses = await calculateExpectedClassesFromAnnualWorkload(
         stat.subjectId,
-        stat.classId,
         schoolId,
         startDate as string,
         endDate as string
@@ -879,7 +886,8 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
               pendingClasses: 0,
               deficit: 0,
               dates: [],
-              weeklyHours: 0 // NOVO
+              weeklyHours: 0,
+              annualWorkload: 0 // NOVO: carga horária anual
             };
           }
 
@@ -897,19 +905,23 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
         });
       });
 
-      // NOVO: Calcular scheduledClasses CORRETAMENTE baseado no HORÁRIO VIGENTE
+      // NOVO: Calcular scheduledClasses baseado na CARGA HORÁRIA ANUAL
       for (const key in subjectStats) {
         const stat = subjectStats[key];
         
-        // Buscar carga horária da disciplina (para referência)
-        const weeklyHours = await getSubjectWeeklyHours(stat.subjectId);
-        stat.weeklyHours = weeklyHours;
+        // Buscar informações da disciplina
+        const Subject = mongoose.model('Subject');
+        const subject = await Subject.findById(stat.subjectId);
         
-        // Calcular aulas previstas baseado no horário vigente da turma
+        if (subject) {
+          stat.annualWorkload = subject.workload || subject.workloadHours || subject.hours || 0;
+          stat.weeklyHours = subject.weeklyHours || 0;
+        }
+        
+        // Calcular aulas previstas BASEADO NA CARGA HORÁRIA ANUAL
         if (schoolDaysInPeriod > 0 && startDate && endDate) {
-          stat.scheduledClasses = await calculateExpectedClassesFromSchedule(
+          stat.scheduledClasses = await calculateExpectedClassesFromAnnualWorkload(
             stat.subjectId,
-            stat.classId,
             schoolId,
             startDate as string,
             endDate as string
