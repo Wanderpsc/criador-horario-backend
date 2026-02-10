@@ -749,10 +749,10 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
 
 // Atualizar status de uma aula específica
 router.put('/class-status', auth, async (req: AuthRequest, res) => {
+  const { teacherId, date, period, status } = req.body;
+  const schoolId = req.user?.schoolId;
+  
   try {
-    const { teacherId, date, period, status } = req.body;
-    const schoolId = req.user?.schoolId;
-
     console.log('📝 [class-status] Requisição recebida:', { teacherId, date, period, status, schoolId });
 
     if (!schoolId) {
@@ -843,28 +843,48 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       }
       
       // Buscar informações das disciplinas e turmas
+      console.log('🔍 [class-status] Buscando informações de disciplinas e turmas...');
+      
       const classesData = await Promise.all(
         teacherSlots.map(async (slot: any) => {
-          const subject = await Subject.findById(slot.subjectId);
-          const classInfo = await Class.findById(slot.classId);
-          
-          return {
-            period: slot.period,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            subjectId: slot.subjectId?.toString(),
-            subjectName: subject?.name || 'Disciplina não encontrada',
-            classId: slot.classId?.toString(),
-            className: classInfo?.name || 'Turma não encontrada',
-            grade: classInfo?.gradeId?.toString() || '',
-            status: slot.period === period ? status : 'pending',
-            markedAt: slot.period === period ? new Date() : undefined
-          };
+          try {
+            const subject = await Subject.findById(slot.subjectId);
+            const classInfo = await Class.findById(slot.classId);
+            
+            console.log(`📚 [class-status] Slot período ${slot.period}: subject=${subject?.name}, class=${classInfo?.name}`);
+            
+            return {
+              period: slot.period,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              subjectId: slot.subjectId?.toString(),
+              subjectName: subject?.name || 'Disciplina não encontrada',
+              classId: slot.classId?.toString(),
+              className: classInfo?.name || 'Turma não encontrada',
+              grade: classInfo?.gradeId?.toString() || '',
+              status: slot.period === period ? status : 'pending',
+              markedAt: slot.period === period ? new Date() : undefined
+            };
+          } catch (slotError: any) {
+            console.error(`❌ [class-status] Erro ao processar slot:`, slotError);
+            throw slotError;
+          }
         })
       );
       
+      console.log(`✅ [class-status] ${classesData.length} aulas processadas`);
+      
       // Buscar nome do professor
       const teacher = await Teacher.findById(teacherId);
+      console.log(`👨‍🏫 [class-status] Professor: ${teacher?.name || 'Não encontrado'}`);
+      
+      if (!teacher) {
+        console.error(`❌ [class-status] Professor não encontrado: ${teacherId}`);
+        return res.status(404).json({ 
+          message: 'Professor não encontrado',
+          details: `Não foi possível encontrar o professor com ID ${teacherId}`
+        });
+      }
       
       // Criar novo registro
       attendance = new TeacherAttendance({
@@ -883,9 +903,19 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
     res.json(attendance);
   } catch (error: any) {
     console.error('❌ [class-status] Erro ao atualizar status da aula:', error);
+    console.error('❌ [class-status] Stack trace:', error.stack);
+    console.error('❌ [class-status] Detalhes do erro:', {
+      message: error.message,
+      name: error.name,
+      teacherId,
+      date,
+      period,
+      status
+    });
     res.status(500).json({ 
       message: 'Erro ao atualizar status da aula',
-      error: error.message 
+      error: error.message,
+      details: error.stack
     });
   }
 });

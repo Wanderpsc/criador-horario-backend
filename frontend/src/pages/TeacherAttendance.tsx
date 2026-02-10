@@ -217,7 +217,19 @@ export default function TeacherAttendance() {
       console.error('❌ [handleClassStatusChange] Resposta do erro:', error.response?.data);
       console.error('❌ [handleClassStatusChange] Status:', error.response?.status);
       
-      const errorMessage = error.response?.data?.message || error.response?.data?.details || 'Erro ao atualizar status da aula';
+      // Mostrar detalhes completos do erro
+      const errorData = error.response?.data;
+      let errorMessage = 'Erro ao atualizar status da aula';
+      
+      if (errorData) {
+        if (errorData.details) {
+          console.error('📋 [handleClassStatusChange] Detalhes técnicos:', errorData.details);
+          errorMessage = errorData.message || errorMessage;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      }
+      
       toast.error(errorMessage);
     }
   };
