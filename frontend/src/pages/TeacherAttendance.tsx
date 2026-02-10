@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
@@ -76,6 +76,7 @@ interface SubjectDeficit {
 }
 
 export default function TeacherAttendance() {
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [startDate, setStartDate] = useState('');
@@ -95,7 +96,6 @@ export default function TeacherAttendance() {
   const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
   const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
   const [paymentReceiptData, setPaymentReceiptData] = useState<any>(null);
-  const queryClient = useQueryClient();
 
   // Calcular datas automáticas baseado no tipo de relatório
   const getDateRangeForReportType = () => {
@@ -150,6 +150,13 @@ export default function TeacherAttendance() {
     console.log('🔄 DateRange recalculado:', { reportType, selectedDate, result });
     return result;
   }, [reportType, selectedDate]);
+
+  // Forçar refetch quando reportType ou selectedDate mudarem
+  useEffect(() => {
+    console.log('🔥 Invalidando queries por mudança de período');
+    queryClient.invalidateQueries({ queryKey: ['general-report'] });
+    queryClient.invalidateQueries({ queryKey: ['subject-report'] });
+  }, [reportType, selectedDate, queryClient]);
 
   // Buscar horários disponíveis
   const { data: timetablesData } = useQuery({
