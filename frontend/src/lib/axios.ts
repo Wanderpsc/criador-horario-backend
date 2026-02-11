@@ -58,7 +58,20 @@ api.interceptors.response.use((response) => {
   }
   return response;
 }, (error) => {
-  console.error('❌ Erro na resposta:', error.config?.url, error.response?.data || error.message);
+  // Log detalhado de erro
+  console.error('❌ [AXIOS ERROR] Erro na resposta:');
+  console.error('   URL:', error.config?.url);
+  console.error('   Method:', error.config?.method?.toUpperCase());
+  console.error('   Status:', error.response?.status);
+  console.error('   Status Text:', error.response?.statusText);
+  console.error('   Response Data:', error.response?.data);
+  console.error('   Error Message:', error.message);
+  
+  // Verificar se é erro de rede (backend offline ou CORS)
+  if (error.message === 'Network Error') {
+    console.error('🌐 ERRO DE REDE: Backend pode estar offline ou há problema de CORS');
+    console.error('   Base URL configurada:', api.defaults.baseURL);
+  }
   
   // Se receber erro 401 (não autorizado), limpar token e redirecionar para login
   if (error.response?.status === 401) {
@@ -66,6 +79,7 @@ api.interceptors.response.use((response) => {
     localStorage.removeItem('auth-storage');
     window.location.href = '/login';
   }
+  
   return Promise.reject(error);
 });
 

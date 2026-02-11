@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, Plus, Edit2, Trash2, Key, CheckCircle, XCircle, 
-  Shield, Save, X, Eye, EyeOff, FileText, Download, Filter, AlertCircle 
+  Shield, Save, X, Eye, EyeOff, FileText, AlertCircle 
 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -35,21 +35,24 @@ interface SchoolUser {
 }
 
 const permissionLabels: { [key: string]: string } = {
+  dashboard: 'Painel Principal',
   teachers: 'Professores',
-  subjects: 'Disciplinas',
-  grades: 'Séries',
+  subjects: 'Componentes Curriculares',
+  grades: 'Anos / Séries',
   classes: 'Turmas',
-  classSubjects: 'Disciplinas por Turma',
-  teacherSubjects: 'Professores por Disciplina',
-  schedules: 'Horários Base',
-  timetableGenerator: 'Gerar Horários',
+  classSubjects: 'Turmas & Componentes',
+  teacherSubjects: 'Lotação de Professores',
+  schedules: 'Grade de Horários',
+  timetableGenerator: 'Gerador Inteligente',
   calendar: 'Calendário Letivo',
-  notifications: 'Comunicados',
-  emergencySchedule: 'Horário Emergencial',
-  teacherAttendance: 'Frequência Professores',
+  notifications: 'Notificações e Lembretes',
+  whatsappSettings: 'WhatsApp Business',
+  liveMessaging: 'Mensagens ao Vivo',
+  emergencySchedule: 'Horário Emergencial e Sábado de Reposição',
+  teacherAttendance: 'Controle de Frequência',
   frequencyReports: 'Relatórios de Frequência',
-  displayPanel: 'Painel de Exibição',
-  settings: 'Configurações',
+  displayPanel: 'Painel de Avisos (TV)',
+  settings: 'Configurações Gerais',
   users: 'Gerenciar Usuários',
   auditLogs: 'Logs de Auditoria'
 };
@@ -569,13 +572,15 @@ export default function Settings() {
                     >
                       <Shield size={18} />
                     </button>
-                    <button
-                      onClick={() => handleResetPassword(user)}
-                      className="p-2 text-orange-600 hover:text-orange-900 hover:bg-orange-50 rounded-lg transition"
-                      title="🔑 Resetar Senha do usuário"
-                    >
-                      <Key size={18} />
-                    </button>
+                    {canManageUsers && (
+                      <button
+                        onClick={() => handleResetPassword(user)}
+                        className="p-2 text-orange-600 hover:text-orange-900 hover:bg-orange-50 rounded-lg transition"
+                        title="🔑 Resetar Senha do usuário (APENAS ADMIN)"
+                      >
+                        <Key size={18} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteUser(user)}
                       className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition"
@@ -684,52 +689,203 @@ export default function Settings() {
       {/* Modal de Permissões */}
       {showPermissionModal && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full my-8">
-            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg p-6 max-w-6xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
               <Shield className="text-primary-600" />
               Permissões de {selectedUser.name}
             </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Marque os módulos que este usuário poderá acessar e as ações permitidas em cada módulo
+            </p>
 
-            <div className="space-y-4 max-h-96 overflow-y-auto mb-6">
-              {Object.entries(permissionLabels).map(([resource, label]) => {
-                const resourcePerms = editingPermissions[resource] || {};
-                const actions = Object.keys(resourcePerms);
+            <div className="space-y-6">
+              {/* ETAPA 1: CADASTROS BÁSICOS */}
+              <div className="border-2 border-blue-200 rounded-lg p-5 bg-blue-50">
+                <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+                  📋 ETAPA 1: CADASTROS BÁSICOS
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['dashboard', 'teachers', 'subjects', 'grades', 'classes'].map((resource) => {
+                    const resourcePerms = editingPermissions[resource] || {};
+                    const actions = Object.keys(resourcePerms);
+                    return (
+                      <div key={resource} className="bg-white border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">{permissionLabels[resource]}</h4>
+                        <div className="space-y-2">
+                          {actions.map((action) => (
+                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={(resourcePerms as any)[action] || false}
+                                onChange={() => togglePermission(resource, action)}
+                                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-700">
+                                {action === 'access' && '✅ Acessar'}
+                                {action === 'create' && '➕ Criar'}
+                                {action === 'read' && '👁️ Visualizar'}
+                                {action === 'update' && '✏️ Editar'}
+                                {action === 'delete' && '🗑️ Deletar'}
+                                {action === 'generate' && '⚡ Gerar'}
+                                {action === 'manage' && '⚙️ Gerenciar'}
+                                {action === 'send' && '📤 Enviar'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-                return (
-                  <div key={resource} className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">{label}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {actions.map((action) => (
-                        <label key={action} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={(resourcePerms as any)[action] || false}
-                            onChange={() => togglePermission(resource, action)}
-                            className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                          />
-                          <span className="text-sm text-gray-700 capitalize">{action}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
+              {/* ETAPA 2: ASSOCIAÇÕES E CARGA HORÁRIA */}
+              <div className="border-2 border-pink-200 rounded-lg p-5 bg-pink-50">
+                <h3 className="text-lg font-bold text-pink-900 mb-4 flex items-center gap-2">
+                  🔗 ETAPA 2: ASSOCIAÇÕES E CARGA HORÁRIA
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['classSubjects', 'teacherSubjects'].map((resource) => {
+                    const resourcePerms = editingPermissions[resource] || {};
+                    const actions = Object.keys(resourcePerms);
+                    return (
+                      <div key={resource} className="bg-white border border-pink-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">{permissionLabels[resource]}</h4>
+                        <div className="space-y-2">
+                          {actions.map((action) => (
+                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={(resourcePerms as any)[action] || false}
+                                onChange={() => togglePermission(resource, action)}
+                                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-700">
+                                {action === 'access' && '✅ Acessar'}
+                                {action === 'create' && '➕ Criar'}
+                                {action === 'read' && '👁️ Visualizar'}
+                                {action === 'update' && '✏️ Editar'}
+                                {action === 'delete' && '🗑️ Deletar'}
+                                {action === 'generate' && '⚡ Gerar'}
+                                {action === 'manage' && '⚙️ Gerenciar'}
+                                {action === 'send' && '📤 Enviar'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ETAPA 3: GRADE DE HORÁRIOS */}
+              <div className="border-2 border-indigo-200 rounded-lg p-5 bg-indigo-50">
+                <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                  ⏰ ETAPA 3: GRADE DE HORÁRIOS E GERAÇÃO
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['schedules', 'timetableGenerator'].map((resource) => {
+                    const resourcePerms = editingPermissions[resource] || {};
+                    const actions = Object.keys(resourcePerms);
+                    return (
+                      <div key={resource} className="bg-white border border-indigo-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3">{permissionLabels[resource]}</h4>
+                        <div className="space-y-2">
+                          {actions.map((action) => (
+                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                              <input
+                                type="checkbox"
+                                checked={(resourcePerms as any)[action] || false}
+                                onChange={() => togglePermission(resource, action)}
+                                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-sm text-gray-700">
+                                {action === 'access' && '✅ Acessar'}
+                                {action === 'create' && '➕ Criar'}
+                                {action === 'read' && '👁️ Visualizar'}
+                                {action === 'update' && '✏️ Editar'}
+                                {action === 'delete' && '🗑️ Deletar'}
+                                {action === 'generate' && '⚡ Gerar'}
+                                {action === 'manage' && '⚙️ Gerenciar'}
+                                {action === 'send' && '📤 Enviar'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* FERRAMENTAS E RECURSOS */}
+              <div className="border-2 border-green-200 rounded-lg p-5 bg-green-50">
+                <h3 className="text-lg font-bold text-green-900 mb-4 flex items-center gap-2">
+                  ⚙️ FERRAMENTAS E RECURSOS
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    'calendar',
+                    'notifications',
+                    'whatsappSettings',
+                    'liveMessaging',
+                    'emergencySchedule',
+                    'teacherAttendance',
+                    'frequencyReports',
+                    'displayPanel',
+                    'settings',
+                    'users',
+                    'auditLogs'
+                  ].map((resource) => {
+                    const resourcePerms = editingPermissions[resource] || {};
+                    const actions = Object.keys(resourcePerms);
+                    return (
+                      <div key={resource} className="bg-white border border-green-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">{permissionLabels[resource]}</h4>
+                        <div className="space-y-2">
+                          {actions.map((action) => (
+                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded">
+                              <input
+                                type="checkbox"
+                                checked={(resourcePerms as any)[action] || false}
+                                onChange={() => togglePermission(resource, action)}
+                                className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                              />
+                              <span className="text-xs text-gray-700">
+                                {action === 'access' && '✅ Acessar'}
+                                {action === 'create' && '➕ Criar'}
+                                {action === 'read' && '👁️ Visualizar'}
+                                {action === 'update' && '✏️ Editar'}
+                                {action === 'delete' && '🗑️ Deletar'}
+                                {action === 'generate' && '⚡ Gerar'}
+                                {action === 'manage' && '⚙️ Gerenciar'}
+                                {action === 'send' && '📤 Enviar'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-6 sticky bottom-0 bg-white pt-4 border-t">
               <button
                 onClick={handleSavePermissions}
                 disabled={updateUserMutation.isPending}
-                className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2"
+                className="flex-1 bg-primary-600 text-white px-4 py-3 rounded-lg hover:bg-primary-700 transition flex items-center justify-center gap-2 font-semibold"
               >
-                <Save size={18} />
+                <Save size={20} />
                 Salvar Permissões
               </button>
               <button
                 onClick={() => setShowPermissionModal(false)}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition flex items-center justify-center gap-2"
+                className="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-300 transition flex items-center justify-center gap-2 font-semibold"
               >
-                <X size={18} />
+                <X size={20} />
                 Cancelar
               </button>
             </div>

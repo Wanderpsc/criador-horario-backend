@@ -64,8 +64,23 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Log detalhado de erro
+    console.error('❌ [API ERROR] Erro na resposta:');
+    console.error('   URL:', error.config?.url);
+    console.error('   Method:', error.config?.method?.toUpperCase());
+    console.error('   Status:', error.response?.status);
+    console.error('   Response Data:', error.response?.data);
+    console.error('   Error Message:', error.message);
+    
+    // Verificar se é erro de rede
+    if (error.message === 'Network Error') {
+      console.error('🌐 ERRO DE REDE: Backend pode estar offline ou há problema de CORS');
+      console.error('   Base URL configurada:', api.defaults.baseURL);
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('auth-storage');
       window.location.href = '/login';
     }
     return Promise.reject(error);
