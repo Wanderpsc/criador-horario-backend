@@ -35,6 +35,23 @@ router.get('/', auth, async (req: any, res: any) => {
       
       console.log(`  - subjectIds (final):`, subjectIdsArray);
       
+      // Convert subjectWeeklyHours Map to Object with string keys
+      let subjectWeeklyHoursObj: { [key: string]: number } = {};
+      if (c.subjectWeeklyHours) {
+        if (c.subjectWeeklyHours instanceof Map) {
+          // Convert Map to Object and ensure keys are strings
+          c.subjectWeeklyHours.forEach((value: number, key: any) => {
+            const stringKey = key.toString();
+            subjectWeeklyHoursObj[stringKey] = value;
+          });
+        } else {
+          // Already an object, but ensure keys are strings
+          Object.entries(c.subjectWeeklyHours).forEach(([key, value]) => {
+            subjectWeeklyHoursObj[key.toString()] = value as number;
+          });
+        }
+      }
+      
       return {
         id: c._id,
         userId: c.userId,
@@ -48,7 +65,7 @@ router.get('/', auth, async (req: any, res: any) => {
         shift: c.shift,
         capacity: c.capacity,
         subjectIds: subjectIdsArray,
-        subjectWeeklyHours: c.subjectWeeklyHours instanceof Map ? Object.fromEntries(c.subjectWeeklyHours) : (c.subjectWeeklyHours || {}),
+        subjectWeeklyHours: subjectWeeklyHoursObj,
         subjects: c.subjectIds ? c.subjectIds.map((s: any) => ({
           id: s._id ? s._id : s,
           name: s.name || 'Unknown',
@@ -84,6 +101,23 @@ router.get('/:id', auth, async (req: any, res: any) => {
     console.log(`   - gradeId (populated):`, classItem.gradeId);
     console.log(`   - gradeId.name: "${(classItem.gradeId as any)?.name}"`);
     
+    // Convert subjectWeeklyHours Map to Object with string keys
+    let subjectWeeklyHoursObj: { [key: string]: number } = {};
+    if (classItem.subjectWeeklyHours) {
+      if (classItem.subjectWeeklyHours instanceof Map) {
+        // Convert Map to Object and ensure keys are strings
+        classItem.subjectWeeklyHours.forEach((value: number, key: any) => {
+          const stringKey = key.toString();
+          subjectWeeklyHoursObj[stringKey] = value;
+        });
+      } else {
+        // Already an object, but ensure keys are strings
+        Object.entries(classItem.subjectWeeklyHours).forEach(([key, value]) => {
+          subjectWeeklyHoursObj[key.toString()] = value as number;
+        });
+      }
+    }
+    
     const transformed = {
       ...classItem.toObject(),
       id: classItem._id,
@@ -93,7 +127,7 @@ router.get('/:id', auth, async (req: any, res: any) => {
         name: (classItem.gradeId as any).name,
         level: (classItem.gradeId as any).level
       } : undefined,
-      subjectWeeklyHours: classItem.subjectWeeklyHours instanceof Map ? Object.fromEntries(classItem.subjectWeeklyHours) : (classItem.subjectWeeklyHours || {})
+      subjectWeeklyHours: subjectWeeklyHoursObj
     };
     
     console.log(`   ✅ Retornando gradeName: "${transformed.gradeName}"`);
@@ -241,7 +275,33 @@ router.put('/:id',
       console.log('✅ Turma salva com sucesso');
       
       const populated = await Class.findById(classItem._id).populate('gradeId').populate('subjectIds');
-      res.json({ data: populated });
+      
+      if (!populated) {
+        return res.status(404).json({ message: 'Turma não encontrada após atualização' });
+      }
+      
+      // Convert subjectWeeklyHours Map to Object with string keys
+      let subjectWeeklyHoursObj: { [key: string]: number } = {};
+      if (populated.subjectWeeklyHours) {
+        if (populated.subjectWeeklyHours instanceof Map) {
+          populated.subjectWeeklyHours.forEach((value: number, key: any) => {
+            const stringKey = key.toString();
+            subjectWeeklyHoursObj[stringKey] = value;
+          });
+        } else {
+          Object.entries(populated.subjectWeeklyHours).forEach(([key, value]) => {
+            subjectWeeklyHoursObj[key.toString()] = value as number;
+          });
+        }
+      }
+      
+      const transformed = {
+        ...populated.toObject(),
+        id: populated._id,
+        subjectWeeklyHours: subjectWeeklyHoursObj
+      };
+      
+      res.json({ data: transformed });
     } catch (error: any) {
       console.error('❌ Erro ao atualizar turma:', error);
       console.error('Stack:', error.stack);
