@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IPermissions {
+  dashboard: { access: boolean };
   teachers: { create: boolean; read: boolean; update: boolean; delete: boolean };
   subjects: { create: boolean; read: boolean; update: boolean; delete: boolean };
   grades: { create: boolean; read: boolean; update: boolean; delete: boolean };
@@ -12,6 +13,8 @@ export interface IPermissions {
   timetableGenerator: { access: boolean; generate: boolean };
   calendar: { create: boolean; read: boolean; update: boolean; delete: boolean };
   notifications: { create: boolean; read: boolean; update: boolean; delete: boolean };
+  whatsappSettings: { access: boolean };
+  liveMessaging: { access: boolean; send: boolean };
   emergencySchedule: { create: boolean; read: boolean };
   teacherAttendance: { create: boolean; read: boolean; update: boolean; delete: boolean };
   frequencyReports: { read: boolean };
@@ -37,6 +40,7 @@ export interface ISchoolUser extends Document {
 }
 
 export const defaultUserPermissions: IPermissions = {
+  dashboard: { access: true },
   teachers: { create: false, read: true, update: false, delete: false },
   subjects: { create: false, read: true, update: false, delete: false },
   grades: { create: false, read: true, update: false, delete: false },
@@ -47,6 +51,8 @@ export const defaultUserPermissions: IPermissions = {
   timetableGenerator: { access: true, generate: false },
   calendar: { create: false, read: true, update: false, delete: false },
   notifications: { create: false, read: true, update: false, delete: false },
+  whatsappSettings: { access: false },
+  liveMessaging: { access: false, send: false },
   emergencySchedule: { create: false, read: true },
   teacherAttendance: { create: false, read: true, update: false, delete: false },
   frequencyReports: { read: true },
@@ -57,6 +63,7 @@ export const defaultUserPermissions: IPermissions = {
 };
 
 export const defaultAdminPermissions: IPermissions = {
+  dashboard: { access: true },
   teachers: { create: true, read: true, update: true, delete: true },
   subjects: { create: true, read: true, update: true, delete: true },
   grades: { create: true, read: true, update: true, delete: true },
@@ -67,6 +74,8 @@ export const defaultAdminPermissions: IPermissions = {
   timetableGenerator: { access: true, generate: true },
   calendar: { create: true, read: true, update: true, delete: true },
   notifications: { create: true, read: true, update: true, delete: true },
+  whatsappSettings: { access: true },
+  liveMessaging: { access: true, send: true },
   emergencySchedule: { create: true, read: true },
   teacherAttendance: { create: true, read: true, update: true, delete: true },
   frequencyReports: { read: true },
@@ -77,6 +86,9 @@ export const defaultAdminPermissions: IPermissions = {
 };
 
 const PermissionsSchema = new Schema({
+  dashboard: {
+    access: { type: Boolean, default: true }
+  },
   teachers: {
     create: { type: Boolean, default: false },
     read: { type: Boolean, default: true },
@@ -134,6 +146,13 @@ const PermissionsSchema = new Schema({
     read: { type: Boolean, default: true },
     update: { type: Boolean, default: false },
     delete: { type: Boolean, default: false }
+  },
+  whatsappSettings: {
+    access: { type: Boolean, default: false }
+  },
+  liveMessaging: {
+    access: { type: Boolean, default: false },
+    send: { type: Boolean, default: false }
   },
   emergencySchedule: {
     create: { type: Boolean, default: false },
