@@ -81,9 +81,10 @@ async function calculateExpectedClassesFromAnnualWorkload(
     
     // Se não houver carga anual, usar weeklyHours como fallback
     if (annualWorkload === 0 && subject.weeklyHours) {
-      console.log(`  🔄 [CARGA ANUAL] Usando weeklyHours (${subject.weeklyHours}) como fallback`);
-      // Assumir 40 semanas letivas por ano (padrão brasileiro: 200 dias / 5 dias = 40 semanas)
+      console.log(`  🔄 [CARGA ANUAL] Usando weeklyHours (${subject.weeklyHours}) × 40 semanas`);
+      // Carga anual = weeklyHours × 40 semanas (sempre múltiplo de 40)
       const estimatedAnnualWorkload = subject.weeklyHours * 40;
+      console.log(`  📐 [CARGA ANUAL] Carga anual calculada: ${estimatedAnnualWorkload} aulas`);
       return await calculateWithWeeklyHours(estimatedAnnualWorkload, schoolId, startDate, endDate);
     }
     
@@ -100,11 +101,11 @@ async function calculateExpectedClassesFromAnnualWorkload(
     
     console.log(`  📅 [CARGA ANUAL] Dias letivos no ano ${year}: ${totalSchoolDaysInYear}`);
     
-    // Se não houver dias cadastrados no ano, usar 200 dias (padrão brasileiro)
+    // Se não houver dias cadastrados, usar 200 dias (40 semanas × 5 dias)
     const daysInYear = totalSchoolDaysInYear > 0 ? totalSchoolDaysInYear : 200;
     
     if (totalSchoolDaysInYear === 0) {
-      console.log(`  ⚠️ [CARGA ANUAL] Nenhum dia letivo cadastrado no calendário! Usando padrão de ${daysInYear} dias`);
+      console.log(`  ⚠️ [CARGA ANUAL] Nenhum dia letivo cadastrado! Usando padrão de ${daysInYear} dias (40 semanas × 5 dias)`);
     }
     
     // Calcular dias letivos no período consultado
@@ -113,9 +114,10 @@ async function calculateExpectedClassesFromAnnualWorkload(
     console.log(`  📅 [CARGA ANUAL] Dias letivos no período (${startDate} a ${endDate}): ${schoolDaysInPeriod}`);
     
     // Cálculo proporcional: (CargaAnual / DiasAno) × DiasPeriodo
+    // Nota: CargaAnual é sempre múltiplo de 40 (weeklyHours × 40 semanas)
     const expectedClasses = Math.round((annualWorkload / daysInYear) * schoolDaysInPeriod);
     
-    console.log(`  ✅ [CARGA ANUAL] Resultado: ${annualWorkload} aulas/ano ÷ ${daysInYear} dias × ${schoolDaysInPeriod} dias = ${expectedClasses} aulas`);
+    console.log(`  ✅ [CARGA ANUAL] Resultado: ${annualWorkload} aulas ÷ ${daysInYear} dias × ${schoolDaysInPeriod} dias = ${expectedClasses} aulas`);
     
     return expectedClasses;
   } catch (error) {
@@ -184,6 +186,7 @@ async function calculateExpectedClassesFromSchedule(
 
 /**
  * Helper: Calcula com base em weeklyHours quando não há workload anual
+ * Considera 40 semanas letivas por ano (padrão brasileiro)
  */
 async function calculateWithWeeklyHours(
   annualWorkload: number,
@@ -191,13 +194,26 @@ async function calculateWithWeeklyHours(
   startDate: string,
   endDate: string
 ): Promise<number> {
+  // annualWorkload já vem como múltiplo de 40 (weeklyHours × 40)
   const year = new Date(startDate).getFullYear();
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
+  
+  // Buscar dias letivos cadastrados no ano
   const totalSchoolDaysInYear = await calculateSchoolDaysInPeriod(schoolId, yearStart, yearEnd);
+  
+  // Se houver calendário cadastrado, usar; senão, usar 200 dias (40 semanas × 5 dias)
   const daysInYear = totalSchoolDaysInYear > 0 ? totalSchoolDaysInYear : 200;
+  
+  // Buscar dias letivos no período
   const schoolDaysInPeriod = await calculateSchoolDaysInPeriod(schoolId, startDate, endDate);
-  return Math.round((annualWorkload / daysInYear) * schoolDaysInPeriod);
+  
+  // Cálculo proporcional
+  const expectedClasses = Math.round((annualWorkload / daysInYear) * schoolDaysInPeriod);
+  
+  console.log(`  📊 [WEEKLY] Cálculo: ${annualWorkload} aulas ÷ ${daysInYear} dias × ${schoolDaysInPeriod} dias = ${expectedClasses} aulas`);
+  
+  return expectedClasses;
 }
 
 /**
