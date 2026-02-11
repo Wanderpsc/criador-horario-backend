@@ -938,10 +938,14 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
       return res.json(Object.values(subjectStats));
     }
 
-    // Estatísticas por professor (padrão)
-    const statistics = records.reduce((acc: any, record) => {
-      if (!acc[record.teacherId]) {
-        acc[record.teacherId] = {
+    // Estatísticas por professor (padrão) - COM CÁLCULO CORRETO DE AULAS PREVISTAS
+    const teacherStats: { [key: string]: any } = {};
+    const teacherSubjects: { [key: string]: Set<string> } = {}; // Rastrear disciplinas únicas por professor
+
+    // Primeiro, coletar todas as disciplinas que cada professor leciona
+    records.forEach(record => {
+      if (!teacherStats[record.teacherId]) {
+        teacherStats[record.teacherId] = {
           teacherId: record.teacherId,
           teacherName: record.teacherName,
           totalScheduledClasses: 0,
@@ -949,27 +953,66 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
           totalAbsentClasses: 0,
           totalPendingClasses: 0,
           attendanceRate: 0,
-          workload: 0
+          workload: 0,
+          subjects: new Set() // Armazenar IDs únicos das disciplinas
         };
+        teacherSubjects[record.teacherId] = new Set();
       }
 
-      acc[record.teacherId].totalScheduledClasses += record.totalScheduledClasses || 0;
-      acc[record.teacherId].totalPresentClasses += record.totalPresentClasses || 0;
-      acc[record.teacherId].totalAbsentClasses += record.totalAbsentClasses || 0;
-      acc[record.teacherId].totalPendingClasses += record.totalPendingClasses || 0;
+      // Contar aulas dadas e ausentes dos registros
+      teacherStats[record.teacherId].totalPresentClasses += record.totalPresentClasses || 0;
+      teacherStats[record.teacherId].totalAbsentClasses += record.totalAbsentClasses || 0;
+      teacherStats[record.teacherId].totalPendingClasses += record.totalPendingClasses || 0;
 
-      return acc;
-    }, {});
-
-    // Calcular taxa de presença e carga horária
-    Object.values(statistics).forEach((stat: any) => {
-      if (stat.totalScheduledClasses > 0) {
-        stat.attendanceRate = (stat.totalPresentClasses / stat.totalScheduledClasses) * 100;
-        stat.workload = stat.totalPresentClasses * 0.833; // 50min por aula
+      // Coletar disciplinas únicas
+      if (record.classes && Array.isArray(record.classes)) {
+        record.classes.forEach((cls: any) => {
+          if (cls.subjectId) {
+            teacherSubjects[record.teacherId].add(cls.subjectId);
+          }
+        });
       }
     });
 
-    res.json(Object.values(statistics));
+    // Agora calcular totalScheduledClasses BASEADO NA CARGA HORÁRIA ANUAL de cada disciplina
+    for (const teacherId in teacherStats) {
+      const stat = teacherStats[teacherId];
+      let totalExpectedClasses = 0;
+
+      // Para cada disciplina que o professor leciona, calcular aulas previstas
+      const subjectIds = Array.from(teacherSubjects[teacherId]);
+      
+      for (const subjectId of subjectIds) {
+        if (startDate && endDate) {
+          const expectedForSubject = await calculateExpectedClassesFromAnnualWorkload(
+            subjectId as string,
+            schoolId,
+            startDate as string,
+            endDate as string
+          );
+          totalExpectedClasses += expectedForSubject;
+        }
+      }
+
+      // Se houver período definido, usar cálculo baseado em carga anual
+      if (startDate && endDate && totalExpectedClasses > 0) {
+        stat.totalScheduledClasses = totalExpectedClasses;
+      } else {
+        // Fallback: usar soma das aulas registradas
+        stat.totalScheduledClasses = stat.totalPresentClasses + stat.totalAbsentClasses + stat.totalPendingClasses;
+      }
+
+      // Calcular taxa de presença e carga horária
+      if (stat.totalScheduledClasses > 0) {
+        stat.attendanceRate = (stat.totalPresentClasses / stat.totalScheduledClasses) * 100;
+      }
+      stat.workload = stat.totalPresentClasses * 0.833; // 50min por aula
+
+      // Remover o Set antes de retornar
+      delete stat.subjects;
+    }
+
+    res.json(Object.values(teacherStats));
   } catch (error) {
     console.error('Erro ao calcular estatísticas:', error);
     res.status(500).json({ message: 'Erro ao calcular estatísticas' });
