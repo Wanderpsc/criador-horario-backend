@@ -218,6 +218,9 @@ export default function Settings() {
   };
 
   const handleEditPermissions = (user: SchoolUser) => {
+    console.log('🎯 handleEditPermissions - User:', user);
+    console.log('🎯 User ID:', user._id);
+    console.log('🎯 User Permissions:', user.permissions);
     setSelectedUser(user);
     setEditingPermissions(JSON.parse(JSON.stringify(user.permissions)));
     setShowPermissionModal(true);
@@ -263,8 +266,24 @@ export default function Settings() {
   };
 
   const handleSavePermissions = () => {
-    if (!selectedUser) return;
+    console.log('🔵 handleSavePermissions - selectedUser:', selectedUser);
+    console.log('🔵 selectedUser._id:', selectedUser?._id);
+    console.log('🔵 editingPermissions:', editingPermissions);
     
+    if (!selectedUser) {
+      console.error('❌ selectedUser é null!');
+      toast.error('Erro: usuário não selecionado');
+      return;
+    }
+    
+    if (!selectedUser._id) {
+      console.error('❌ selectedUser._id é undefined!');
+      console.error('❌ selectedUser completo:', JSON.stringify(selectedUser, null, 2));
+      toast.error('Erro: ID do usuário não encontrado');
+      return;
+    }
+    
+    console.log('✅ Salvando permissões para usuário:', selectedUser._id);
     updateUserMutation.mutate({
       id: selectedUser._id,
       data: { permissions: editingPermissions }

@@ -907,18 +907,24 @@ const TeacherSubjectAssociation: React.FC = () => {
 
         {/* Navegação Rápida */}
         <div className="flex gap-3 mb-6">
-          <a
-            href="#todas-lotacoes"
+          <button
+            onClick={() => {
+              const element = document.getElementById('todas-lotacoes');
+              element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium text-sm flex items-center gap-2 transition-colors"
           >
             📋 Ir para Todas as Lotações
-          </a>
-          <a
-            href="#componentes-professores"
+          </button>
+          <button
+            onClick={() => {
+              const element = document.getElementById('componentes-professores');
+              element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium text-sm flex items-center gap-2 transition-colors"
           >
             📚 Ir para Componentes e Professores
-          </a>
+          </button>
         </div>
 
         {message && (

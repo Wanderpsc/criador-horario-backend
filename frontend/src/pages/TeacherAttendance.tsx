@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
+import { useAuthStore } from '../store/authStore';
 import { 
   CheckCircle, 
   XCircle, 
@@ -75,8 +76,52 @@ interface SubjectDeficit {
   dates: string[]; // datas das faltas
 }
 
+interface TeacherSubjectWorkload {
+  teacherId: string;
+  teacherName: string;
+  subjects: {
+    subjectId: string;
+    subjectName: string;
+    classId?: string;
+    className?: string;
+    weeklyHours: number;
+    // Cálculos de carga horária
+    annualHours: number; // weeklyHours × 40 semanas
+    monthlyHours: number; // annualHours ÷ 12 meses
+    dailyHours: number; // weeklyHours ÷ dias letivos da semana
+  }[];
+  totalWeeklyHours: number;
+  totalAnnualHours: number;
+  totalMonthlyHours: number;
+}
+
+interface WorkloadDeficitReport {
+  teacherId: string;
+  teacherName: string;
+  subjectId: string;
+  subjectName: string;
+  classId?: string;
+  className?: string;
+  // Cargas horárias teóricas (da lotação)
+  expectedWeeklyHours: number;
+  expectedMonthlyHours: number;
+  expectedAnnualHours: number;
+  // Aulas previstas (do horário × dias letivos)
+  expectedClasses: number;
+  expectedHours: number;
+  // Aulas dadas (baseado na frequência)
+  givenClasses: number;
+  givenHours: number;
+  // Déficit ou saldo de aulas
+  deficitClasses: number; // negativo = saldo, positivo = déficit
+  deficit: number; // em horas
+  deficitPercentage: number;
+  status: 'ok' | 'warning' | 'critical'; // ok: <5%, warning: 5-10%, critical: >10%
+}
+
 export default function TeacherAttendance() {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
   const [startDate, setStartDate] = useState('');
@@ -169,6 +214,40 @@ export default function TeacherAttendance() {
 
   const availableTimetables = Array.isArray(timetablesData) ? timetablesData : [];
 
+  // Buscar calendário escolar para pegar dias letivos
+  const { data: calendarData } = useQuery({
+    queryKey: ['school-calendar'],
+    queryFn: async () => {
+      try {
+        const response = await api.get('/calendar-events');
+        return response.data || [];
+      } catch (error) {
+        console.error('Erro ao buscar calendário:', error);
+        return [];
+      }
+    }
+  });
+
+  // Buscar horário completo do timetable selecionado
+  const { data: selectedTimetableData } = useQuery({
+    queryKey: ['selected-timetable-detail', selectedTimetableId],
+    queryFn: async () => {
+      if (!selectedTimetableId || selectedTimetableId === 'auto') {
+        // Buscar o horário padrão/mais recente
+        const timetables = availableTimetables;
+        if (timetables.length > 0) {
+          const defaultTimetable = timetables.find((t: any) => t.isDefault) || timetables[0];
+          const response = await api.get(`/generated-timetables/${defaultTimetable.id}`);
+          return response.data;
+        }
+        return null;
+      }
+      const response = await api.get(`/generated-timetables/${selectedTimetableId}`);
+      return response.data;
+    },
+    enabled: !!availableTimetables && availableTimetables.length > 0
+  });
+
   // Buscar dados da escola para impressão
   const { data: schoolData } = useQuery({
     queryKey: ['school-info'],
@@ -254,6 +333,264 @@ export default function TeacherAttendance() {
     staleTime: 0,
     gcTime: 0
   });
+
+  // Buscar lotação de professores (teacher-subjects) para exibir cargas horárias
+  const { data: teacherWorkloadData } = useQuery({
+    queryKey: ['teacher-workload', user?.id],
+    queryFn: async () => {
+      try {
+        if (!user?.id) {
+          console.log('⚠️ userId não disponível para buscar lotações');
+          return [];
+        }
+        
+        // Buscar todas as lotações de professores
+        const response = await api.get(`/teacher-subjects/${user.id}`);
+        const associations = response.data.data || [];
+        
+        // Buscar professores e disciplinas para pegar os nomes
+        const teachersRes = await api.get(`/teachers/user/${user.id}`);
+        const subjectsRes = await api.get(`/subjects/user/${user.id}`);
+        const classesRes = await api.get('/classes');
+        
+        const teachers = teachersRes.data.data || [];
+        const subjects = subjectsRes.data.data || [];
+        const classes = classesRes.data.data || [];
+        
+        // Agrupar por professor
+        const teacherMap = new Map<string, TeacherSubjectWorkload>();
+        
+        associations.forEach((assoc: any) => {
+          const teacher = teachers.find((t: any) => t.id === assoc.teacherId || t._id === assoc.teacherId);
+          const subject = subjects.find((s: any) => s.id === assoc.subjectId || s._id === assoc.subjectId);
+          const classItem = classes.find((c: any) => c.id === assoc.classId || c._id === assoc.classId);
+          
+          if (!teacher || !subject) return;
+          
+          const teacherId = teacher.id || teacher._id;
+          const teacherName = teacher.name;
+          
+          if (!teacherMap.has(teacherId)) {
+            teacherMap.set(teacherId, {
+              teacherId,
+              teacherName,
+              subjects: [],
+              totalWeeklyHours: 0,
+              totalAnnualHours: 0,
+              totalMonthlyHours: 0
+            });
+          }
+          
+          const workload = teacherMap.get(teacherId)!;
+          
+          // Pegar carga horária: primeiro tenta do assoc, depois do subject, senão usa 0
+          const weeklyHours = assoc.weeklyHours || subject.weeklyHours || 0;
+          
+          // Cálculos de carga horária
+          const annualHours = weeklyHours * 40; // 40 semanas letivas no ano
+          const monthlyHours = annualHours / 12; // Distribuir em 12 meses
+          const dailyHours = weeklyHours / 5; // Assumindo 5 dias letivos por semana
+          
+          workload.subjects.push({
+            subjectId: subject.id || subject._id,
+            subjectName: subject.name,
+            classId: classItem ? (classItem.id || classItem._id) : undefined,
+            className: classItem ? classItem.name : undefined,
+            weeklyHours,
+            annualHours,
+            monthlyHours,
+            dailyHours
+          });
+          
+          workload.totalWeeklyHours += weeklyHours;
+          workload.totalAnnualHours += annualHours;
+          workload.totalMonthlyHours += monthlyHours;
+        });
+        
+        // Converter para array e ordenar por nome do professor
+        return Array.from(teacherMap.values()).sort((a, b) => 
+          a.teacherName.localeCompare(b.teacherName)
+        );
+      } catch (error) {
+        console.error('Erro ao buscar cargas horárias:', error);
+        return [];
+      }
+    },
+    enabled: !!user?.id,
+    staleTime: 0, // Sempre buscar dados frescos
+    gcTime: 0 // Não manter cache
+  });
+
+  const teacherWorkload: TeacherSubjectWorkload[] = teacherWorkloadData || [];
+
+  // Calcular dias letivos no período selecionado
+  const workingDaysInPeriod = useMemo(() => {
+    if (!calendarData || calendarData.length === 0) {
+      // Se não tiver calendário, usar estimativa padrão
+      if (reportType === 'daily') return 1;
+      if (reportType === 'weekly') return 5;
+      if (reportType === 'monthly') return 20; // ~4 semanas * 5 dias
+      if (reportType === 'yearly') return 200; // 40 semanas * 5 dias
+      return 1;
+    }
+
+    const start = new Date(dateRange.start + 'T00:00:00');
+    const end = new Date(dateRange.end + 'T23:59:59');
+    
+    // Filtrar eventos de feriado e recesso no período
+    const holidays = calendarData.filter((event: any) => 
+      (event.type === 'holiday' || event.type === 'break') &&
+      new Date(event.date) >= start &&
+      new Date(event.date) <= end
+    );
+
+    // Contar dias úteis (seg-sex, excluindo feriados)
+    let workingDays = 0;
+    const currentDate = new Date(start);
+    
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Domingo ou Sábado
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const isHoliday = holidays.some((h: any) => h.date.split('T')[0] === dateStr);
+      
+      if (!isWeekend && !isHoliday) {
+        workingDays++;
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return workingDays;
+  }, [calendarData, dateRange, reportType]);
+
+  // Calcular aulas previstas baseado no horário selecionado
+  const scheduledClassesPerWeek = useMemo(() => {
+    if (!selectedTimetableData || !selectedTimetableData.schedule) {
+      return new Map<string, number>(); // Map de "teacherId-subjectId-classId" -> quantidade de aulas por semana
+    }
+
+    const classCountMap = new Map<string, number>();
+    
+    // Iterar sobre todos os dias da semana no horário
+    Object.keys(selectedTimetableData.schedule).forEach(day => {
+      const daySchedule = selectedTimetableData.schedule[day];
+      
+      // Iterar sobre todas as turmas
+      Object.keys(daySchedule).forEach(classId => {
+        const classSchedule = daySchedule[classId];
+        
+        // Iterar sobre todos os períodos
+        classSchedule.forEach((period: any) => {
+          if (period && period.teacherId && period.subjectId) {
+            const key = `${period.teacherId}-${period.subjectId}-${classId}`;
+            classCountMap.set(key, (classCountMap.get(key) || 0) + 1);
+          }
+        });
+      });
+    });
+    
+    return classCountMap;
+  }, [selectedTimetableData]);
+
+  // Calcular relatório de déficit/saldo baseado na frequência
+  const workloadDeficitReport = useMemo(() => {
+    if (!teacherWorkload || teacherWorkload.length === 0) {
+      return [];
+    }
+
+    const report: WorkloadDeficitReport[] = [];
+
+    teacherWorkload.forEach(teacher => {
+      teacher.subjects.forEach(subject => {
+        // Chave para buscar aulas previstas no horário
+        const scheduleKey = `${teacher.teacherId}-${subject.subjectId}-${subject.classId || ''}`;
+        const classesPerWeek = scheduledClassesPerWeek.get(scheduleKey) || 0;
+        
+        // Calcular aulas previstas baseado no horário e dias letivos
+        let expectedClasses = 0;
+        if (reportType === 'daily') {
+          // Aulas previstas no dia (média)
+          expectedClasses = classesPerWeek / 5;
+        } else if (reportType === 'weekly') {
+          // Aulas previstas na semana (do horário)
+          expectedClasses = classesPerWeek;
+        } else if (reportType === 'monthly') {
+          // Aulas previstas no mês (semanas * aulas/semana)  
+          const weeksInPeriod = workingDaysInPeriod / 5;
+          expectedClasses = classesPerWeek * weeksInPeriod;
+        } else if (reportType === 'yearly') {
+          // Aulas previstas no ano (40 semanas * aulas/semana)
+          const weeksInPeriod = workingDaysInPeriod / 5;
+          expectedClasses = classesPerWeek * weeksInPeriod;
+        }
+
+        // Buscar frequência do professor para esta disciplina no período
+        let givenClasses = 0;
+        if (attendanceRecords) {
+          const teacherRecords = attendanceRecords.filter(
+            (record: AttendanceRecord) => record.teacherId === teacher.teacherId
+          );
+
+          // Contar aulas dadas desta disciplina específica
+          teacherRecords.forEach((record: AttendanceRecord) => {
+            const subjectClasses = record.classes?.filter(
+              (cls: ClassAttendance) => 
+                cls.subjectId === subject.subjectId &&
+                (subject.classId ? cls.classId === subject.classId : true) &&
+                cls.status === 'present'
+            ) || [];
+            givenClasses += subjectClasses.length;
+          });
+        }
+
+        // Calcular horas (assumindo 1 aula = 50 minutos = 0.83 horas)
+        const expectedHours = expectedClasses * 0.83;
+        const givenHours = givenClasses * 0.83;
+
+        // Calcular déficit/saldo (positivo = falta dar aulas, negativo = deu aulas a mais)
+        const deficitClasses = expectedClasses - givenClasses;
+        const deficit = expectedHours - givenHours;
+        const deficitPercentage = expectedClasses > 0 ? (deficitClasses / expectedClasses) * 100 : 0;
+
+        let status: 'ok' | 'warning' | 'critical' = 'ok';
+        if (Math.abs(deficitPercentage) > 10) {
+          status = 'critical';
+        } else if (Math.abs(deficitPercentage) > 5) {
+          status = 'warning';
+        }
+
+        report.push({
+          teacherId: teacher.teacherId,
+          teacherName: teacher.teacherName,
+          subjectId: subject.subjectId,
+          subjectName: subject.subjectName,
+          classId: subject.classId,
+          className: subject.className,
+          expectedWeeklyHours: subject.weeklyHours,
+          expectedMonthlyHours: subject.monthlyHours,
+          expectedAnnualHours: subject.annualHours,
+          expectedClasses,
+          expectedHours,
+          givenClasses,
+          givenHours,
+          deficitClasses,
+          deficit,
+          deficitPercentage,
+          status
+        });
+      });
+    });
+
+    // Ordenar por déficit crítico primeiro
+    return report.sort((a, b) => {
+      if (a.status === 'critical' && b.status !== 'critical') return -1;
+      if (a.status !== 'critical' && b.status === 'critical') return 1;
+      if (a.status === 'warning' && b.status === 'ok') return -1;
+      if (a.status === 'ok' && b.status === 'warning') return 1;
+      return Math.abs(b.deficitClasses) - Math.abs(a.deficitClasses);
+    });
+  }, [teacherWorkload, scheduledClassesPerWeek, attendanceRecords, reportType, workingDaysInPeriod]);
 
   // Mesclar dados agendados com registros salvos
   const getMergedTeacherData = () => {
@@ -1882,6 +2219,503 @@ export default function TeacherAttendance() {
               </div>
         </div>{/* Fim print-subject-report */}
       </div>
+
+      {/* ===== RELATÓRIO DE DÉFICIT/SALDO POR PROFESSOR E DISCIPLINA ===== */}
+      <div className="mt-8 mb-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg shadow-lg border-2 border-orange-300 no-print">
+        <div className="p-6">
+          {/* Cabeçalho */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-orange-600 p-3 rounded-lg">
+              <BarChart3 className="text-white" size={28} />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-orange-900">
+                📊 Relatório de Déficit/Saldo de Carga Horária
+              </h2>
+              <p className="text-sm text-orange-700 mt-1">
+                Comparação entre carga horária esperada e aulas efetivamente dadas • Baseado na frequência registrada
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-orange-600 font-semibold">
+                Período: {reportType === 'daily' ? 'Diário' : reportType === 'weekly' ? 'Semanal' : reportType === 'monthly' ? 'Mensal' : 'Anual'}
+              </div>
+              <div className="text-3xl font-bold text-orange-900">
+                {workloadDeficitReport.filter(r => r.status === 'critical').length}
+              </div>
+              <div className="text-xs text-orange-600">Críticos</div>
+            </div>
+          </div>
+
+          {/* Legenda de Status */}
+          <div className="flex gap-3 mb-4 p-3 bg-white rounded-lg border border-orange-200">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-green-500"></div>
+              <span className="text-sm font-medium text-gray-700">✅ OK (&lt;5%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+              <span className="text-sm font-medium text-gray-700">⚠️ Atenção (5-10%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-red-500"></div>
+              <span className="text-sm font-medium text-gray-700">🚨 Crítico (&gt;10%)</span>
+            </div>
+          </div>
+
+          {/* Tabela de Déficit/Saldo */}
+          {workloadDeficitReport.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 bg-white rounded-lg">
+              <AlertCircle className="mx-auto mb-3 text-gray-400" size={48} />
+              <p className="text-lg font-semibold">Nenhum dado de frequência registrado</p>
+              <p className="text-sm mt-2">
+                Registre a frequência dos professores para visualizar o relatório de déficit/saldo
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow">
+                <thead>
+                  <tr className="bg-gradient-to-r from-orange-600 to-red-600 text-white">
+                    <th className="border border-orange-500 p-3 text-left font-bold" rowSpan={2}>Status</th>
+                    <th className="border border-orange-500 p-3 text-left font-bold" rowSpan={2}>Professor</th>
+                    <th className="border border-orange-500 p-3 text-left font-bold" rowSpan={2}>Disciplina</th>
+                    <th className="border border-orange-500 p-3 text-left font-bold" rowSpan={2}>Turma</th>
+                    <th className="border border-orange-500 p-3 text-center font-bold" colSpan={2}>📅 Aulas Previstas<br/>(Horário × Dias Letivos)</th>
+                    <th className="border border-orange-500 p-3 text-center font-bold" colSpan={2}>✅ Aulas Dadas<br/>(Frequência)</th>
+                    <th className="border border-orange-500 p-3 text-center font-bold" colSpan={3}>📊 Déficit / Saldo</th>
+                  </tr>
+                  <tr className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm">
+                    <th className="border border-orange-400 p-2 text-center font-semibold">Qtd</th>
+                    <th className="border border-orange-400 p-2 text-center font-semibold">Horas</th>
+                    <th className="border border-orange-400 p-2 text-center font-semibold">Qtd</th>
+                    <th className="border border-orange-400 p-2 text-center font-semibold">Horas</th>
+                    <th className="border border-orange-400 p-2 text-center font-semibold">Aulas</th>
+                    <th className="border border-orange-400 p-2 text-center font-semibold">Horas</th>
+                    <th className="border border-orange-400 p-2 text-center font-semibold">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workloadDeficitReport.map((item, idx) => (
+                    <tr 
+                      key={`${item.teacherId}-${item.subjectId}-${item.classId || 'no-class'}`}
+                      className={
+                        item.status === 'critical' ? 'bg-red-50' :
+                        item.status === 'warning' ? 'bg-yellow-50' :
+                        idx % 2 === 0 ? 'bg-orange-50' : 'bg-white'
+                      }
+                    >
+                      <td className="border border-gray-300 p-3 text-center">
+                        {item.status === 'critical' && (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white font-bold">
+                            🚨
+                          </span>
+                        )}
+                        {item.status === 'warning' && (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500 text-white font-bold">
+                            ⚠️
+                          </span>
+                        )}
+                        {item.status === 'ok' && (
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500 text-white font-bold">
+                            ✅
+                          </span>
+                        )}
+                      </td>
+                      <td className="border border-gray-300 p-3">
+                        <div className="font-semibold text-gray-900">{item.teacherName}</div>
+                      </td>
+                      <td className="border border-gray-300 p-3">
+                        <div className="font-medium text-gray-800">{item.subjectName}</div>
+                      </td>
+                      <td className="border border-gray-300 p-3">
+                        {item.className ? (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-semibold">
+                            {item.className}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
+                      </td>
+                      {/* Aulas Previstas */}
+                      <td className="border border-gray-300 p-3 text-center bg-blue-50">
+                        <span className="font-bold text-blue-700 text-lg">
+                          {item.expectedClasses.toFixed(0)}
+                        </span>
+                        <div className="text-xs text-gray-500 mt-1">aulas</div>
+                      </td>
+                      <td className="border border-gray-300 p-3 text-center bg-blue-50">
+                        <span className="font-semibold text-blue-600">
+                          {item.expectedHours.toFixed(1)}h
+                        </span>
+                      </td>
+                      {/* Aulas Dadas */}
+                      <td className="border border-gray-300 p-3 text-center bg-green-50">
+                        <span className="font-bold text-green-700 text-lg">
+                          {item.givenClasses}
+                        </span>
+                        <div className="text-xs text-gray-500 mt-1">aulas</div>
+                      </td>
+                      <td className="border border-gray-300 p-3 text-center bg-green-50">
+                        <span className="font-semibold text-green-600">
+                          {item.givenHours.toFixed(1)}h
+                        </span>
+                      </td>
+                      {/* Déficit/Saldo */}
+                      <td className="border border-gray-300 p-3 text-center">
+                        {item.deficitClasses > 0.5 ? (
+                          <span className="font-bold text-red-600 text-lg">
+                            -{Math.round(item.deficitClasses)}
+                          </span>
+                        ) : item.deficitClasses < -0.5 ? (
+                          <span className="font-bold text-green-600 text-lg">
+                            +{Math.abs(Math.round(item.deficitClasses))}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">✓</span>
+                        )}
+                        <div className="text-xs text-gray-500 mt-1">aulas</div>
+                      </td>
+                      <td className="border border-gray-300 p-3 text-center">
+                        {item.deficit > 0.5 ? (
+                          <span className="font-bold text-red-600">
+                            -{item.deficit.toFixed(1)}h
+                          </span>
+                        ) : item.deficit < -0.5 ? (
+                          <span className="font-bold text-green-600">
+                            +{Math.abs(item.deficit).toFixed(1)}h
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">✓</span>
+                        )}
+                      </td>
+                      <td className="border border-gray-300 p-3 text-center">
+                        <span className={`font-bold text-lg ${
+                          Math.abs(item.deficitPercentage) > 10 ? 'text-red-600' :
+                          Math.abs(item.deficitPercentage) > 5 ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>
+                          {item.deficitPercentage.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gradient-to-r from-orange-100 to-red-100 font-bold">
+                    <td colSpan={4} className="border border-gray-300 p-3 text-right">
+                      <span className="text-lg text-gray-900">📊 TOTAIS:</span>
+                    </td>
+                    {/* Aulas Previstas */}
+                    <td className="border border-gray-300 p-3 text-center bg-blue-100">
+                      <span className="text-blue-700 font-bold text-lg">
+                        {workloadDeficitReport.reduce((sum, item) => sum + item.expectedClasses, 0).toFixed(0)}
+                      </span>
+                      <div className="text-xs text-gray-600">aulas</div>
+                    </td>
+                    <td className="border border-gray-300 p-3 text-center bg-blue-100">
+                      <span className="text-blue-700 font-bold">
+                        {workloadDeficitReport.reduce((sum, item) => sum + item.expectedHours, 0).toFixed(1)}h
+                      </span>
+                    </td>
+                    {/* Aulas Dadas */}
+                    <td className="border border-gray-300 p-3 text-center bg-green-100">
+                      <span className="text-green-700 font-bold text-lg">
+                        {workloadDeficitReport.reduce((sum, item) => sum + item.givenClasses, 0)}
+                      </span>
+                      <div className="text-xs text-gray-600">aulas</div>
+                    </td>
+                    <td className="border border-gray-300 p-3 text-center bg-green-100">
+                      <span className="text-green-700 font-bold">
+                        {workloadDeficitReport.reduce((sum, item) => sum + item.givenHours, 0).toFixed(1)}h
+                      </span>
+                    </td>
+                    {/* Déficit/Saldo */}
+                    <td className="border border-gray-300 p-3 text-center">
+                      {(() => {
+                        const totalDeficitClasses = workloadDeficitReport.reduce((sum, item) => sum + item.deficitClasses, 0);
+                        return totalDeficitClasses > 0.5 ? (
+                          <span className="font-bold text-red-600 text-xl">
+                            -{Math.round(totalDeficitClasses)}
+                          </span>
+                        ) : totalDeficitClasses < -0.5 ? (
+                          <span className="font-bold text-green-600 text-xl">
+                            +{Math.abs(Math.round(totalDeficitClasses))}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">✓</span>
+                        );
+                      })()}
+                      <div className="text-xs text-gray-600">aulas</div>
+                    </td>
+                    <td className="border border-gray-300 p-3 text-center">
+                      {(() => {
+                        const totalDeficit = workloadDeficitReport.reduce((sum, item) => sum + item.deficit, 0);
+                        return totalDeficit > 0.5 ? (
+                          <span className="font-bold text-red-600 text-lg">
+                            -{totalDeficit.toFixed(1)}h
+                          </span>
+                        ) : totalDeficit < 0 ? (
+                          <span className="font-bold text-green-600 text-lg">
+                            +{Math.abs(totalDeficit).toFixed(1)}h
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        );
+                      })()}
+                    </td>
+                    <td className="border border-gray-300 p-3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* Nota Explicativa */}
+          <div className="mt-4 p-4 bg-orange-100 border-l-4 border-orange-600 rounded">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="text-orange-600 flex-shrink-0 mt-0.5" size={18} />
+              <div className="text-sm text-orange-900">
+                <p className="font-semibold mb-1">
+                  ℹ️ Como interpretar este relatório
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li><strong>CH Esperada:</strong> Calculada com base na lotação do professor (Semanal × 40 semanas = Anual ÷ 12 = Mensal)</li>
+                  <li><strong>Aulas Dadas:</strong> Número de aulas marcadas como "presente" na frequência</li>
+                  <li><strong>Déficit:</strong> Valor positivo = faltam horas • Valor negativo = horas extras/saldo</li>
+                  <li><strong>Status:</strong> 🚨 Crítico (&gt;10%) • ⚠️ Atenção (5-10%) • ✅ OK (&lt;5%)</li>
+                  <li><strong>Atualização:</strong> Relatório atualiza automaticamente ao mudar lotações ou registrar frequência</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* ===== FIM RELATÓRIO DE DÉFICIT/SALDO ===== */}
+
+      {/* ===== SEÇÃO PERMANENTE: RELAÇÃO GERAL DE CARGAS HORÁRIAS ===== */}
+      <div className="mt-8 mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-300 no-print">
+        <div className="p-6">
+          {/* Cabeçalho */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-blue-600 p-3 rounded-lg">
+              <BookOpen className="text-white" size={28} />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-blue-900">
+                📚 Relação Geral de Cargas Horárias
+              </h2>
+              <p className="text-sm text-blue-700 mt-1">
+                Lotação de todos os professores por disciplina • Dados da página de <strong>Lotação de Professores</strong>
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-blue-600 font-semibold">
+                Total de Professores
+              </div>
+              <div className="text-3xl font-bold text-blue-900">
+                {teacherWorkload.length}
+              </div>
+            </div>
+          </div>
+
+          {/* Tabela de Cargas Horárias */}
+          {teacherWorkload.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <AlertCircle className="mx-auto mb-3 text-gray-400" size={48} />
+              <p className="text-lg font-semibold">Nenhuma lotação de professor cadastrada</p>
+              <p className="text-sm mt-2">
+                Acesse <strong>Lotação de Professores</strong> para associar professores às disciplinas
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white rounded-lg overflow-hidden shadow">
+                <thead>
+                  <tr className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+                    <th className="border border-blue-500 p-4 text-left font-bold" rowSpan={2}>
+                      👨‍🏫 Professor
+                    </th>
+                    <th className="border border-blue-500 p-4 text-left font-bold" rowSpan={2}>
+                      📖 Disciplinas Lotadas
+                    </th>
+                    <th className="border border-blue-500 p-4 text-center font-bold" colSpan={4}>
+                      ⏰ Carga Horária por Período
+                    </th>
+                  </tr>
+                  <tr className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
+                    <th className="border border-blue-400 p-2 text-center font-semibold text-sm">
+                      📅 Diária
+                    </th>
+                    <th className="border border-blue-400 p-2 text-center font-semibold text-sm">
+                      📆 Semanal
+                    </th>
+                    <th className="border border-blue-400 p-2 text-center font-semibold text-sm">
+                      🗓️ Mensal
+                    </th>
+                    <th className="border border-blue-400 p-2 text-center font-semibold text-sm">
+                      📊 Anual
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teacherWorkload.map((teacher, idx) => (
+                    <tr 
+                      key={teacher.teacherId}
+                      className={idx % 2 === 0 ? 'bg-blue-50' : 'bg-white'}
+                    >
+                      <td className="border border-gray-300 p-4">
+                        <div className="font-semibold text-gray-900">
+                          {teacher.teacherName}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {teacher.subjects.length} disciplina(s)
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 p-4">
+                        <div className="space-y-2">
+                          {teacher.subjects.map((subj, subIdx) => (
+                            <div 
+                              key={`${subj.subjectId}-${subj.classId || 'no-class'}-${subIdx}`}
+                              className="bg-gray-50 p-2 rounded border border-gray-200"
+                            >
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-800 flex-1">
+                                  {subj.subjectName}
+                                </span>
+                                {subj.className && (
+                                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                    {subj.className}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 p-4 text-center align-top">
+                        <div className="space-y-2">
+                          {teacher.subjects.map((subj, subIdx) => (
+                            <div 
+                              key={`daily-${subj.subjectId}-${subj.classId || 'no-class'}-${subIdx}`}
+                              className="bg-blue-50 p-2 rounded"
+                            >
+                              <span className="font-semibold text-blue-700 text-sm">
+                                {subj.dailyHours.toFixed(1)}h
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 p-4 text-center align-top">
+                        <div className="space-y-2">
+                          {teacher.subjects.map((subj, subIdx) => (
+                            <div 
+                              key={`weekly-${subj.subjectId}-${subj.classId || 'no-class'}-${subIdx}`}
+                              className="bg-indigo-50 p-2 rounded"
+                            >
+                              <span className="font-semibold text-indigo-700 text-sm">
+                                {subj.weeklyHours}h
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 p-4 text-center align-top">
+                        <div className="space-y-2">
+                          {teacher.subjects.map((subj, subIdx) => (
+                            <div 
+                              key={`monthly-${subj.subjectId}-${subj.classId || 'no-class'}-${subIdx}`}
+                              className="bg-purple-50 p-2 rounded"
+                            >
+                              <span className="font-semibold text-purple-700 text-sm">
+                                {subj.monthlyHours.toFixed(1)}h
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 p-4 text-center align-top">
+                        <div className="space-y-2">
+                          {teacher.subjects.map((subj, subIdx) => (
+                            <div 
+                              key={`annual-${subj.subjectId}-${subj.classId || 'no-class'}-${subIdx}`}
+                              className="bg-green-50 p-2 rounded"
+                            >
+                              <span className="font-bold text-green-700">
+                                {subj.annualHours}h
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gradient-to-r from-indigo-100 to-blue-100 font-bold">
+                    <td className="border border-gray-300 p-4 text-right" colSpan={2}>
+                      <span className="text-lg text-gray-900">
+                        📊 TOTAIS GERAIS:
+                      </span>
+                    </td>
+                    <td className="border border-gray-300 p-4 text-center">
+                      <div className="inline-flex items-center justify-center bg-blue-600 text-white font-bold text-lg px-4 py-2 rounded-lg">
+                        <Clock className="mr-2" size={20} />
+                        {(teacherWorkload.reduce((sum, t) => sum + t.totalWeeklyHours, 0) / 5).toFixed(1)}h
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">Diária</div>
+                    </td>
+                    <td className="border border-gray-300 p-4 text-center">
+                      <div className="inline-flex items-center justify-center bg-indigo-600 text-white font-bold text-xl px-4 py-2 rounded-lg">
+                        <Clock className="mr-2" size={22} />
+                        {teacherWorkload.reduce((sum, t) => sum + t.totalWeeklyHours, 0)}h
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">Semanal</div>
+                    </td>
+                    <td className="border border-gray-300 p-4 text-center">
+                      <div className="inline-flex items-center justify-center bg-purple-600 text-white font-bold text-xl px-4 py-2 rounded-lg">
+                        <Clock className="mr-2" size={22} />
+                        {teacherWorkload.reduce((sum, t) => sum + t.totalMonthlyHours, 0).toFixed(1)}h
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">Mensal</div>
+                    </td>
+                    <td className="border border-gray-300 p-4 text-center">
+                      <div className="inline-flex items-center justify-center bg-green-600 text-white font-bold text-2xl px-6 py-3 rounded-lg">
+                        <Clock className="mr-2" size={24} />
+                        {teacherWorkload.reduce((sum, t) => sum + t.totalAnnualHours, 0)}h
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">Anual</div>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          {/* Nota Explicativa */}
+          <div className="mt-4 p-4 bg-blue-100 border-l-4 border-blue-600 rounded">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
+              <div className="text-sm text-blue-900">
+                <p className="font-semibold mb-1">
+                  ℹ️ Sobre as Cargas Horárias
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li><strong>Origem dos dados:</strong> Cargas horárias definidas na página de <strong>Lotação de Professores</strong></li>
+                  <li><strong>Atualização automática:</strong> Ao alterar lotações, os dados desta seção atualizam automaticamente</li>
+                  <li><strong>Cálculo anual:</strong> CH Semanal × 40 semanas letivas = CH Anual</li>
+                  <li><strong>Cálculo mensal:</strong> CH Anual ÷ 12 meses = CH Mensal</li>
+                  <li><strong>Cálculo diário:</strong> CH Semanal ÷ 5 dias letivos = CH Diária</li>
+                  <li>Cada professor pode ter múltiplas disciplinas com cargas horárias específicas por turma</li>
+                  <li>Estas informações são usadas para calcular déficits/saldos, pagamentos e controlar frequência</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* ===== FIM SEÇÃO PERMANENTE ===== */}
 
       {/* Estilos de impressão (já definidos no topo, removendo duplicata) */}
     </div>
