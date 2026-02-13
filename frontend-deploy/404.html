@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecionando...</title>
+    
+    <!-- GitHub Pages SPA Redirect - Versão Simples e Robusta -->
+    <script type="text/javascript">
+      (function() {
+        var l = window.location;
+        var path = l.pathname;
+        
+        // Para rotas do repositório: /criador-horario-backend/xxx
+        // Converte para: /criador-horario-backend/?/xxx
+        if (path && path !== '/' && path !== '/criador-horario-backend/' && path !== '/criador-horario-backend') {
+          // Remove o base path /criador-horario-backend/ do início
+          var route = path.replace('/criador-horario-backend/', '').replace('/criador-horario-backend', '');
+          
+          // Redireciona para o índice com a rota codificada
+          var redirect = l.protocol + '//' + l.hostname + 
+                        '/criador-horario-backend/?/' + route.replace(/&/g, '~and~') +
+                        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+                        l.hash;
+          
+          console.log('🔄 404.html redirect:', path, '→', redirect);
+          l.replace(redirect);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <p style="text-align: center; padding: 50px; font-family: Arial; color: #666;">
+      Carregando...
+    </p>
+  </body>
+</html>
