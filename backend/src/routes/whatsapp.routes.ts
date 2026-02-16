@@ -13,6 +13,78 @@ import { WhatsAppService } from '../services/whatsapp.service';
 const router = Router();
 
 /**
+ * GET /api/whatsapp/webhook
+ * Verificação do webhook da Meta (WhatsApp Cloud API)
+ */
+router.get('/webhook', async (req, res) => {
+  try {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
+
+    if (mode === 'subscribe' && token && verifyToken && token === verifyToken) {
+      return res.status(200).send(challenge);
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'Token de verificação inválido',
+    });
+  } catch (error: any) {
+    console.error('Erro na verificação do webhook WhatsApp:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao verificar webhook',
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/whatsapp/webhook
+ * Recebe eventos/mensagens do WhatsApp Cloud API
+ */
+router.post('/webhook', async (req, res) => {
+  try {
+    const payload = req.body;
+
+    const entries = payload?.entry || [];
+    for (const entry of entries) {
+      const changes = entry?.changes || [];
+      for (const change of changes) {
+        const value = change?.value;
+        const messages = value?.messages || [];
+
+        for (const message of messages) {
+          const from = message?.from;
+          const text = message?.text?.body || '';
+          const timestamp = message?.timestamp;
+          const messageId = message?.id;
+
+          console.log('📨 WhatsApp recebido:', {
+            from,
+            text,
+            timestamp,
+            messageId,
+          });
+        }
+      }
+    }
+
+    return res.status(200).json({ success: true, received: true });
+  } catch (error: any) {
+    console.error('Erro ao processar webhook WhatsApp:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao processar webhook',
+      error: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/whatsapp/config
  * Buscar configuração do WhatsApp da escola
  */

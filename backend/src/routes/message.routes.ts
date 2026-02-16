@@ -183,7 +183,7 @@ router.post('/send', auth, async (req: AuthRequest, res: Response) => {
 
     // Se não for admin, sempre enviar para o admin
     if (!isAdmin) {
-      const admin = await User.findOne({ role: 'admin' });
+      const admin = await User.findOne({ role: { $in: ['admin', 'super-admin'] } });
       if (!admin) {
         return res.status(404).json({ message: 'Administrador não encontrado' });
       }

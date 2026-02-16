@@ -49,7 +49,10 @@ router.post('/send', auth, async (req: AuthRequest, res: Response) => {
     }
 
     // Validar canais de envio
-    if (!channels || (!channels.whatsapp && !channels.sms && !channels.telegram)) {
+    if (
+      !channels ||
+      (!channels.whatsapp && !channels.sms && !channels.telegram && !channels.internal && !channels.message)
+    ) {
       return res.status(400).json({
         success: false,
         message: 'Selecione pelo menos um canal de envio',
@@ -92,6 +95,7 @@ router.post('/send', auth, async (req: AuthRequest, res: Response) => {
     if (channels.whatsapp) selectedChannels.push('whatsapp');
     if (channels.sms) selectedChannels.push('sms');
     if (channels.telegram) selectedChannels.push('telegram');
+    if (channels.internal || channels.message) selectedChannels.push('internal');
 
     for (const teacher of recipients) {
       if (!teacher.phone) continue;
@@ -126,6 +130,7 @@ router.post('/send', auth, async (req: AuthRequest, res: Response) => {
     const channelNames = selectedChannels.map(ch => {
       if (ch === 'whatsapp') return 'WhatsApp';
       if (ch === 'sms') return 'SMS';
+      if (ch === 'internal') return 'Mensagem Interna';
       return 'Telegram';
     }).join(', ');
 

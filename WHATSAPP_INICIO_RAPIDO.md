@@ -40,6 +40,14 @@ npx ts-node test-whatsapp.ts
 
 Você receberá uma mensagem no seu WhatsApp! 📱
 
+Ou no sistema web:
+
+1. Abra **Configurações → WhatsApp Business**
+2. Salve `Access Token`, `Phone Number ID` e número WhatsApp
+3. Clique em **Testar Conexão**
+4. Vá em **Mensagens ao Vivo**
+5. Marque **WhatsApp**, escreva a mensagem e envie para os professores
+
 ---
 
 ## 📖 Documentação Completa

@@ -124,10 +124,6 @@ export class NotificationService {
       // Buscar configuração
       const config = await NotificationConfig.findOne({ userId: notification.userId });
 
-      if (!config) {
-        throw new Error('Configuração de notificações não encontrada');
-      }
-
       // Verificar qual canal usar (baseado no metadata.channel)
       const channel = notification.metadata?.channel || 'whatsapp';
 
@@ -142,7 +138,7 @@ export class NotificationService {
       }
 
       // Enviar via WhatsApp Business API
-      if (channel === 'whatsapp' && config.sendToWhatsApp) {
+      if (channel === 'whatsapp' && config?.sendToWhatsApp !== false) {
         const result = await WhatsAppService.sendMessage({
           to: notification.recipientPhone,
           message: notification.message,
@@ -156,7 +152,7 @@ export class NotificationService {
         }
       }
       // SMS via Twilio (TODO: implementar)
-      else if (channel === 'sms' && config.sendToSMS) {
+      else if (channel === 'sms' && config?.sendToSMS) {
         // TODO: Implementar integração com Twilio SMS
         console.log('📱 SMS ainda não implementado - use WhatsApp');
         errorMessage = 'SMS não implementado';
@@ -166,6 +162,10 @@ export class NotificationService {
         // TODO: Implementar integração com Telegram Bot
         console.log('📱 Telegram ainda não implementado - use WhatsApp');
         errorMessage = 'Telegram não implementado';
+      }
+      // Mensagem interna (registro no sistema)
+      else if (channel === 'internal') {
+        success = true;
       }
       else {
         errorMessage = 'Nenhum método de envio configurado ou habilitado';
