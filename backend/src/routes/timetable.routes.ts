@@ -110,7 +110,9 @@ router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
       periodsPerDay: timetable.periodsPerDay,
       saturdayEquivalent: timetable.saturdayEquivalent,
       avoidConsecutive: true,
-      distributeEvenly: true
+      distributeEvenly: true,
+      compactTeacherSchedule: true,
+      compactnessMode: 'aggressive'
     });
 
     if (!result.success) {

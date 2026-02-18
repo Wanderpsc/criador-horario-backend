@@ -49,6 +49,8 @@ interface GenerationOptions {
   saturdayEquivalent?: number; // equivalência de sábado em períodos
   avoidConsecutive?: boolean; // evitar matérias consecutivas (default: true)
   distributeEvenly?: boolean; // distribuir carga uniformemente (default: true)
+  compactTeacherSchedule?: boolean; // compactar aulas do professor no mesmo dia (default: true)
+  compactnessMode?: 'normal' | 'aggressive'; // intensidade da compactação (default: aggressive)
 }
 
 /**
@@ -66,7 +68,9 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       periodsPerDay,
       saturdayEquivalent,
       avoidConsecutive = true,
-      distributeEvenly = true
+      distributeEvenly = true,
+      compactTeacherSchedule = true,
+      compactnessMode = 'aggressive'
     } = options;
 
     // Buscar professores e disciplinas do usuário
@@ -171,6 +175,89 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       };
     };
 
+    // Calcula pontuação para compactar as aulas do professor em blocos consecutivos
+    const evaluateTeacherSlotScore = (
+      teacherId: mongoose.Types.ObjectId,
+      day: number,
+      period: number
+    ): number => {
+      if (!compactTeacherSchedule) {
+        return Math.random();
+      }
+
+      const teacherIdStr = teacherId.toString();
+      const usage = teacherUsage.get(teacherIdStr);
+      const periodsByDay = new Map<number, Set<number>>();
+      const aggressive = compactnessMode === 'aggressive';
+
+      if (usage) {
+        for (const slot of usage) {
+          const [slotDayStr, slotPeriodStr] = slot.split('-');
+          const slotDay = Number(slotDayStr);
+          const slotPeriod = Number(slotPeriodStr);
+
+          if (!periodsByDay.has(slotDay)) {
+            periodsByDay.set(slotDay, new Set());
+          }
+          periodsByDay.get(slotDay)!.add(slotPeriod);
+        }
+      }
+
+      if (!periodsByDay.has(day)) {
+        periodsByDay.set(day, new Set());
+      }
+      periodsByDay.get(day)!.add(period);
+
+      let isolatedLessons = 0;
+      let blocks = 0;
+      let activeDays = 0;
+      let internalGaps = 0;
+      let leadingGaps = 0;
+      let lastOccupiedPeriodSum = 0;
+
+      for (const dayPeriods of periodsByDay.values()) {
+        if (dayPeriods.size === 0) {
+          continue;
+        }
+
+        activeDays++;
+        const sortedPeriods = Array.from(dayPeriods).sort((a, b) => a - b);
+        const firstPeriod = sortedPeriods[0];
+        const lastPeriod = sortedPeriods[sortedPeriods.length - 1];
+
+        leadingGaps += firstPeriod;
+        lastOccupiedPeriodSum += lastPeriod;
+        internalGaps += (lastPeriod - firstPeriod + 1) - sortedPeriods.length;
+
+        for (let i = 0; i < sortedPeriods.length; i++) {
+          const current = sortedPeriods[i];
+          const prev = sortedPeriods[i - 1];
+          const next = sortedPeriods[i + 1];
+
+          if (i === 0 || current !== prev + 1) {
+            blocks++;
+          }
+
+          const hasPreviousAdjacent = prev !== undefined && prev === current - 1;
+          const hasNextAdjacent = next !== undefined && next === current + 1;
+          if (!hasPreviousAdjacent && !hasNextAdjacent) {
+            isolatedLessons++;
+          }
+        }
+      }
+
+      const score = -(
+        isolatedLessons * (aggressive ? 180 : 100) +
+        internalGaps * (aggressive ? 140 : 80) +
+        blocks * (aggressive ? 35 : 20) +
+        activeDays * (aggressive ? 14 : 10) +
+        leadingGaps * (aggressive ? 12 : 8) +
+        lastOccupiedPeriodSum * (aggressive ? 5 : 3)
+      );
+
+      return score + Math.random() * 0.01;
+    };
+
     // Distribuir disciplinas pela grade
     for (const subject of subjects) {
       // Selecionar professores que podem lecionar esta disciplina
@@ -192,20 +279,46 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       while (assigned < hoursToAssign && attempts < maxAttempts) {
         attempts++;
 
-        // Escolher professor aleatório dos disponíveis
-        const teacher = availableTeachers[Math.floor(Math.random() * availableTeachers.length)];
-        const teacherId = new mongoose.Types.ObjectId(teacher._id);
+        const subjectId = new mongoose.Types.ObjectId(subject._id);
+        let bestCandidate:
+          | {
+              teacherId: mongoose.Types.ObjectId;
+              day: number;
+              period: number;
+              score: number;
+            }
+          | null = null;
 
-        // Escolher slot aleatório
-        const day = Math.floor(Math.random() * daysOfWeek);
-        const period = Math.floor(Math.random() * periodsPerDay);
+        // Buscar melhor posição para compactar o horário do professor
+        for (const teacher of availableTeachers) {
+          const teacherId = new mongoose.Types.ObjectId(teacher._id);
 
-        // Verificar se o slot está vazio e a atribuição é válida
-        if (
-          !grid[day][period]?.teacherId &&
-          isValidAssignment(teacherId, new mongoose.Types.ObjectId(subject._id), day, period)
-        ) {
-          markAssignment(teacherId, new mongoose.Types.ObjectId(subject._id), day, period);
+          for (let day = 0; day < daysOfWeek; day++) {
+            for (let period = 0; period < periodsPerDay; period++) {
+              if (grid[day][period]?.teacherId) {
+                continue;
+              }
+
+              if (!isValidAssignment(teacherId, subjectId, day, period)) {
+                continue;
+              }
+
+              const score = evaluateTeacherSlotScore(teacherId, day, period);
+
+              if (!bestCandidate || score > bestCandidate.score) {
+                bestCandidate = { teacherId, day, period, score };
+              }
+            }
+          }
+        }
+
+        if (bestCandidate) {
+          markAssignment(
+            bestCandidate.teacherId,
+            subjectId,
+            bestCandidate.day,
+            bestCandidate.period
+          );
           assigned++;
         }
       }
