@@ -24,6 +24,7 @@ interface TeacherSubject {
   teacherId: string;
   subjectId: string;
   classId?: string;
+  weeklyHours?: number;
 }
 
 interface Subject {
@@ -541,17 +542,93 @@ export default function TimetableGenerator() {
           continue;
         }
 
-        // Criar lista de aulas necessárias baseada na carga horária semanal
-        const neededLessons: { subjectId: string; count: number }[] = [];
-        
+        // Criar lista de aulas necessárias RESPEITANDO lotação por professor
+        const neededLessons: Array<{
+          subjectId: string;
+          teacherId: string;
+          count: number;
+          subjectName: string;
+          teacherName: string;
+        }> = [];
+
+        const classTeacherSubjects = teacherSubjects.filter((ts: TeacherSubject) => ts.classId === currentClass.id);
+
         classSubjects.forEach((subject: any) => {
-          // Pegar carga horária da associação turma-componente
-          const weeklyHours = currentClass.subjectWeeklyHours?.[subject.id] || subject.weeklyHours || 2;
-          neededLessons.push({
-            subjectId: subject.id,
-            count: weeklyHours
+          const subjectTargetHours = Number(currentClass.subjectWeeklyHours?.[subject.id] || subject.weeklyHours || 2);
+
+          if (subjectTargetHours <= 0) {
+            return;
+          }
+
+          const assignments = classTeacherSubjects.filter((ts: TeacherSubject) => {
+            if (ts.subjectId !== subject.id) return false;
+            return activeTeachers.some((t: Teacher) => t.id === ts.teacherId);
           });
-          console.log(`  📖 ${subject.name}: ${weeklyHours} aulas/semana`);
+
+          if (assignments.length === 0) {
+            newConflicts.push(`⚠️ ${currentClass.grade?.name} ${currentClass.name}: sem lotação para ${subject.name}`);
+            return;
+          }
+
+          const teacherHours = new Map<string, number>();
+          let assignedFromExplicit = 0;
+
+          const explicitAssignments = assignments.filter((ts: TeacherSubject) =>
+            typeof ts.weeklyHours === 'number' && ts.weeklyHours >= 0
+          );
+
+          for (const assignment of explicitAssignments) {
+            const desired = Math.max(0, Math.floor(Number(assignment.weeklyHours || 0)));
+            if (desired === 0) continue;
+
+            const remainingForSubject = Math.max(0, subjectTargetHours - assignedFromExplicit);
+            const allocated = Math.min(desired, remainingForSubject);
+            if (allocated <= 0) continue;
+
+            teacherHours.set(assignment.teacherId, (teacherHours.get(assignment.teacherId) || 0) + allocated);
+            assignedFromExplicit += allocated;
+          }
+
+          const explicitRequested = explicitAssignments.reduce(
+            (sum: number, ts: TeacherSubject) => sum + Math.max(0, Math.floor(Number(ts.weeklyHours || 0))),
+            0
+          );
+
+          if (explicitRequested > subjectTargetHours) {
+            newConflicts.push(
+              `⚠️ ${currentClass.grade?.name} ${currentClass.name}: lotação de ${subject.name} excede a carga da turma (${explicitRequested}/${subjectTargetHours})`
+            );
+          }
+
+          let remaining = Math.max(0, subjectTargetHours - assignedFromExplicit);
+          if (remaining > 0) {
+            const nonExplicitAssignments = assignments.filter((ts: TeacherSubject) =>
+              !(typeof ts.weeklyHours === 'number' && ts.weeklyHours >= 0)
+            );
+
+            const distributionTargets = nonExplicitAssignments.length > 0 ? nonExplicitAssignments : assignments;
+
+            let index = 0;
+            while (remaining > 0 && distributionTargets.length > 0) {
+              const target = distributionTargets[index % distributionTargets.length];
+              teacherHours.set(target.teacherId, (teacherHours.get(target.teacherId) || 0) + 1);
+              remaining--;
+              index++;
+            }
+          }
+
+          for (const [teacherId, count] of teacherHours.entries()) {
+            if (count <= 0) continue;
+            const teacher = activeTeachers.find((t: Teacher) => t.id === teacherId);
+            neededLessons.push({
+              subjectId: subject.id,
+              teacherId,
+              count,
+              subjectName: subject.name,
+              teacherName: teacher?.name || 'Professor'
+            });
+            console.log(`  📖 ${subject.name}: ${count} aula(s)/semana para ${teacher?.name || teacherId}`);
+          }
         });
 
         // Total de aulas necessárias para esta turma
@@ -565,10 +642,10 @@ export default function TimetableGenerator() {
         }
 
         // Criar pool de aulas a serem distribuídas
-        const lessonPool: string[] = [];
+        const lessonPool: Array<{ subjectId: string; teacherId: string }> = [];
         neededLessons.forEach(lesson => {
           for (let i = 0; i < lesson.count; i++) {
-            lessonPool.push(lesson.subjectId);
+            lessonPool.push({ subjectId: lesson.subjectId, teacherId: lesson.teacherId });
           }
         });
 
@@ -598,7 +675,7 @@ export default function TimetableGenerator() {
                 continue;
               }
 
-              const subjectId = lessonPool[lessonIndex];
+              const { subjectId, teacherId: fixedTeacherId } = lessonPool[lessonIndex];
               const subject = classSubjects.find((s: any) => s.id === subjectId);
 
               if (!subject) {
@@ -607,17 +684,9 @@ export default function TimetableGenerator() {
                 continue;
               }
 
-              // Buscar professores elegíveis
-              const eligibleTeachers = activeTeachers.filter((teacher: Teacher) => {
-                return teacherSubjects.some((ts: TeacherSubject) => 
-                  ts.teacherId === teacher.id && 
-                  ts.subjectId === subjectId &&
-                  ts.classId === currentClass.id
-                );
-              });
-
-              if (eligibleTeachers.length === 0) {
-                console.log(`  ⚠️ Sem professor para ${subject.name} na turma ${currentClass.name}`);
+              const selectedTeacherCandidate = activeTeachers.find((teacher: Teacher) => teacher.id === fixedTeacherId);
+              if (!selectedTeacherCandidate) {
+                console.log(`  ⚠️ Professor ${fixedTeacherId} não encontrado/ativo para ${subject.name}`);
                 lessonIndex++;
                 continue;
               }
@@ -625,8 +694,8 @@ export default function TimetableGenerator() {
               let selectedTeacher: Teacher | null = null;
               let bestScore = -1;
               let blockedByObservations: string[] = [];
-              
-              for (const candidate of eligibleTeachers) {
+
+              for (const candidate of [selectedTeacherCandidate]) {
                 // REGRA 1 (SEMPRE): PRIORIDADE MÁXIMA - Observações
                 const isAvailable = isTeacherAvailableAtTime(candidate, day, periodInfo.period);
                 if (!isAvailable) {
