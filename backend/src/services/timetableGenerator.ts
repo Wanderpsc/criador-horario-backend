@@ -51,7 +51,11 @@ interface GenerationOptions {
   distributeEvenly?: boolean; // distribuir carga uniformemente (default: true)
   compactTeacherSchedule?: boolean; // compactar aulas do professor no mesmo dia (default: true)
   compactnessMode?: 'normal' | 'aggressive'; // intensidade da compactação (default: aggressive)
+  strictSubjectAllocation?: boolean; // exige 100% da carga de todas disciplinas (default: true)
+  requireAllTeachersAllocated?: boolean; // exige ao menos 1 aula por professor quando possível (default: true)
 }
+
+type SubjectCategory = 'core' | 'study' | 'regular';
 
 /**
  * Gera um horário automaticamente evitando conflitos
@@ -70,7 +74,9 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       avoidConsecutive = true,
       distributeEvenly = true,
       compactTeacherSchedule = true,
-      compactnessMode = 'aggressive'
+      compactnessMode = 'aggressive',
+      strictSubjectAllocation = true,
+      requireAllTeachersAllocated = true
     } = options;
 
     // Buscar professores e disciplinas do usuário
@@ -94,6 +100,47 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
     const totalSlots = daysOfWeek * periodsPerDay;
     const totalWorkload = subjects.reduce((sum, subject) => sum + (subject.workload || subject.workloadHours || 0), 0);
 
+    const normalizeText = (value: string): string =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase();
+
+    const coreSubjectKeywords = [
+      'MATEMATICA',
+      'FISICA',
+      'QUIMICA',
+      'PORTUGUES',
+      'BIOLOGIA',
+      'GEOGRAFIA',
+      'HISTORIA'
+    ];
+
+    const studySubjectKeywords = [
+      'HORARIO DE ESTUDO',
+      'HORARIOS DE ESTUDO',
+      'ESTUDOS DIRIGIDOS',
+      'ESTUDO DIRIGIDO',
+      'MONITORIA / HORARIO DE ESTUDO',
+      'MONITORIA/HORARIO DE ESTUDO'
+    ];
+
+    const getSubjectCategory = (subjectName: string): SubjectCategory => {
+      const normalizedName = normalizeText(subjectName);
+
+      if (coreSubjectKeywords.some((keyword) => normalizedName.includes(keyword))) {
+        return 'core';
+      }
+
+      if (studySubjectKeywords.some((keyword) => normalizedName.includes(keyword))) {
+        return 'study';
+      }
+
+      return 'regular';
+    };
+
+    const isStudyCategory = (category: SubjectCategory): boolean => category === 'study';
+
     // Validar se há slots suficientes
     if (totalWorkload > totalSlots) {
       return {
@@ -113,12 +160,18 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
 
     // Mapas para controle de conflitos
     const teacherUsage = new Map<string, Set<string>>(); // teacherId -> Set("day-period")
+    const teacherAssignedLessons = new Map<string, number>(); // teacherId -> total de aulas
     const conflicts: ConflictInfo[] = [];
+
+    for (const teacher of teachers) {
+      teacherAssignedLessons.set(teacher._id.toString(), 0);
+    }
 
     // Função para verificar se a atribuição é válida
     const isValidAssignment = (
       teacherId: mongoose.Types.ObjectId,
       subjectId: mongoose.Types.ObjectId,
+      subjectCategory: SubjectCategory,
       day: number,
       period: number
     ): boolean => {
@@ -149,6 +202,25 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
         }
       }
 
+      if (isStudyCategory(subjectCategory)) {
+        const previousSubjectId = period > 0 ? grid[day][period - 1]?.subjectId?.toString() : undefined;
+        const nextSubjectId = period < periodsPerDay - 1 ? grid[day][period + 1]?.subjectId?.toString() : undefined;
+
+        const previousCell = previousSubjectId
+          ? subjects.find((item) => item._id.toString() === previousSubjectId)
+          : undefined;
+        const nextCell = nextSubjectId
+          ? subjects.find((item) => item._id.toString() === nextSubjectId)
+          : undefined;
+
+        if (
+          (previousCell && isStudyCategory(getSubjectCategory(previousCell.name))) ||
+          (nextCell && isStudyCategory(getSubjectCategory(nextCell.name)))
+        ) {
+          return false;
+        }
+      }
+
       return true;
     };
 
@@ -166,6 +238,10 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
         teacherUsage.set(teacherIdStr, new Set());
       }
       teacherUsage.get(teacherIdStr)!.add(slotKey);
+      teacherAssignedLessons.set(
+        teacherIdStr,
+        (teacherAssignedLessons.get(teacherIdStr) || 0) + 1
+      );
 
       grid[day][period] = {
         day,
@@ -173,6 +249,36 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
         teacherId,
         subjectId
       };
+    };
+
+    const reassignTeacherInSlot = (
+      fromTeacherId: mongoose.Types.ObjectId,
+      toTeacherId: mongoose.Types.ObjectId,
+      day: number,
+      period: number
+    ) => {
+      const slotKey = `${day}-${period}`;
+      const fromTeacherIdStr = fromTeacherId.toString();
+      const toTeacherIdStr = toTeacherId.toString();
+
+      teacherUsage.get(fromTeacherIdStr)?.delete(slotKey);
+      if (!teacherUsage.has(toTeacherIdStr)) {
+        teacherUsage.set(toTeacherIdStr, new Set());
+      }
+      teacherUsage.get(toTeacherIdStr)!.add(slotKey);
+
+      teacherAssignedLessons.set(
+        fromTeacherIdStr,
+        Math.max(0, (teacherAssignedLessons.get(fromTeacherIdStr) || 0) - 1)
+      );
+      teacherAssignedLessons.set(
+        toTeacherIdStr,
+        (teacherAssignedLessons.get(toTeacherIdStr) || 0) + 1
+      );
+
+      if (grid[day][period]) {
+        grid[day][period]!.teacherId = toTeacherId;
+      }
     };
 
     // Calcula pontuação para compactar as aulas do professor em blocos consecutivos
@@ -258,11 +364,128 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       return score + Math.random() * 0.01;
     };
 
+    const evaluatePeriodPreferenceScore = (
+      subjectCategory: SubjectCategory,
+      day: number,
+      period: number
+    ): number => {
+      const normalizedPosition = periodsPerDay > 1 ? period / (periodsPerDay - 1) : 0;
+      const morningWeight = 1 - normalizedPosition;
+      const laterWeight = normalizedPosition;
+      const middleWeight = 1 - Math.abs(normalizedPosition - 0.6) / 0.6;
+
+      if (subjectCategory === 'core') {
+        return morningWeight * 260 + middleWeight * 20;
+      }
+
+      if (subjectCategory === 'study') {
+        const firstPeriodLimit = Math.max(2, Math.ceil(periodsPerDay * 0.25));
+        const firstPeriodPenalty = period < firstPeriodLimit ? -320 : 0;
+        return laterWeight * 230 + middleWeight * 90 + firstPeriodPenalty;
+      }
+
+      return laterWeight * 90 + middleWeight * 110;
+    };
+
+    const evaluateSubjectDistributionScore = (
+      subjectId: mongoose.Types.ObjectId,
+      day: number,
+      targetPerDay: number
+    ): number => {
+      if (!distributeEvenly || targetPerDay <= 0) {
+        return 0;
+      }
+
+      let lessonsOnDay = 0;
+      for (let period = 0; period < periodsPerDay; period++) {
+        if (grid[day][period]?.subjectId?.toString() === subjectId.toString()) {
+          lessonsOnDay++;
+        }
+      }
+
+      if (lessonsOnDay >= targetPerDay) {
+        return -80;
+      }
+
+      return 40;
+    };
+
+    const evaluateImmediateTeacherCompactness = (
+      teacherId: mongoose.Types.ObjectId,
+      day: number,
+      period: number
+    ): number => {
+      const teacherIdStr = teacherId.toString();
+      const usage = teacherUsage.get(teacherIdStr);
+
+      if (!usage || usage.size === 0) {
+        return 0;
+      }
+
+      const previousBusy = usage.has(`${day}-${period - 1}`);
+      const nextBusy = usage.has(`${day}-${period + 1}`);
+
+      if (previousBusy && nextBusy) {
+        return 120;
+      }
+
+      if (previousBusy || nextBusy) {
+        return 75;
+      }
+
+      return -30;
+    };
+
+    const evaluateTeacherInclusionScore = (
+      teacherId: mongoose.Types.ObjectId,
+      remainingLessonsToAssign: number
+    ): number => {
+      const teacherIdStr = teacherId.toString();
+      const assignedLessons = teacherAssignedLessons.get(teacherIdStr) || 0;
+
+      if (assignedLessons > 0) {
+        return 0;
+      }
+
+      const teachersWithoutLessons = Array.from(teacherAssignedLessons.values()).filter(
+        (value) => value === 0
+      ).length;
+
+      if (remainingLessonsToAssign >= teachersWithoutLessons) {
+        return 280;
+      }
+
+      return 40;
+    };
+
+    const prioritizedSubjects = [...subjects].sort((left, right) => {
+      const leftCategory = getSubjectCategory(left.name);
+      const rightCategory = getSubjectCategory(right.name);
+
+      const categoryWeight: Record<SubjectCategory, number> = {
+        core: 0,
+        regular: 1,
+        study: 2
+      };
+
+      const byCategory = categoryWeight[leftCategory] - categoryWeight[rightCategory];
+      if (byCategory !== 0) {
+        return byCategory;
+      }
+
+      const leftWorkload = left.workload || left.workloadHours || 0;
+      const rightWorkload = right.workload || right.workloadHours || 0;
+      return rightWorkload - leftWorkload;
+    });
+
     // Distribuir disciplinas pela grade
-    for (const subject of subjects) {
+    let totalAssignedLessons = 0;
+
+    for (const subject of prioritizedSubjects) {
       // Selecionar professores que podem lecionar esta disciplina
       // TODO: Implementar filtro por especialização do professor
       const hoursToAssign = subject.workload || subject.workloadHours || 0;
+      const subjectCategory = getSubjectCategory(subject.name);
       
       // Por enquanto, usar todos os professores disponíveis
       const availableTeachers = teachers;
@@ -299,11 +522,16 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
                 continue;
               }
 
-              if (!isValidAssignment(teacherId, subjectId, day, period)) {
+              if (!isValidAssignment(teacherId, subjectId, subjectCategory, day, period)) {
                 continue;
               }
 
-              const score = evaluateTeacherSlotScore(teacherId, day, period);
+              const score =
+                evaluateTeacherSlotScore(teacherId, day, period) +
+                evaluateImmediateTeacherCompactness(teacherId, day, period) +
+                evaluatePeriodPreferenceScore(subjectCategory, day, period) +
+                evaluateSubjectDistributionScore(subjectId, day, targetPerDay) +
+                evaluateTeacherInclusionScore(teacherId, totalWorkload - totalAssignedLessons);
 
               if (!bestCandidate || score > bestCandidate.score) {
                 bestCandidate = { teacherId, day, period, score };
@@ -320,6 +548,7 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
             bestCandidate.period
           );
           assigned++;
+          totalAssignedLessons++;
         }
       }
 
@@ -329,7 +558,82 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
           type: 'no_available_slots',
           message: `Disciplina "${subject.name}": alocadas ${assigned}/${hoursToAssign} aulas. Restam ${hoursToAssign - assigned} sem alocação.`
         });
+
+        if (strictSubjectAllocation) {
+          return {
+            success: false,
+            message: `Não foi possível alocar 100% da carga da disciplina "${subject.name}".`,
+            conflicts
+          };
+        }
       }
+    }
+
+    const enforceAllTeachersIncluded = () => {
+      if (!requireAllTeachersAllocated) {
+        return;
+      }
+
+      if (totalWorkload < teachers.length) {
+        conflicts.push({
+          type: 'no_available_slots',
+          message: `Não é possível alocar todos os professores: há ${teachers.length} professores e apenas ${totalWorkload} aulas totais.`
+        });
+        return;
+      }
+
+      const getTeachersWithoutLessons = () =>
+        teachers.filter((teacher) => (teacherAssignedLessons.get(teacher._id.toString()) || 0) === 0);
+
+      let teachersWithoutLessons = getTeachersWithoutLessons();
+
+      for (const teacher of teachersWithoutLessons) {
+        const toTeacherId = new mongoose.Types.ObjectId(teacher._id);
+        let reassigned = false;
+
+        for (let day = 0; day < daysOfWeek && !reassigned; day++) {
+          for (let period = 0; period < periodsPerDay && !reassigned; period++) {
+            const cell = grid[day][period];
+            if (!cell?.teacherId || !cell.subjectId) {
+              continue;
+            }
+
+            const fromTeacherId = cell.teacherId;
+            const fromTeacherIdStr = fromTeacherId.toString();
+            const fromTeacherLessons = teacherAssignedLessons.get(fromTeacherIdStr) || 0;
+
+            if (fromTeacherLessons <= 1) {
+              continue;
+            }
+
+            if (!isValidAssignment(toTeacherId, cell.subjectId, 'regular', day, period)) {
+              continue;
+            }
+
+            reassignTeacherInSlot(fromTeacherId, toTeacherId, day, period);
+            reassigned = true;
+          }
+        }
+      }
+
+      teachersWithoutLessons = getTeachersWithoutLessons();
+      if (teachersWithoutLessons.length > 0) {
+        const names = teachersWithoutLessons.map((teacher) => teacher.name).join(', ');
+        conflicts.push({
+          type: 'no_available_slots',
+          message: `Não foi possível alocar aula para todos os professores. Sem aulas: ${names}.`
+        });
+      }
+    };
+
+    enforceAllTeachersIncluded();
+
+    if (requireAllTeachersAllocated && conflicts.length > 0) {
+      return {
+        success: false,
+        message: conflicts[0].message,
+        conflicts
+      };
     }
 
     // Converter grid para array flat

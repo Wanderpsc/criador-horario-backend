@@ -136,7 +136,13 @@ export const scheduleAPI = {
   create: (data: any) => api.post('/schedules', data),
   update: (id: string, data: any) => api.put(`/schedules/${id}`, data),
   delete: (id: string) => api.delete(`/schedules/${id}`),
-  generate: (id: string) => api.post(`/schedules/${id}/generate`),
+  generate: (
+    id: string,
+    options?: {
+      strictSubjectAllocation?: boolean;
+      requireAllTeachersAllocated?: boolean;
+    }
+  ) => api.post(`/schedules/${id}/generate`, options),
   addSlot: (id: string, data: any) => api.post(`/schedules/${id}/slots`, data),
   updateSlot: (id: string, slotId: string, data: any) => 
     api.put(`/schedules/${id}/slots/${slotId}`, data),

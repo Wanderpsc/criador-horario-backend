@@ -41,6 +41,8 @@ export default function ScheduleView() {
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [strictSubjectAllocation, setStrictSubjectAllocation] = useState(true);
+  const [requireAllTeachersAllocated, setRequireAllTeachersAllocated] = useState(true);
   const [hasAccess, setHasAccess] = useState(true);
   const [accessReason, setAccessReason] = useState('');
   const [accessMessage, setAccessMessage] = useState('');
@@ -93,7 +95,10 @@ export default function ScheduleView() {
 
     try {
       setGenerating(true);
-      await scheduleAPI.generate(id!);
+      await scheduleAPI.generate(id!, {
+        strictSubjectAllocation,
+        requireAllTeachersAllocated
+      });
       toast.success('Horário gerado com sucesso!');
       loadSchedule();
     } catch (error: any) {
@@ -265,6 +270,30 @@ export default function ScheduleView() {
             <Printer className="w-5 h-5 mr-2" />
             Imprimir
           </button>
+        </div>
+      </div>
+
+      <div className="card mb-4 no-print">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Opções de geração</h3>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={strictSubjectAllocation}
+              onChange={(event) => setStrictSubjectAllocation(event.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Exigir alocação total das disciplinas
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={requireAllTeachersAllocated}
+              onChange={(event) => setRequireAllTeachersAllocated(event.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Exigir pelo menos uma aula para cada professor
+          </label>
         </div>
       </div>
 

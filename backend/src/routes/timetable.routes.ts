@@ -43,6 +43,9 @@ router.post('/', auth,
 // Gerar horário automaticamente
 router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
   try {
+    const strictSubjectAllocation = req.body?.strictSubjectAllocation !== false;
+    const requireAllTeachersAllocated = req.body?.requireAllTeachersAllocated !== false;
+
     const timetable = await Timetable.findOne({ _id: req.params.id, userId: req.user!.id });
     if (!timetable) {
       return res.status(404).json({ message: 'Grade de horário não encontrada' });
@@ -112,7 +115,9 @@ router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
       avoidConsecutive: true,
       distributeEvenly: true,
       compactTeacherSchedule: true,
-      compactnessMode: 'aggressive'
+      compactnessMode: 'aggressive',
+      strictSubjectAllocation,
+      requireAllTeachersAllocated
     });
 
     if (!result.success) {
