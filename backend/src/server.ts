@@ -200,13 +200,30 @@ app.use('/api/school-users', schoolUsersRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
 
 // Rota de health check
+const healthPayload = () => ({
+  status: 'OK',
+  service: 'criador-horario-backend',
+  message: 'Sistema Criador de Horário de Aula Escolar - API funcionando',
+  timestamp: new Date().toISOString(),
+  uptimeSeconds: Math.floor(process.uptime())
+});
+
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Sistema Criador de Horário de Aula Escolar - API funcionando', timestamp: new Date().toISOString() });
+  res.status(200).json(healthPayload());
+});
+
+app.get('/api/healthz', (req, res) => {
+  res.status(200).json(healthPayload());
 });
 
 // Health check sem /api para verificação do Render
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Sistema funcionando', timestamp: new Date().toISOString() });
+  res.status(200).json(healthPayload());
+});
+
+// Root health para provedores que validam apenas "/"
+app.get('/', (req, res) => {
+  res.status(200).json(healthPayload());
 });
 
 // Error handler
