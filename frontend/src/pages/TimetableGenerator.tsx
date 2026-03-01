@@ -723,6 +723,19 @@ export default function TimetableGenerator() {
     return previousIsStudy || nextIsStudy;
   };
 
+  const countSubjectSlotsInDay = (
+    timetable: TimetableSlot[],
+    classId: string,
+    day: string,
+    subjectId: string
+  ): number => {
+    return timetable.filter((slot) => {
+      if (slot.classId !== classId) return false;
+      if (slot.day !== day) return false;
+      return slot.subjectId === subjectId;
+    }).length;
+  };
+
   const countStudySlotsInDay = (
     timetable: TimetableSlot[],
     classId: string,
@@ -1030,6 +1043,7 @@ export default function TimetableGenerator() {
         for (const lesson of pendingForClass) {
           const lessonCategory = subjectCategoryById.get(lesson.subjectId) || 'regular';
           const totalPeriods = currentSchedule?.periods?.length || 8;
+          const latePeriodStart = Math.max(1, totalPeriods - 2);
 
           let softPenalty = 0;
           if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
@@ -1037,6 +1051,17 @@ export default function TimetableGenerator() {
           }
 
           if (lessonCategory === 'study') {
+            const sameStudyCountInDay = countSubjectSlotsInDay(
+              classTimetable,
+              currentClassId,
+              day,
+              lesson.subjectId
+            );
+
+            if (sameStudyCountInDay > 0 && mode < 3) {
+              continue;
+            }
+
             const studyCountInDay = countStudySlotsInDay(
               classTimetable,
               currentClassId,
@@ -1044,8 +1069,18 @@ export default function TimetableGenerator() {
               subjectCategoryById
             );
 
-            if (studyCountInDay > 0 && mode < 2) {
+            if (studyCountInDay > 0 && mode < 3) {
               continue;
+            }
+
+            if (period < latePeriodStart && mode < 3) {
+              continue;
+            }
+
+            if (period < latePeriodStart) {
+              softPenalty -= 180;
+            } else {
+              softPenalty += 140;
             }
 
             if (studyCountInDay > 0) {
