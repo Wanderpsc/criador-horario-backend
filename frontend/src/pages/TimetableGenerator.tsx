@@ -1058,7 +1058,7 @@ export default function TimetableGenerator() {
               lesson.subjectId
             );
 
-            if (sameStudyCountInDay > 0 && mode < 3) {
+            if (sameStudyCountInDay > 0 && mode < 2) {
               continue;
             }
 
@@ -1069,11 +1069,11 @@ export default function TimetableGenerator() {
               subjectCategoryById
             );
 
-            if (studyCountInDay > 0 && mode < 3) {
+            if (studyCountInDay > 0 && mode < 2) {
               continue;
             }
 
-            if (period < latePeriodStart && mode < 3) {
+            if (period < latePeriodStart && mode < 2) {
               continue;
             }
 
