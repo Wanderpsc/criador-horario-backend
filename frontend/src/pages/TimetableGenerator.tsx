@@ -68,6 +68,8 @@ interface LessonDemand {
   allocated: boolean;
 }
 
+type SubjectCategory = 'core' | 'study' | 'regular';
+
 export default function TimetableGenerator() {
   const [selectedSchedule, setSelectedSchedule] = useState<string>('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
@@ -507,6 +509,79 @@ export default function TimetableGenerator() {
     return score;
   };
 
+  const normalizeSubjectText = (value: string): string =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase();
+
+  const getSubjectCategory = (subjectName: string): SubjectCategory => {
+    const normalized = normalizeSubjectText(subjectName);
+    const coreKeywords = ['MATEMATICA', 'FISICA', 'QUIMICA', 'PORTUGUES', 'BIOLOGIA', 'GEOGRAFIA', 'HISTORIA'];
+    const studyKeywords = ['HORARIO DE ESTUDO', 'ESTUDOS DIRIGIDOS', 'ESTUDO DIRIGIDO', 'MONITORIA / HORARIO DE ESTUDO'];
+
+    if (coreKeywords.some((keyword) => normalized.includes(keyword))) {
+      return 'core';
+    }
+
+    if (studyKeywords.some((keyword) => normalized.includes(keyword))) {
+      return 'study';
+    }
+
+    return 'regular';
+  };
+
+  const isEarlyPeriodForStudy = (period: number, totalPeriods: number): boolean => {
+    const earlyLimit = Math.max(2, Math.ceil(totalPeriods * 0.25));
+    return period <= earlyLimit;
+  };
+
+  const calculatePeriodPreferenceScore = (
+    subjectCategory: SubjectCategory,
+    period: number,
+    totalPeriods: number
+  ): number => {
+    const normalizedPosition = totalPeriods > 1 ? (period - 1) / (totalPeriods - 1) : 0;
+    const earlyWeight = 1 - normalizedPosition;
+    const lateWeight = normalizedPosition;
+    const middleWeight = 1 - Math.abs(normalizedPosition - 0.6) / 0.6;
+
+    if (subjectCategory === 'core') {
+      return earlyWeight * 260 + middleWeight * 20;
+    }
+
+    if (subjectCategory === 'study') {
+      const firstPeriodPenalty = isEarlyPeriodForStudy(period, totalPeriods) ? -400 : 0;
+      return lateWeight * 230 + middleWeight * 90 + firstPeriodPenalty;
+    }
+
+    return middleWeight * 110 + lateWeight * 90;
+  };
+
+  const hasAdjacentStudyInSameClass = (
+    timetable: TimetableSlot[],
+    classId: string,
+    day: string,
+    period: number,
+    subjectCategoryById: Map<string, SubjectCategory>
+  ): boolean => {
+    const previousSlot = timetable.find(
+      (slot) => slot.day === day && slot.period === period - 1 && slot.classId === classId
+    );
+    const nextSlot = timetable.find(
+      (slot) => slot.day === day && slot.period === period + 1 && slot.classId === classId
+    );
+
+    const previousIsStudy = previousSlot
+      ? subjectCategoryById.get(previousSlot.subjectId) === 'study'
+      : false;
+    const nextIsStudy = nextSlot
+      ? subjectCategoryById.get(nextSlot.subjectId) === 'study'
+      : false;
+
+    return previousIsStudy || nextIsStudy;
+  };
+
   // Função para gerar horários para TODAS as turmas SEM CONFLITOS
   const generateTimetable = () => {
     if (!selectedSchedule) {
@@ -561,6 +636,9 @@ export default function TimetableGenerator() {
       const activeTeacherById = new Map(activeTeachers.map((t: Teacher) => [t.id, t]));
       const teacherNameById = new Map(activeTeachers.map((t: Teacher) => [t.id, t.name]));
       const subjectNameById = new Map(subjects.map((s: Subject) => [s.id, s.name]));
+      const subjectCategoryById = new Map(
+        subjects.map((subject: Subject) => [subject.id, getSubjectCategory(subject.name)])
+      );
       const classLabelById = new Map(
         classesToGenerate.map((c: any) => [
           c.id,
@@ -644,6 +722,10 @@ export default function TimetableGenerator() {
             if (allocated <= 0) continue;
 
             for (let i = 0; i < allocated; i++) {
+              const subjectCategory = subjectCategoryById.get(subject.id) || 'regular';
+              const categoryPriorityBoost =
+                subjectCategory === 'core' ? 220 : subjectCategory === 'study' ? -260 : 80;
+
               lessonDemands.push({
                 id: `L${lessonIdCounter++}`,
                 classId: currentClass.id,
@@ -652,7 +734,7 @@ export default function TimetableGenerator() {
                 preferredTeacherId: assignment.teacherId,
                 requiredTeacherId: assignment.teacherId,
                 isFixedTeacher: true,
-                priority: 1000,
+                priority: 1000 + categoryPriorityBoost,
                 allocated: false
               });
             }
@@ -687,6 +769,10 @@ export default function TimetableGenerator() {
             let index = 0;
             while (remaining > 0 && candidateTeacherIds.length > 0) {
               const preferredTeacherId: string = candidateTeacherIds[index % candidateTeacherIds.length];
+              const subjectCategory = subjectCategoryById.get(subject.id) || 'regular';
+              const categoryPriorityBoost =
+                subjectCategory === 'core' ? 220 : subjectCategory === 'study' ? -260 : 80;
+
               lessonDemands.push({
                 id: `L${lessonIdCounter++}`,
                 classId: currentClass.id,
@@ -694,7 +780,7 @@ export default function TimetableGenerator() {
                 candidateTeacherIds,
                 preferredTeacherId,
                 isFixedTeacher: false,
-                priority: Math.max(100, 350 - candidateTeacherIds.length * 40),
+                priority: Math.max(100, 350 - candidateTeacherIds.length * 40) + categoryPriorityBoost,
                 allocated: false
               });
               remaining--;
@@ -732,6 +818,20 @@ export default function TimetableGenerator() {
           .sort((a, b) => b.priority - a.priority);
 
         for (const lesson of pendingForClass) {
+          const lessonCategory = subjectCategoryById.get(lesson.subjectId) || 'regular';
+          const totalPeriods = currentSchedule?.periods?.length || 8;
+
+          if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
+            continue;
+          }
+
+          if (
+            lessonCategory === 'study' &&
+            hasAdjacentStudyInSameClass(classTimetable, currentClassId, day, period, subjectCategoryById)
+          ) {
+            continue;
+          }
+
           const subjectFlexBonus = Math.max(0, 60 - lesson.candidateTeacherIds.length * 10);
           let bestTeacherForLesson: { teacher: Teacher; score: number } | null = null;
 
@@ -774,7 +874,13 @@ export default function TimetableGenerator() {
             continue;
           }
 
-          const totalScore = bestTeacherForLesson.score + lesson.priority + subjectFlexBonus;
+          const periodPreferenceScore = calculatePeriodPreferenceScore(lessonCategory, period, totalPeriods);
+          const totalScore =
+            bestTeacherForLesson.score +
+            lesson.priority +
+            subjectFlexBonus +
+            periodPreferenceScore;
+
           if (!bestPlacement || totalScore > bestPlacement.score) {
             bestPlacement = {
               lesson,
