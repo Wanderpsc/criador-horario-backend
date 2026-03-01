@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ interface Teacher {
   observations?: string;
   availability?: TeacherAvailability;
   isActive?: boolean;
+  weeklyWorkload?: number;
 }
 
 interface TeacherSubject {
@@ -66,6 +67,31 @@ interface LessonDemand {
   isFixedTeacher: boolean;
   priority: number;
   allocated: boolean;
+}
+
+interface GenerationChecklistClass {
+  classId: string;
+  classLabel: string;
+  totalSlots: number;
+  totalTargetHours: number;
+  missingSubjects: string[];
+  hasNoSubjects: boolean;
+  isReady: boolean;
+}
+
+interface GenerationChecklistSummary {
+  classesAnalyzed: number;
+  classesReady: number;
+  classesWithIssues: number;
+  classesWithMissingLoad: number;
+  classesWithExcessLoad: number;
+  classesWithoutSubjects: number;
+  totalMissingSubjectAllocations: number;
+}
+
+interface GenerationChecklist {
+  classes: GenerationChecklistClass[];
+  summary: GenerationChecklistSummary;
 }
 
 type SubjectCategory = 'core' | 'study' | 'regular';
@@ -180,6 +206,122 @@ export default function TimetableGenerator() {
   });
 
   const currentSchedule = schedules.find((s: Schedule) => s.id === selectedSchedule);
+
+  const generationChecklist: GenerationChecklist | null = useMemo(() => {
+    if (!selectedSchedule || !currentSchedule || !Array.isArray(classes) || classes.length === 0) {
+      return null;
+    }
+
+    const toPositiveInteger = (value: unknown): number => {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) {
+        return 0;
+      }
+      return Math.max(0, Math.floor(numericValue));
+    };
+
+    const activeTeacherIds = new Set(
+      teachers
+        .filter((teacher: Teacher) => teacher.isActive !== false)
+        .map((teacher: Teacher) => teacher.id)
+    );
+
+    const classesToAnalyze = selectedClassFilter === 'all'
+      ? classes
+      : classes.filter((currentClass: any) => currentClass.id === selectedClassFilter);
+
+    const totalSlots = weekDays.length * (currentSchedule.periods?.length || 0);
+    const checklistClasses: GenerationChecklistClass[] = [];
+
+    for (const currentClass of classesToAnalyze) {
+      const classSubjects = currentClass.subjects || [];
+      const classLabel = `${currentClass.grade?.name || 'Sem série'} ${currentClass.name || ''}`.trim();
+
+      if (classSubjects.length === 0) {
+        checklistClasses.push({
+          classId: currentClass.id,
+          classLabel,
+          totalSlots,
+          totalTargetHours: 0,
+          missingSubjects: [],
+          hasNoSubjects: true,
+          isReady: false
+        });
+        continue;
+      }
+
+      const classSubjectIds = new Set(classSubjects.map((subject: Subject) => subject.id));
+      const classTeacherSubjects = teacherSubjects.filter((ts: TeacherSubject) => {
+        if (!classSubjectIds.has(ts.subjectId)) {
+          return false;
+        }
+        if (!activeTeacherIds.has(ts.teacherId)) {
+          return false;
+        }
+        return ts.classId === currentClass.id || !ts.classId;
+      });
+
+      const missingSubjects: string[] = [];
+      let totalTargetHours = 0;
+
+      for (const subject of classSubjects) {
+        const assignments = classTeacherSubjects.filter((ts: TeacherSubject) => ts.subjectId === subject.id);
+
+        if (assignments.length === 0) {
+          missingSubjects.push(subject.name);
+          continue;
+        }
+
+        const explicitRequested = assignments.reduce((sum: number, ts: TeacherSubject) => {
+          const weeklyHours = toPositiveInteger(ts.weeklyHours);
+          return sum + weeklyHours;
+        }, 0);
+
+        const classConfiguredHours = toPositiveInteger(currentClass.subjectWeeklyHours?.[subject.id]);
+        const subjectDefaultHours = toPositiveInteger(subject.weeklyHours);
+        const fallbackHours = classConfiguredHours || subjectDefaultHours || 2;
+        const subjectTargetHours = explicitRequested > 0 ? explicitRequested : fallbackHours;
+
+        totalTargetHours += subjectTargetHours;
+      }
+
+      const isReady = !missingSubjects.length && !classSubjects.length
+        ? false
+        : !missingSubjects.length && totalTargetHours > 0;
+
+      checklistClasses.push({
+        classId: currentClass.id,
+        classLabel,
+        totalSlots,
+        totalTargetHours,
+        missingSubjects,
+        hasNoSubjects: false,
+        isReady
+      });
+    }
+
+    const summary: GenerationChecklistSummary = {
+      classesAnalyzed: checklistClasses.length,
+      classesReady: checklistClasses.filter((currentClass) => currentClass.isReady).length,
+      classesWithIssues: checklistClasses.filter((currentClass) => !currentClass.isReady).length,
+      classesWithMissingLoad: checklistClasses.filter(
+        (currentClass) => currentClass.totalTargetHours < currentClass.totalSlots
+      ).length,
+      classesWithExcessLoad: checklistClasses.filter(
+        (currentClass) => currentClass.totalTargetHours > currentClass.totalSlots
+      ).length,
+      classesWithoutSubjects: checklistClasses.filter((currentClass) => currentClass.hasNoSubjects).length,
+      totalMissingSubjectAllocations: checklistClasses.reduce(
+        (sum, currentClass) => sum + currentClass.missingSubjects.length,
+        0
+      )
+    };
+
+    return {
+      classes: checklistClasses,
+      summary
+    };
+  }, [selectedSchedule, selectedClassFilter, currentSchedule, classes, teachers, teacherSubjects]);
 
   // Carregar lista de horários salvos ao montar o componente
   useEffect(() => {
@@ -635,6 +777,13 @@ export default function TimetableGenerator() {
       const activeTeachers = teachers.filter((teacher: Teacher) => teacher.isActive !== false);
       const activeTeacherById = new Map(activeTeachers.map((t: Teacher) => [t.id, t]));
       const teacherNameById = new Map(activeTeachers.map((t: Teacher) => [t.id, t.name]));
+      const teacherMaxLoadById = new Map(
+        activeTeachers.map((t: Teacher) => {
+          const maxLoad = Number(t.weeklyWorkload || 0);
+          return [t.id, maxLoad > 0 ? maxLoad : Number.POSITIVE_INFINITY];
+        })
+      );
+      const teacherAssignedLoad = new Map(activeTeachers.map((t: Teacher) => [t.id, 0]));
       const subjectNameById = new Map(subjects.map((s: Subject) => [s.id, s.name]));
       const subjectCategoryById = new Map(
         subjects.map((subject: Subject) => [subject.id, getSubjectCategory(subject.name)])
@@ -678,6 +827,14 @@ export default function TimetableGenerator() {
       const sortedPeriods = [...currentSchedule.periods].sort((a, b) => a.period - b.period);
       let lessonIdCounter = 0;
 
+      const toPositiveInteger = (value: unknown): number => {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue)) {
+          return 0;
+        }
+        return Math.max(0, Math.floor(numericValue));
+      };
+
       for (const currentClass of classesToGenerate) {
         console.log(`\n🏫 Processando turma: ${currentClass.grade?.name} ${currentClass.name}`);
         const classSubjects = currentClass.subjects || [];
@@ -687,16 +844,23 @@ export default function TimetableGenerator() {
           continue;
         }
 
-        const classTeacherSubjects = teacherSubjects.filter((ts: TeacherSubject) =>
-          ts.classId === currentClass.id || !ts.classId
-        );
+        const classSubjectIds = new Set(classSubjects.map((subject: Subject) => subject.id));
+        const classTeacherSubjects = teacherSubjects.filter((ts: TeacherSubject) => {
+          if (!classSubjectIds.has(ts.subjectId)) {
+            return false;
+          }
+
+          if (!activeTeacherById.has(ts.teacherId)) {
+            return false;
+          }
+
+          return ts.classId === currentClass.id || !ts.classId;
+        });
 
         let classLessonsNeeded = 0;
         for (const subject of classSubjects) {
-          const subjectTargetHours = Number(currentClass.subjectWeeklyHours?.[subject.id] || subject.weeklyHours || 2);
-          if (subjectTargetHours <= 0) {
-            continue;
-          }
+          const classConfiguredHours = toPositiveInteger(currentClass.subjectWeeklyHours?.[subject.id]);
+          const subjectDefaultHours = toPositiveInteger(subject.weeklyHours);
 
           const assignments = classTeacherSubjects.filter((ts: TeacherSubject) => {
             if (ts.subjectId !== subject.id) return false;
@@ -712,9 +876,22 @@ export default function TimetableGenerator() {
             typeof ts.weeklyHours === 'number' && Number(ts.weeklyHours) > 0
           );
 
+          const explicitRequested = explicitAssignments.reduce(
+            (sum: number, ts: TeacherSubject) => sum + toPositiveInteger(ts.weeklyHours),
+            0
+          );
+
+          const fallbackHours = classConfiguredHours || subjectDefaultHours || 2;
+          const subjectTargetHours = explicitRequested > 0 ? explicitRequested : fallbackHours;
+
+          if (subjectTargetHours <= 0) {
+            newConflicts.push(`⚠️ ${currentClass.grade?.name} ${currentClass.name}: carga inválida para ${subject.name}`);
+            continue;
+          }
+
           let assignedFromExplicit = 0;
           for (const assignment of explicitAssignments) {
-            const desired = Math.max(0, Math.floor(Number(assignment.weeklyHours || 0)));
+            const desired = toPositiveInteger(assignment.weeklyHours);
             if (desired <= 0) continue;
 
             const remainingForSubject = Math.max(0, subjectTargetHours - assignedFromExplicit);
@@ -742,17 +919,6 @@ export default function TimetableGenerator() {
             const allocationKey = `${currentClass.id}|${subject.id}|${assignment.teacherId}`;
             expectedAllocation.set(allocationKey, (expectedAllocation.get(allocationKey) || 0) + allocated);
             assignedFromExplicit += allocated;
-          }
-
-          const explicitRequested = explicitAssignments.reduce(
-            (sum: number, ts: TeacherSubject) => sum + Math.max(0, Math.floor(Number(ts.weeklyHours || 0))),
-            0
-          );
-
-          if (explicitRequested > subjectTargetHours) {
-            newConflicts.push(
-              `⚠️ ${currentClass.grade?.name} ${currentClass.name}: lotação de ${subject.name} excede a carga da turma (${explicitRequested}/${subjectTargetHours})`
-            );
           }
 
           let remaining = Math.max(0, subjectTargetHours - assignedFromExplicit);
@@ -794,6 +960,12 @@ export default function TimetableGenerator() {
         const totalSlotsAvailable = weekDays.length * currentSchedule.periods.length;
         console.log(`  📊 Aulas necessárias: ${classLessonsNeeded} | Slots disponíveis: ${totalSlotsAvailable}`);
 
+        if (classLessonsNeeded < totalSlotsAvailable) {
+          newConflicts.push(
+            `ℹ️ ${currentClass.grade?.name} ${currentClass.name}: carga total da lotação (${classLessonsNeeded}) é menor que os slots (${totalSlotsAvailable}). Slots restantes ficarão vazios por falta de carga cadastrada.`
+          );
+        }
+
         if (classLessonsNeeded > totalSlotsAvailable) {
           newConflicts.push(`⚠️ ${currentClass.grade?.name} ${currentClass.name}: ${classLessonsNeeded} aulas necessárias, mas apenas ${totalSlotsAvailable} slots disponíveis`);
         }
@@ -802,8 +974,13 @@ export default function TimetableGenerator() {
       const selectBestPlacement = (
         currentClassId: string,
         day: string,
-        period: number
+        period: number,
+        mode: number
       ) => {
+        const allowStudyInEarlyPeriods = mode >= 1;
+        const allowAdjacentStudy = mode >= 2;
+        const allowConsecutiveInClass = mode >= 2;
+
         const classTimetable = allTimetables[currentClassId] || [];
         let bestPlacement:
           | {
@@ -821,11 +998,12 @@ export default function TimetableGenerator() {
           const lessonCategory = subjectCategoryById.get(lesson.subjectId) || 'regular';
           const totalPeriods = currentSchedule?.periods?.length || 8;
 
-          if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
+          if (!allowStudyInEarlyPeriods && lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
             continue;
           }
 
           if (
+            !allowAdjacentStudy &&
             lessonCategory === 'study' &&
             hasAdjacentStudyInSameClass(classTimetable, currentClassId, day, period, subjectCategoryById)
           ) {
@@ -843,6 +1021,12 @@ export default function TimetableGenerator() {
               continue;
             }
 
+            const currentTeacherLoad = teacherAssignedLoad.get(candidate.id) || 0;
+            const teacherMaxLoad = teacherMaxLoadById.get(candidate.id) || Number.POSITIVE_INFINITY;
+            if (currentTeacherLoad >= teacherMaxLoad) {
+              continue;
+            }
+
             if (globalTeacherSchedule[day][period].has(candidate.id)) {
               continue;
             }
@@ -853,7 +1037,7 @@ export default function TimetableGenerator() {
               currentClassId,
               day,
               period
-            )) {
+            ) && !allowConsecutiveInClass) {
               continue;
             }
 
@@ -863,6 +1047,11 @@ export default function TimetableGenerator() {
             }
             if (lesson.isFixedTeacher) {
               teacherScore += 90;
+            }
+
+            if (Number.isFinite(teacherMaxLoad)) {
+              const occupancyRatio = teacherMaxLoad > 0 ? currentTeacherLoad / teacherMaxLoad : 1;
+              teacherScore -= occupancyRatio * 120;
             }
 
             if (!bestTeacherForLesson || teacherScore > bestTeacherForLesson.score) {
@@ -908,7 +1097,7 @@ export default function TimetableGenerator() {
                   continue;
                 }
 
-                const placement = selectBestPlacement(currentClass.id, day, periodInfo.period);
+                const placement = selectBestPlacement(currentClass.id, day, periodInfo.period, attemptMode);
                 if (!placement) {
                   continue;
                 }
@@ -926,6 +1115,10 @@ export default function TimetableGenerator() {
                 placement.lesson.allocated = true;
                 classSchedule[currentClass.id][day].add(periodInfo.period);
                 globalTeacherSchedule[day][periodInfo.period].add(placement.teacher.id);
+                teacherAssignedLoad.set(
+                  placement.teacher.id,
+                  (teacherAssignedLoad.get(placement.teacher.id) || 0) + 1
+                );
 
                 const actualKey = `${currentClass.id}|${placement.lesson.subjectId}|${placement.teacher.id}`;
                 actualAllocation.set(actualKey, (actualAllocation.get(actualKey) || 0) + 1);
@@ -950,9 +1143,9 @@ export default function TimetableGenerator() {
         if (lessonDemands.some((lesson) => !lesson.allocated)) {
           attemptMode++;
           if (attemptMode === 1) {
-            console.log('  🔄 Modo 1: Nova varredura de alocação com mesmas regras rígidas...');
+            console.log('  🔄 Modo 1: relaxando posição de matérias de estudo para preencher lacunas...');
           } else if (attemptMode === 2) {
-            console.log('  🔄 Modo 2: Última varredura mantendo regras de não-sequencialidade...');
+            console.log('  🔄 Modo 2: permitindo sequencialidade pontual para eliminar slots vazios...');
           }
         }
 
@@ -1416,6 +1609,87 @@ export default function TimetableGenerator() {
             }
           </p>
         </div>
+
+        {generationChecklist && (
+          <div className="mb-6 border border-amber-300 bg-amber-50 rounded-lg p-4">
+            <h3 className="text-base font-bold text-amber-900 mb-2">Checklist Automático Pré-Geração</h3>
+            <p className="text-sm text-amber-800 mb-3">
+              Diagnóstico baseado na lotação atual (professor + disciplina + turma) e cargas horárias configuradas.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 text-sm">
+              <div className="bg-white rounded border border-amber-200 p-3">
+                <p className="text-amber-700">Turmas analisadas</p>
+                <p className="text-xl font-bold text-amber-900">{generationChecklist.summary.classesAnalyzed}</p>
+              </div>
+              <div className="bg-white rounded border border-green-200 p-3">
+                <p className="text-green-700">Turmas prontas</p>
+                <p className="text-xl font-bold text-green-800">{generationChecklist.summary.classesReady}</p>
+              </div>
+              <div className="bg-white rounded border border-red-200 p-3">
+                <p className="text-red-700">Turmas com ajustes</p>
+                <p className="text-xl font-bold text-red-800">{generationChecklist.summary.classesWithIssues}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {generationChecklist.classes.map((currentClass) => {
+                const loadDifference = currentClass.totalSlots - currentClass.totalTargetHours;
+                const hasMissingTeachers = currentClass.missingSubjects.length > 0;
+
+                return (
+                  <div
+                    key={currentClass.classId}
+                    className={`rounded border p-3 ${
+                      currentClass.isReady ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      <p className="font-semibold text-gray-900">{currentClass.classLabel}</p>
+                      <p className={`text-xs font-bold ${currentClass.isReady ? 'text-green-700' : 'text-red-700'}`}>
+                        {currentClass.isReady ? 'PRONTA PARA GERAR' : 'AJUSTE NECESSÁRIO'}
+                      </p>
+                    </div>
+
+                    <div className="text-xs text-gray-700 mt-1">
+                      Carga total da turma: {currentClass.totalTargetHours} aulas • Slots: {currentClass.totalSlots}
+                    </div>
+
+                    {loadDifference > 0 && (
+                      <div className="text-xs text-amber-700 mt-1">
+                        Sobra prevista de {loadDifference} slot(s) por carga insuficiente cadastrada.
+                      </div>
+                    )}
+
+                    {loadDifference < 0 && (
+                      <div className="text-xs text-red-700 mt-1">
+                        Déficit de {Math.abs(loadDifference)} slot(s): carga da turma maior que a grade disponível.
+                      </div>
+                    )}
+
+                    {currentClass.hasNoSubjects && (
+                      <div className="text-xs text-red-700 mt-1">
+                        Turma sem disciplinas associadas.
+                      </div>
+                    )}
+
+                    {hasMissingTeachers && (
+                      <div className="text-xs text-red-700 mt-1">
+                        Sem lotação de professor em: {currentClass.missingSubjects.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 text-xs text-amber-900">
+              Resumo: {generationChecklist.summary.totalMissingSubjectAllocations} disciplina(s) sem lotação •{' '}
+              {generationChecklist.summary.classesWithMissingLoad} turma(s) com carga menor que slots •{' '}
+              {generationChecklist.summary.classesWithExcessLoad} turma(s) com carga maior que slots.
+            </div>
+          </div>
+        )}
 
         {/* Campo de Observações */}
         <div className="mb-6">

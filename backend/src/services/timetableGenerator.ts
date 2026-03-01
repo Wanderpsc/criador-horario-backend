@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import Teacher from '../models/Teacher';
 import Subject from '../models/Subject';
 import Timetable from '../models/Timetable';
+import TeacherSubject from '../models/TeacherSubject';
 
 interface GridCell {
   day: number;
@@ -82,6 +83,7 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
     // Buscar professores e disciplinas do usuário
     const teachers = await Teacher.find({ userId }).lean();
     const subjects = await Subject.find({ userId }).lean();
+    const teacherSubjects = await TeacherSubject.find({ userId }).lean();
 
     if (teachers.length === 0) {
       return {
@@ -173,7 +175,8 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       subjectId: mongoose.Types.ObjectId,
       subjectCategory: SubjectCategory,
       day: number,
-      period: number
+      period: number,
+      allowConsecutiveInClass: boolean
     ): boolean => {
       const slotKey = `${day}-${period}`;
       const teacherIdStr = teacherId.toString();
@@ -188,7 +191,7 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       // const teacher = teachers.find(t => t._id.toString() === teacherIdStr);
 
       // Verificar matérias consecutivas
-      if (avoidConsecutive) {
+      if (avoidConsecutive && !allowConsecutiveInClass) {
         const subjectIdStr = subjectId.toString();
         
         // Verificar período anterior
@@ -481,14 +484,50 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
     // Distribuir disciplinas pela grade
     let totalAssignedLessons = 0;
 
+    const subjectTeacherMap = new Map<string, Set<string>>();
+    for (const association of teacherSubjects) {
+      const subjectId = association.subjectId?.toString();
+      const teacherId = association.teacherId?.toString();
+      if (!subjectId || !teacherId) continue;
+
+      if (!subjectTeacherMap.has(subjectId)) {
+        subjectTeacherMap.set(subjectId, new Set());
+      }
+      subjectTeacherMap.get(subjectId)!.add(teacherId);
+    }
+
+    const teacherMaxLessons = new Map<string, number>();
+    for (const teacher of teachers) {
+      const teacherId = teacher._id.toString();
+      const weeklyWorkload = Number((teacher as any).weeklyWorkload || 0);
+      teacherMaxLessons.set(teacherId, weeklyWorkload > 0 ? weeklyWorkload : Number.POSITIVE_INFINITY);
+    }
+
     for (const subject of prioritizedSubjects) {
       // Selecionar professores que podem lecionar esta disciplina
-      // TODO: Implementar filtro por especialização do professor
       const hoursToAssign = subject.workload || subject.workloadHours || 0;
       const subjectCategory = getSubjectCategory(subject.name);
-      
-      // Por enquanto, usar todos os professores disponíveis
-      const availableTeachers = teachers;
+      const subjectIdStr = subject._id.toString();
+      const allowedTeacherIds = subjectTeacherMap.get(subjectIdStr) || new Set<string>();
+
+      const availableTeachers = teachers.filter((teacher) => allowedTeacherIds.has(teacher._id.toString()));
+
+      if (availableTeachers.length === 0) {
+        conflicts.push({
+          type: 'no_available_slots',
+          message: `Disciplina "${subject.name}": sem professor lotado para lecionar.`
+        });
+
+        if (strictSubjectAllocation) {
+          return {
+            success: false,
+            message: `Disciplina "${subject.name}" sem lotação de professor.`,
+            conflicts
+          };
+        }
+
+        continue;
+      }
       
       // Distribuir uniformemente pelos dias
       const targetPerDay = distributeEvenly 
@@ -501,6 +540,8 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
 
       while (assigned < hoursToAssign && attempts < maxAttempts) {
         attempts++;
+
+        const allowConsecutiveInClass = attempts > totalSlots;
 
         const subjectId = new mongoose.Types.ObjectId(subject._id);
         let bestCandidate:
@@ -515,6 +556,13 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
         // Buscar melhor posição para compactar o horário do professor
         for (const teacher of availableTeachers) {
           const teacherId = new mongoose.Types.ObjectId(teacher._id);
+          const teacherIdStr = teacherId.toString();
+          const currentLessons = teacherAssignedLessons.get(teacherIdStr) || 0;
+          const maxLessons = teacherMaxLessons.get(teacherIdStr) || Number.POSITIVE_INFINITY;
+
+          if (currentLessons >= maxLessons) {
+            continue;
+          }
 
           for (let day = 0; day < daysOfWeek; day++) {
             for (let period = 0; period < periodsPerDay; period++) {
@@ -522,7 +570,7 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
                 continue;
               }
 
-              if (!isValidAssignment(teacherId, subjectId, subjectCategory, day, period)) {
+              if (!isValidAssignment(teacherId, subjectId, subjectCategory, day, period, allowConsecutiveInClass)) {
                 continue;
               }
 
@@ -531,7 +579,8 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
                 evaluateImmediateTeacherCompactness(teacherId, day, period) +
                 evaluatePeriodPreferenceScore(subjectCategory, day, period) +
                 evaluateSubjectDistributionScore(subjectId, day, targetPerDay) +
-                evaluateTeacherInclusionScore(teacherId, totalWorkload - totalAssignedLessons);
+                evaluateTeacherInclusionScore(teacherId, totalWorkload - totalAssignedLessons) -
+                (Number.isFinite(maxLessons) ? (currentLessons / Math.max(1, maxLessons)) * 120 : 0);
 
               if (!bestCandidate || score > bestCandidate.score) {
                 bestCandidate = { teacherId, day, period, score };
@@ -606,7 +655,7 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
               continue;
             }
 
-            if (!isValidAssignment(toTeacherId, cell.subjectId, 'regular', day, period)) {
+            if (!isValidAssignment(toTeacherId, cell.subjectId, 'regular', day, period, true)) {
               continue;
             }
 

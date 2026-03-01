@@ -133,7 +133,7 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       // Buscar o subject
       const subject = subjects.find(s => s._id.toString() === ts.subjectId.toString());
       
-      if (subject && ts.classId) {
+      if (subject) {
         let weeklyHours = 2; // Padrão: 2 aulas/semana
         let specificHours: number | undefined = undefined;
         let teacherSpecificHours: number | undefined = undefined;
@@ -144,7 +144,9 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
           weeklyHours = teacherSpecificHours!; // Já validamos que não é undefined
         } else {
           // PRIORIDADE 2: Carga horária específica da turma
-          const classItem = classes.find((c: any) => c._id.toString() === ts.classId!.toString());
+          const classItem = ts.classId
+            ? classes.find((c: any) => c._id.toString() === ts.classId!.toString())
+            : undefined;
           
           if (classItem && classItem.subjectWeeklyHours) {
             // Buscar carga horária específica para este componente nesta turma
@@ -167,7 +169,9 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
         
         teacherWorkload[teacherId].totalLessons += weeklyHours;
         teacherWorkload[teacherId].subjects.add(ts.subjectId.toString());
-        teacherWorkload[teacherId].classes.add(ts.classId.toString());
+        if (ts.classId) {
+          teacherWorkload[teacherId].classes.add(ts.classId.toString());
+        }
 
         // Log detalhado para debug
         const teacher = activeTeachers.find(t => t._id.toString() === teacherId);
