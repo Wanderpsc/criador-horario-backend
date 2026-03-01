@@ -1058,7 +1058,7 @@ export default function TimetableGenerator() {
               lesson.subjectId
             );
 
-            if (sameStudyCountInDay > 0 && mode < 2) {
+            if (sameStudyCountInDay > 0) {
               continue;
             }
 
@@ -1069,7 +1069,7 @@ export default function TimetableGenerator() {
               subjectCategoryById
             );
 
-            if (studyCountInDay > 0 && mode < 2) {
+            if (studyCountInDay > 0) {
               continue;
             }
 
@@ -1094,7 +1094,7 @@ export default function TimetableGenerator() {
             lessonCategory === 'study' &&
             hasAdjacentStudyInSameClass(classTimetable, currentClassId, day, period, subjectCategoryById)
           ) {
-            softPenalty -= mode === 0 ? 180 : mode === 1 ? 90 : 30;
+            continue;
           }
 
           const subjectFlexBonus = Math.max(0, 60 - lesson.candidateTeacherIds.length * 10);
@@ -1288,6 +1288,7 @@ export default function TimetableGenerator() {
             const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
             const classTimetable = allTimetables[classId] || [];
             const targetTeacher = activeTeacherById.get(teacherId);
+            const targetCategory = subjectCategoryById.get(subjectId) || 'regular';
 
             if (!targetTeacher) {
               continue;
@@ -1306,6 +1307,31 @@ export default function TimetableGenerator() {
 
               if (slot.subjectId === subjectId && slot.teacherId === teacherId) {
                 continue;
+              }
+
+              if (targetCategory === 'study') {
+                const sameDayStudyCount = countStudySlotsInDay(
+                  classTimetable,
+                  classId,
+                  slot.day,
+                  subjectCategoryById
+                );
+
+                if (sameDayStudyCount > 0) {
+                  continue;
+                }
+
+                if (
+                  hasAdjacentStudyInSameClass(
+                    classTimetable,
+                    classId,
+                    slot.day,
+                    slot.period,
+                    subjectCategoryById
+                  )
+                ) {
+                  continue;
+                }
               }
 
               if (!isTeacherAvailableAtTime(targetTeacher, slot.day, slot.period)) {
