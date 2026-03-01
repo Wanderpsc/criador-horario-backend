@@ -723,6 +723,19 @@ export default function TimetableGenerator() {
     return previousIsStudy || nextIsStudy;
   };
 
+  const countStudySlotsInDay = (
+    timetable: TimetableSlot[],
+    classId: string,
+    day: string,
+    subjectCategoryById: Map<string, SubjectCategory>
+  ): number => {
+    return timetable.filter((slot) => {
+      if (slot.classId !== classId) return false;
+      if (slot.day !== day) return false;
+      return subjectCategoryById.get(slot.subjectId) === 'study';
+    }).length;
+  };
+
   // Função para gerar horários para TODAS as turmas SEM CONFLITOS
   const generateTimetable = () => {
     if (!selectedSchedule) {
@@ -1020,6 +1033,25 @@ export default function TimetableGenerator() {
           let softPenalty = 0;
           if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
             softPenalty -= mode === 0 ? 220 : mode === 1 ? 120 : 40;
+          }
+
+          if (lessonCategory === 'study') {
+            const studyCountInDay = countStudySlotsInDay(
+              classTimetable,
+              currentClassId,
+              day,
+              subjectCategoryById
+            );
+
+            if (studyCountInDay > 0 && mode < 2) {
+              continue;
+            }
+
+            if (studyCountInDay > 0) {
+              softPenalty -= studyCountInDay * 220;
+            } else {
+              softPenalty += 90;
+            }
           }
 
           if (
