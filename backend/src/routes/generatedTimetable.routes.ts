@@ -1,14 +1,43 @@
 import { Router } from 'express';
 import GeneratedTimetable from '../models/GeneratedTimetable';
+import TeacherSubject from '../models/TeacherSubject';
+import Class from '../models/Class';
+import Subject from '../models/Subject';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
+
+const toPositiveInteger = (value: unknown): number => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(numericValue));
+};
+
+const getClassSubjectHours = (classItem: any, subjectId: string): number | undefined => {
+  if (!classItem?.subjectWeeklyHours) {
+    return undefined;
+  }
+
+  const subjectWeeklyHours = classItem.subjectWeeklyHours;
+  if (subjectWeeklyHours instanceof Map) {
+    return subjectWeeklyHours.get(subjectId);
+  }
+
+  if (typeof subjectWeeklyHours.get === 'function') {
+    return subjectWeeklyHours.get(subjectId);
+  }
+
+  return subjectWeeklyHours[subjectId];
+};
 
 // Salvar ou atualizar horários
 router.post('/', auth, async (req: AuthRequest, res) => {
   try {
     // ✅ ISOLAMENTO DE DADOS POR ESCOLA
     const schoolId = req.user?.schoolId || req.user?.id;
+    const userId = req.user?.id;
     
     console.log('📥 POST /generated-timetables recebido');
     console.log('📥 req.body:', JSON.stringify(req.body, null, 2).substring(0, 500));
@@ -33,6 +62,118 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       });
     }
 
+    const classIds = Object.keys(timetables || {});
+    if (classIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nenhuma turma foi enviada para salvar'
+      });
+    }
+
+    const teacherSubjects = await TeacherSubject.find({
+      userId,
+      classId: { $in: classIds }
+    }).lean();
+
+    const classDocs = await Class.find({ _id: { $in: classIds } }).lean();
+    const classById = new Map(classDocs.map((classItem: any) => [String(classItem._id), classItem]));
+
+    const subjectIds = Array.from(
+      new Set(
+        teacherSubjects
+          .map((association: any) => String(association.subjectId || ''))
+          .filter(Boolean)
+      )
+    );
+    const subjectDocs = subjectIds.length > 0
+      ? await Subject.find({ _id: { $in: subjectIds } }).lean()
+      : [];
+    const subjectById = new Map(subjectDocs.map((subjectItem: any) => [String(subjectItem._id), subjectItem]));
+
+    const expectedAllocation = new Map<string, number>();
+    for (const association of teacherSubjects as any[]) {
+      if (!association.classId || !association.subjectId || !association.teacherId) {
+        continue;
+      }
+
+      const classId = String(association.classId);
+      const subjectId = String(association.subjectId);
+      const teacherId = String(association.teacherId);
+
+      const classItem = classById.get(classId);
+      const subjectItem = subjectById.get(subjectId);
+      if (!classItem || !subjectItem) {
+        continue;
+      }
+
+      let expectedHours: number | undefined =
+        association.weeklyHours !== undefined && association.weeklyHours !== null
+          ? Number(association.weeklyHours)
+          : undefined;
+
+      if (expectedHours === undefined || Number.isNaN(expectedHours)) {
+        const classHours = getClassSubjectHours(classItem, subjectId);
+        if (classHours !== undefined && classHours !== null) {
+          expectedHours = Number(classHours);
+        } else if (subjectItem.weeklyHours !== undefined && subjectItem.weeklyHours !== null) {
+          expectedHours = Number(subjectItem.weeklyHours);
+        } else {
+          expectedHours = 2;
+        }
+      }
+
+      const normalizedExpected = toPositiveInteger(expectedHours);
+      const key = `${classId}|${subjectId}|${teacherId}`;
+      expectedAllocation.set(key, (expectedAllocation.get(key) || 0) + normalizedExpected);
+    }
+
+    const generatedAllocation = new Map<string, number>();
+    for (const [classId, slots] of Object.entries(timetables as Record<string, any[]>)) {
+      const classSlots = Array.isArray(slots) ? slots : [];
+      for (const slot of classSlots) {
+        if (!slot?.subjectId || !slot?.teacherId) {
+          continue;
+        }
+        const key = `${classId}|${String(slot.subjectId)}|${String(slot.teacherId)}`;
+        generatedAllocation.set(key, (generatedAllocation.get(key) || 0) + 1);
+      }
+    }
+
+    const deficits: any[] = [];
+    for (const [key, expected] of expectedAllocation.entries()) {
+      const generated = generatedAllocation.get(key) || 0;
+      if (generated >= expected) {
+        continue;
+      }
+
+      const [classId, subjectId, teacherId] = key.split('|');
+      const classItem = classById.get(classId);
+      const subjectItem = subjectById.get(subjectId);
+
+      deficits.push({
+        classId,
+        className: classItem?.name || classId,
+        subjectId,
+        subjectName: subjectItem?.name || subjectId,
+        teacherId,
+        expected,
+        generated,
+        missing: expected - generated
+      });
+    }
+
+    if (deficits.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Horário incompleto: existem lotações com déficit de aulas. Gere novamente antes de salvar.',
+        deficits,
+        summary: {
+          totalDeficits: deficits.length,
+          totalMissingLessons: deficits.reduce((sum, item) => sum + item.missing, 0)
+        }
+      });
+    }
+
     // ✅ Deletar apenas horários da mesma escola
     const deleted = await GeneratedTimetable.deleteMany({ 
       scheduleId, 
@@ -51,7 +192,8 @@ router.post('/', auth, async (req: AuthRequest, res) => {
         classId,
         slots,
         title,
-        school: schoolId  // ✅ Associar à escola
+        school: schoolId,  // ✅ Associar à escola
+        userId
       });
       await timetable.save();
       savedTimetables.push(timetable);
@@ -118,14 +260,14 @@ router.get('/list/:scheduleId', auth, async (req: AuthRequest, res) => {
 router.get('/', auth, async (req: AuthRequest, res) => {
   try {
     console.log('📊 GET /generated-timetables - req.user.id:', req.user!.id);
+    const schoolId = req.user?.schoolId || req.user?.id;
     
-    // Buscar horários com userId do usuário OU sem userId (para compatibilidade com dados antigos)
+    // Buscar apenas horários do usuário/escola autenticada
     const timetables = await GeneratedTimetable.find({
       $or: [
+        { school: schoolId },
         { userId: req.user!.id },
-        { userId: req.user!.id.toString() },
-        { userId: { $exists: false } },
-        { userId: null }
+        { userId: req.user!.id.toString() }
       ]
     }).sort({ createdAt: -1 });
     
@@ -681,18 +823,14 @@ router.delete('/:scheduleId', auth, async (req: AuthRequest, res) => {
 // Deletar por título (sem precisar de scheduleId)
 router.delete('/by-title/:title', auth, async (req: AuthRequest, res) => {
   try {
+    const schoolId = req.user?.schoolId || req.user?.id;
     const { title } = req.params;
-    console.log('🗑️ Excluindo horários:', { title, userId: req.user!.id });
+    console.log('🗑️ Excluindo horários:', { title, schoolId, userId: req.user!.id });
 
-    // Deletar apenas horários do usuário autenticado
+    // Deletar apenas horários da escola autenticada
     const result = await GeneratedTimetable.deleteMany({ 
       title,
-      $or: [
-        { userId: req.user!.id },
-        { userId: req.user!.id.toString() },
-        { userId: { $exists: false } },
-        { userId: null }
-      ]
+      school: schoolId
     });
 
     console.log('✅ Deletados:', result.deletedCount);
