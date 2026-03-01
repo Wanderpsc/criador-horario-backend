@@ -69,9 +69,9 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       name,
       year,
       semester,
-      daysOfWeek,
+      daysOfWeek: _daysOfWeek,
       periodsPerDay,
-      saturdayEquivalent,
+      saturdayEquivalent: _saturdayEquivalent,
       avoidConsecutive = true,
       distributeEvenly = true,
       compactTeacherSchedule = true,
@@ -79,6 +79,10 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       strictSubjectAllocation = true,
       requireAllTeachersAllocated = true
     } = options;
+
+    // REGRA FIXA: gerador de horário trabalha apenas de segunda a sexta
+    const daysOfWeek = 5;
+    const saturdayEquivalent = undefined;
 
     // Buscar professores e disciplinas do usuário
     const teachers = await Teacher.find({ userId }).lean();

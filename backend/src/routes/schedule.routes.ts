@@ -93,7 +93,7 @@ router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
         ? scheduleData.periods.length
         : Number(scheduleData.numberOfPeriods || 8);
 
-    const daysOfWeek = scheduleData.includeSaturday ? 6 : 5;
+    const daysOfWeek = 5; // Regra fixa do gerador: segunda a sexta
     const year = Number(scheduleData.year || new Date().getFullYear());
     const semester = String(scheduleData.semester || '1');
 
@@ -105,7 +105,7 @@ router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
       semester,
       daysOfWeek,
       periodsPerDay,
-      saturdayEquivalent: scheduleData.saturdayEquivalent,
+      saturdayEquivalent: undefined,
       avoidConsecutive: true,
       distributeEvenly: true,
       compactTeacherSchedule: true,
