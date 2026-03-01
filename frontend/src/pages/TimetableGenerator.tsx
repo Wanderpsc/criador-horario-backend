@@ -1019,6 +1019,7 @@ export default function TimetableGenerator() {
               lesson: LessonDemand;
               teacher: Teacher;
               score: number;
+              violatesAvailability: boolean;
             }
           | null = null;
 
@@ -1062,13 +1063,16 @@ export default function TimetableGenerator() {
           }
 
           const subjectFlexBonus = Math.max(0, 60 - lesson.candidateTeacherIds.length * 10);
-          let bestTeacherForLesson: { teacher: Teacher; score: number } | null = null;
+          let bestTeacherForLesson: { teacher: Teacher; score: number; violatesAvailability: boolean } | null = null;
 
           for (const teacherId of lesson.candidateTeacherIds) {
             const candidate = activeTeacherById.get(teacherId);
             if (!candidate) continue;
 
-            if (!isTeacherAvailableAtTime(candidate, day, period)) {
+            const isAvailableAtTime = isTeacherAvailableAtTime(candidate, day, period);
+            const canOverrideAvailability = mode >= 3;
+
+            if (!isAvailableAtTime && !canOverrideAvailability) {
               continue;
             }
 
@@ -1093,6 +1097,9 @@ export default function TimetableGenerator() {
             }
 
             let teacherScore = calculateTeacherPreferenceScore(globalTeacherSchedule, candidate.id, day, period);
+            if (!isAvailableAtTime) {
+              teacherScore -= 550;
+            }
             if (lesson.preferredTeacherId === candidate.id) {
               teacherScore += 25;
             }
@@ -1106,7 +1113,11 @@ export default function TimetableGenerator() {
             }
 
             if (!bestTeacherForLesson || teacherScore > bestTeacherForLesson.score) {
-              bestTeacherForLesson = { teacher: candidate, score: teacherScore };
+              bestTeacherForLesson = {
+                teacher: candidate,
+                score: teacherScore,
+                violatesAvailability: !isAvailableAtTime
+              };
             }
           }
 
@@ -1126,7 +1137,8 @@ export default function TimetableGenerator() {
             bestPlacement = {
               lesson,
               teacher: bestTeacherForLesson.teacher,
-              score: totalScore
+              score: totalScore,
+              violatesAvailability: bestTeacherForLesson.violatesAvailability
             };
           }
         }
@@ -1134,8 +1146,9 @@ export default function TimetableGenerator() {
         return bestPlacement;
       };
 
+      let availabilityOverridesUsed = 0;
       let attemptMode = 0;
-      while (attemptMode < 3 && lessonDemands.some((lesson) => !lesson.allocated)) {
+      while (attemptMode < 4 && lessonDemands.some((lesson) => !lesson.allocated)) {
         let allocatedThisMode = 0;
         let progress = true;
 
@@ -1163,6 +1176,10 @@ export default function TimetableGenerator() {
                   teacherId: placement.teacher.id,
                   classId: currentClass.id
                 });
+
+                if (placement.violatesAvailability) {
+                  availabilityOverridesUsed++;
+                }
 
                 placement.lesson.allocated = true;
                 classSchedule[currentClass.id][day].add(periodInfo.period);
@@ -1198,10 +1215,12 @@ export default function TimetableGenerator() {
             console.log('  🔄 Modo 1: reduzindo penalidades de preferências para fechar lacunas...');
           } else if (attemptMode === 2) {
             console.log('  🔄 Modo 2: priorizando alocação total da lotação acima de preferências de distribuição...');
+          } else if (attemptMode === 3) {
+            console.log('  🔄 Modo 3: fallback final para completar carga, permitindo alocação fora da disponibilidade quando necessário...');
           }
         }
 
-        if (allocatedThisMode === 0 && attemptMode >= 2) {
+        if (allocatedThisMode === 0 && attemptMode >= 3) {
           break;
         }
       }
@@ -1306,6 +1325,12 @@ export default function TimetableGenerator() {
       const repairedLessons = rebalanceDeficits();
       if (repairedLessons > 0) {
         console.log(`  🔧 Rebalanceamento aplicado: ${repairedLessons} aula(s) realocadas para reduzir déficits.`);
+      }
+
+      if (availabilityOverridesUsed > 0) {
+        newConflicts.push(
+          `ℹ️ ${availabilityOverridesUsed} aula(s) foram alocadas fora da disponibilidade para cumprir a carga horária total.`
+        );
       }
 
       for (const currentClass of classesToGenerate) {
