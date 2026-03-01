@@ -162,17 +162,7 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       });
     }
 
-    if (deficits.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Horário incompleto: existem lotações com déficit de aulas. Gere novamente antes de salvar.',
-        deficits,
-        summary: {
-          totalDeficits: deficits.length,
-          totalMissingLessons: deficits.reduce((sum, item) => sum + item.missing, 0)
-        }
-      });
-    }
+    const hasDeficits = deficits.length > 0;
 
     // ✅ Deletar apenas horários da mesma escola
     const deleted = await GeneratedTimetable.deleteMany({ 
@@ -202,9 +192,20 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     console.log(`✅ ${savedTimetables.length} horários salvos com sucesso!`);
 
     res.json({ 
-      success: true, 
+      success: true,
       data: savedTimetables,
-      message: 'Horários salvos com sucesso'
+      message: hasDeficits
+        ? 'Horários salvos com avisos: existem lotações com déficit de aulas'
+        : 'Horários salvos com sucesso',
+      warnings: hasDeficits
+        ? {
+            deficits,
+            summary: {
+              totalDeficits: deficits.length,
+              totalMissingLessons: deficits.reduce((sum, item) => sum + item.missing, 0)
+            }
+          }
+        : undefined
     });
   } catch (error: any) {
     console.error('❌ ERRO ao salvar horários:', error.message);
