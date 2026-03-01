@@ -776,12 +776,8 @@ export default function TimetableGenerator() {
       const activeTeachers = teachers.filter((teacher: Teacher) => teacher.isActive !== false);
       const activeTeacherById = new Map(activeTeachers.map((t: Teacher) => [t.id, t]));
       const teacherNameById = new Map(activeTeachers.map((t: Teacher) => [t.id, t.name]));
-      const teacherMaxLoadById = new Map(
-        activeTeachers.map((t: Teacher) => {
-          const maxLoad = Number(t.weeklyWorkload || 0);
-          return [t.id, maxLoad > 0 ? maxLoad : Number.POSITIVE_INFINITY];
-        })
-      );
+      const teacherMaxLoadById = new Map(activeTeachers.map((t: Teacher) => [t.id, Number.POSITIVE_INFINITY]));
+      const teacherRequiredLoad = new Map(activeTeachers.map((t: Teacher) => [t.id, 0]));
       const teacherAssignedLoad = new Map(activeTeachers.map((t: Teacher) => [t.id, 0]));
       const subjectNameById = new Map(subjects.map((s: Subject) => [s.id, s.name]));
       const subjectCategoryById = new Map(
@@ -834,6 +830,23 @@ export default function TimetableGenerator() {
         return Math.max(0, Math.floor(numericValue));
       };
 
+      const getClassConfiguredHours = (currentClass: any, subjectId: string): number => {
+        const weeklyHoursRaw = currentClass?.subjectWeeklyHours;
+        if (!weeklyHoursRaw) {
+          return 0;
+        }
+
+        if (weeklyHoursRaw instanceof Map) {
+          return toPositiveInteger(weeklyHoursRaw.get(subjectId));
+        }
+
+        if (typeof weeklyHoursRaw.get === 'function') {
+          return toPositiveInteger(weeklyHoursRaw.get(subjectId));
+        }
+
+        return toPositiveInteger(weeklyHoursRaw[subjectId]);
+      };
+
       for (const currentClass of classesToGenerate) {
         console.log(`\n🏫 Processando turma: ${currentClass.grade?.name} ${currentClass.name}`);
         const classSubjects = currentClass.subjects || [];
@@ -858,7 +871,7 @@ export default function TimetableGenerator() {
 
         let classLessonsNeeded = 0;
         for (const subject of classSubjects) {
-          const classConfiguredHours = toPositiveInteger(currentClass.subjectWeeklyHours?.[subject.id]);
+          const classConfiguredHours = getClassConfiguredHours(currentClass, subject.id);
           const subjectDefaultHours = toPositiveInteger(subject.weeklyHours);
 
           const assignments = classTeacherSubjects.filter((ts: TeacherSubject) => {
@@ -888,20 +901,39 @@ export default function TimetableGenerator() {
             continue;
           }
 
-          let assignedFromExplicit = 0;
-          for (const assignment of explicitAssignments) {
-            const desired = toPositiveInteger(assignment.weeklyHours);
-            if (desired <= 0) continue;
+          const nonExplicitAssignments = assignments.filter((ts: TeacherSubject) =>
+            !(typeof ts.weeklyHours === 'number' && Number(ts.weeklyHours) > 0)
+          );
 
-            const remainingForSubject = Math.max(0, subjectTargetHours - assignedFromExplicit);
-            const allocated = Math.min(desired, remainingForSubject);
-            if (allocated <= 0) continue;
+          const nonExplicitHoursByTeacher = new Map<string, number>();
+          const remainingForNonExplicit = Math.max(0, subjectTargetHours - explicitRequested);
 
-            for (let i = 0; i < allocated; i++) {
-              const subjectCategory = subjectCategoryById.get(subject.id) || 'regular';
-              const categoryPriorityBoost =
-                subjectCategory === 'core' ? 220 : subjectCategory === 'study' ? -260 : 80;
+          if (nonExplicitAssignments.length > 0 && remainingForNonExplicit > 0) {
+            const baseHours = Math.floor(remainingForNonExplicit / nonExplicitAssignments.length);
+            const extraHours = remainingForNonExplicit % nonExplicitAssignments.length;
 
+            nonExplicitAssignments.forEach((assignment: TeacherSubject, index: number) => {
+              const distributedHours = baseHours + (index < extraHours ? 1 : 0);
+              nonExplicitHoursByTeacher.set(assignment.teacherId, distributedHours);
+            });
+          }
+
+          let subjectAllocatedHours = 0;
+          for (const assignment of assignments) {
+            const isExplicit = typeof assignment.weeklyHours === 'number' && Number(assignment.weeklyHours) > 0;
+            const assignedHours = isExplicit
+              ? toPositiveInteger(assignment.weeklyHours)
+              : toPositiveInteger(nonExplicitHoursByTeacher.get(assignment.teacherId));
+
+            if (assignedHours <= 0) {
+              continue;
+            }
+
+            const subjectCategory = subjectCategoryById.get(subject.id) || 'regular';
+            const categoryPriorityBoost =
+              subjectCategory === 'core' ? 220 : subjectCategory === 'study' ? -260 : 80;
+
+            for (let i = 0; i < assignedHours; i++) {
               lessonDemands.push({
                 id: `L${lessonIdCounter++}`,
                 classId: currentClass.id,
@@ -916,41 +948,22 @@ export default function TimetableGenerator() {
             }
 
             const allocationKey = `${currentClass.id}|${subject.id}|${assignment.teacherId}`;
-            expectedAllocation.set(allocationKey, (expectedAllocation.get(allocationKey) || 0) + allocated);
-            assignedFromExplicit += allocated;
+            expectedAllocation.set(allocationKey, (expectedAllocation.get(allocationKey) || 0) + assignedHours);
+            teacherRequiredLoad.set(
+              assignment.teacherId,
+              (teacherRequiredLoad.get(assignment.teacherId) || 0) + assignedHours
+            );
+            subjectAllocatedHours += assignedHours;
           }
 
-          let remaining = Math.max(0, subjectTargetHours - assignedFromExplicit);
-          if (remaining > 0) {
-            const nonExplicitAssignments = assignments.filter((ts: TeacherSubject) =>
-              !(typeof ts.weeklyHours === 'number' && Number(ts.weeklyHours) > 0)
+          if (subjectAllocatedHours < subjectTargetHours) {
+            const missingForSubject = subjectTargetHours - subjectAllocatedHours;
+            const teacherNames = assignments
+              .map((assignment: TeacherSubject) => teacherNameById.get(assignment.teacherId) || assignment.teacherId)
+              .join(', ');
+            newConflicts.push(
+              `⚠️ ${currentClass.grade?.name} ${currentClass.name}: ${subject.name} com ${missingForSubject} aula(s) sem professor lotado com carga definida (${teacherNames})`
             );
-
-            const distributionTargets = nonExplicitAssignments.length > 0 ? nonExplicitAssignments : assignments;
-            const candidateTeacherIds: string[] = Array.from(
-              new Set<string>(distributionTargets.map((ts: TeacherSubject) => ts.teacherId))
-            );
-
-            let index = 0;
-            while (remaining > 0 && candidateTeacherIds.length > 0) {
-              const preferredTeacherId: string = candidateTeacherIds[index % candidateTeacherIds.length];
-              const subjectCategory = subjectCategoryById.get(subject.id) || 'regular';
-              const categoryPriorityBoost =
-                subjectCategory === 'core' ? 220 : subjectCategory === 'study' ? -260 : 80;
-
-              lessonDemands.push({
-                id: `L${lessonIdCounter++}`,
-                classId: currentClass.id,
-                subjectId: subject.id,
-                candidateTeacherIds,
-                preferredTeacherId,
-                isFixedTeacher: false,
-                priority: Math.max(100, 350 - candidateTeacherIds.length * 40) + categoryPriorityBoost,
-                allocated: false
-              });
-              remaining--;
-              index++;
-            }
           }
 
           classLessonsNeeded += subjectTargetHours;
@@ -970,16 +983,23 @@ export default function TimetableGenerator() {
         }
       }
 
+      for (const teacher of activeTeachers) {
+        const configuredLoad = toPositiveInteger(teacher.weeklyWorkload);
+        const requiredLoad = teacherRequiredLoad.get(teacher.id) || 0;
+        const effectiveMaxLoad = Math.max(configuredLoad, requiredLoad);
+
+        teacherMaxLoadById.set(
+          teacher.id,
+          effectiveMaxLoad > 0 ? effectiveMaxLoad : Number.POSITIVE_INFINITY
+        );
+      }
+
       const selectBestPlacement = (
         currentClassId: string,
         day: string,
         period: number,
         mode: number
       ) => {
-        const allowStudyInEarlyPeriods = mode >= 1;
-        const allowAdjacentStudy = mode >= 2;
-        const allowConsecutiveInClass = mode >= 2;
-
         const classTimetable = allTimetables[currentClassId] || [];
         let bestPlacement:
           | {
@@ -997,16 +1017,16 @@ export default function TimetableGenerator() {
           const lessonCategory = subjectCategoryById.get(lesson.subjectId) || 'regular';
           const totalPeriods = currentSchedule?.periods?.length || 8;
 
-          if (!allowStudyInEarlyPeriods && lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
-            continue;
+          let softPenalty = 0;
+          if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
+            softPenalty -= mode === 0 ? 220 : mode === 1 ? 120 : 40;
           }
 
           if (
-            !allowAdjacentStudy &&
             lessonCategory === 'study' &&
             hasAdjacentStudyInSameClass(classTimetable, currentClassId, day, period, subjectCategoryById)
           ) {
-            continue;
+            softPenalty -= mode === 0 ? 180 : mode === 1 ? 90 : 30;
           }
 
           const subjectFlexBonus = Math.max(0, 60 - lesson.candidateTeacherIds.length * 10);
@@ -1036,8 +1056,8 @@ export default function TimetableGenerator() {
               currentClassId,
               day,
               period
-            ) && !allowConsecutiveInClass) {
-              continue;
+            )) {
+              softPenalty -= mode === 0 ? 140 : mode === 1 ? 70 : 20;
             }
 
             let teacherScore = calculateTeacherPreferenceScore(globalTeacherSchedule, candidate.id, day, period);
@@ -1067,7 +1087,8 @@ export default function TimetableGenerator() {
             bestTeacherForLesson.score +
             lesson.priority +
             subjectFlexBonus +
-            periodPreferenceScore;
+            periodPreferenceScore +
+            softPenalty;
 
           if (!bestPlacement || totalScore > bestPlacement.score) {
             bestPlacement = {
@@ -1142,9 +1163,9 @@ export default function TimetableGenerator() {
         if (lessonDemands.some((lesson) => !lesson.allocated)) {
           attemptMode++;
           if (attemptMode === 1) {
-            console.log('  🔄 Modo 1: relaxando posição de matérias de estudo para preencher lacunas...');
+            console.log('  🔄 Modo 1: reduzindo penalidades de preferências para fechar lacunas...');
           } else if (attemptMode === 2) {
-            console.log('  🔄 Modo 2: permitindo sequencialidade pontual para eliminar slots vazios...');
+            console.log('  🔄 Modo 2: priorizando alocação total da lotação acima de preferências de distribuição...');
           }
         }
 
