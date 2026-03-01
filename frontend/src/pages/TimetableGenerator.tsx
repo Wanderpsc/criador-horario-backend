@@ -1260,6 +1260,160 @@ export default function TimetableGenerator() {
         }
       }
 
+      const fillPendingStudyDeficitsInEmptySlots = () => {
+        let filledLessons = 0;
+        const periodPriority = [...sortedPeriods].sort((a, b) => b.period - a.period);
+
+        const studyDeficits = Array.from(expectedAllocation.entries())
+          .map(([allocationKey, expected]) => {
+            const allocated = actualAllocation.get(allocationKey) || 0;
+            return {
+              allocationKey,
+              expected,
+              allocated,
+              missing: expected - allocated
+            };
+          })
+          .filter((entry) => {
+            if (entry.missing <= 0) return false;
+            const [, subjectId] = entry.allocationKey.split('|');
+            return (subjectCategoryById.get(subjectId) || 'regular') === 'study';
+          })
+          .sort((a, b) => b.missing - a.missing);
+
+        for (const deficitEntry of studyDeficits) {
+          let remaining = deficitEntry.missing;
+          const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
+          const teacher = activeTeacherById.get(teacherId);
+
+          if (!teacher) {
+            continue;
+          }
+
+          while (remaining > 0) {
+            const classTimetable = allTimetables[classId] || [];
+            let chosenSlot:
+              | {
+                  day: string;
+                  period: number;
+                  violatesAvailability: boolean;
+                }
+              | null = null;
+
+            for (const enforceAvailability of [true, false]) {
+              for (const day of weekDays) {
+                const studyCountInDay = countStudySlotsInDay(
+                  classTimetable,
+                  classId,
+                  day,
+                  subjectCategoryById
+                );
+
+                if (studyCountInDay > 0) {
+                  continue;
+                }
+
+                for (const periodInfo of periodPriority) {
+                  const period = periodInfo.period;
+
+                  if (classSchedule[classId][day].has(period)) {
+                    continue;
+                  }
+
+                  if (globalTeacherSchedule[day][period].has(teacherId)) {
+                    continue;
+                  }
+
+                  const availableAtTime = isTeacherAvailableAtTime(teacher, day, period);
+                  if (enforceAvailability && !availableAtTime) {
+                    continue;
+                  }
+
+                  if (
+                    hasAdjacentStudyInSameClass(
+                      classTimetable,
+                      classId,
+                      day,
+                      period,
+                      subjectCategoryById
+                    )
+                  ) {
+                    continue;
+                  }
+
+                  chosenSlot = {
+                    day,
+                    period,
+                    violatesAvailability: !availableAtTime
+                  };
+                  break;
+                }
+
+                if (chosenSlot) {
+                  break;
+                }
+              }
+
+              if (chosenSlot) {
+                break;
+              }
+            }
+
+            if (!chosenSlot) {
+              break;
+            }
+
+            allTimetables[classId].push({
+              day: chosenSlot.day,
+              period: chosenSlot.period,
+              subjectId,
+              teacherId,
+              classId
+            });
+
+            classSchedule[classId][chosenSlot.day].add(chosenSlot.period);
+            globalTeacherSchedule[chosenSlot.day][chosenSlot.period].add(teacherId);
+            teacherAssignedLoad.set(
+              teacherId,
+              (teacherAssignedLoad.get(teacherId) || 0) + 1
+            );
+
+            actualAllocation.set(
+              deficitEntry.allocationKey,
+              (actualAllocation.get(deficitEntry.allocationKey) || 0) + 1
+            );
+
+            if (chosenSlot.violatesAvailability) {
+              availabilityOverridesUsed++;
+            }
+
+            const pendingLesson = lessonDemands.find((lesson) => {
+              if (lesson.allocated) return false;
+              if (lesson.classId !== classId) return false;
+              if (lesson.subjectId !== subjectId) return false;
+              if (lesson.requiredTeacherId) {
+                return lesson.requiredTeacherId === teacherId;
+              }
+              return lesson.candidateTeacherIds.includes(teacherId);
+            });
+
+            if (pendingLesson) {
+              pendingLesson.allocated = true;
+            }
+
+            filledLessons++;
+            remaining--;
+          }
+        }
+
+        return filledLessons;
+      };
+
+      const studyFilledLessons = fillPendingStudyDeficitsInEmptySlots();
+      if (studyFilledLessons > 0) {
+        console.log(`  🧩 Preenchimento de estudo aplicado: ${studyFilledLessons} aula(s) adicionadas em slots vazios.`);
+      }
+
       const rebalanceDeficits = () => {
         let repairedLessons = 0;
         let keepSearching = true;
