@@ -214,18 +214,23 @@ export default function TeacherAttendance() {
 
   const availableTimetables = Array.isArray(timetablesData) ? timetablesData : [];
 
-  // Buscar calendário escolar para pegar dias letivos
+  // Buscar calendário escolar (dias letivos com feriados e recessos)
   const { data: calendarData } = useQuery({
-    queryKey: ['school-calendar'],
+    queryKey: ['school-calendar', user?.schoolId],
     queryFn: async () => {
       try {
-        const response = await api.get('/calendar-events');
+        if (!user?.schoolId) {
+          console.log('⚠️ schoolId não disponível para buscar calendário');
+          return [];
+        }
+        const response = await api.get(`/schooldays/school/${user.schoolId}`);
         return response.data || [];
       } catch (error) {
         console.error('Erro ao buscar calendário:', error);
         return [];
       }
-    }
+    },
+    enabled: !!user?.schoolId
   });
 
   // Buscar horário completo do timetable selecionado
@@ -336,7 +341,7 @@ export default function TeacherAttendance() {
 
   // Buscar lotação de professores (teacher-subjects) para exibir cargas horárias
   const { data: teacherWorkloadData } = useQuery({
-    queryKey: ['teacher-workload', user?.id],
+    queryKey: ['teacher-workload', user?.id, totalSchoolWeeks, schoolDaysPerWeek],
     queryFn: async () => {
       try {
         if (!user?.id) {
@@ -386,10 +391,10 @@ export default function TeacherAttendance() {
           // Pegar carga horária: primeiro tenta do assoc, depois do subject, senão usa 0
           const weeklyHours = assoc.weeklyHours || subject.weeklyHours || 0;
           
-          // Cálculos de carga horária
-          const annualHours = weeklyHours * 40; // 40 semanas letivas no ano
-          const monthlyHours = annualHours / 12; // Distribuir em 12 meses
-          const dailyHours = weeklyHours / 5; // Assumindo 5 dias letivos por semana
+          // Cálculos de carga horária DINÂMICOS (baseados no calendário e horário)
+          const annualHours = weeklyHours * totalSchoolWeeks; // Semanas letivas reais do calendário
+          const monthlyHours = annualHours / 12; // Distribuir proporcionalmente em 12 meses
+          const dailyHours = weeklyHours / schoolDaysPerWeek; // Dias letivos reais da semana
           
           workload.subjects.push({
             subjectId: subject.id || subject._id,
@@ -416,21 +421,86 @@ export default function TeacherAttendance() {
         return [];
       }
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && totalSchoolWeeks > 0 && schoolDaysPerWeek > 0,
     staleTime: 0, // Sempre buscar dados frescos
     gcTime: 0 // Não manter cache
   });
 
   const teacherWorkload: TeacherSubjectWorkload[] = teacherWorkloadData || [];
 
+  // Calcular total de semanas letivas no ano baseado no calendário escolar
+  const totalSchoolWeeks = useMemo(() => {
+    if (!calendarData || calendarData.length === 0) {
+      return 40; // Valor padrão se não houver calendário
+    }
+
+    // Buscar início e fim do ano letivo no calendário
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear, 11, 31);
+    
+    // Filtrar eventos de feriado e recesso no ano
+    const holidays = calendarData.filter((event: any) => 
+      (event.dayType === 'holiday' || event.dayType === 'recess') &&
+      new Date(event.date) >= yearStart &&
+      new Date(event.date) <= yearEnd
+    );
+
+    // Contar dias úteis no ano (seg-sex, excluindo feriados)
+    let workingDaysInYear = 0;
+    const currentDate = new Date(yearStart);
+    
+    while (currentDate <= yearEnd) {
+      const dayOfWeek = currentDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const isHoliday = holidays.some((h: any) => {
+        const holidayDate = typeof h.date === 'string' ? h.date.split('T')[0] : new Date(h.date).toISOString().split('T')[0];
+        return holidayDate === dateStr;
+      });
+      
+      if (!isWeekend && !isHoliday) {
+        workingDaysInYear++;
+      }
+      
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Converter dias em semanas (assumindo 5 dias por semana)
+    return Math.floor(workingDaysInYear / 5);
+  }, [calendarData]);
+
+  // Calcular quantos dias da semana têm aula baseado no horário selecionado
+  const schoolDaysPerWeek = useMemo(() => {
+    if (!selectedTimetableData || !selectedTimetableData.schedule) {
+      return 5; // Valor padrão: 5 dias úteis
+    }
+
+    // Mapear dias da semana do horário
+    const daysWithClasses = new Set<string>();
+    Object.keys(selectedTimetableData.schedule).forEach(day => {
+      const daySchedule = selectedTimetableData.schedule[day];
+      // Verificar se há alguma aula neste dia
+      const hasClasses = Object.keys(daySchedule).some(classId => {
+        const classSchedule = daySchedule[classId];
+        return classSchedule && classSchedule.length > 0 && classSchedule.some((period: any) => period && period.teacherId);
+      });
+      if (hasClasses) {
+        daysWithClasses.add(day);
+      }
+    });
+
+    return daysWithClasses.size || 5; // Retorna número de dias com aula ou 5 se não encontrar
+  }, [selectedTimetableData]);
+
   // Calcular dias letivos no período selecionado
   const workingDaysInPeriod = useMemo(() => {
     if (!calendarData || calendarData.length === 0) {
       // Se não tiver calendário, usar estimativa padrão
       if (reportType === 'daily') return 1;
-      if (reportType === 'weekly') return 5;
-      if (reportType === 'monthly') return 20; // ~4 semanas * 5 dias
-      if (reportType === 'yearly') return 200; // 40 semanas * 5 dias
+      if (reportType === 'weekly') return schoolDaysPerWeek;
+      if (reportType === 'monthly') return schoolDaysPerWeek * 4; // ~4 semanas
+      if (reportType === 'yearly') return schoolDaysPerWeek * totalSchoolWeeks;
       return 1;
     }
 
@@ -439,7 +509,7 @@ export default function TeacherAttendance() {
     
     // Filtrar eventos de feriado e recesso no período
     const holidays = calendarData.filter((event: any) => 
-      (event.type === 'holiday' || event.type === 'break') &&
+      (event.dayType === 'holiday' || event.dayType === 'recess') &&
       new Date(event.date) >= start &&
       new Date(event.date) <= end
     );
@@ -452,7 +522,10 @@ export default function TeacherAttendance() {
       const dayOfWeek = currentDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Domingo ou Sábado
       const dateStr = currentDate.toISOString().split('T')[0];
-      const isHoliday = holidays.some((h: any) => h.date.split('T')[0] === dateStr);
+      const isHoliday = holidays.some((h: any) => {
+        const holidayDate = typeof h.date === 'string' ? h.date.split('T')[0] : new Date(h.date).toISOString().split('T')[0];
+        return holidayDate === dateStr;
+      });
       
       if (!isWeekend && !isHoliday) {
         workingDays++;
@@ -462,7 +535,7 @@ export default function TeacherAttendance() {
     }
     
     return workingDays;
-  }, [calendarData, dateRange, reportType]);
+  }, [calendarData, dateRange, reportType, schoolDaysPerWeek, totalSchoolWeeks]);
 
   // Calcular aulas previstas baseado no horário selecionado
   const scheduledClassesPerWeek = useMemo(() => {
@@ -2701,12 +2774,30 @@ export default function TeacherAttendance() {
                 <p className="font-semibold mb-1">
                   ℹ️ Sobre as Cargas Horárias
                 </p>
+                
+                {/* Indicadores Dinâmicos */}
+                <div className="mb-3 p-2 bg-white/50 rounded border border-blue-300">
+                  <p className="text-xs font-semibold text-blue-800 mb-1">📊 Parâmetros de Cálculo Atuais:</p>
+                  <div className="flex gap-4 text-xs">
+                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded font-medium">
+                      📅 {totalSchoolWeeks} semanas letivas/ano
+                    </span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium">
+                      🗓️ {schoolDaysPerWeek} dias letivos/semana
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1 italic">
+                    * Baseado no calendário escolar e horário geral selecionado
+                  </p>
+                </div>
+
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li><strong>Origem dos dados:</strong> Cargas horárias definidas na página de <strong>Lotação de Professores</strong></li>
                   <li><strong>Atualização automática:</strong> Ao alterar lotações, os dados desta seção atualizam automaticamente</li>
-                  <li><strong>Cálculo anual:</strong> CH Semanal × 40 semanas letivas = CH Anual</li>
-                  <li><strong>Cálculo mensal:</strong> CH Anual ÷ 12 meses = CH Mensal</li>
-                  <li><strong>Cálculo diário:</strong> CH Semanal ÷ 5 dias letivos = CH Diária</li>
+                  <li><strong>Cálculo anual:</strong> CH Semanal × Semanas letivas (do calendário) = CH Anual</li>
+                  <li><strong>Cálculo mensal:</strong> CH Anual ÷ 12 meses = CH Mensal (proporcional)</li>
+                  <li><strong>Cálculo diário:</strong> CH Semanal ÷ Dias letivos (do horário selecionado) = CH Diária</li>
+                  <li><strong>Valores dinâmicos:</strong> Cálculos baseados no calendário escolar e horário geral selecionado</li>
                   <li>Cada professor pode ter múltiplas disciplinas com cargas horárias específicas por turma</li>
                   <li>Estas informações são usadas para calcular déficits/saldos, pagamentos e controlar frequência</li>
                 </ul>

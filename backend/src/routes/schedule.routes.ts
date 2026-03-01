@@ -1,6 +1,8 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import Schedule from '../models/Schedule';
+import { generateTimetable } from '../services/timetableGenerator';
+import Timetable from '../models/Timetable';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -70,6 +72,65 @@ router.get('/:id', auth, async (req: AuthRequest, res) => {
     res.json(schedule);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Gerar horário automaticamente a partir de um Schedule
+router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
+  try {
+    const schedule = await Schedule.findOne({ _id: req.params.id, userId: req.user!.id });
+
+    if (!schedule) {
+      return res.status(404).json({ message: 'Horário não encontrado' });
+    }
+
+    const scheduleData = schedule as any;
+    const strictSubjectAllocation = req.body?.strictSubjectAllocation !== false;
+    const requireAllTeachersAllocated = req.body?.requireAllTeachersAllocated !== false;
+
+    const periodsPerDay =
+      Array.isArray(scheduleData.periods) && scheduleData.periods.length > 0
+        ? scheduleData.periods.length
+        : Number(scheduleData.numberOfPeriods || 8);
+
+    const daysOfWeek = scheduleData.includeSaturday ? 6 : 5;
+    const year = Number(scheduleData.year || new Date().getFullYear());
+    const semester = String(scheduleData.semester || '1');
+
+    const result = await generateTimetable({
+      userId: req.user!.id,
+      scheduleId: schedule._id.toString(),
+      name: schedule.name,
+      year,
+      semester,
+      daysOfWeek,
+      periodsPerDay,
+      saturdayEquivalent: scheduleData.saturdayEquivalent,
+      avoidConsecutive: true,
+      distributeEvenly: true,
+      compactTeacherSchedule: true,
+      compactnessMode: 'aggressive',
+      strictSubjectAllocation,
+      requireAllTeachersAllocated
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message, conflicts: result.conflicts });
+    }
+
+    const generatedTimetable = await Timetable.findById(result.timetableId)
+      .populate('grid.teacherId')
+      .populate('grid.subjectId');
+
+    return res.json({
+      success: true,
+      message: result.message,
+      timetable: generatedTimetable,
+      stats: result.stats,
+      conflicts: result.conflicts
+    });
+  } catch (error: any) {
+    return res.status(500).json({ message: error.message });
   }
 });
 

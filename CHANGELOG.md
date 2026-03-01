@@ -1,5 +1,115 @@
 # 📝 CHANGELOG - Sistema Criador de Horário de Aula
 
+## [2.1.1] - 2026-02-12
+
+### 🐛 Correção Crítica: Erro 404 Calendário Escolar
+
+#### 🔧 Corrigido
+- **Erro 404 em `/calendar-events`:**
+  - Endpoint não existia no backend
+  - Causava falha no cálculo de semanas letivas
+  - Impedia funcionamento dos indicadores dinâmicos
+
+#### ✅ Solução
+- **Endpoint Correto Implementado:**
+  - Mudado de `/calendar-events` para `/schooldays/school/:schoolId`
+  - Adicionado `user.schoolId` na query
+  - Query condicional (enabled apenas se schoolId existir)
+
+- **Filtros Ajustados:**
+  - `event.type` → `event.dayType` (conforme modelo SchoolDay)
+  - `'break'` → `'recess'` (tipo correto do enum)
+  - Comparação de datas robusta (aceita string ou Date)
+
+- **Melhorias de Código:**
+  - Tratamento de erro silencioso (não bloqueia interface)
+  - Fallback para valores padrão (40 semanas, 5 dias)
+  - Logs informativos no console
+
+#### 📊 Impacto
+- ✅ Cálculo de semanas letivas funcionando
+- ✅ Indicadores dinâmicos exibindo valores corretos
+- ✅ Carga horária proporcional ao calendário real
+- ✅ Sem erros 404 no console
+
+#### 📁 Arquivos Modificados
+- `frontend/src/pages/TeacherAttendance.tsx`
+  - Query `school-calendar` corrigida
+  - Filtros de `dayType` ajustados
+  - Comparação de datas melhorada
+
+#### 📚 Documentação
+- Criado: CORRECAO_ENDPOINT_CALENDARIO.md
+
+---
+
+## [2.1.0] - 2026-02-12
+
+### 🎯 Carga Horária Dinâmica e Proporcional
+
+#### ✨ Adicionado
+- **Cálculo Dinâmico de Semanas Letivas:**
+  - Função `totalSchoolWeeks` que analisa calendário escolar
+  - Considera feriados e recessos cadastrados
+  - Conta apenas dias úteis (segunda a sexta)
+  - Calcula número real de semanas letivas no ano
+
+- **Cálculo Dinâmico de Dias Letivos:**
+  - Função `schoolDaysPerWeek` que analisa horário geral
+  - Identifica dias da semana com aulas configuradas
+  - Retorna número real de dias com aulas (3, 4, 5 ou 6)
+
+- **Indicador Visual de Parâmetros:**
+  - Badge mostrando semanas letivas calculadas
+  - Badge mostrando dias letivos por semana
+  - Nota explicativa sobre base dos cálculos
+
+#### 🔄 Modificado
+- **Cálculo de Carga Horária Anual:**
+  - Antes: `weeklyHours × 40` (fixo)
+  - Depois: `weeklyHours × totalSchoolWeeks` (dinâmico)
+  
+- **Cálculo de Carga Horária Diária:**
+  - Antes: `weeklyHours ÷ 5` (fixo)
+  - Depois: `weeklyHours ÷ schoolDaysPerWeek` (dinâmico)
+
+- **Cálculo de Carga Horária Mensal:**
+  - Antes: `annualHours ÷ 12` (fixo)
+  - Depois: `annualHours ÷ 12` (proporcional ao ano real)
+
+- **Query teacherWorkloadData:**
+  - Adicionados `totalSchoolWeeks` e `schoolDaysPerWeek` na key
+  - Enabled condicional aos parâmetros calculados
+  - Recalcula automaticamente ao mudar calendário/horário
+
+- **Documentação de Interface:**
+  - Textos explicativos atualizados
+  - Removidas referências a valores fixos (40 semanas, 5 dias)
+  - Adicionada transparência sobre origem dos cálculos
+
+#### 🐛 Corrigido
+- **Valores Fixos Incorretos:**
+  - Carga horária não refletia calendário escolar real
+  - Cálculo diário não considerava dias com aulas reais
+  - Carga mensal não era proporcional ao ano letivo
+
+- **Falta de Transparência:**
+  - Usuário não sabia como valores eram calculados
+  - Não havia indicação de parâmetros usados
+
+#### ✅ Benefícios
+- Relatórios de frequência mais precisos
+- Cálculo de déficit/saldo correto
+- Pagamentos baseados em carga horária real
+- Atualização automática ao mudar configurações
+- Maior transparência para o usuário
+
+#### 📚 Documentação
+- Criado: CORRECAO_CARGA_HORARIA_DINAMICA.md
+- Atualizado: TeacherAttendance.tsx (comentários)
+
+---
+
 ## [2.0.0] - 2026-02-10
 
 ### 🎯 MAJOR UPDATE: Importação Automática de Frequência
