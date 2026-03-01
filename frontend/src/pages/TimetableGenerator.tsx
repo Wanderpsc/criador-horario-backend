@@ -404,7 +404,6 @@ export default function TimetableGenerator() {
       'quarta': ['quarta', 'quarta-feira', 'qua'],
       'quinta': ['quinta', 'quinta-feira', 'qui'],
       'sexta': ['sexta', 'sexta-feira', 'sex'],
-      'sábado': ['sábado', 'sabado', 'sab'],
       'domingo': ['domingo', 'dom']
     };
     

@@ -22,7 +22,6 @@ interface Schedule {
   year: number;
   semester?: number;
   daysPerWeek: number;
-  includeSaturday: boolean;
   slots: ScheduleSlot[];
 }
 
@@ -47,7 +46,7 @@ export default function ScheduleView() {
   const [accessReason, setAccessReason] = useState('');
   const [accessMessage, setAccessMessage] = useState('');
 
-  const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
   const slots = Array.from({ length: 8 }, (_, i) => i + 1);
 
   useEffect(() => {
@@ -241,7 +240,7 @@ export default function ScheduleView() {
     );
   }
 
-  const daysToShow = schedule.includeSaturday ? 6 : 5;
+  const daysToShow = 5;
 
   return (
     <div>
