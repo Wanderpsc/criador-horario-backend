@@ -1542,6 +1542,204 @@ export default function TimetableGenerator() {
         console.log(`  🔧 Rebalanceamento aplicado: ${repairedLessons} aula(s) realocadas para reduzir déficits.`);
       }
 
+      const resolveStudyDeficitsByClassSlotSwap = () => {
+        let fixedBySwap = 0;
+
+        const studyDeficits = Array.from(expectedAllocation.entries())
+          .map(([allocationKey, expected]) => {
+            const allocated = actualAllocation.get(allocationKey) || 0;
+            return {
+              allocationKey,
+              expected,
+              allocated,
+              missing: expected - allocated
+            };
+          })
+          .filter((entry) => {
+            if (entry.missing <= 0) return false;
+            const [, subjectId] = entry.allocationKey.split('|');
+            return (subjectCategoryById.get(subjectId) || 'regular') === 'study';
+          })
+          .sort((a, b) => b.missing - a.missing);
+
+        for (const deficitEntry of studyDeficits) {
+          let remaining = deficitEntry.missing;
+          const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
+          const targetTeacher = activeTeacherById.get(teacherId);
+
+          if (!targetTeacher) {
+            continue;
+          }
+
+          while (remaining > 0) {
+            const classTimetable = allTimetables[classId] || [];
+            const emptySlots = weekDays.flatMap((day) =>
+              sortedPeriods
+                .map((periodInfo) => periodInfo.period)
+                .filter((period) => !classSchedule[classId][day].has(period))
+                .map((period) => ({ day, period }))
+            );
+
+            if (emptySlots.length === 0) {
+              break;
+            }
+
+            let swapApplied = false;
+
+            for (const enforceAvailability of [true, false]) {
+              for (const occupiedSlot of classTimetable) {
+                const occupiedCategory = subjectCategoryById.get(occupiedSlot.subjectId) || 'regular';
+                if (occupiedCategory === 'study') {
+                  continue;
+                }
+
+                const existingStudyInDay = countStudySlotsInDay(
+                  classTimetable,
+                  classId,
+                  occupiedSlot.day,
+                  subjectCategoryById
+                );
+
+                if (existingStudyInDay > 0) {
+                  continue;
+                }
+
+                if (
+                  hasAdjacentStudyInSameClass(
+                    classTimetable,
+                    classId,
+                    occupiedSlot.day,
+                    occupiedSlot.period,
+                    subjectCategoryById
+                  )
+                ) {
+                  continue;
+                }
+
+                if (globalTeacherSchedule[occupiedSlot.day][occupiedSlot.period].has(teacherId)) {
+                  continue;
+                }
+
+                const targetTeacherAvailable = isTeacherAvailableAtTime(
+                  targetTeacher,
+                  occupiedSlot.day,
+                  occupiedSlot.period
+                );
+
+                if (enforceAvailability && !targetTeacherAvailable) {
+                  continue;
+                }
+
+                const displacedTeacher = activeTeacherById.get(occupiedSlot.teacherId);
+                if (!displacedTeacher) {
+                  continue;
+                }
+
+                let relocation:
+                  | {
+                      day: string;
+                      period: number;
+                      violatesAvailability: boolean;
+                    }
+                  | null = null;
+
+                for (const emptySlot of emptySlots) {
+                  if (globalTeacherSchedule[emptySlot.day][emptySlot.period].has(displacedTeacher.id)) {
+                    continue;
+                  }
+
+                  const displacedAvailable = isTeacherAvailableAtTime(
+                    displacedTeacher,
+                    emptySlot.day,
+                    emptySlot.period
+                  );
+
+                  if (enforceAvailability && !displacedAvailable) {
+                    continue;
+                  }
+
+                  relocation = {
+                    day: emptySlot.day,
+                    period: emptySlot.period,
+                    violatesAvailability: !displacedAvailable
+                  };
+                  break;
+                }
+
+                if (!relocation) {
+                  continue;
+                }
+
+                globalTeacherSchedule[occupiedSlot.day][occupiedSlot.period].delete(occupiedSlot.teacherId);
+                globalTeacherSchedule[occupiedSlot.day][occupiedSlot.period].add(teacherId);
+
+                allTimetables[classId].push({
+                  classId,
+                  day: relocation.day,
+                  period: relocation.period,
+                  subjectId: occupiedSlot.subjectId,
+                  teacherId: occupiedSlot.teacherId
+                });
+
+                classSchedule[classId][relocation.day].add(relocation.period);
+                globalTeacherSchedule[relocation.day][relocation.period].add(occupiedSlot.teacherId);
+
+                occupiedSlot.subjectId = subjectId;
+                occupiedSlot.teacherId = teacherId;
+
+                teacherAssignedLoad.set(
+                  teacherId,
+                  (teacherAssignedLoad.get(teacherId) || 0) + 1
+                );
+
+                actualAllocation.set(
+                  deficitEntry.allocationKey,
+                  (actualAllocation.get(deficitEntry.allocationKey) || 0) + 1
+                );
+
+                if (!targetTeacherAvailable || relocation.violatesAvailability) {
+                  availabilityOverridesUsed++;
+                }
+
+                const pendingLesson = lessonDemands.find((lesson) => {
+                  if (lesson.allocated) return false;
+                  if (lesson.classId !== classId) return false;
+                  if (lesson.subjectId !== subjectId) return false;
+                  if (lesson.requiredTeacherId) {
+                    return lesson.requiredTeacherId === teacherId;
+                  }
+                  return lesson.candidateTeacherIds.includes(teacherId);
+                });
+
+                if (pendingLesson) {
+                  pendingLesson.allocated = true;
+                }
+
+                fixedBySwap++;
+                remaining--;
+                swapApplied = true;
+                break;
+              }
+
+              if (swapApplied) {
+                break;
+              }
+            }
+
+            if (!swapApplied) {
+              break;
+            }
+          }
+        }
+
+        return fixedBySwap;
+      };
+
+      const studyFixedBySwap = resolveStudyDeficitsByClassSlotSwap();
+      if (studyFixedBySwap > 0) {
+        console.log(`  🔁 Troca local aplicada: ${studyFixedBySwap} déficit(s) de estudo corrigido(s) com swap de slot.`);
+      }
+
       if (availabilityOverridesUsed > 0) {
         newConflicts.push(
           `ℹ️ ${availabilityOverridesUsed} aula(s) foram alocadas fora da disponibilidade para cumprir a carga horária total.`
