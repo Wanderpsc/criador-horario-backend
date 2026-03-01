@@ -1174,6 +1174,108 @@ export default function TimetableGenerator() {
         }
       }
 
+      const rebalanceDeficits = () => {
+        let repairedLessons = 0;
+        let keepSearching = true;
+
+        while (keepSearching) {
+          keepSearching = false;
+
+          const deficitEntries = Array.from(expectedAllocation.entries())
+            .map(([allocationKey, expected]) => {
+              const allocated = actualAllocation.get(allocationKey) || 0;
+              return {
+                allocationKey,
+                expected,
+                allocated,
+                missing: expected - allocated
+              };
+            })
+            .filter((entry) => entry.missing > 0)
+            .sort((a, b) => b.missing - a.missing);
+
+          if (deficitEntries.length === 0) {
+            break;
+          }
+
+          for (const deficitEntry of deficitEntries) {
+            const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
+            const classTimetable = allTimetables[classId] || [];
+            const targetTeacher = activeTeacherById.get(teacherId);
+
+            if (!targetTeacher) {
+              continue;
+            }
+
+            let repairedThisDeficit = false;
+
+            for (const slot of classTimetable) {
+              const sourceKey = `${classId}|${slot.subjectId}|${slot.teacherId}`;
+              const sourceExpected = expectedAllocation.get(sourceKey) || 0;
+              const sourceAllocated = actualAllocation.get(sourceKey) || 0;
+
+              if (sourceAllocated <= sourceExpected) {
+                continue;
+              }
+
+              if (slot.subjectId === subjectId && slot.teacherId === teacherId) {
+                continue;
+              }
+
+              if (!isTeacherAvailableAtTime(targetTeacher, slot.day, slot.period)) {
+                continue;
+              }
+
+              if (globalTeacherSchedule[slot.day][slot.period].has(teacherId)) {
+                continue;
+              }
+
+              globalTeacherSchedule[slot.day][slot.period].delete(slot.teacherId);
+              globalTeacherSchedule[slot.day][slot.period].add(teacherId);
+
+              teacherAssignedLoad.set(slot.teacherId, Math.max(0, (teacherAssignedLoad.get(slot.teacherId) || 0) - 1));
+              teacherAssignedLoad.set(teacherId, (teacherAssignedLoad.get(teacherId) || 0) + 1);
+
+              actualAllocation.set(sourceKey, sourceAllocated - 1);
+              actualAllocation.set(deficitEntry.allocationKey, (actualAllocation.get(deficitEntry.allocationKey) || 0) + 1);
+
+              slot.subjectId = subjectId;
+              slot.teacherId = teacherId;
+
+              const pendingLesson = lessonDemands.find((lesson) => {
+                if (lesson.allocated) return false;
+                if (lesson.classId !== classId) return false;
+                if (lesson.subjectId !== subjectId) return false;
+                if (lesson.requiredTeacherId) {
+                  return lesson.requiredTeacherId === teacherId;
+                }
+                return lesson.candidateTeacherIds.includes(teacherId);
+              });
+
+              if (pendingLesson) {
+                pendingLesson.allocated = true;
+              }
+
+              repairedLessons++;
+              repairedThisDeficit = true;
+              keepSearching = true;
+              break;
+            }
+
+            if (repairedThisDeficit) {
+              break;
+            }
+          }
+        }
+
+        return repairedLessons;
+      };
+
+      const repairedLessons = rebalanceDeficits();
+      if (repairedLessons > 0) {
+        console.log(`  🔧 Rebalanceamento aplicado: ${repairedLessons} aula(s) realocadas para reduzir déficits.`);
+      }
+
       for (const currentClass of classesToGenerate) {
         const classPending = lessonDemands.filter(
           (lesson) => !lesson.allocated && lesson.classId === currentClass.id
