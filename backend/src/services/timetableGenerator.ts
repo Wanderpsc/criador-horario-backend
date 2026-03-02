@@ -124,6 +124,27 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
     const totalSlots = daysOfWeek * periodsPerDay;
     const totalWorkload = subjects.reduce((sum, subject) => sum + getSubjectWeeklyLessons(subject), 0);
 
+    const extractClassKeyFromSubjectName = (subjectName: string): string => {
+      const normalized = normalizeText(subjectName);
+      if (normalized.includes('→')) {
+        return normalized.split('→').pop()!.trim();
+      }
+      return normalized;
+    };
+
+    const subjectClassKeyMap = new Map<string, string>();
+    for (const subject of subjects) {
+      subjectClassKeyMap.set(
+        subject._id.toString(),
+        extractClassKeyFromSubjectName(subject.name)
+      );
+    }
+
+    const teacherById = new Map<string, any>();
+    for (const teacher of teachers) {
+      teacherById.set(teacher._id.toString(), teacher);
+    }
+
     const normalizeText = (value: string): string =>
       value
         .normalize('NFD')
@@ -191,6 +212,153 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       teacherAssignedLessons.set(teacher._id.toString(), 0);
     }
 
+    const getAvailabilityKeysForDay = (day: number): string[] => {
+      const aliases = [
+        ['0', '1', 'seg', 'segunda', 'segunda-feira', 'mon', 'monday'],
+        ['1', '2', 'ter', 'terca', 'terça', 'terca-feira', 'terça-feira', 'tue', 'tuesday'],
+        ['2', '3', 'qua', 'quarta', 'quarta-feira', 'wed', 'wednesday'],
+        ['3', '4', 'qui', 'quinta', 'quinta-feira', 'thu', 'thursday'],
+        ['4', '5', 'sex', 'sexta', 'sexta-feira', 'fri', 'friday'],
+        ['5', '6', 'sab', 'sábado', 'sabado', 'saturday', 'sat']
+      ];
+
+      return (aliases[day] || [String(day), String(day + 1)]).map((key) =>
+        key
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+      );
+    };
+
+    const resolveTeacherAvailabilityByDay = (teacherIdStr: string, day: number): any => {
+      const teacher = teacherById.get(teacherIdStr);
+      const rawAvailability = teacher?.availability;
+
+      if (!rawAvailability || typeof rawAvailability !== 'object') {
+        return null;
+      }
+
+      const availabilityEntries = Object.entries(rawAvailability);
+      if (availabilityEntries.length === 0) {
+        return null;
+      }
+
+      const normalizedDayKeyMap = new Map<string, any>();
+      for (const [key, value] of availabilityEntries) {
+        const normalizedKey = key
+          .toString()
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+
+        normalizedDayKeyMap.set(normalizedKey, value);
+      }
+
+      const candidateKeys = getAvailabilityKeysForDay(day);
+      for (const candidateKey of candidateKeys) {
+        if (normalizedDayKeyMap.has(candidateKey)) {
+          return normalizedDayKeyMap.get(candidateKey);
+        }
+      }
+
+      return null;
+    };
+
+    const isTeacherAvailableAt = (teacherIdStr: string, day: number, period: number): boolean => {
+      const dayAvailability = resolveTeacherAvailabilityByDay(teacherIdStr, day);
+
+      if (dayAvailability == null) {
+        return true;
+      }
+
+      const readAvailabilityValue = (value: any): boolean | null => {
+        if (typeof value === 'boolean') {
+          return value;
+        }
+
+        if (typeof value === 'string') {
+          const normalized = value.trim().toLowerCase();
+          if (normalized === 'true') return true;
+          if (normalized === 'false') return false;
+        }
+
+        if (typeof value === 'number') {
+          if (value === 1) return true;
+          if (value === 0) return false;
+        }
+
+        return null;
+      };
+
+      if (Array.isArray(dayAvailability)) {
+        const direct = readAvailabilityValue(dayAvailability[period]);
+        if (direct !== null) {
+          return direct;
+        }
+
+        const shifted = readAvailabilityValue(dayAvailability[period + 1]);
+        if (shifted !== null) {
+          return shifted;
+        }
+
+        return false;
+      }
+
+      if (typeof dayAvailability === 'object') {
+        const direct = readAvailabilityValue(dayAvailability[period]);
+        if (direct !== null) {
+          return direct;
+        }
+
+        const shifted = readAvailabilityValue(dayAvailability[period + 1]);
+        if (shifted !== null) {
+          return shifted;
+        }
+
+        const stringDirect = readAvailabilityValue(dayAvailability[String(period)]);
+        if (stringDirect !== null) {
+          return stringDirect;
+        }
+
+        const stringShifted = readAvailabilityValue(dayAvailability[String(period + 1)]);
+        if (stringShifted !== null) {
+          return stringShifted;
+        }
+
+        return false;
+      }
+
+      return true;
+    };
+
+    const hasAdjacentSameClassForTeacher = (
+      teacherIdStr: string,
+      subjectIdStr: string,
+      day: number,
+      period: number
+    ): boolean => {
+      const candidateClassKey = subjectClassKeyMap.get(subjectIdStr);
+      if (!candidateClassKey) {
+        return false;
+      }
+
+      const previousCell = period > 0 ? grid[day][period - 1] : null;
+      const nextCell = period < periodsPerDay - 1 ? grid[day][period + 1] : null;
+      const adjacentCells = [previousCell, nextCell].filter(Boolean) as GridCell[];
+
+      return adjacentCells.some((cell) => {
+        if (cell.teacherId?.toString() !== teacherIdStr || !cell.subjectId) {
+          return false;
+        }
+
+        const adjacentClassKey = subjectClassKeyMap.get(cell.subjectId.toString());
+        return adjacentClassKey === candidateClassKey;
+      });
+    };
+
     // Função para verificar se a atribuição é válida
     const isValidAssignment = (
       teacherId: mongoose.Types.ObjectId,
@@ -209,8 +377,9 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       }
 
       // Verificar disponibilidade do professor (se configurada)
-      // TODO: Implementar verificação de disponibilidade com availabilityNotes
-      // const teacher = teachers.find(t => t._id.toString() === teacherIdStr);
+      if (!isTeacherAvailableAt(teacherIdStr, day, period)) {
+        return false;
+      }
 
       // Verificar matérias consecutivas
       if (avoidConsecutive && !allowConsecutiveInClass) {
@@ -223,6 +392,11 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
         
         // Verificar próximo período
         if (period < periodsPerDay - 1 && grid[day][period + 1]?.subjectId?.toString() === subjectIdStr) {
+          return false;
+        }
+
+        // Evitar professor com aulas consecutivas repetidas na mesma turma
+        if (hasAdjacentSameClassForTeacher(teacherIdStr, subjectIdStr, day, period)) {
           return false;
         }
       }
@@ -566,6 +740,57 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       );
     }
 
+    const evaluateTeacherDayDistributionScore = (
+      teacherId: mongoose.Types.ObjectId,
+      day: number
+    ): number => {
+      const teacherIdStr = teacherId.toString();
+      const usage = teacherUsage.get(teacherIdStr);
+      const dayCounts = Array(daysOfWeek).fill(0) as number[];
+
+      if (usage) {
+        for (const slot of usage) {
+          const [slotDayStr] = slot.split('-');
+          const slotDay = Number(slotDayStr);
+          if (slotDay >= 0 && slotDay < daysOfWeek) {
+            dayCounts[slotDay]++;
+          }
+        }
+      }
+
+      const expectedLessons = getPositiveNumber(
+        teacherRequestedLessons.get(teacherIdStr),
+        teacherMaxLessons.get(teacherIdStr)
+      );
+      const targetActiveDays = expectedLessons > 0
+        ? Math.min(daysOfWeek, Math.max(1, expectedLessons))
+        : Math.min(daysOfWeek, 3);
+
+      const activeDaysBefore = dayCounts.filter((count) => count > 0).length;
+      const hasLessonsOnDay = dayCounts[day] > 0;
+      const activeDaysAfter = hasLessonsOnDay ? activeDaysBefore : activeDaysBefore + 1;
+
+      let score = 0;
+
+      if (activeDaysBefore < targetActiveDays) {
+        score += hasLessonsOnDay ? -30 : 150;
+      } else if (!hasLessonsOnDay) {
+        score -= 20;
+      }
+
+      const projectedCountOnDay = dayCounts[day] + 1;
+      const totalLessonsAfter = (usage?.size || 0) + 1;
+      const averageAfter = totalLessonsAfter / Math.max(1, activeDaysAfter);
+
+      score -= Math.abs(projectedCountOnDay - averageAfter) * 35;
+
+      if (dayCounts[day] >= Math.ceil(periodsPerDay * 0.65)) {
+        score -= 90;
+      }
+
+      return score;
+    };
+
     for (const subject of prioritizedSubjects) {
       // Selecionar professores que podem lecionar esta disciplina
       const hoursToAssign = getSubjectWeeklyLessons(subject);
@@ -640,6 +865,7 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
               const score =
                 evaluateTeacherSlotScore(teacherId, day, period) +
                 evaluateImmediateTeacherCompactness(teacherId, day, period) +
+                evaluateTeacherDayDistributionScore(teacherId, day) +
                 evaluatePeriodPreferenceScore(subjectCategory, day, period) +
                 evaluateSubjectDistributionScore(subjectId, day, targetPerDay) +
                 evaluateTeacherInclusionScore(teacherId, totalWorkload - totalAssignedLessons) -
