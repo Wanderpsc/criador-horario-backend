@@ -652,32 +652,32 @@ export default function TimetableGenerator() {
 
     let score = 0;
 
-    const targetActiveDays = Math.min(
-      5,
-      Math.max(1, requiredWeeklyLoad > 0 ? requiredWeeklyLoad : 3)
-    );
+    const targetActiveDays =
+      requiredWeeklyLoad >= 5
+        ? 5
+        : Math.min(5, Math.max(1, requiredWeeklyLoad > 0 ? requiredWeeklyLoad : 3));
 
     // Distribuir ao longo da semana (até 5 dias)
     const activeDays = Array.from(slotsByDay.values()).filter((periods) => periods.length > 0).length;
     if (activeDays < targetActiveDays) {
-      score += todayBefore.length === 0 ? 150 : -30;
+      score += todayBefore.length === 0 ? 120 : 20;
     } else if (todayBefore.length === 0) {
-      score -= 25;
+      score -= 45;
     }
 
     if (teacherSlotsToday.length > 0) {
-      score += 80;
+      score += 120;
 
       if (teacherSlotsToday.includes(period - 1) || teacherSlotsToday.includes(period + 1)) {
-        score += 95;
+        score += 180;
       } else {
         const nearestDistance = teacherSlotsToday.reduce((minDistance, teacherPeriod) => {
           return Math.min(minDistance, Math.abs(teacherPeriod - period));
         }, Number.POSITIVE_INFINITY);
-        score += Math.max(0, 80 - nearestDistance * 18);
+        score += Math.max(0, 90 - nearestDistance * 16);
       }
     } else {
-      score += 40;
+      score += 25;
     }
 
     // Penalizar janelas internas e blocos quebrados
@@ -697,15 +697,15 @@ export default function TimetableGenerator() {
         }
       }
 
-      score -= gaps * 140;
-      score -= (blocks - 1) * 45;
+      score -= gaps * 190;
+      score -= (blocks - 1) * 80;
       score -= first * 8;
       score -= last * 3;
 
       const projectedDayLoad = sorted.length;
       const softDailyLimit = Math.max(1, Math.ceil((requiredWeeklyLoad || projectedDayLoad) / Math.max(1, targetActiveDays)));
       if (projectedDayLoad > softDailyLimit + 1) {
-        score -= (projectedDayLoad - softDailyLimit) * 120;
+        score -= (projectedDayLoad - softDailyLimit) * 95;
       }
     }
 
@@ -1395,6 +1395,18 @@ export default function TimetableGenerator() {
                     continue;
                   }
 
+                  if (
+                    hasConsecutiveTeacherInSameClass(
+                      classTimetable,
+                      teacherId,
+                      classId,
+                      day,
+                      period
+                    )
+                  ) {
+                    continue;
+                  }
+
                   const availableAtTime = isTeacherAvailableAtTime(teacher, day, period);
                   if (enforceAvailability && !availableAtTime) {
                     continue;
@@ -1559,6 +1571,30 @@ export default function TimetableGenerator() {
                 }
               }
 
+              if (
+                hasConsecutiveSubjectInSameClass(
+                  classTimetable,
+                  subjectId,
+                  classId,
+                  slot.day,
+                  slot.period
+                )
+              ) {
+                continue;
+              }
+
+              if (
+                hasConsecutiveTeacherInSameClass(
+                  classTimetable,
+                  teacherId,
+                  classId,
+                  slot.day,
+                  slot.period
+                )
+              ) {
+                continue;
+              }
+
               if (!isTeacherAvailableAtTime(targetTeacher, slot.day, slot.period)) {
                 continue;
               }
@@ -1691,6 +1727,18 @@ export default function TimetableGenerator() {
                   continue;
                 }
 
+                if (
+                  hasConsecutiveTeacherInSameClass(
+                    classTimetable,
+                    teacherId,
+                    classId,
+                    occupiedSlot.day,
+                    occupiedSlot.period
+                  )
+                ) {
+                  continue;
+                }
+
                 const targetTeacherAvailable = isTeacherAvailableAtTime(
                   targetTeacher,
                   occupiedSlot.day,
@@ -1716,6 +1764,18 @@ export default function TimetableGenerator() {
 
                 for (const emptySlot of emptySlots) {
                   if (globalTeacherSchedule[emptySlot.day][emptySlot.period].has(displacedTeacher.id)) {
+                    continue;
+                  }
+
+                  if (
+                    hasConsecutiveTeacherInSameClass(
+                      classTimetable,
+                      displacedTeacher.id,
+                      classId,
+                      emptySlot.day,
+                      emptySlot.period
+                    )
+                  ) {
                     continue;
                   }
 
