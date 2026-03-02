@@ -362,26 +362,52 @@ export default function TimetableGenerator() {
   // Função para verificar se professor está disponível baseado em observações (PRIORIDADE MÁXIMA)
   const isTeacherAvailableAtTime = (teacher: Teacher, day: string, period: number): boolean => {
 
+    const normalizeDayKey = (value: string): string =>
+      value
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
+    const getDayAliases = (dayValue: string): string[] => {
+      const normalized = normalizeDayKey(dayValue);
+      const aliases: Record<string, string[]> = {
+        segunda: ['segunda', 'segunda-feira', 'seg', 'monday', 'mon', '0', '1'],
+        terca: ['terca', 'terca-feira', 'ter', 'tuesday', 'tue', '1', '2'],
+        quarta: ['quarta', 'quarta-feira', 'qua', 'wednesday', 'wed', '2', '3'],
+        quinta: ['quinta', 'quinta-feira', 'qui', 'thursday', 'thu', '3', '4'],
+        sexta: ['sexta', 'sexta-feira', 'sex', 'friday', 'fri', '4', '5']
+      };
+
+      if (aliases[normalized]) {
+        return aliases[normalized];
+      }
+
+      return [normalized];
+    };
+
     // PRIORIDADE ABSOLUTA: Verificar disponibilidade estruturada (checkboxes)
     // Mas só usar se foi REALMENTE configurada (tem pelo menos um dia com dados)
     if (teacher.availability && Object.keys(teacher.availability).length > 0) {
-      const dayLower = day.toLowerCase();
-      
-      // Verificar se este dia específico foi configurado
-      if (teacher.availability[dayLower] && Object.keys(teacher.availability[dayLower]).length > 0) {
-        const isAvailable = teacher.availability[dayLower][period];
-        
-        console.log(`  📊 Availability check:`, {
-          day: dayLower,
-          period,
-          dayData: teacher.availability[dayLower],
-          isAvailable,
-          isDefined: isAvailable !== undefined
-        });
-        
-        // Se existe configuração para este dia/período, usar ela SEMPRE
-        if (isAvailable !== undefined) {
-          return isAvailable;
+      const normalizedAvailability = new Map<string, { [period: number]: boolean }>();
+      for (const [key, value] of Object.entries(teacher.availability)) {
+        normalizedAvailability.set(normalizeDayKey(key), value);
+      }
+
+      for (const dayAlias of getDayAliases(day)) {
+        const dayAvailability = normalizedAvailability.get(dayAlias);
+        if (!dayAvailability || Object.keys(dayAvailability).length === 0) {
+          continue;
+        }
+
+        const direct = (dayAvailability as any)[period];
+        if (direct !== undefined) {
+          return Boolean(direct);
+        }
+
+        const shifted = (dayAvailability as any)[period + 1];
+        if (shifted !== undefined) {
+          return Boolean(shifted);
         }
       }
     }
@@ -581,12 +607,33 @@ export default function TimetableGenerator() {
     return !!previousSlot || !!nextSlot;
   };
 
+  const hasConsecutiveTeacherInSameClass = (
+    timetable: TimetableSlot[],
+    teacherId: string,
+    classId: string,
+    day: string,
+    period: number
+  ): boolean => {
+    const previousSlot = timetable.find(
+      slot => slot.day === day && slot.period === period - 1 &&
+              slot.teacherId === teacherId && slot.classId === classId
+    );
+
+    const nextSlot = timetable.find(
+      slot => slot.day === day && slot.period === period + 1 &&
+              slot.teacherId === teacherId && slot.classId === classId
+    );
+
+    return !!previousSlot || !!nextSlot;
+  };
+
   // Função para calcular score de preferência do professor (quanto maior, melhor)
   const calculateTeacherPreferenceScore = (
     globalSchedule: { [day: string]: { [period: number]: Set<string> } },
     teacherId: string,
     day: string,
-    period: number
+    period: number,
+    requiredWeeklyLoad: number
   ): number => {
     const totalPeriods = currentSchedule?.periods?.length || 8;
     const teacherSlotsToday = Array.from({ length: totalPeriods }, (_, i) => i + 1)
@@ -605,15 +652,24 @@ export default function TimetableGenerator() {
 
     let score = 0;
 
-    // Compactar no mesmo dia e reduzir ida em dias diferentes
+    const targetActiveDays = Math.min(
+      5,
+      Math.max(1, requiredWeeklyLoad > 0 ? requiredWeeklyLoad : 3)
+    );
+
+    // Distribuir ao longo da semana (até 5 dias)
     const activeDays = Array.from(slotsByDay.values()).filter((periods) => periods.length > 0).length;
-    score -= activeDays * 55;
+    if (activeDays < targetActiveDays) {
+      score += todayBefore.length === 0 ? 150 : -30;
+    } else if (todayBefore.length === 0) {
+      score -= 25;
+    }
 
     if (teacherSlotsToday.length > 0) {
-      score += 90;
+      score += 80;
 
       if (teacherSlotsToday.includes(period - 1) || teacherSlotsToday.includes(period + 1)) {
-        score += 160;
+        score += 95;
       } else {
         const nearestDistance = teacherSlotsToday.reduce((minDistance, teacherPeriod) => {
           return Math.min(minDistance, Math.abs(teacherPeriod - period));
@@ -621,7 +677,7 @@ export default function TimetableGenerator() {
         score += Math.max(0, 80 - nearestDistance * 18);
       }
     } else {
-      score -= 70;
+      score += 40;
     }
 
     // Penalizar janelas internas e blocos quebrados
@@ -645,6 +701,12 @@ export default function TimetableGenerator() {
       score -= (blocks - 1) * 45;
       score -= first * 8;
       score -= last * 3;
+
+      const projectedDayLoad = sorted.length;
+      const softDailyLimit = Math.max(1, Math.ceil((requiredWeeklyLoad || projectedDayLoad) / Math.max(1, targetActiveDays)));
+      if (projectedDayLoad > softDailyLimit + 1) {
+        score -= (projectedDayLoad - softDailyLimit) * 120;
+      }
     }
 
     return score;
@@ -1105,9 +1167,7 @@ export default function TimetableGenerator() {
             if (!candidate) continue;
 
             const isAvailableAtTime = isTeacherAvailableAtTime(candidate, day, period);
-            const canOverrideAvailability = mode >= 3;
-
-            if (!isAvailableAtTime && !canOverrideAvailability) {
+            if (!isAvailableAtTime) {
               continue;
             }
 
@@ -1128,13 +1188,26 @@ export default function TimetableGenerator() {
               day,
               period
             )) {
-              softPenalty -= mode === 0 ? 140 : mode === 1 ? 70 : 20;
+              continue;
             }
 
-            let teacherScore = calculateTeacherPreferenceScore(globalTeacherSchedule, candidate.id, day, period);
-            if (!isAvailableAtTime) {
-              teacherScore -= 550;
+            if (hasConsecutiveTeacherInSameClass(
+              classTimetable,
+              candidate.id,
+              currentClassId,
+              day,
+              period
+            )) {
+              continue;
             }
+
+            let teacherScore = calculateTeacherPreferenceScore(
+              globalTeacherSchedule,
+              candidate.id,
+              day,
+              period,
+              teacherRequiredLoad.get(candidate.id) || 0
+            );
             if (lesson.preferredTeacherId === candidate.id) {
               teacherScore += 25;
             }
@@ -1183,7 +1256,7 @@ export default function TimetableGenerator() {
 
       let availabilityOverridesUsed = 0;
       let attemptMode = 0;
-      while (attemptMode < 4 && lessonDemands.some((lesson) => !lesson.allocated)) {
+      while (attemptMode < 3 && lessonDemands.some((lesson) => !lesson.allocated)) {
         let allocatedThisMode = 0;
         let progress = true;
 
@@ -1250,12 +1323,10 @@ export default function TimetableGenerator() {
             console.log('  🔄 Modo 1: reduzindo penalidades de preferências para fechar lacunas...');
           } else if (attemptMode === 2) {
             console.log('  🔄 Modo 2: priorizando alocação total da lotação acima de preferências de distribuição...');
-          } else if (attemptMode === 3) {
-            console.log('  🔄 Modo 3: fallback final para completar carga, permitindo alocação fora da disponibilidade quando necessário...');
           }
         }
 
-        if (allocatedThisMode === 0 && attemptMode >= 3) {
+        if (allocatedThisMode === 0 && attemptMode >= 2) {
           break;
         }
       }
@@ -1300,7 +1371,7 @@ export default function TimetableGenerator() {
                 }
               | null = null;
 
-            for (const enforceAvailability of [true, false]) {
+            for (const enforceAvailability of [true]) {
               for (const day of weekDays) {
                 const studyCountInDay = countStudySlotsInDay(
                   classTimetable,
@@ -1586,7 +1657,7 @@ export default function TimetableGenerator() {
 
             let swapApplied = false;
 
-            for (const enforceAvailability of [true, false]) {
+            for (const enforceAvailability of [true]) {
               for (const occupiedSlot of classTimetable) {
                 const occupiedCategory = subjectCategoryById.get(occupiedSlot.subjectId) || 'regular';
                 if (occupiedCategory === 'study') {
@@ -1877,6 +1948,22 @@ export default function TimetableGenerator() {
     if (!saveTitle.trim()) {
       toast.error('Digite um título para o horário');
       console.log('❌ Validação falhou: sem título');
+      return;
+    }
+
+    const hasCriticalConflicts = conflicts.some((conflict) => {
+      const normalized = conflict.toLowerCase();
+      return (
+        normalized.includes('déficit') ||
+        normalized.includes('deficit') ||
+        normalized.includes('não puderam ser alocadas') ||
+        normalized.includes('nao puderam ser alocadas') ||
+        normalized.includes('fora da disponibilidade')
+      );
+    });
+
+    if (hasCriticalConflicts) {
+      toast.error('Não é possível salvar: o horário ainda possui conflitos críticos (déficit/indisponibilidade).');
       return;
     }
 
