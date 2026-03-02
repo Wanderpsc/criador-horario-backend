@@ -3,6 +3,7 @@ import GeneratedTimetable from '../models/GeneratedTimetable';
 import TeacherSubject from '../models/TeacherSubject';
 import Class from '../models/Class';
 import Subject from '../models/Subject';
+import Teacher from '../models/Teacher';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -30,6 +31,100 @@ const getClassSubjectHours = (classItem: any, subjectId: string): number | undef
   }
 
   return subjectWeeklyHours[subjectId];
+};
+
+const normalizeKey = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const getAvailabilityKeysForDay = (day: number): string[] => {
+  const aliases = [
+    ['0', '1', 'seg', 'segunda', 'segunda-feira', 'mon', 'monday'],
+    ['1', '2', 'ter', 'terca', 'terça', 'terca-feira', 'terça-feira', 'tue', 'tuesday'],
+    ['2', '3', 'qua', 'quarta', 'quarta-feira', 'wed', 'wednesday'],
+    ['3', '4', 'qui', 'quinta', 'quinta-feira', 'thu', 'thursday'],
+    ['4', '5', 'sex', 'sexta', 'sexta-feira', 'fri', 'friday'],
+    ['5', '6', 'sab', 'sábado', 'sabado', 'sat', 'saturday']
+  ];
+
+  return (aliases[day] || [String(day), String(day + 1)]).map((key) => normalizeKey(String(key)));
+};
+
+const readAvailabilityValue = (value: any): boolean | null => {
+  if (typeof value === 'boolean') return value;
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true') return true;
+    if (normalized === 'false') return false;
+  }
+
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+
+  return null;
+};
+
+const isTeacherAvailableAt = (teacher: any, day: number, period: number): boolean => {
+  const rawAvailability = teacher?.availability;
+  if (!rawAvailability || typeof rawAvailability !== 'object') {
+    return true;
+  }
+
+  const entries = Object.entries(rawAvailability);
+  if (entries.length === 0) {
+    return true;
+  }
+
+  const normalizedMap = new Map<string, any>();
+  for (const [key, value] of entries) {
+    normalizedMap.set(normalizeKey(key), value);
+  }
+
+  let dayAvailability: any = null;
+  for (const dayKey of getAvailabilityKeysForDay(day)) {
+    if (normalizedMap.has(dayKey)) {
+      dayAvailability = normalizedMap.get(dayKey);
+      break;
+    }
+  }
+
+  if (dayAvailability == null) {
+    return true;
+  }
+
+  if (Array.isArray(dayAvailability)) {
+    const direct = readAvailabilityValue(dayAvailability[period]);
+    if (direct !== null) return direct;
+
+    const shifted = readAvailabilityValue(dayAvailability[period + 1]);
+    if (shifted !== null) return shifted;
+
+    return false;
+  }
+
+  if (typeof dayAvailability === 'object') {
+    const direct = readAvailabilityValue(dayAvailability[period]);
+    if (direct !== null) return direct;
+
+    const shifted = readAvailabilityValue(dayAvailability[period + 1]);
+    if (shifted !== null) return shifted;
+
+    const directStr = readAvailabilityValue(dayAvailability[String(period)]);
+    if (directStr !== null) return directStr;
+
+    const shiftedStr = readAvailabilityValue(dayAvailability[String(period + 1)]);
+    if (shiftedStr !== null) return shiftedStr;
+
+    return false;
+  }
+
+  return true;
 };
 
 // Salvar ou atualizar horários
@@ -70,6 +165,8 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       });
     }
 
+    const strictCompliance = req.query.strictCompliance !== 'false';
+
     const teacherSubjects = await TeacherSubject.find({
       userId,
       classId: { $in: classIds }
@@ -89,6 +186,18 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       ? await Subject.find({ _id: { $in: subjectIds } }).lean()
       : [];
     const subjectById = new Map(subjectDocs.map((subjectItem: any) => [String(subjectItem._id), subjectItem]));
+
+    const teacherIds = Array.from(
+      new Set(
+        teacherSubjects
+          .map((association: any) => String(association.teacherId || ''))
+          .filter(Boolean)
+      )
+    );
+    const teacherDocs = teacherIds.length > 0
+      ? await Teacher.find({ _id: { $in: teacherIds } }).lean()
+      : [];
+    const teacherById = new Map(teacherDocs.map((teacherItem: any) => [String(teacherItem._id), teacherItem]));
 
     const expectedAllocation = new Map<string, number>();
     for (const association of teacherSubjects as any[]) {
@@ -164,6 +273,140 @@ router.post('/', auth, async (req: AuthRequest, res) => {
 
     const hasDeficits = deficits.length > 0;
 
+    const availabilityViolations: any[] = [];
+    const consecutiveViolations: any[] = [];
+    const windowMetrics: any[] = [];
+    const teacherDayCounts = new Map<string, Map<number, number>>();
+
+    for (const [classId, slots] of Object.entries(timetables as Record<string, any[]>)) {
+      const classSlots = (Array.isArray(slots) ? slots : []).filter((slot: any) => slot && slot.teacherId !== null && slot.teacherId !== undefined);
+
+      const slotsByDay = new Map<number, any[]>();
+      for (const slot of classSlots) {
+        const day = Number(slot.day);
+        const period = Number(slot.period);
+        if (!Number.isFinite(day) || !Number.isFinite(period)) {
+          continue;
+        }
+
+        const teacherId = String(slot.teacherId);
+        const teacher = teacherById.get(teacherId);
+        if (teacher && !isTeacherAvailableAt(teacher, day, period)) {
+          availabilityViolations.push({
+            classId,
+            teacherId,
+            teacherName: (teacher as any)?.name || teacherId,
+            day,
+            period,
+            subjectId: slot.subjectId
+          });
+        }
+
+        if (!teacherDayCounts.has(teacherId)) {
+          teacherDayCounts.set(teacherId, new Map<number, number>());
+        }
+        const dayCountMap = teacherDayCounts.get(teacherId)!;
+        dayCountMap.set(day, (dayCountMap.get(day) || 0) + 1);
+
+        if (!slotsByDay.has(day)) {
+          slotsByDay.set(day, []);
+        }
+        slotsByDay.get(day)!.push(slot);
+      }
+
+      for (const [day, daySlots] of slotsByDay.entries()) {
+        daySlots.sort((a: any, b: any) => Number(a.period) - Number(b.period));
+
+        for (let index = 0; index < daySlots.length - 1; index++) {
+          const current = daySlots[index];
+          const next = daySlots[index + 1];
+
+          if (
+            Number(next.period) === Number(current.period) + 1 &&
+            String(next.teacherId) === String(current.teacherId)
+          ) {
+            consecutiveViolations.push({
+              classId,
+              day,
+              teacherId: String(current.teacherId),
+              teacherName: (teacherById.get(String(current.teacherId)) as any)?.name || String(current.teacherId),
+              periods: [Number(current.period), Number(next.period)]
+            });
+          }
+        }
+
+        const uniquePeriods = Array.from(
+          new Set(
+            daySlots
+              .map((slot: any) => Number(slot.period))
+              .filter((period: number) => Number.isFinite(period))
+          )
+        ).sort((a: number, b: number) => a - b);
+
+        if (uniquePeriods.length >= 3) {
+          let gaps = 0;
+          for (let index = 0; index < uniquePeriods.length - 1; index++) {
+            const diff = uniquePeriods[index + 1] - uniquePeriods[index];
+            if (diff > 1) {
+              gaps += diff - 1;
+            }
+          }
+
+          if (gaps > 0) {
+            windowMetrics.push({ classId, day, gaps });
+          }
+        }
+      }
+    }
+
+    const distributionWarnings: any[] = [];
+    teacherDayCounts.forEach((dayMap, teacherId) => {
+      const total = Array.from(dayMap.values()).reduce((sum, value) => sum + value, 0);
+      if (total < 4) {
+        return;
+      }
+
+      const activeDays = dayMap.size;
+      if (activeDays < 2) {
+        distributionWarnings.push({
+          teacherId,
+          teacherName: (teacherById.get(teacherId) as any)?.name || teacherId,
+          totalLessons: total,
+          activeDays
+        });
+      }
+    });
+
+    const complianceReport = {
+      strictCompliance,
+      status: hasDeficits || availabilityViolations.length > 0 || consecutiveViolations.length > 0 ? 'critical' : 'ok',
+      deficits,
+      availabilityViolations,
+      consecutiveViolations,
+      windows: {
+        totalDaysWithGaps: windowMetrics.length,
+        totalGaps: windowMetrics.reduce((sum, item) => sum + item.gaps, 0),
+        details: windowMetrics
+      },
+      distributionWarnings,
+      summary: {
+        totalDeficits: deficits.length,
+        totalMissingLessons: deficits.reduce((sum, item) => sum + item.missing, 0),
+        totalAvailabilityViolations: availabilityViolations.length,
+        totalConsecutiveViolations: consecutiveViolations.length,
+        totalWindowGaps: windowMetrics.reduce((sum, item) => sum + item.gaps, 0),
+        totalDistributionWarnings: distributionWarnings.length
+      }
+    };
+
+    if (strictCompliance && complianceReport.status === 'critical') {
+      return res.status(400).json({
+        success: false,
+        message: 'Não foi possível salvar: a grade gerada possui conflitos críticos de conformidade',
+        complianceReport
+      });
+    }
+
     // ✅ Deletar apenas horários da mesma escola
     const deleted = await GeneratedTimetable.deleteMany({ 
       scheduleId, 
@@ -194,18 +437,13 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     res.json({ 
       success: true,
       data: savedTimetables,
-      message: hasDeficits
-        ? 'Horários salvos com avisos: existem lotações com déficit de aulas'
-        : 'Horários salvos com sucesso',
-      warnings: hasDeficits
-        ? {
-            deficits,
-            summary: {
-              totalDeficits: deficits.length,
-              totalMissingLessons: deficits.reduce((sum, item) => sum + item.missing, 0)
-            }
-          }
-        : undefined
+      message:
+        complianceReport.status === 'critical'
+          ? 'Horários salvos com avisos: existem conflitos críticos, mas o modo estrito está desativado'
+          : complianceReport.summary.totalDistributionWarnings > 0 || complianceReport.summary.totalWindowGaps > 0
+            ? 'Horários salvos com alertas de qualidade (janelas/distribuição)'
+            : 'Horários salvos com sucesso',
+      complianceReport
     });
   } catch (error: any) {
     console.error('❌ ERRO ao salvar horários:', error.message);
