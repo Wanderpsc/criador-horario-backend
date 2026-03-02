@@ -103,8 +103,26 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       };
     }
 
+    const getPositiveNumber = (...values: unknown[]): number => {
+      for (const value of values) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          return parsed;
+        }
+      }
+      return 0;
+    };
+
+    const getSubjectWeeklyLessons = (subject: any): number =>
+      getPositiveNumber(
+        subject.workload,
+        subject.workloadHours,
+        subject.weeklyHours,
+        subject.hours
+      );
+
     const totalSlots = daysOfWeek * periodsPerDay;
-    const totalWorkload = subjects.reduce((sum, subject) => sum + (subject.workload || subject.workloadHours || 0), 0);
+    const totalWorkload = subjects.reduce((sum, subject) => sum + getSubjectWeeklyLessons(subject), 0);
 
     const normalizeText = (value: string): string =>
       value
@@ -480,8 +498,8 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
         return byCategory;
       }
 
-      const leftWorkload = left.workload || left.workloadHours || 0;
-      const rightWorkload = right.workload || right.workloadHours || 0;
+      const leftWorkload = getSubjectWeeklyLessons(left);
+      const rightWorkload = getSubjectWeeklyLessons(right);
       return rightWorkload - leftWorkload;
     });
 
@@ -500,16 +518,57 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
       subjectTeacherMap.get(subjectId)!.add(teacherId);
     }
 
+    const subjectWeeklyLessonsMap = new Map<string, number>();
+    for (const subject of subjects) {
+      subjectWeeklyLessonsMap.set(subject._id.toString(), getSubjectWeeklyLessons(subject));
+    }
+
+    const teacherRequestedLessons = new Map<string, number>();
+    for (const association of teacherSubjects) {
+      const teacherId = association.teacherId?.toString();
+      const subjectId = association.subjectId?.toString();
+
+      if (!teacherId || !subjectId) {
+        continue;
+      }
+
+      const explicitWeeklyHours = getPositiveNumber((association as any).weeklyHours);
+      const allowedTeachersForSubject = subjectTeacherMap.get(subjectId);
+      const isSingleTeacherSubject = (allowedTeachersForSubject?.size || 0) === 1;
+
+      const requestedLessons =
+        explicitWeeklyHours > 0
+          ? explicitWeeklyHours
+          : isSingleTeacherSubject
+            ? getPositiveNumber(subjectWeeklyLessonsMap.get(subjectId))
+            : 0;
+
+      if (requestedLessons <= 0) {
+        continue;
+      }
+
+      teacherRequestedLessons.set(
+        teacherId,
+        (teacherRequestedLessons.get(teacherId) || 0) + requestedLessons
+      );
+    }
+
     const teacherMaxLessons = new Map<string, number>();
     for (const teacher of teachers) {
       const teacherId = teacher._id.toString();
-      const weeklyWorkload = Number((teacher as any).weeklyWorkload || 0);
-      teacherMaxLessons.set(teacherId, weeklyWorkload > 0 ? weeklyWorkload : Number.POSITIVE_INFINITY);
+      const weeklyWorkload = getPositiveNumber((teacher as any).weeklyWorkload);
+      const requestedLessons = teacherRequestedLessons.get(teacherId) || 0;
+      const maxLessons = getPositiveNumber(weeklyWorkload, requestedLessons);
+
+      teacherMaxLessons.set(
+        teacherId,
+        maxLessons > 0 ? Math.max(weeklyWorkload, requestedLessons) : Number.POSITIVE_INFINITY
+      );
     }
 
     for (const subject of prioritizedSubjects) {
       // Selecionar professores que podem lecionar esta disciplina
-      const hoursToAssign = subject.workload || subject.workloadHours || 0;
+      const hoursToAssign = getSubjectWeeklyLessons(subject);
       const subjectCategory = getSubjectCategory(subject.name);
       const subjectIdStr = subject._id.toString();
       const allowedTeacherIds = subjectTeacherMap.get(subjectIdStr) || new Set<string>();
@@ -680,6 +739,36 @@ export async function generateTimetable(options: GenerationOptions): Promise<Gen
     };
 
     enforceAllTeachersIncluded();
+
+    const teacherAllocationDeficits = teachers
+      .map((teacher) => {
+        const teacherId = teacher._id.toString();
+        const expectedLessons = teacherRequestedLessons.get(teacherId) || 0;
+        const assignedLessons = teacherAssignedLessons.get(teacherId) || 0;
+
+        return {
+          teacherName: teacher.name,
+          expectedLessons,
+          assignedLessons,
+          deficit: expectedLessons - assignedLessons
+        };
+      })
+      .filter((item) => item.expectedLessons > 0 && item.deficit > 0);
+
+    if (teacherAllocationDeficits.length > 0) {
+      for (const item of teacherAllocationDeficits) {
+        conflicts.push({
+          type: 'no_available_slots',
+          message: `Professor "${item.teacherName}": alocadas ${item.assignedLessons}/${item.expectedLessons} aulas lotadas. Faltam ${item.deficit}.`
+        });
+      }
+
+      return {
+        success: false,
+        message: conflicts[0].message,
+        conflicts
+      };
+    }
 
     if (requireAllTeachersAllocated && conflicts.length > 0) {
       return {
