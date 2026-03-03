@@ -1106,6 +1106,13 @@ export default function TimetableGenerator() {
           const lessonCategory = subjectCategoryById.get(lesson.subjectId) || 'regular';
           const totalPeriods = currentSchedule?.periods?.length || 8;
           const latePeriodStart = Math.max(1, totalPeriods - 2);
+          const allocationTeacherId =
+            lesson.requiredTeacherId || lesson.preferredTeacherId || lesson.candidateTeacherIds[0] || '';
+          const allocationKey = `${currentClassId}|${lesson.subjectId}|${allocationTeacherId}`;
+          const remainingForAllocation = Math.max(
+            0,
+            (expectedAllocation.get(allocationKey) || 0) - (actualAllocation.get(allocationKey) || 0)
+          );
 
           let softPenalty = 0;
           if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
@@ -1237,6 +1244,7 @@ export default function TimetableGenerator() {
           const totalScore =
             bestTeacherForLesson.score +
             lesson.priority +
+            remainingForAllocation * 160 +
             subjectFlexBonus +
             periodPreferenceScore +
             softPenalty;
@@ -1256,16 +1264,26 @@ export default function TimetableGenerator() {
 
       let availabilityOverridesUsed = 0;
       let attemptMode = 0;
-      while (attemptMode < 3 && lessonDemands.some((lesson) => !lesson.allocated)) {
+      while (attemptMode < 5 && lessonDemands.some((lesson) => !lesson.allocated)) {
         let allocatedThisMode = 0;
         let progress = true;
 
         while (progress && lessonDemands.some((lesson) => !lesson.allocated)) {
           progress = false;
 
+          const classesByPending = [...classesToGenerate].sort((classA, classB) => {
+            const pendingA = lessonDemands.filter((lesson) => !lesson.allocated && lesson.classId === classA.id).length;
+            const pendingB = lessonDemands.filter((lesson) => !lesson.allocated && lesson.classId === classB.id).length;
+            return pendingB - pendingA;
+          });
+
+          const classIterationOrder = attemptMode >= 3 ? classesByPending : classesToGenerate;
+          const periodIterationOrder =
+            attemptMode >= 4 ? [...sortedPeriods].sort((a, b) => b.period - a.period) : sortedPeriods;
+
           for (const day of weekDays) {
-            for (const periodInfo of sortedPeriods) {
-              for (const currentClass of classesToGenerate) {
+            for (const periodInfo of periodIterationOrder) {
+              for (const currentClass of classIterationOrder) {
                 if (classSchedule[currentClass.id][day].has(periodInfo.period)) {
                   continue;
                 }
@@ -1323,10 +1341,14 @@ export default function TimetableGenerator() {
             console.log('  🔄 Modo 1: reduzindo penalidades de preferências para fechar lacunas...');
           } else if (attemptMode === 2) {
             console.log('  🔄 Modo 2: priorizando alocação total da lotação acima de preferências de distribuição...');
+          } else if (attemptMode === 3) {
+            console.log('  🔄 Modo 3: priorizando turmas com maior déficit restante...');
+          } else if (attemptMode === 4) {
+            console.log('  🔄 Modo 4: invertendo prioridade de períodos para capturar lacunas remanescentes...');
           }
         }
 
-        if (allocatedThisMode === 0 && attemptMode >= 2) {
+        if (allocatedThisMode === 0 && attemptMode >= 4) {
           break;
         }
       }
