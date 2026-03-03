@@ -1331,11 +1331,11 @@ export default function TimetableGenerator() {
         }
       }
 
-      const fillPendingStudyDeficitsInEmptySlots = () => {
+      const fillPendingDeficitsInEmptySlots = () => {
         let filledLessons = 0;
         const periodPriority = [...sortedPeriods].sort((a, b) => b.period - a.period);
 
-        const studyDeficits = Array.from(expectedAllocation.entries())
+        const pendingDeficits = Array.from(expectedAllocation.entries())
           .map(([allocationKey, expected]) => {
             const allocated = actualAllocation.get(allocationKey) || 0;
             return {
@@ -1345,17 +1345,14 @@ export default function TimetableGenerator() {
               missing: expected - allocated
             };
           })
-          .filter((entry) => {
-            if (entry.missing <= 0) return false;
-            const [, subjectId] = entry.allocationKey.split('|');
-            return (subjectCategoryById.get(subjectId) || 'regular') === 'study';
-          })
+          .filter((entry) => entry.missing > 0)
           .sort((a, b) => b.missing - a.missing);
 
-        for (const deficitEntry of studyDeficits) {
+        for (const deficitEntry of pendingDeficits) {
           let remaining = deficitEntry.missing;
           const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
           const teacher = activeTeacherById.get(teacherId);
+          const targetCategory = subjectCategoryById.get(subjectId) || 'regular';
 
           if (!teacher) {
             continue;
@@ -1373,15 +1370,17 @@ export default function TimetableGenerator() {
 
             for (const enforceAvailability of [true]) {
               for (const day of weekDays) {
-                const studyCountInDay = countStudySlotsInDay(
-                  classTimetable,
-                  classId,
-                  day,
-                  subjectCategoryById
-                );
+                if (targetCategory === 'study') {
+                  const studyCountInDay = countStudySlotsInDay(
+                    classTimetable,
+                    classId,
+                    day,
+                    subjectCategoryById
+                  );
 
-                if (studyCountInDay > 0) {
-                  continue;
+                  if (studyCountInDay > 0) {
+                    continue;
+                  }
                 }
 
                 for (const periodInfo of periodPriority) {
@@ -1413,12 +1412,25 @@ export default function TimetableGenerator() {
                   }
 
                   if (
+                    targetCategory === 'study' &&
                     hasAdjacentStudyInSameClass(
                       classTimetable,
                       classId,
                       day,
                       period,
                       subjectCategoryById
+                    )
+                  ) {
+                    continue;
+                  }
+
+                  if (
+                    hasConsecutiveSubjectInSameClass(
+                      classTimetable,
+                      subjectId,
+                      classId,
+                      day,
+                      period
                     )
                   ) {
                     continue;
@@ -1492,9 +1504,9 @@ export default function TimetableGenerator() {
         return filledLessons;
       };
 
-      const studyFilledLessons = fillPendingStudyDeficitsInEmptySlots();
-      if (studyFilledLessons > 0) {
-        console.log(`  🧩 Preenchimento de estudo aplicado: ${studyFilledLessons} aula(s) adicionadas em slots vazios.`);
+      const filledLessonsByDeficit = fillPendingDeficitsInEmptySlots();
+      if (filledLessonsByDeficit > 0) {
+        console.log(`  🧩 Preenchimento de déficits aplicado: ${filledLessonsByDeficit} aula(s) adicionadas em slots vazios.`);
       }
 
       const rebalanceDeficits = () => {
@@ -1649,10 +1661,10 @@ export default function TimetableGenerator() {
         console.log(`  🔧 Rebalanceamento aplicado: ${repairedLessons} aula(s) realocadas para reduzir déficits.`);
       }
 
-      const resolveStudyDeficitsByClassSlotSwap = () => {
+      const resolveDeficitsByClassSlotSwap = () => {
         let fixedBySwap = 0;
 
-        const studyDeficits = Array.from(expectedAllocation.entries())
+        const pendingDeficits = Array.from(expectedAllocation.entries())
           .map(([allocationKey, expected]) => {
             const allocated = actualAllocation.get(allocationKey) || 0;
             return {
@@ -1662,17 +1674,14 @@ export default function TimetableGenerator() {
               missing: expected - allocated
             };
           })
-          .filter((entry) => {
-            if (entry.missing <= 0) return false;
-            const [, subjectId] = entry.allocationKey.split('|');
-            return (subjectCategoryById.get(subjectId) || 'regular') === 'study';
-          })
+          .filter((entry) => entry.missing > 0)
           .sort((a, b) => b.missing - a.missing);
 
-        for (const deficitEntry of studyDeficits) {
+        for (const deficitEntry of pendingDeficits) {
           let remaining = deficitEntry.missing;
           const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
           const targetTeacher = activeTeacherById.get(teacherId);
+          const targetCategory = subjectCategoryById.get(subjectId) || 'regular';
 
           if (!targetTeacher) {
             continue;
@@ -1696,22 +1705,25 @@ export default function TimetableGenerator() {
             for (const enforceAvailability of [true]) {
               for (const occupiedSlot of classTimetable) {
                 const occupiedCategory = subjectCategoryById.get(occupiedSlot.subjectId) || 'regular';
-                if (occupiedCategory === 'study') {
+                if (occupiedSlot.subjectId === subjectId && occupiedSlot.teacherId === teacherId) {
                   continue;
                 }
 
-                const existingStudyInDay = countStudySlotsInDay(
-                  classTimetable,
-                  classId,
-                  occupiedSlot.day,
-                  subjectCategoryById
-                );
+                if (targetCategory === 'study') {
+                  const existingStudyInDay = countStudySlotsInDay(
+                    classTimetable,
+                    classId,
+                    occupiedSlot.day,
+                    subjectCategoryById
+                  );
 
-                if (existingStudyInDay > 0) {
-                  continue;
+                  if (existingStudyInDay > 0) {
+                    continue;
+                  }
                 }
 
                 if (
+                  targetCategory === 'study' &&
                   hasAdjacentStudyInSameClass(
                     classTimetable,
                     classId,
@@ -1728,6 +1740,13 @@ export default function TimetableGenerator() {
                 }
 
                 if (
+                  hasConsecutiveSubjectInSameClass(
+                    classTimetable,
+                    subjectId,
+                    classId,
+                    occupiedSlot.day,
+                    occupiedSlot.period
+                  ) ||
                   hasConsecutiveTeacherInSameClass(
                     classTimetable,
                     teacherId,
@@ -1768,12 +1787,32 @@ export default function TimetableGenerator() {
                   }
 
                   if (
+                    hasConsecutiveSubjectInSameClass(
+                      classTimetable,
+                      occupiedSlot.subjectId,
+                      classId,
+                      emptySlot.day,
+                      emptySlot.period
+                    ) ||
                     hasConsecutiveTeacherInSameClass(
                       classTimetable,
                       displacedTeacher.id,
                       classId,
                       emptySlot.day,
                       emptySlot.period
+                    )
+                  ) {
+                    continue;
+                  }
+
+                  if (
+                    occupiedCategory === 'study' &&
+                    hasAdjacentStudyInSameClass(
+                      classTimetable,
+                      classId,
+                      emptySlot.day,
+                      emptySlot.period,
+                      subjectCategoryById
                     )
                   ) {
                     continue;
@@ -1866,9 +1905,9 @@ export default function TimetableGenerator() {
         return fixedBySwap;
       };
 
-      const studyFixedBySwap = resolveStudyDeficitsByClassSlotSwap();
-      if (studyFixedBySwap > 0) {
-        console.log(`  🔁 Troca local aplicada: ${studyFixedBySwap} déficit(s) de estudo corrigido(s) com swap de slot.`);
+      const fixedBySwap = resolveDeficitsByClassSlotSwap();
+      if (fixedBySwap > 0) {
+        console.log(`  🔁 Troca local aplicada: ${fixedBySwap} déficit(s) corrigido(s) com swap de slot.`);
       }
 
       if (availabilityOverridesUsed > 0) {
