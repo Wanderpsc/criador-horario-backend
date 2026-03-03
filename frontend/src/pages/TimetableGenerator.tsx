@@ -1188,24 +1188,26 @@ export default function TimetableGenerator() {
               continue;
             }
 
-            if (hasConsecutiveSubjectInSameClass(
+            const consecutiveSubjectConflict = hasConsecutiveSubjectInSameClass(
               classTimetable,
               lesson.subjectId,
               currentClassId,
               day,
               period
-            )) {
-              continue;
-            }
+            );
 
-            if (hasConsecutiveTeacherInSameClass(
+            const consecutiveTeacherConflict = hasConsecutiveTeacherInSameClass(
               classTimetable,
               candidate.id,
               currentClassId,
               day,
               period
-            )) {
-              continue;
+            );
+
+            if (attemptMode < 4) {
+              if (consecutiveSubjectConflict || consecutiveTeacherConflict) {
+                continue;
+              }
             }
 
             let teacherScore = calculateTeacherPreferenceScore(
@@ -1225,6 +1227,15 @@ export default function TimetableGenerator() {
             if (Number.isFinite(teacherMaxLoad)) {
               const occupancyRatio = teacherMaxLoad > 0 ? currentTeacherLoad / teacherMaxLoad : 1;
               teacherScore -= occupancyRatio * 120;
+            }
+
+            if (attemptMode >= 4) {
+              if (consecutiveSubjectConflict) {
+                teacherScore -= 160;
+              }
+              if (consecutiveTeacherConflict) {
+                teacherScore -= 190;
+              }
             }
 
             if (!bestTeacherForLesson || teacherScore > bestTeacherForLesson.score) {
@@ -1391,6 +1402,8 @@ export default function TimetableGenerator() {
               | null = null;
 
             for (const enforceAvailability of [true]) {
+              let allowConsecutiveInSameClass = false;
+              for (let pass = 0; pass < 2 && !chosenSlot; pass++) {
               for (const day of weekDays) {
                 if (targetCategory === 'study') {
                   const studyCountInDay = countStudySlotsInDay(
@@ -1416,16 +1429,18 @@ export default function TimetableGenerator() {
                     continue;
                   }
 
-                  if (
-                    hasConsecutiveTeacherInSameClass(
-                      classTimetable,
-                      teacherId,
-                      classId,
-                      day,
-                      period
-                    )
-                  ) {
-                    continue;
+                  if (!allowConsecutiveInSameClass) {
+                    if (
+                      hasConsecutiveTeacherInSameClass(
+                        classTimetable,
+                        teacherId,
+                        classId,
+                        day,
+                        period
+                      )
+                    ) {
+                      continue;
+                    }
                   }
 
                   const availableAtTime = isTeacherAvailableAtTime(teacher, day, period);
@@ -1446,16 +1461,18 @@ export default function TimetableGenerator() {
                     continue;
                   }
 
-                  if (
-                    hasConsecutiveSubjectInSameClass(
-                      classTimetable,
-                      subjectId,
-                      classId,
-                      day,
-                      period
-                    )
-                  ) {
-                    continue;
+                  if (!allowConsecutiveInSameClass) {
+                    if (
+                      hasConsecutiveSubjectInSameClass(
+                        classTimetable,
+                        subjectId,
+                        classId,
+                        day,
+                        period
+                      )
+                    ) {
+                      continue;
+                    }
                   }
 
                   chosenSlot = {
@@ -1470,6 +1487,11 @@ export default function TimetableGenerator() {
                   break;
                 }
               }
+
+              if (!chosenSlot) {
+                allowConsecutiveInSameClass = true;
+              }
+            }
 
               if (chosenSlot) {
                 break;
@@ -1725,6 +1747,8 @@ export default function TimetableGenerator() {
             let swapApplied = false;
 
             for (const enforceAvailability of [true]) {
+              let allowConsecutiveInSameClass = false;
+              for (let pass = 0; pass < 2 && !swapApplied; pass++) {
               for (const occupiedSlot of classTimetable) {
                 const occupiedCategory = subjectCategoryById.get(occupiedSlot.subjectId) || 'regular';
                 if (occupiedSlot.subjectId === subjectId && occupiedSlot.teacherId === teacherId) {
@@ -1761,23 +1785,25 @@ export default function TimetableGenerator() {
                   continue;
                 }
 
-                if (
-                  hasConsecutiveSubjectInSameClass(
-                    classTimetable,
-                    subjectId,
-                    classId,
-                    occupiedSlot.day,
-                    occupiedSlot.period
-                  ) ||
-                  hasConsecutiveTeacherInSameClass(
-                    classTimetable,
-                    teacherId,
-                    classId,
-                    occupiedSlot.day,
-                    occupiedSlot.period
-                  )
-                ) {
-                  continue;
+                if (!allowConsecutiveInSameClass) {
+                  if (
+                    hasConsecutiveSubjectInSameClass(
+                      classTimetable,
+                      subjectId,
+                      classId,
+                      occupiedSlot.day,
+                      occupiedSlot.period
+                    ) ||
+                    hasConsecutiveTeacherInSameClass(
+                      classTimetable,
+                      teacherId,
+                      classId,
+                      occupiedSlot.day,
+                      occupiedSlot.period
+                    )
+                  ) {
+                    continue;
+                  }
                 }
 
                 const targetTeacherAvailable = isTeacherAvailableAtTime(
@@ -1808,23 +1834,25 @@ export default function TimetableGenerator() {
                     continue;
                   }
 
-                  if (
-                    hasConsecutiveSubjectInSameClass(
-                      classTimetable,
-                      occupiedSlot.subjectId,
-                      classId,
-                      emptySlot.day,
-                      emptySlot.period
-                    ) ||
-                    hasConsecutiveTeacherInSameClass(
-                      classTimetable,
-                      displacedTeacher.id,
-                      classId,
-                      emptySlot.day,
-                      emptySlot.period
-                    )
-                  ) {
-                    continue;
+                  if (!allowConsecutiveInSameClass) {
+                    if (
+                      hasConsecutiveSubjectInSameClass(
+                        classTimetable,
+                        occupiedSlot.subjectId,
+                        classId,
+                        emptySlot.day,
+                        emptySlot.period
+                      ) ||
+                      hasConsecutiveTeacherInSameClass(
+                        classTimetable,
+                        displacedTeacher.id,
+                        classId,
+                        emptySlot.day,
+                        emptySlot.period
+                      )
+                    ) {
+                      continue;
+                    }
                   }
 
                   if (
@@ -1912,6 +1940,11 @@ export default function TimetableGenerator() {
                 swapApplied = true;
                 break;
               }
+
+              if (!swapApplied) {
+                allowConsecutiveInSameClass = true;
+              }
+            }
 
               if (swapApplied) {
                 break;
