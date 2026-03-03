@@ -1401,7 +1401,7 @@ export default function TimetableGenerator() {
                 }
               | null = null;
 
-            for (const enforceAvailability of [true]) {
+            for (const enforceAvailability of [true, false]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !chosenSlot; pass++) {
               for (const day of weekDays) {
@@ -1589,7 +1589,14 @@ export default function TimetableGenerator() {
 
             let repairedThisDeficit = false;
 
-            for (const slot of classTimetable) {
+            const rebalanceStrategies = [
+              { allowConsecutiveInSameClass: false, allowAvailabilityOverride: false },
+              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false },
+              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: true }
+            ];
+
+            for (const strategy of rebalanceStrategies) {
+              for (const slot of classTimetable) {
               const sourceKey = `${classId}|${slot.subjectId}|${slot.teacherId}`;
               const sourceExpected = expectedAllocation.get(sourceKey) || 0;
               const sourceAllocated = actualAllocation.get(sourceKey) || 0;
@@ -1627,31 +1634,34 @@ export default function TimetableGenerator() {
                 }
               }
 
-              if (
-                hasConsecutiveSubjectInSameClass(
-                  classTimetable,
-                  subjectId,
-                  classId,
-                  slot.day,
-                  slot.period
-                )
-              ) {
-                continue;
+              if (!strategy.allowConsecutiveInSameClass) {
+                if (
+                  hasConsecutiveSubjectInSameClass(
+                    classTimetable,
+                    subjectId,
+                    classId,
+                    slot.day,
+                    slot.period
+                  )
+                ) {
+                  continue;
+                }
+
+                if (
+                  hasConsecutiveTeacherInSameClass(
+                    classTimetable,
+                    teacherId,
+                    classId,
+                    slot.day,
+                    slot.period
+                  )
+                ) {
+                  continue;
+                }
               }
 
-              if (
-                hasConsecutiveTeacherInSameClass(
-                  classTimetable,
-                  teacherId,
-                  classId,
-                  slot.day,
-                  slot.period
-                )
-              ) {
-                continue;
-              }
-
-              if (!isTeacherAvailableAtTime(targetTeacher, slot.day, slot.period)) {
+              const targetAvailableAtSlot = isTeacherAvailableAtTime(targetTeacher, slot.day, slot.period);
+              if (!strategy.allowAvailabilityOverride && !targetAvailableAtSlot) {
                 continue;
               }
 
@@ -1667,6 +1677,10 @@ export default function TimetableGenerator() {
 
               actualAllocation.set(sourceKey, sourceAllocated - 1);
               actualAllocation.set(deficitEntry.allocationKey, (actualAllocation.get(deficitEntry.allocationKey) || 0) + 1);
+
+              if (!targetAvailableAtSlot) {
+                availabilityOverridesUsed++;
+              }
 
               slot.subjectId = subjectId;
               slot.teacherId = teacherId;
@@ -1689,6 +1703,11 @@ export default function TimetableGenerator() {
               repairedThisDeficit = true;
               keepSearching = true;
               break;
+            }
+
+              if (repairedThisDeficit) {
+                break;
+              }
             }
 
             if (repairedThisDeficit) {
@@ -1746,7 +1765,7 @@ export default function TimetableGenerator() {
 
             let swapApplied = false;
 
-            for (const enforceAvailability of [true]) {
+            for (const enforceAvailability of [true, false]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !swapApplied; pass++) {
               for (const occupiedSlot of classTimetable) {
