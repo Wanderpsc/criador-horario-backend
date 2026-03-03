@@ -2135,25 +2135,74 @@ export default function TimetableGenerator() {
       );
     });
 
-    if (hasCriticalConflicts) {
-      toast.error('Não é possível salvar: o horário ainda possui conflitos críticos (déficit/indisponibilidade).');
-      return;
-    }
-
     setIsSaving(true);
     try {
-      console.log('📤 Enviando para API...');
-      const response = await api.post('/generated-timetables', {
+      const payload = {
         scheduleId: selectedSchedule,
         timetables: generatedTimetables,
         title: saveTitle.trim()
-      });
+      };
+
+      const saveStrictly = async () => {
+        console.log('📤 Enviando para API (strictCompliance=true)...');
+        return api.post('/generated-timetables', payload);
+      };
+
+      const saveWithOverride = async () => {
+        console.log('📤 Enviando para API (strictCompliance=false)...');
+        return api.post('/generated-timetables?strictCompliance=false', payload);
+      };
+
+      let response;
+
+      if (hasCriticalConflicts) {
+        const confirmed = window.confirm(
+          'A grade possui conflitos críticos (déficit/indisponibilidade). Deseja salvar mesmo assim com aviso?'
+        );
+
+        if (!confirmed) {
+          toast('Salvamento cancelado.');
+          return;
+        }
+
+        response = await saveWithOverride();
+      } else {
+        try {
+          response = await saveStrictly();
+        } catch (strictError: any) {
+          const message = String(strictError?.response?.data?.message || '').toLowerCase();
+          const blockedByCompliance =
+            strictError?.response?.status === 400 &&
+            (message.includes('conflitos críticos') || message.includes('conflitos criticos'));
+
+          if (!blockedByCompliance) {
+            throw strictError;
+          }
+
+          const confirmed = window.confirm(
+            'O backend bloqueou o salvamento por conflitos críticos. Deseja salvar mesmo assim com aviso?'
+          );
+
+          if (!confirmed) {
+            toast('Salvamento cancelado.');
+            return;
+          }
+
+          response = await saveWithOverride();
+        }
+      }
       
       console.log('✅ Resposta da API:', response.data);
-      toast.success('✅ Horários salvos com sucesso!', {
+      const savedWithCriticalWarnings = response?.data?.complianceReport?.status === 'critical';
+      toast.success(
+        savedWithCriticalWarnings
+          ? '✅ Horários salvos com alertas críticos (modo não estrito).'
+          : '✅ Horários salvos com sucesso!',
+        {
         duration: 4000,
         position: 'top-center',
-      });
+        }
+      );
       setShowSaveDialog(false);
       setSaveTitle('');
       loadSavedTimetablesList();
