@@ -99,6 +99,7 @@ type SubjectCategory = 'core' | 'study' | 'regular';
 export default function TimetableGenerator() {
   const [selectedSchedule, setSelectedSchedule] = useState<string>('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+  const [selectedDayFilter, setSelectedDayFilter] = useState<string>('all');
   const [generatedTimetables, setGeneratedTimetables] = useState<{ [classId: string]: TimetableSlot[] }>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
@@ -113,7 +114,12 @@ export default function TimetableGenerator() {
   const [observations, setObservations] = useState<string>('');
   const [printFormat, setPrintFormat] = useState<'normal' | 'transposed'>('normal'); // Formato de impressão
 
-  const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+  const allWeekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+  const weekDays = selectedDayFilter === 'all'
+    ? allWeekDays
+    : allWeekDays.includes(selectedDayFilter)
+      ? [selectedDayFilter]
+      : allWeekDays;
 
   // Traduzir turno
   const translateShift = (shift: string) => {
@@ -206,6 +212,23 @@ export default function TimetableGenerator() {
   });
 
   const currentSchedule = schedules.find((s: Schedule) => s.id === selectedSchedule);
+
+  const generatedClassIds = useMemo(
+    () => new Set(Object.keys(generatedTimetables)),
+    [generatedTimetables]
+  );
+
+  const classesForDisplay = useMemo(() => {
+    if (selectedClassFilter !== 'all') {
+      return classes.filter((currentClass: any) => currentClass.id === selectedClassFilter);
+    }
+
+    if (generatedClassIds.size === 0) {
+      return classes;
+    }
+
+    return classes.filter((currentClass: any) => generatedClassIds.has(currentClass.id));
+  }, [classes, selectedClassFilter, generatedClassIds]);
 
   const generationChecklist: GenerationChecklist | null = useMemo(() => {
     if (!selectedSchedule || !currentSchedule || !Array.isArray(classes) || classes.length === 0) {
@@ -300,16 +323,18 @@ export default function TimetableGenerator() {
       });
     }
 
+    const isFullWeekSelection = selectedDayFilter === 'all';
+
     const summary: GenerationChecklistSummary = {
       classesAnalyzed: checklistClasses.length,
       classesReady: checklistClasses.filter((currentClass) => currentClass.isReady).length,
       classesWithIssues: checklistClasses.filter((currentClass) => !currentClass.isReady).length,
-      classesWithMissingLoad: checklistClasses.filter(
-        (currentClass) => currentClass.totalTargetHours < currentClass.totalSlots
-      ).length,
-      classesWithExcessLoad: checklistClasses.filter(
-        (currentClass) => currentClass.totalTargetHours > currentClass.totalSlots
-      ).length,
+      classesWithMissingLoad: isFullWeekSelection
+        ? checklistClasses.filter((currentClass) => currentClass.totalTargetHours < currentClass.totalSlots).length
+        : 0,
+      classesWithExcessLoad: isFullWeekSelection
+        ? checklistClasses.filter((currentClass) => currentClass.totalTargetHours > currentClass.totalSlots).length
+        : 0,
       classesWithoutSubjects: checklistClasses.filter((currentClass) => currentClass.hasNoSubjects).length,
       totalMissingSubjectAllocations: checklistClasses.reduce(
         (sum, currentClass) => sum + currentClass.missingSubjects.length,
@@ -321,7 +346,7 @@ export default function TimetableGenerator() {
       classes: checklistClasses,
       summary
     };
-  }, [selectedSchedule, selectedClassFilter, currentSchedule, classes, teachers, teacherSubjects]);
+  }, [selectedSchedule, selectedClassFilter, selectedDayFilter, currentSchedule, classes, teachers, teacherSubjects]);
 
   // Carregar lista de horários salvos ao montar o componente
   useEffect(() => {
@@ -895,6 +920,7 @@ export default function TimetableGenerator() {
       const classesToGenerate = selectedClassFilter === 'all' 
         ? classes 
         : classes.filter((c: any) => c.id === selectedClassFilter);
+      const isPartialDayGeneration = selectedDayFilter !== 'all';
 
       if (classesToGenerate.length === 0) {
         toast.error('Nenhuma turma selecionada para gerar horário');
@@ -946,6 +972,7 @@ export default function TimetableGenerator() {
       console.log('🎯 GERAÇÃO DE HORÁRIOS SEM CONFLITOS');
       console.log('📊 Turmas:', classesToGenerate.length);
       console.log('🎯 Filtro:', selectedClassFilter === 'all' ? 'Todas' : 'Turma específica');
+      console.log('📅 Dia:', selectedDayFilter === 'all' ? 'Todos os dias' : selectedDayFilter);
       console.log('📚 Disciplinas:', subjects.length);
       console.log('👨‍🏫 Professores ativos:', activeTeachers.length);
       console.log('⏰ Períodos por dia:', currentSchedule.periods.length);
@@ -1110,13 +1137,13 @@ export default function TimetableGenerator() {
         const totalSlotsAvailable = weekDays.length * currentSchedule.periods.length;
         console.log(`  📊 Aulas necessárias: ${classLessonsNeeded} | Slots disponíveis: ${totalSlotsAvailable}`);
 
-        if (classLessonsNeeded < totalSlotsAvailable) {
+        if (!isPartialDayGeneration && classLessonsNeeded < totalSlotsAvailable) {
           newConflicts.push(
             `ℹ️ ${currentClass.grade?.name} ${currentClass.name}: carga total da lotação (${classLessonsNeeded}) é menor que os slots (${totalSlotsAvailable}). Slots restantes ficarão vazios por falta de carga cadastrada.`
           );
         }
 
-        if (classLessonsNeeded > totalSlotsAvailable) {
+        if (!isPartialDayGeneration && classLessonsNeeded > totalSlotsAvailable) {
           newConflicts.push(`⚠️ ${currentClass.grade?.name} ${currentClass.name}: ${classLessonsNeeded} aulas necessárias, mas apenas ${totalSlotsAvailable} slots disponíveis`);
         }
       }
@@ -2340,41 +2367,49 @@ export default function TimetableGenerator() {
         );
       }
 
-      for (const currentClass of classesToGenerate) {
-        const classPending = lessonDemands.filter(
-          (lesson) => !lesson.allocated && lesson.classId === currentClass.id
-        ).length;
+      if (isPartialDayGeneration) {
+        console.log('ℹ️ Geração por dia ativo: validações de déficit semanal foram ignoradas neste processamento.');
+      } else {
+        for (const currentClass of classesToGenerate) {
+          const classPending = lessonDemands.filter(
+            (lesson) => !lesson.allocated && lesson.classId === currentClass.id
+          ).length;
 
-        if (classPending > 0) {
-          newConflicts.push(
-            `⚠️ ${currentClass.grade?.name} ${currentClass.name}: ${classPending} aula(s) não puderam ser alocadas por falta de professores disponíveis`
-          );
+          if (classPending > 0) {
+            newConflicts.push(
+              `⚠️ ${currentClass.grade?.name} ${currentClass.name}: ${classPending} aula(s) não puderam ser alocadas por falta de professores disponíveis`
+            );
+          }
+
+          const classTotal = lessonDemands.filter((lesson) => lesson.classId === currentClass.id).length;
+          console.log(`  ✅ Total alocado: ${(allTimetables[currentClass.id] || []).length}/${classTotal} aulas`);
         }
 
-        const classTotal = lessonDemands.filter((lesson) => lesson.classId === currentClass.id).length;
-        console.log(`  ✅ Total alocado: ${(allTimetables[currentClass.id] || []).length}/${classTotal} aulas`);
-      }
+        for (const [allocationKey, expected] of expectedAllocation.entries()) {
+          const allocated = actualAllocation.get(allocationKey) || 0;
+          if (allocated >= expected) continue;
 
-      for (const [allocationKey, expected] of expectedAllocation.entries()) {
-        const allocated = actualAllocation.get(allocationKey) || 0;
-        if (allocated >= expected) continue;
+          const [classId, subjectId, teacherId] = allocationKey.split('|');
+          const classLabel = classLabelById.get(classId) || classId;
+          const subjectName = subjectNameById.get(subjectId) || subjectId;
+          const teacherName = teacherNameById.get(teacherId) || teacherId;
+          const missing = expected - allocated;
 
-        const [classId, subjectId, teacherId] = allocationKey.split('|');
-        const classLabel = classLabelById.get(classId) || classId;
-        const subjectName = subjectNameById.get(subjectId) || subjectId;
-        const teacherName = teacherNameById.get(teacherId) || teacherId;
-        const missing = expected - allocated;
-
-        newConflicts.push(
-          `⚠️ ${classLabel}: ${teacherName} (${subjectName}) com déficit de ${missing} aula(s) (${allocated}/${expected})`
-        );
+          newConflicts.push(
+            `⚠️ ${classLabel}: ${teacherName} (${subjectName}) com déficit de ${missing} aula(s) (${allocated}/${expected})`
+          );
+        }
       }
 
       setGeneratedTimetables(allTimetables);
       setConflicts(newConflicts);
 
       if (newConflicts.length === 0) {
-        toast.success(`✅ Horários gerados para ${classesToGenerate.length} turma(s) sem conflitos!`, { duration: 4000 });
+        const dayScopeLabel = selectedDayFilter === 'all' ? 'todos os dias' : selectedDayFilter;
+        toast.success(
+          `✅ Horários gerados para ${classesToGenerate.length} turma(s) (${dayScopeLabel}) sem conflitos!`,
+          { duration: 4000 }
+        );
       } else {
         toast(`⚠️ ${newConflicts.length} aviso(s) encontrado(s)`, { icon: '⚠️', duration: 5000 });
       }
@@ -2788,6 +2823,25 @@ export default function TimetableGenerator() {
     return false;
   };
 
+  const selectedClassesCount = selectedClassFilter === 'all' ? classes.length : 1;
+  const selectedDayLabel = selectedDayFilter === 'all' ? 'Todos os dias' : selectedDayFilter;
+  const visibleClassIdSet = useMemo(
+    () => new Set(classesForDisplay.map((currentClass: any) => currentClass.id)),
+    [classesForDisplay]
+  );
+  const filteredScheduledSlotsCount = useMemo(() => {
+    const allowedDays = new Set(weekDays);
+
+    return Object.entries(generatedTimetables).reduce((total, [classId, slots]) => {
+      if (!visibleClassIdSet.has(classId)) {
+        return total;
+      }
+
+      const visibleSlots = (slots || []).filter((slot) => allowedDays.has(slot.day));
+      return total + visibleSlots.length;
+    }, 0);
+  }, [generatedTimetables, visibleClassIdSet, weekDays]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -2861,6 +2915,32 @@ export default function TimetableGenerator() {
           </p>
         </div>
 
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Horário por Dia *
+          </label>
+          <select
+            value={selectedDayFilter}
+            onChange={(e) => setSelectedDayFilter(e.target.value)}
+            className="input max-w-md"
+          >
+            <option value="all">📅 Todos os dias (Segunda a Sexta)</option>
+            <optgroup label="Dia Específico">
+              {allWeekDays.map((day) => (
+                <option key={day} value={day}>
+                  {day}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+          <p className="text-sm text-gray-500 mt-2">
+            {selectedDayFilter === 'all'
+              ? 'ℹ️ O sistema tentará distribuir aulas em toda a semana'
+              : `ℹ️ A geração ficará focada apenas em ${selectedDayFilter}`
+            }
+          </p>
+        </div>
+
         {generationChecklist && (
           <div className="mb-6 border border-amber-300 bg-amber-50 rounded-lg p-4">
             <h3 className="text-base font-bold text-amber-900 mb-2">Checklist Automático Pré-Geração</h3>
@@ -2887,6 +2967,7 @@ export default function TimetableGenerator() {
               {generationChecklist.classes.map((currentClass) => {
                 const loadDifference = currentClass.totalSlots - currentClass.totalTargetHours;
                 const hasMissingTeachers = currentClass.missingSubjects.length > 0;
+                const showLoadBalance = selectedDayFilter === 'all';
 
                 return (
                   <div
@@ -2906,13 +2987,13 @@ export default function TimetableGenerator() {
                       Carga total da turma: {currentClass.totalTargetHours} aulas • Slots: {currentClass.totalSlots}
                     </div>
 
-                    {loadDifference > 0 && (
+                    {showLoadBalance && loadDifference > 0 && (
                       <div className="text-xs text-amber-700 mt-1">
                         Sobra prevista de {loadDifference} slot(s) por carga insuficiente cadastrada.
                       </div>
                     )}
 
-                    {loadDifference < 0 && (
+                    {showLoadBalance && loadDifference < 0 && (
                       <div className="text-xs text-red-700 mt-1">
                         Déficit de {Math.abs(loadDifference)} slot(s): carga da turma maior que a grade disponível.
                       </div>
@@ -2935,9 +3016,21 @@ export default function TimetableGenerator() {
             </div>
 
             <div className="mt-3 text-xs text-amber-900">
-              Resumo: {generationChecklist.summary.totalMissingSubjectAllocations} disciplina(s) sem lotação •{' '}
-              {generationChecklist.summary.classesWithMissingLoad} turma(s) com carga menor que slots •{' '}
-              {generationChecklist.summary.classesWithExcessLoad} turma(s) com carga maior que slots.
+              {selectedDayFilter === 'all'
+                ? (
+                  <>
+                    Resumo: {generationChecklist.summary.totalMissingSubjectAllocations} disciplina(s) sem lotação •{' '}
+                    {generationChecklist.summary.classesWithMissingLoad} turma(s) com carga menor que slots •{' '}
+                    {generationChecklist.summary.classesWithExcessLoad} turma(s) com carga maior que slots.
+                  </>
+                )
+                : (
+                  <>
+                    Resumo por dia: {generationChecklist.summary.totalMissingSubjectAllocations} disciplina(s) sem lotação.
+                    Comparativos de carga semanal foram ocultados porque o filtro está em {selectedDayFilter}.
+                  </>
+                )
+              }
             </div>
           </div>
         )}
@@ -3030,9 +3123,7 @@ export default function TimetableGenerator() {
             <RefreshCw size={20} className={isGenerating ? 'animate-spin' : ''} />
             {isGenerating 
               ? 'Gerando...' 
-              : selectedClassFilter === 'all'
-                ? `Gerar Horários (${classes.length} turmas)`
-                : 'Gerar Horário (1 turma)'
+              : `Gerar Horário (${selectedClassesCount} turma(s) • ${selectedDayLabel})`
             }
           </button>
 
@@ -3153,10 +3244,18 @@ export default function TimetableGenerator() {
       {/* Horários de Todas as Turmas */}
       {Object.keys(generatedTimetables).length > 0 && currentSchedule && (
         <>
+          {classesForDisplay.length === 0 && (
+            <div className="card bg-amber-50 border-l-4 border-amber-500 no-print">
+              <p className="text-sm text-amber-800">
+                Nenhuma turma com horário encontrado para o filtro selecionado.
+              </p>
+            </div>
+          )}
+
           {/* Visualização em Planilha Normal */}
-          {viewMode === 'spreadsheet' && printFormat === 'normal' && (
+          {classesForDisplay.length > 0 && viewMode === 'spreadsheet' && printFormat === 'normal' && (
             <div className="space-y-8">
-              {classes.map((currentClass: any) => {
+              {classesForDisplay.map((currentClass: any) => {
                 return (
                   <div key={currentClass.id} className="card print-container">
                     <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
@@ -3261,7 +3360,7 @@ export default function TimetableGenerator() {
           )}
 
           {/* Visualização em Planilha Transposta (Períodos no topo, Turmas na lateral) */}
-          {viewMode === 'spreadsheet' && printFormat === 'transposed' && (
+          {classesForDisplay.length > 0 && viewMode === 'spreadsheet' && printFormat === 'transposed' && (
             <div className="space-y-8">
               {weekDays.map((day) => (
                 <div key={day} className="card print-container">
@@ -3290,7 +3389,7 @@ export default function TimetableGenerator() {
                         </tr>
                       </thead>
                       <tbody>
-                        {classes.map((currentClass: any) => (
+                        {classesForDisplay.map((currentClass: any) => (
                           <tr key={currentClass.id} className="hover:bg-gray-50">
                             <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
                               <div className="text-sm">{currentClass.grade?.name || 'Série'}</div>
@@ -3359,9 +3458,9 @@ export default function TimetableGenerator() {
           )}
 
           {/* Visualização Dia a Dia */}
-          {viewMode === 'day-by-day' && (
+          {classesForDisplay.length > 0 && viewMode === 'day-by-day' && (
         <div className="space-y-8">
-          {classes.map((currentClass: any) => (
+          {classesForDisplay.map((currentClass: any) => (
             <div key={currentClass.id} className="card print-container">
               <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
                 <h2 className="text-2xl font-bold text-center text-primary-700">
@@ -3447,12 +3546,12 @@ export default function TimetableGenerator() {
         <div className="card bg-blue-50 border-l-4 border-blue-500 no-print">
           <h3 className="font-bold text-blue-900 mb-3">Como usar:</h3>
           <ol className="space-y-2 text-sm text-blue-800">
-            <li>1. Selecione a <strong>Turma</strong> para a qual deseja gerar o horário</li>
-            <li>2. Escolha o <strong>Tipo de Horário</strong> (Parcial, Integral, etc.)</li>
-            <li>3. Adicione <strong>Observações</strong> se necessário (opcional)</li>
-            <li>4. Clique em <strong>Gerar Horário</strong></li>
-            <li>5. Escolha o <strong>Formato de Impressão</strong>: Padrão ou Transposto</li>
-            <li>6. Use os botões de <strong>Imprimir</strong>, <strong>Download</strong> ou <strong>Compartilhar</strong></li>
+            <li>1. Escolha o <strong>Tipo de Horário</strong> (Parcial, Integral, etc.)</li>
+            <li>2. Selecione a <strong>Turma</strong> (ou todas as turmas)</li>
+            <li>3. Selecione o <strong>Dia</strong> (Segunda a Sexta, ou Todos)</li>
+            <li>4. Adicione <strong>Observações</strong> se necessário (opcional)</li>
+            <li>5. Clique em <strong>Gerar Horário</strong></li>
+            <li>6. Escolha o <strong>Formato de Impressão</strong>: Padrão ou Transposto</li>
           </ol>
           <div className="mt-4 space-y-2">
             <div className="p-3 bg-blue-100 rounded">
@@ -3494,7 +3593,7 @@ export default function TimetableGenerator() {
           </div>
           <div className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
             <div className="text-3xl font-bold">
-              {Object.values(generatedTimetables).reduce((total, timetable) => total + timetable.length, 0)}
+              {filteredScheduledSlotsCount}
             </div>
             <div className="text-sm opacity-90">Aulas Agendadas</div>
           </div>
