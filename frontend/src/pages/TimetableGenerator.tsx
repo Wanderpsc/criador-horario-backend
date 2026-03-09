@@ -811,6 +811,55 @@ export default function TimetableGenerator() {
     }).length;
   };
 
+  const countTeacherSlotsInDay = (
+    globalSchedule: { [day: string]: { [period: number]: Set<string> } },
+    teacherId: string,
+    day: string,
+    totalPeriods: number
+  ): number => {
+    return Array.from({ length: totalPeriods }, (_, index) => index + 1).filter((period) =>
+      globalSchedule[day]?.[period]?.has(teacherId)
+    ).length;
+  };
+
+  const countTeacherClassSlotsInDay = (
+    timetable: TimetableSlot[],
+    classId: string,
+    teacherId: string,
+    day: string
+  ): number => {
+    return timetable.filter((slot) => {
+      if (slot.classId !== classId) return false;
+      if (slot.teacherId !== teacherId) return false;
+      return slot.day === day;
+    }).length;
+  };
+
+  const countTeacherSubjectSlotsInClassDay = (
+    timetable: TimetableSlot[],
+    classId: string,
+    teacherId: string,
+    subjectId: string,
+    day: string
+  ): number => {
+    return timetable.filter((slot) => {
+      if (slot.classId !== classId) return false;
+      if (slot.teacherId !== teacherId) return false;
+      if (slot.subjectId !== subjectId) return false;
+      return slot.day === day;
+    }).length;
+  };
+
+  const getTeacherClassDailyLimit = (weeklyTarget: number): number => {
+    if (weeklyTarget <= 4) return 1;
+    if (weeklyTarget <= 12) return 2;
+    return 3;
+  };
+
+  const getTeacherSubjectDailyLimit = (weeklyTarget: number): number => {
+    return weeklyTarget >= 8 ? 2 : 1;
+  };
+
   // Função para gerar horários para TODAS as turmas SEM CONFLITOS
   const generateTimetable = () => {
     if (!selectedSchedule) {
@@ -858,6 +907,7 @@ export default function TimetableGenerator() {
       const expectedAllocation = new Map<string, number>();
       const actualAllocation = new Map<string, number>();
       const lessonDemands: LessonDemand[] = [];
+      let availabilityOverridesUsed = 0;
 
       const globalTeacherSchedule: { [day: string]: { [period: number]: Set<string> } } = {};
       const classSchedule: { [classId: string]: { [day: string]: Set<number> } } = {};
@@ -1071,6 +1121,61 @@ export default function TimetableGenerator() {
         }
       }
 
+      const expectedClassTeacherLoad = new Map<string, number>();
+      for (const [allocationKey, expected] of expectedAllocation.entries()) {
+        const [classId, _subjectId, teacherId] = allocationKey.split('|');
+        const classTeacherKey = `${classId}|${teacherId}`;
+        expectedClassTeacherLoad.set(
+          classTeacherKey,
+          (expectedClassTeacherLoad.get(classTeacherKey) || 0) + expected
+        );
+      }
+
+      // Aulas com poucos slots possíveis precisam ser priorizadas para evitar déficits no fim.
+      const totalPeriods = currentSchedule?.periods?.length || 8;
+      const estimateFeasibleSlotsForLesson = (lesson: LessonDemand): number => {
+        let feasibleSlots = 0;
+        const lessonCategory = subjectCategoryById.get(lesson.subjectId) || 'regular';
+
+        for (const day of weekDays) {
+          for (const periodInfo of sortedPeriods) {
+            const period = periodInfo.period;
+
+            if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
+              continue;
+            }
+
+            const canFitAnyTeacher = lesson.candidateTeacherIds.some((teacherId) => {
+              const candidate = activeTeacherById.get(teacherId);
+              if (!candidate) return false;
+              return isTeacherAvailableAtTime(candidate, day, period);
+            });
+
+            if (canFitAnyTeacher) {
+              feasibleSlots++;
+            }
+          }
+        }
+
+        return feasibleSlots;
+      };
+
+      for (const lesson of lessonDemands) {
+        const feasibleSlots = estimateFeasibleSlotsForLesson(lesson);
+        if (feasibleSlots <= 0) {
+          lesson.priority += 1200;
+          continue;
+        }
+
+        if (feasibleSlots <= 4) {
+          lesson.priority += 520;
+        } else if (feasibleSlots <= 8) {
+          lesson.priority += 280;
+        } else if (feasibleSlots <= 12) {
+          lesson.priority += 120;
+        }
+      }
+
       for (const teacher of activeTeachers) {
         const configuredLoad = toPositiveInteger(teacher.weeklyWorkload);
         const requiredLoad = teacherRequiredLoad.get(teacher.id) || 0;
@@ -1089,12 +1194,67 @@ export default function TimetableGenerator() {
         mode: number
       ) => {
         const classTimetable = allTimetables[currentClassId] || [];
+
+        const countOpenSlotsForTeacherInClass = (
+          teacher: Teacher,
+          subjectId: string
+        ): number => {
+          let count = 0;
+
+          for (const weekDay of weekDays) {
+            for (const periodInfo of sortedPeriods) {
+              const candidatePeriod = periodInfo.period;
+
+              if (classSchedule[currentClassId][weekDay].has(candidatePeriod)) {
+                continue;
+              }
+
+              if (globalTeacherSchedule[weekDay][candidatePeriod].has(teacher.id)) {
+                continue;
+              }
+
+              if (!isTeacherAvailableAtTime(teacher, weekDay, candidatePeriod)) {
+                continue;
+              }
+
+              if (mode < 4) {
+                if (
+                  hasConsecutiveSubjectInSameClass(
+                    classTimetable,
+                    subjectId,
+                    currentClassId,
+                    weekDay,
+                    candidatePeriod
+                  )
+                ) {
+                  continue;
+                }
+
+                if (
+                  hasConsecutiveTeacherInSameClass(
+                    classTimetable,
+                    teacher.id,
+                    currentClassId,
+                    weekDay,
+                    candidatePeriod
+                  )
+                ) {
+                  continue;
+                }
+              }
+
+              count++;
+            }
+          }
+
+          return count;
+        };
+
         let bestPlacement:
           | {
               lesson: LessonDemand;
               teacher: Teacher;
               score: number;
-              violatesAvailability: boolean;
             }
           | null = null;
 
@@ -1167,7 +1327,7 @@ export default function TimetableGenerator() {
           }
 
           const subjectFlexBonus = Math.max(0, 60 - lesson.candidateTeacherIds.length * 10);
-          let bestTeacherForLesson: { teacher: Teacher; score: number; violatesAvailability: boolean } | null = null;
+          let bestTeacherForLesson: { teacher: Teacher; score: number } | null = null;
 
           for (const teacherId of lesson.candidateTeacherIds) {
             const candidate = activeTeacherById.get(teacherId);
@@ -1188,6 +1348,99 @@ export default function TimetableGenerator() {
               continue;
             }
 
+            const teacherRequired = teacherRequiredLoad.get(candidate.id) || 0;
+            const teacherDailyLoad = countTeacherSlotsInDay(
+              globalTeacherSchedule,
+              candidate.id,
+              day,
+              totalPeriods
+            );
+            const teacherActiveDays = weekDays.filter((weekDay) =>
+              countTeacherSlotsInDay(globalTeacherSchedule, candidate.id, weekDay, totalPeriods) > 0
+            ).length;
+            const teacherTargetActiveDays = Math.min(
+              5,
+              Math.max(1, teacherRequired > 0 ? teacherRequired : 3)
+            );
+            const teacherTargetDailyLoad = Math.max(
+              1,
+              Math.ceil(Math.max(teacherRequired, 1) / weekDays.length)
+            );
+            const teacherHardDailyLoad =
+              teacherTargetDailyLoad +
+              (mode >= 3 ? 1 : 0) +
+              (mode >= 4 ? 1 : 0);
+
+            // Before relaxed modes, force opening new working days when a teacher still
+            // has room to spread load through the week.
+            if (
+              mode < 1 &&
+              teacherActiveDays < teacherTargetActiveDays &&
+              teacherDailyLoad > 0
+            ) {
+              continue;
+            }
+
+            if (teacherDailyLoad >= teacherHardDailyLoad) {
+              continue;
+            }
+
+            const classTeacherWeeklyTarget =
+              expectedClassTeacherLoad.get(`${currentClassId}|${candidate.id}`) || teacherRequired;
+            const classTeacherDayCount = countTeacherClassSlotsInDay(
+              classTimetable,
+              currentClassId,
+              candidate.id,
+              day
+            );
+            const classTeacherDayLimit =
+              getTeacherClassDailyLimit(classTeacherWeeklyTarget) +
+              (mode >= 4 && classTeacherWeeklyTarget <= 4 ? 1 : 0);
+
+            if (mode < 4 && classTeacherDayCount >= classTeacherDayLimit) {
+              continue;
+            }
+
+            const classSubjectTeacherKey = `${currentClassId}|${lesson.subjectId}|${candidate.id}`;
+            const classSubjectTeacherWeeklyTarget = expectedAllocation.get(classSubjectTeacherKey) || 0;
+            const teacherSubjectDayCount = countTeacherSubjectSlotsInClassDay(
+              classTimetable,
+              currentClassId,
+              candidate.id,
+              lesson.subjectId,
+              day
+            );
+            const teacherSubjectDayLimit =
+              getTeacherSubjectDailyLimit(classSubjectTeacherWeeklyTarget) +
+              (mode >= 4 && classSubjectTeacherWeeklyTarget <= 4 ? 1 : 0);
+
+            if (mode < 4 && teacherSubjectDayCount >= teacherSubjectDayLimit) {
+              continue;
+            }
+
+            const openSlotsForTeacherInClass = countOpenSlotsForTeacherInClass(
+              candidate,
+              lesson.subjectId
+            );
+
+            if (openSlotsForTeacherInClass <= 0) {
+              continue;
+            }
+
+            const openSlotsTodayForTeacherInClass = sortedPeriods.filter((periodInfo) => {
+              const candidatePeriod = periodInfo.period;
+
+              if (classSchedule[currentClassId][day].has(candidatePeriod)) {
+                return false;
+              }
+
+              if (globalTeacherSchedule[day][candidatePeriod].has(candidate.id)) {
+                return false;
+              }
+
+              return isTeacherAvailableAtTime(candidate, day, candidatePeriod);
+            }).length;
+
             const consecutiveSubjectConflict = hasConsecutiveSubjectInSameClass(
               classTimetable,
               lesson.subjectId,
@@ -1204,7 +1457,7 @@ export default function TimetableGenerator() {
               period
             );
 
-            if (attemptMode < 4) {
+            if (mode < 4) {
               if (consecutiveSubjectConflict || consecutiveTeacherConflict) {
                 continue;
               }
@@ -1215,8 +1468,39 @@ export default function TimetableGenerator() {
               candidate.id,
               day,
               period,
-              teacherRequiredLoad.get(candidate.id) || 0
+              teacherRequired
             );
+
+            if (teacherActiveDays < teacherTargetActiveDays) {
+              if (teacherDailyLoad === 0) {
+                teacherScore += 320;
+              } else {
+                teacherScore -= 280;
+              }
+            }
+
+            if (teacherDailyLoad >= teacherTargetDailyLoad) {
+              teacherScore -= (teacherDailyLoad - teacherTargetDailyLoad + 1) * 140;
+            } else {
+              teacherScore += 30;
+            }
+
+            if (remainingForAllocation > 0) {
+              if (openSlotsForTeacherInClass <= remainingForAllocation) {
+                teacherScore += 1800;
+              } else if (openSlotsForTeacherInClass <= remainingForAllocation + 2) {
+                teacherScore += 900;
+              } else if (openSlotsForTeacherInClass <= remainingForAllocation + 4) {
+                teacherScore += 420;
+              }
+            }
+
+            if (openSlotsTodayForTeacherInClass <= 1) {
+              teacherScore += 180;
+            } else if (openSlotsTodayForTeacherInClass <= 2) {
+              teacherScore += 70;
+            }
+
             if (lesson.preferredTeacherId === candidate.id) {
               teacherScore += 25;
             }
@@ -1229,7 +1513,7 @@ export default function TimetableGenerator() {
               teacherScore -= occupancyRatio * 120;
             }
 
-            if (attemptMode >= 4) {
+            if (mode >= 4) {
               if (consecutiveSubjectConflict) {
                 teacherScore -= 160;
               }
@@ -1241,8 +1525,7 @@ export default function TimetableGenerator() {
             if (!bestTeacherForLesson || teacherScore > bestTeacherForLesson.score) {
               bestTeacherForLesson = {
                 teacher: candidate,
-                score: teacherScore,
-                violatesAvailability: !isAvailableAtTime
+                score: teacherScore
               };
             }
           }
@@ -1264,8 +1547,7 @@ export default function TimetableGenerator() {
             bestPlacement = {
               lesson,
               teacher: bestTeacherForLesson.teacher,
-              score: totalScore,
-              violatesAvailability: bestTeacherForLesson.violatesAvailability
+              score: totalScore
             };
           }
         }
@@ -1273,7 +1555,6 @@ export default function TimetableGenerator() {
         return bestPlacement;
       };
 
-      let availabilityOverridesUsed = 0;
       let attemptMode = 0;
       while (attemptMode < 5 && lessonDemands.some((lesson) => !lesson.allocated)) {
         let allocatedThisMode = 0;
@@ -1313,10 +1594,6 @@ export default function TimetableGenerator() {
                   teacherId: placement.teacher.id,
                   classId: currentClass.id
                 });
-
-                if (placement.violatesAvailability) {
-                  availabilityOverridesUsed++;
-                }
 
                 placement.lesson.allocated = true;
                 classSchedule[currentClass.id][day].add(periodInfo.period);
@@ -1364,6 +1641,71 @@ export default function TimetableGenerator() {
         }
       }
 
+      const tryRelocateTeacherBlockingSlot = (
+        teacherId: string,
+        blockedDay: string,
+        blockedPeriod: number,
+        targetClassId: string
+      ): boolean => {
+        if (!globalTeacherSchedule[blockedDay]?.[blockedPeriod]?.has(teacherId)) {
+          return true;
+        }
+
+        const teacher = activeTeacherById.get(teacherId);
+        if (!teacher) {
+          return false;
+        }
+
+        const allSlots = Object.values(allTimetables).flat();
+        const blockingSlot = allSlots.find((slot) => {
+          if (slot.teacherId !== teacherId) return false;
+          if (slot.day !== blockedDay) return false;
+          if (slot.period !== blockedPeriod) return false;
+          return slot.classId !== targetClassId;
+        });
+
+        if (!blockingSlot) {
+          return false;
+        }
+
+        const blockingClassId = blockingSlot.classId;
+        const dayOrder = [blockedDay, ...weekDays.filter((day) => day !== blockedDay)];
+
+        for (const day of dayOrder) {
+          for (const periodInfo of sortedPeriods) {
+            const period = periodInfo.period;
+
+            if (day === blockedDay && period === blockedPeriod) {
+              continue;
+            }
+
+            if (classSchedule[blockingClassId][day].has(period)) {
+              continue;
+            }
+
+            if (globalTeacherSchedule[day][period].has(teacherId)) {
+              continue;
+            }
+
+            if (!isTeacherAvailableAtTime(teacher, day, period)) {
+              continue;
+            }
+
+            classSchedule[blockingClassId][blockingSlot.day].delete(blockingSlot.period);
+            globalTeacherSchedule[blockingSlot.day][blockingSlot.period].delete(teacherId);
+
+            blockingSlot.day = day;
+            blockingSlot.period = period;
+
+            classSchedule[blockingClassId][day].add(period);
+            globalTeacherSchedule[day][period].add(teacherId);
+            return true;
+          }
+        }
+
+        return false;
+      };
+
       const fillPendingDeficitsInEmptySlots = () => {
         let filledLessons = 0;
         const periodPriority = [...sortedPeriods].sort((a, b) => b.period - a.period);
@@ -1401,7 +1743,7 @@ export default function TimetableGenerator() {
                 }
               | null = null;
 
-            for (const enforceAvailability of [true, false]) {
+            for (const enforceAvailability of [true]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !chosenSlot; pass++) {
               for (const day of weekDays) {
@@ -1422,10 +1764,6 @@ export default function TimetableGenerator() {
                   const period = periodInfo.period;
 
                   if (classSchedule[classId][day].has(period)) {
-                    continue;
-                  }
-
-                  if (globalTeacherSchedule[day][period].has(teacherId)) {
                     continue;
                   }
 
@@ -1471,6 +1809,19 @@ export default function TimetableGenerator() {
                         period
                       )
                     ) {
+                      continue;
+                    }
+                  }
+
+                  if (globalTeacherSchedule[day][period].has(teacherId)) {
+                    const relocated = tryRelocateTeacherBlockingSlot(
+                      teacherId,
+                      day,
+                      period,
+                      classId
+                    );
+
+                    if (!relocated) {
                       continue;
                     }
                   }
@@ -1591,8 +1942,7 @@ export default function TimetableGenerator() {
 
             const rebalanceStrategies = [
               { allowConsecutiveInSameClass: false, allowAvailabilityOverride: false },
-              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false },
-              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: true }
+              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false }
             ];
 
             for (const strategy of rebalanceStrategies) {
@@ -1765,7 +2115,7 @@ export default function TimetableGenerator() {
 
             let swapApplied = false;
 
-            for (const enforceAvailability of [true, false]) {
+            for (const enforceAvailability of [true]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !swapApplied; pass++) {
               for (const occupiedSlot of classTimetable) {
@@ -2199,8 +2549,8 @@ export default function TimetableGenerator() {
           ? '✅ Horários salvos com alertas críticos (modo não estrito).'
           : '✅ Horários salvos com sucesso!',
         {
-        duration: 4000,
-        position: 'top-center',
+          duration: 4000,
+          position: 'top-center',
         }
       );
       setShowSaveDialog(false);
