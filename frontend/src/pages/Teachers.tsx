@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { teacherAPI } from '../services/api';
+import { scheduleAPI, teacherAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit2, Trash2, X, Printer, Download, FileSpreadsheet } from 'lucide-react';
 
@@ -27,6 +27,17 @@ interface Teacher {
   isActive: boolean;
 }
 
+interface Schedule {
+  id: string;
+  name: string;
+  numberOfPeriods?: number;
+  periods?: Array<{
+    period: number;
+    startTime?: string;
+    endTime?: string;
+  }>;
+}
+
 interface TeacherForm extends Omit<Teacher, 'id'> {
   schoolId: string;
 }
@@ -34,6 +45,7 @@ interface TeacherForm extends Omit<Teacher, 'id'> {
 export default function Teachers() {
   const { user } = useAuthStore();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
@@ -49,8 +61,21 @@ export default function Teachers() {
   useEffect(() => {
     if (user) {
       loadTeachers();
+      loadSchedules();
     }
   }, [user]);
+
+  const loadSchedules = async () => {
+    try {
+      const response = await scheduleAPI.getAll();
+      const rawData = response.data?.data || response.data;
+      const schedulesData = Array.isArray(rawData) ? rawData : [];
+      setSchedules(schedulesData);
+    } catch (error: any) {
+      console.error('Erro ao carregar horários:', error);
+      setSchedules([]);
+    }
+  };
 
   const loadTeachers = async () => {
     try {
@@ -806,6 +831,7 @@ export default function Teachers() {
       {showAvailabilityModal && selectedTeacher && (
         <AvailabilityModal
           teacher={selectedTeacher}
+          schedules={schedules}
           onClose={() => setShowAvailabilityModal(false)}
           onSave={handleSaveAvailability}
         />
@@ -817,40 +843,215 @@ export default function Teachers() {
 // Componente Modal de Disponibilidade
 function AvailabilityModal({ 
   teacher, 
+  schedules,
   onClose, 
   onSave 
 }: { 
   teacher: Teacher; 
+  schedules: Schedule[];
   onClose: () => void; 
   onSave: (availability: TeacherAvailability) => void; 
 }) {
-  const days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
-  const periods = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta'];
+  const defaultPeriods = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  const normalizeDayKey = (value: string): string =>
+    value
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+  const resolveSchedulePeriods = (schedule?: Schedule): number[] => {
+    if (Array.isArray(schedule?.periods) && schedule.periods.length > 0) {
+      const uniquePeriods = Array.from(
+        new Set(
+          schedule.periods
+            .map((periodInfo) => Number(periodInfo.period))
+            .filter((period) => Number.isInteger(period) && period > 0)
+        )
+      );
+      if (uniquePeriods.length > 0) {
+        return uniquePeriods.sort((a, b) => a - b);
+      }
+    }
+
+    const count = Number(schedule?.numberOfPeriods);
+    if (Number.isInteger(count) && count > 0) {
+      return Array.from({ length: count }, (_, index) => index + 1);
+    }
+
+    return defaultPeriods;
+  };
+
+  const getInitialScheduleId = (): string => {
+    if (schedules.length === 0) {
+      return '';
+    }
+
+    const lastSelectedScheduleId = localStorage.getItem('lastSelectedScheduleId');
+    if (lastSelectedScheduleId && schedules.some((schedule) => schedule.id === lastSelectedScheduleId)) {
+      return lastSelectedScheduleId;
+    }
+
+    return schedules[0].id;
+  };
+
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string>(() => getInitialScheduleId());
+
+  useEffect(() => {
+    if (schedules.length === 0) {
+      return;
+    }
+
+    if (!selectedScheduleId || !schedules.some((schedule) => schedule.id === selectedScheduleId)) {
+      const fallbackScheduleId = getInitialScheduleId();
+      if (fallbackScheduleId) {
+        setSelectedScheduleId(fallbackScheduleId);
+      }
+    }
+  }, [schedules, selectedScheduleId]);
+
+  const selectedSchedule = useMemo(
+    () => schedules.find((schedule) => schedule.id === selectedScheduleId),
+    [schedules, selectedScheduleId]
+  );
+
+  const periods = useMemo(
+    () => resolveSchedulePeriods(selectedSchedule),
+    [selectedSchedule]
+  );
+
+  const resolveDayAvailability = (
+    source: TeacherAvailability | undefined,
+    day: string,
+    dayIndex: number
+  ): { [period: number]: boolean } | null => {
+    if (!source || typeof source !== 'object') {
+      return null;
+    }
+
+    const normalizedDay = normalizeDayKey(day);
+    const aliases = new Set<string>([
+      normalizedDay,
+      `${normalizedDay}-feira`,
+      String(dayIndex),
+      String(dayIndex + 1)
+    ]);
+
+    for (const [key, value] of Object.entries(source)) {
+      if (!value || typeof value !== 'object') {
+        continue;
+      }
+
+      if (aliases.has(normalizeDayKey(key))) {
+        return value as { [period: number]: boolean };
+      }
+    }
+
+    return null;
+  };
+
+  const getStoredPeriodValue = (
+    dayAvailability: { [period: number]: boolean } | null,
+    period: number
+  ): boolean | undefined => {
+    if (!dayAvailability) {
+      return undefined;
+    }
+
+    const direct = (dayAvailability as any)[period];
+    if (typeof direct === 'boolean') {
+      return direct;
+    }
+
+    const stringDirect = (dayAvailability as any)[String(period)];
+    if (typeof stringDirect === 'boolean') {
+      return stringDirect;
+    }
+
+    const shifted = (dayAvailability as any)[period + 1];
+    if (typeof shifted === 'boolean') {
+      return shifted;
+    }
+
+    const stringShifted = (dayAvailability as any)[String(period + 1)];
+    if (typeof stringShifted === 'boolean') {
+      return stringShifted;
+    }
+
+    return undefined;
+  };
+
+  const buildAvailabilityForGrid = (sourceAvailability?: TeacherAvailability): TeacherAvailability => {
+    const normalized: TeacherAvailability = {};
+
+    days.forEach((day, dayIndex) => {
+      normalized[day] = {};
+      const dayAvailability = resolveDayAvailability(sourceAvailability, day, dayIndex);
+
+      periods.forEach((period) => {
+        const storedValue = getStoredPeriodValue(dayAvailability, period);
+        normalized[day][period] = storedValue === undefined ? true : storedValue;
+      });
+    });
+
+    return normalized;
+  };
   
   console.log('🔍 Abrindo modal de disponibilidade:', {
     teacherName: teacher.name,
+    selectedSchedule: selectedSchedule?.name || 'Padrão',
+    periods,
     hasAvailability: !!teacher.availability,
     availability: teacher.availability
   });
   
   // Inicializar com todos os horários disponíveis por padrão
-  const [availability, setAvailability] = useState<TeacherAvailability>(() => {
-    if (teacher.availability && Object.keys(teacher.availability).length > 0) {
-      console.log('✅ Carregando disponibilidade salva:', teacher.availability);
-      return teacher.availability;
+  const [availability, setAvailability] = useState<TeacherAvailability>(() =>
+    buildAvailabilityForGrid(teacher.availability)
+  );
+
+  useEffect(() => {
+    setAvailability(buildAvailabilityForGrid(teacher.availability));
+  }, [teacher.availability, periods]);
+
+  const outOfRangeAvailableSlots = useMemo(() => {
+    if (!teacher.availability || Object.keys(teacher.availability).length === 0) {
+      return 0;
     }
-    
-    console.log('⚠️ Nenhuma disponibilidade salva, usando padrão (todos disponíveis)');
-    // Default: todos disponíveis
-    const defaultAvailability: TeacherAvailability = {};
-    days.forEach(day => {
-      defaultAvailability[day] = {};
-      periods.forEach(period => {
-        defaultAvailability[day][period] = true; // true = disponível
-      });
-    });
-    return defaultAvailability;
-  });
+
+    const validDays = new Set(days.map((day) => normalizeDayKey(day)));
+    const validPeriods = new Set(periods);
+    let total = 0;
+
+    for (const [dayKey, dayAvailability] of Object.entries(teacher.availability)) {
+      if (!validDays.has(normalizeDayKey(dayKey))) {
+        continue;
+      }
+
+      if (!dayAvailability || typeof dayAvailability !== 'object') {
+        continue;
+      }
+
+      for (const [periodKey, value] of Object.entries(dayAvailability)) {
+        if (value !== true) {
+          continue;
+        }
+
+        const period = Number(periodKey);
+        if (!Number.isInteger(period)) {
+          continue;
+        }
+
+        if (!validPeriods.has(period)) {
+          total++;
+        }
+      }
+    }
+
+    return total;
+  }, [teacher.availability, periods]);
 
   const togglePeriod = (day: string, period: number) => {
     setAvailability(prev => ({
@@ -910,6 +1111,42 @@ function AvailabilityModal({
             ✗ <strong>Vermelho</strong> = Professor INDISPONÍVEL (não será alocado)
           </p>
         </div>
+
+        {schedules.length > 0 ? (
+          <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Grade de Referência
+            </label>
+            <select
+              value={selectedScheduleId}
+              onChange={(e) => setSelectedScheduleId(e.target.value)}
+              className="input"
+            >
+              {schedules.map((schedule) => (
+                <option key={schedule.id} value={schedule.id}>
+                  {schedule.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-600 mt-2">
+              Períodos considerados nesta grade: {periods.join(', ')}.
+            </p>
+          </div>
+        ) : (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <p className="text-sm text-yellow-800">
+              Não foi possível identificar uma grade de horários. Será usada a grade padrão de 8 períodos.
+            </p>
+          </div>
+        )}
+
+        {outOfRangeAvailableSlots > 0 && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded">
+            <p className="text-sm text-amber-800">
+              Existem {outOfRangeAvailableSlots} marcações de disponibilidade fora dos períodos desta grade. Elas serão ignoradas ao salvar.
+            </p>
+          </div>
+        )}
 
         <div className="mb-4">
           <button

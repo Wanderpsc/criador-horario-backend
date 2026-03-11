@@ -97,6 +97,7 @@ interface GenerationChecklist {
 type SubjectCategory = 'core' | 'study' | 'regular';
 
 export default function TimetableGenerator() {
+  const LAST_SELECTED_SCHEDULE_KEY = 'lastSelectedScheduleId';
   const [selectedSchedule, setSelectedSchedule] = useState<string>('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
   const [selectedDayFilter, setSelectedDayFilter] = useState<string>('all');
@@ -212,6 +213,33 @@ export default function TimetableGenerator() {
   });
 
   const currentSchedule = schedules.find((s: Schedule) => s.id === selectedSchedule);
+
+  useEffect(() => {
+    if (!selectedSchedule || !Array.isArray(schedules) || schedules.length === 0) {
+      return;
+    }
+
+    const scheduleExists = schedules.some((schedule: Schedule) => schedule.id === selectedSchedule);
+    if (scheduleExists) {
+      localStorage.setItem(LAST_SELECTED_SCHEDULE_KEY, selectedSchedule);
+    }
+  }, [selectedSchedule, schedules]);
+
+  useEffect(() => {
+    if (selectedSchedule || !Array.isArray(schedules) || schedules.length === 0) {
+      return;
+    }
+
+    const savedScheduleId = localStorage.getItem(LAST_SELECTED_SCHEDULE_KEY);
+    if (!savedScheduleId) {
+      return;
+    }
+
+    const savedScheduleExists = schedules.some((schedule: Schedule) => schedule.id === savedScheduleId);
+    if (savedScheduleExists) {
+      setSelectedSchedule(savedScheduleId);
+    }
+  }, [selectedSchedule, schedules]);
 
   const generatedClassIds = useMemo(
     () => new Set(Object.keys(generatedTimetables)),
@@ -394,21 +422,58 @@ export default function TimetableGenerator() {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
 
-    const getDayAliases = (dayValue: string): string[] => {
+    const getDayAliases = (dayValue: string, availabilityKeys: Set<string>): string[] => {
       const normalized = normalizeDayKey(dayValue);
       const aliases: Record<string, string[]> = {
-        segunda: ['segunda', 'segunda-feira', 'seg', 'monday', 'mon', '0', '1'],
-        terca: ['terca', 'terca-feira', 'ter', 'tuesday', 'tue', '1', '2'],
-        quarta: ['quarta', 'quarta-feira', 'qua', 'wednesday', 'wed', '2', '3'],
-        quinta: ['quinta', 'quinta-feira', 'qui', 'thursday', 'thu', '3', '4'],
-        sexta: ['sexta', 'sexta-feira', 'sex', 'friday', 'fri', '4', '5']
+        segunda: ['segunda', 'segunda-feira', 'seg', 'monday', 'mon'],
+        terca: ['terca', 'terca-feira', 'ter', 'tuesday', 'tue'],
+        quarta: ['quarta', 'quarta-feira', 'qua', 'wednesday', 'wed'],
+        quinta: ['quinta', 'quinta-feira', 'qui', 'thursday', 'thu'],
+        sexta: ['sexta', 'sexta-feira', 'sex', 'friday', 'fri']
       };
 
-      if (aliases[normalized]) {
-        return aliases[normalized];
+      const dayIndexByAlias: Record<string, number> = {
+        segunda: 0,
+        terca: 1,
+        quarta: 2,
+        quinta: 3,
+        sexta: 4
+      };
+
+      const resolvedAliases = aliases[normalized] ? [...aliases[normalized]] : [normalized];
+      const dayIndex = dayIndexByAlias[normalized];
+
+      if (dayIndex === undefined || availabilityKeys.size === 0) {
+        return resolvedAliases;
       }
 
-      return [normalized];
+      const numericKeys = Array.from(availabilityKeys)
+        .map((key) => Number(key))
+        .filter((value) => Number.isInteger(value) && value >= 0 && value <= 7);
+
+      if (numericKeys.length === 0) {
+        return resolvedAliases;
+      }
+
+      const hasZero = numericKeys.includes(0);
+      const hasSeven = numericKeys.includes(7);
+
+      let numericAlias: string;
+      if (hasZero && !hasSeven) {
+        numericAlias = String(dayIndex);
+      } else if (hasSeven && !hasZero) {
+        numericAlias = String(dayIndex + 1);
+      } else {
+        const oneBasedHints = numericKeys.filter((value) => value >= 1 && value <= 7).length;
+        const zeroBasedHints = numericKeys.filter((value) => value >= 0 && value <= 6).length;
+        numericAlias = oneBasedHints >= zeroBasedHints
+          ? String(dayIndex + 1)
+          : String(dayIndex);
+      }
+
+      resolvedAliases.push(numericAlias);
+
+      return resolvedAliases;
     };
 
     // PRIORIDADE ABSOLUTA: Verificar disponibilidade estruturada (checkboxes)
@@ -419,7 +484,8 @@ export default function TimetableGenerator() {
         normalizedAvailability.set(normalizeDayKey(key), value);
       }
 
-      for (const dayAlias of getDayAliases(day)) {
+      const availabilityKeys = new Set(normalizedAvailability.keys());
+      for (const dayAlias of getDayAliases(day, availabilityKeys)) {
         const dayAvailability = normalizedAvailability.get(dayAlias);
         if (!dayAvailability || Object.keys(dayAvailability).length === 0) {
           continue;
@@ -506,7 +572,7 @@ export default function TimetableGenerator() {
             afterText.includes('em diante') ||
             hasNegativeContext) {
           restrictedFromHour = hour;
-          console.log(`⏰ Detectado horário restrito: ${hour}:00h para ${teacher} (contexto: "${beforeText.trim()}...")`);
+          console.log(`⏰ Detectado horário restrito: ${hour}:00h para ${teacher.name} (contexto: "${beforeText.trim()}...")`);
           break; // Usa o primeiro horário encontrado
         }
       }
@@ -515,7 +581,7 @@ export default function TimetableGenerator() {
     // Se não encontrou horário específico mas menciona "tarde" + negativo, bloquear após 12h
     if (restrictedFromHour === null && hasAfternoonMention && hasNegativeContext) {
       restrictedFromHour = 12;
-      console.log(`⏰ Detectado restrição de tarde para ${teacher}, bloqueando após 12:00h`);
+      console.log(`⏰ Detectado restrição de tarde para ${teacher.name}, bloqueando após 12:00h`);
     }
     
     // ========== DETECÇÃO DE PERÍODOS ESPECÍFICOS ==========
@@ -550,8 +616,9 @@ export default function TimetableGenerator() {
       let periodNum = periodNumConst;
       if (periodNum === 99) periodNum = currentSchedule?.periods?.length || 8; // último período
       
-      const avoidPattern = new RegExp(`(não|nao|evitar|sem).*(${periodName}|periodo|período|horário|horario|aula)`, 'i');
-      if (obs.match(avoidPattern) && period === periodNum) {
+      const avoidPattern = new RegExp(`(não|nao|evitar|sem)[^\n]{0,35}${periodName}`, 'i');
+      const avoidPeriodPattern = new RegExp(`${periodName}[^\n]{0,20}(periodo|período|horário|horario|aula)`, 'i');
+      if ((avoidPattern.test(obs) || avoidPeriodPattern.test(obs)) && period === periodNum) {
         return false;
       }
     }
@@ -587,15 +654,15 @@ export default function TimetableGenerator() {
     // REGRA 4: Apenas turno sem dia específico (aplica a todos os dias)
     if (!dayMentioned && hasNegativeContext) {
       if (hasMorningMention && isMorning) {
-        console.log(`🚫 ${teacher} bloqueado: manhã em ${dayLower} período ${period}`);
+        console.log(`🚫 ${teacher.name} bloqueado: manhã em ${dayLower} período ${period}`);
         return false;
       }
       if (hasAfternoonMention && isAfternoon) {
-        console.log(`🚫 ${teacher} bloqueado: tarde em ${dayLower} período ${period} (observação: "${observations}")`);
+        console.log(`🚫 ${teacher.name} bloqueado: tarde em ${dayLower} período ${period} (observação: "${teacher.observations}")`);
         return false;
       }
       if (hasNightMention && period >= 8) {
-        console.log(`🚫 ${teacher} bloqueado: noite em ${dayLower} período ${period}`);
+        console.log(`🚫 ${teacher.name} bloqueado: noite em ${dayLower} período ${period}`);
         return false;
       }
     }
@@ -603,7 +670,7 @@ export default function TimetableGenerator() {
     // REGRA 5: Horário específico (ex: "após 12:00h", "a partir das 14h", "não pode às 14:15")
     // PRIORIDADE MÁXIMA: Se há horário específico restrito, bloquear SEMPRE
     if (restrictedFromHour !== null && periodHour >= restrictedFromHour) {
-      console.log(`🚫 ${teacher} bloqueado: horário ${periodHour}:00 >= ${restrictedFromHour}:00 em ${dayLower} período ${period} (observação: "${observations}")`);
+      console.log(`🚫 ${teacher.name} bloqueado: horário ${periodHour}:00 >= ${restrictedFromHour}:00 em ${dayLower} período ${period} (observação: "${teacher.observations}")`);
       return false;
     }
     
@@ -1214,6 +1281,150 @@ export default function TimetableGenerator() {
         );
       }
 
+      const teacherAvailableSlotsByDay = new Map<string, Map<string, number>>();
+      const teacherAvailableDaysById = new Map<string, number>();
+      const teacherTotalAvailableSlotsById = new Map<string, number>();
+      const teacherDailyQuotaById = new Map<string, Map<string, number>>();
+      const normalizeDayToken = (value: string): string =>
+        value
+          .trim()
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+      const activeDayTokens = new Set(weekDays.map((day) => normalizeDayToken(day)));
+      const activePeriods = new Set(sortedPeriods.map((periodInfo) => periodInfo.period));
+
+      for (const teacher of activeTeachers) {
+        const availabilityByDay = new Map<string, number>();
+        let totalAvailableSlots = 0;
+        let outOfRangeAvailableSlots = 0;
+
+        if (teacher.availability && typeof teacher.availability === 'object') {
+          for (const [dayKey, dayAvailability] of Object.entries(teacher.availability)) {
+            if (!activeDayTokens.has(normalizeDayToken(dayKey))) {
+              continue;
+            }
+
+            if (!dayAvailability || typeof dayAvailability !== 'object') {
+              continue;
+            }
+
+            for (const [periodKey, value] of Object.entries(dayAvailability)) {
+              if (value !== true) {
+                continue;
+              }
+
+              const period = Number(periodKey);
+              if (!Number.isInteger(period)) {
+                continue;
+              }
+
+              if (!activePeriods.has(period)) {
+                outOfRangeAvailableSlots++;
+              }
+            }
+          }
+        }
+
+        for (const day of weekDays) {
+          let availableSlotsInDay = 0;
+
+          for (const periodInfo of sortedPeriods) {
+            if (isTeacherAvailableAtTime(teacher, day, periodInfo.period)) {
+              availableSlotsInDay++;
+            }
+          }
+
+          availabilityByDay.set(day, availableSlotsInDay);
+          totalAvailableSlots += availableSlotsInDay;
+        }
+
+        const availableDays = weekDays.filter((day) => (availabilityByDay.get(day) || 0) > 0).length;
+
+        teacherAvailableSlotsByDay.set(teacher.id, availabilityByDay);
+        teacherAvailableDaysById.set(teacher.id, availableDays);
+        teacherTotalAvailableSlotsById.set(teacher.id, totalAvailableSlots);
+
+        const requiredLoad = teacherRequiredLoad.get(teacher.id) || 0;
+        const quotaByDay = new Map<string, number>(weekDays.map((day) => [day, 0]));
+
+        if (requiredLoad > 0) {
+          if (totalAvailableSlots === 0) {
+            newConflicts.push(
+              `⚠️ ${teacher.name}: carga lotada (${requiredLoad}) sem nenhum slot disponível na agenda do professor.`
+            );
+          } else if (requiredLoad > totalAvailableSlots) {
+            const outOfRangeHint =
+              outOfRangeAvailableSlots > 0
+                ? ` (${outOfRangeAvailableSlots} marcações fora da grade ativa)`
+                : '';
+            newConflicts.push(
+              `⚠️ ${teacher.name}: carga lotada (${requiredLoad}) excede slots disponíveis (${totalAvailableSlots})${outOfRangeHint}.`
+            );
+          }
+        }
+
+        if (requiredLoad > 0 && totalAvailableSlots > 0) {
+          const targets = weekDays.map((day) => {
+            const slots = availabilityByDay.get(day) || 0;
+            if (slots <= 0) {
+              return { day, slots, base: 0, fractional: 0 };
+            }
+
+            const exact = (requiredLoad * slots) / totalAvailableSlots;
+            const base = Math.min(slots, Math.floor(exact));
+
+            return {
+              day,
+              slots,
+              base,
+              fractional: exact - Math.floor(exact)
+            };
+          });
+
+          let allocated = 0;
+          for (const target of targets) {
+            quotaByDay.set(target.day, target.base);
+            allocated += target.base;
+          }
+
+          let remaining = Math.max(0, requiredLoad - allocated);
+
+          const byFraction = [...targets].sort(
+            (a, b) => b.fractional - a.fractional || b.slots - a.slots
+          );
+
+          for (const target of byFraction) {
+            if (remaining <= 0) break;
+            if (target.slots <= 0) continue;
+
+            const current = quotaByDay.get(target.day) || 0;
+            if (current >= target.slots) continue;
+
+            quotaByDay.set(target.day, current + 1);
+            remaining--;
+          }
+
+          if (remaining > 0) {
+            const byCapacity = [...targets].sort((a, b) => b.slots - a.slots);
+            for (const target of byCapacity) {
+              while (remaining > 0) {
+                const current = quotaByDay.get(target.day) || 0;
+                if (current >= target.slots) break;
+                quotaByDay.set(target.day, current + 1);
+                remaining--;
+              }
+
+              if (remaining <= 0) {
+                break;
+              }
+            }
+          }
+        }
+
+        teacherDailyQuotaById.set(teacher.id, quotaByDay);
+      }
+
       const selectBestPlacement = (
         currentClassId: string,
         day: string,
@@ -1240,7 +1451,7 @@ export default function TimetableGenerator() {
                 continue;
               }
 
-              if (!isTeacherAvailableAtTime(teacher, weekDay, candidatePeriod)) {
+              if (mode < 4 && !isTeacherAvailableAtTime(teacher, weekDay, candidatePeriod)) {
                 continue;
               }
 
@@ -1282,6 +1493,7 @@ export default function TimetableGenerator() {
               lesson: LessonDemand;
               teacher: Teacher;
               score: number;
+              violatesAvailability: boolean;
             }
           | null = null;
 
@@ -1354,14 +1566,16 @@ export default function TimetableGenerator() {
           }
 
           const subjectFlexBonus = Math.max(0, 60 - lesson.candidateTeacherIds.length * 10);
-          let bestTeacherForLesson: { teacher: Teacher; score: number } | null = null;
+          let bestTeacherForLesson:
+            | { teacher: Teacher; score: number; availableAtTime: boolean }
+            | null = null;
 
           for (const teacherId of lesson.candidateTeacherIds) {
             const candidate = activeTeacherById.get(teacherId);
             if (!candidate) continue;
 
             const isAvailableAtTime = isTeacherAvailableAtTime(candidate, day, period);
-            if (!isAvailableAtTime) {
+            if (!isAvailableAtTime && mode < 4) {
               continue;
             }
 
@@ -1385,18 +1599,34 @@ export default function TimetableGenerator() {
             const teacherActiveDays = weekDays.filter((weekDay) =>
               countTeacherSlotsInDay(globalTeacherSchedule, candidate.id, weekDay, totalPeriods) > 0
             ).length;
-            const teacherTargetActiveDays = Math.min(
-              5,
-              Math.max(1, teacherRequired > 0 ? teacherRequired : 3)
+            const teacherAvailableDays = teacherAvailableDaysById.get(candidate.id) || 0;
+            const teacherTotalAvailableSlots = teacherTotalAvailableSlotsById.get(candidate.id) || 0;
+            const teacherAvailableSlotsInDay =
+              teacherAvailableSlotsByDay.get(candidate.id)?.get(day) || 0;
+            const teacherDayQuota = teacherDailyQuotaById.get(candidate.id)?.get(day) || 0;
+            const effectiveAvailableDays = Math.max(
+              1,
+              teacherAvailableDays > 0 ? teacherAvailableDays : weekDays.length
+            );
+            const teacherTargetActiveDays = Math.max(
+              1,
+              Math.min(
+                effectiveAvailableDays,
+                teacherRequired > 0 ? teacherRequired : effectiveAvailableDays
+              )
             );
             const teacherTargetDailyLoad = Math.max(
               1,
-              Math.ceil(Math.max(teacherRequired, 1) / weekDays.length)
+              Math.ceil(Math.max(teacherRequired, 1) / teacherTargetActiveDays)
             );
             const teacherHardDailyLoad =
               teacherTargetDailyLoad +
               (mode >= 3 ? 1 : 0) +
               (mode >= 4 ? 1 : 0);
+
+            if (mode < 4 && teacherAvailableSlotsInDay > 0 && teacherDailyLoad >= teacherAvailableSlotsInDay) {
+              continue;
+            }
 
             // Before relaxed modes, force opening new working days when a teacher still
             // has room to spread load through the week.
@@ -1465,7 +1695,11 @@ export default function TimetableGenerator() {
                 return false;
               }
 
-              return isTeacherAvailableAtTime(candidate, day, candidatePeriod);
+              if (mode < 4) {
+                return isTeacherAvailableAtTime(candidate, day, candidatePeriod);
+              }
+
+              return true;
             }).length;
 
             const consecutiveSubjectConflict = hasConsecutiveSubjectInSameClass(
@@ -1512,6 +1746,24 @@ export default function TimetableGenerator() {
               teacherScore += 30;
             }
 
+            if (teacherDayQuota > 0) {
+              if (teacherDailyLoad < teacherDayQuota) {
+                teacherScore += 210 + (teacherDayQuota - teacherDailyLoad) * 90;
+              } else {
+                teacherScore -= (teacherDailyLoad - teacherDayQuota + 1) * 120;
+              }
+            } else if (teacherDailyLoad > 0 && teacherRequired > 0) {
+              teacherScore -= 130;
+            }
+
+            if (teacherRequired > 0 && teacherTotalAvailableSlots > 0) {
+              const scarcityRatio = teacherRequired / teacherTotalAvailableSlots;
+              teacherScore += scarcityRatio * 160;
+              if (scarcityRatio >= 0.8 && teacherDayQuota > 0 && teacherDailyLoad < teacherDayQuota) {
+                teacherScore += 120;
+              }
+            }
+
             if (remainingForAllocation > 0) {
               if (openSlotsForTeacherInClass <= remainingForAllocation) {
                 teacherScore += 1800;
@@ -1541,6 +1793,10 @@ export default function TimetableGenerator() {
             }
 
             if (mode >= 4) {
+              if (!isAvailableAtTime) {
+                teacherScore -= 650;
+              }
+
               if (consecutiveSubjectConflict) {
                 teacherScore -= 160;
               }
@@ -1552,7 +1808,8 @@ export default function TimetableGenerator() {
             if (!bestTeacherForLesson || teacherScore > bestTeacherForLesson.score) {
               bestTeacherForLesson = {
                 teacher: candidate,
-                score: teacherScore
+                score: teacherScore,
+                availableAtTime: isAvailableAtTime
               };
             }
           }
@@ -1574,7 +1831,8 @@ export default function TimetableGenerator() {
             bestPlacement = {
               lesson,
               teacher: bestTeacherForLesson.teacher,
-              score: totalScore
+              score: totalScore,
+              violatesAvailability: !bestTeacherForLesson.availableAtTime
             };
           }
         }
@@ -1630,6 +1888,10 @@ export default function TimetableGenerator() {
                   (teacherAssignedLoad.get(placement.teacher.id) || 0) + 1
                 );
 
+                if (placement.violatesAvailability) {
+                  availabilityOverridesUsed++;
+                }
+
                 const actualKey = `${currentClass.id}|${placement.lesson.subjectId}|${placement.teacher.id}`;
                 actualAllocation.set(actualKey, (actualAllocation.get(actualKey) || 0) + 1);
 
@@ -1672,7 +1934,8 @@ export default function TimetableGenerator() {
         teacherId: string,
         blockedDay: string,
         blockedPeriod: number,
-        targetClassId: string
+        targetClassId: string,
+        allowAvailabilityOverride = false
       ): boolean => {
         if (!globalTeacherSchedule[blockedDay]?.[blockedPeriod]?.has(teacherId)) {
           return true;
@@ -1714,7 +1977,8 @@ export default function TimetableGenerator() {
               continue;
             }
 
-            if (!isTeacherAvailableAtTime(teacher, day, period)) {
+            const teacherAvailableAtTime = isTeacherAvailableAtTime(teacher, day, period);
+            if (!allowAvailabilityOverride && !teacherAvailableAtTime) {
               continue;
             }
 
@@ -1726,8 +1990,84 @@ export default function TimetableGenerator() {
 
             classSchedule[blockingClassId][day].add(period);
             globalTeacherSchedule[day][period].add(teacherId);
+
+            if (allowAvailabilityOverride && !teacherAvailableAtTime) {
+              availabilityOverridesUsed++;
+            }
+
             return true;
           }
+        }
+
+        // Sem slot vazio no horário bloqueador: tentar swap com outro slot ocupado
+        // da mesma turma para liberar o horário necessário.
+        const blockingClassTimetable = allTimetables[blockingClassId] || [];
+        for (const swapSlot of blockingClassTimetable) {
+          if (swapSlot.day === blockedDay && swapSlot.period === blockedPeriod) {
+            continue;
+          }
+
+          const displacedTeacherId = swapSlot.teacherId;
+          if (!displacedTeacherId || displacedTeacherId === teacherId) {
+            continue;
+          }
+
+          const displacedTeacher = activeTeacherById.get(displacedTeacherId);
+          if (!displacedTeacher) {
+            continue;
+          }
+
+          if (globalTeacherSchedule[swapSlot.day][swapSlot.period].has(teacherId)) {
+            continue;
+          }
+
+          if (globalTeacherSchedule[blockedDay][blockedPeriod].has(displacedTeacherId)) {
+            continue;
+          }
+
+          const teacherAvailableAtSwap = isTeacherAvailableAtTime(
+            teacher,
+            swapSlot.day,
+            swapSlot.period
+          );
+
+          if (!allowAvailabilityOverride && !teacherAvailableAtSwap) {
+            continue;
+          }
+
+          const displacedAvailableAtBlocked = isTeacherAvailableAtTime(
+            displacedTeacher,
+            blockedDay,
+            blockedPeriod
+          );
+
+          if (!allowAvailabilityOverride && !displacedAvailableAtBlocked) {
+            continue;
+          }
+
+          globalTeacherSchedule[blockedDay][blockedPeriod].delete(teacherId);
+          globalTeacherSchedule[blockedDay][blockedPeriod].add(displacedTeacherId);
+
+          globalTeacherSchedule[swapSlot.day][swapSlot.period].delete(displacedTeacherId);
+          globalTeacherSchedule[swapSlot.day][swapSlot.period].add(teacherId);
+
+          blockingSlot.day = swapSlot.day;
+          blockingSlot.period = swapSlot.period;
+
+          swapSlot.day = blockedDay;
+          swapSlot.period = blockedPeriod;
+
+          if (allowAvailabilityOverride) {
+            if (!teacherAvailableAtSwap) {
+              availabilityOverridesUsed++;
+            }
+
+            if (!displacedAvailableAtBlocked) {
+              availabilityOverridesUsed++;
+            }
+          }
+
+          return true;
         }
 
         return false;
@@ -1770,7 +2110,7 @@ export default function TimetableGenerator() {
                 }
               | null = null;
 
-            for (const enforceAvailability of [true]) {
+            for (const enforceAvailability of [true, false]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !chosenSlot; pass++) {
               for (const day of weekDays) {
@@ -1845,7 +2185,8 @@ export default function TimetableGenerator() {
                       teacherId,
                       day,
                       period,
-                      classId
+                      classId,
+                      !enforceAvailability
                     );
 
                     if (!relocated) {
@@ -1926,11 +2267,6 @@ export default function TimetableGenerator() {
         return filledLessons;
       };
 
-      const filledLessonsByDeficit = fillPendingDeficitsInEmptySlots();
-      if (filledLessonsByDeficit > 0) {
-        console.log(`  🧩 Preenchimento de déficits aplicado: ${filledLessonsByDeficit} aula(s) adicionadas em slots vazios.`);
-      }
-
       const rebalanceDeficits = () => {
         let repairedLessons = 0;
         let keepSearching = true;
@@ -1969,7 +2305,9 @@ export default function TimetableGenerator() {
 
             const rebalanceStrategies = [
               { allowConsecutiveInSameClass: false, allowAvailabilityOverride: false },
-              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false }
+              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false },
+              { allowConsecutiveInSameClass: false, allowAvailabilityOverride: true },
+              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: true }
             ];
 
             for (const strategy of rebalanceStrategies) {
@@ -2043,7 +2381,17 @@ export default function TimetableGenerator() {
               }
 
               if (globalTeacherSchedule[slot.day][slot.period].has(teacherId)) {
-                continue;
+                const relocated = tryRelocateTeacherBlockingSlot(
+                  teacherId,
+                  slot.day,
+                  slot.period,
+                  classId,
+                  strategy.allowAvailabilityOverride
+                );
+
+                if (!relocated) {
+                  continue;
+                }
               }
 
               globalTeacherSchedule[slot.day][slot.period].delete(slot.teacherId);
@@ -2096,11 +2444,6 @@ export default function TimetableGenerator() {
         return repairedLessons;
       };
 
-      const repairedLessons = rebalanceDeficits();
-      if (repairedLessons > 0) {
-        console.log(`  🔧 Rebalanceamento aplicado: ${repairedLessons} aula(s) realocadas para reduzir déficits.`);
-      }
-
       const resolveDeficitsByClassSlotSwap = () => {
         let fixedBySwap = 0;
 
@@ -2142,7 +2485,7 @@ export default function TimetableGenerator() {
 
             let swapApplied = false;
 
-            for (const enforceAvailability of [true]) {
+            for (const enforceAvailability of [true, false]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !swapApplied; pass++) {
               for (const occupiedSlot of classTimetable) {
@@ -2178,7 +2521,17 @@ export default function TimetableGenerator() {
                 }
 
                 if (globalTeacherSchedule[occupiedSlot.day][occupiedSlot.period].has(teacherId)) {
-                  continue;
+                  const relocated = tryRelocateTeacherBlockingSlot(
+                    teacherId,
+                    occupiedSlot.day,
+                    occupiedSlot.period,
+                    classId,
+                    !enforceAvailability
+                  );
+
+                  if (!relocated) {
+                    continue;
+                  }
                 }
 
                 if (!allowConsecutiveInSameClass) {
@@ -2356,9 +2709,47 @@ export default function TimetableGenerator() {
         return fixedBySwap;
       };
 
-      const fixedBySwap = resolveDeficitsByClassSlotSwap();
-      if (fixedBySwap > 0) {
-        console.log(`  🔁 Troca local aplicada: ${fixedBySwap} déficit(s) corrigido(s) com swap de slot.`);
+      const getTotalMissingLessons = (): number => {
+        return Array.from(expectedAllocation.entries()).reduce((sum, [allocationKey, expected]) => {
+          const allocated = actualAllocation.get(allocationKey) || 0;
+          return sum + Math.max(0, expected - allocated);
+        }, 0);
+      };
+
+      const maxRepairCycles = 6;
+      let previousMissingLessons = getTotalMissingLessons();
+
+      for (let cycle = 1; cycle <= maxRepairCycles; cycle++) {
+        const filledLessonsByDeficit = fillPendingDeficitsInEmptySlots();
+        const repairedLessons = rebalanceDeficits();
+        const fixedBySwap = resolveDeficitsByClassSlotSwap();
+
+        if (filledLessonsByDeficit > 0) {
+          console.log(
+            `  🧩 Ciclo ${cycle}: preenchimento de déficits adicionou ${filledLessonsByDeficit} aula(s) em slots vazios.`
+          );
+        }
+
+        if (repairedLessons > 0) {
+          console.log(
+            `  🔧 Ciclo ${cycle}: rebalanceamento realocou ${repairedLessons} aula(s) para reduzir déficits.`
+          );
+        }
+
+        if (fixedBySwap > 0) {
+          console.log(
+            `  🔁 Ciclo ${cycle}: troca local corrigiu ${fixedBySwap} déficit(s) com swap de slot.`
+          );
+        }
+
+        const cycleChanges = filledLessonsByDeficit + repairedLessons + fixedBySwap;
+        const currentMissingLessons = getTotalMissingLessons();
+
+        if (cycleChanges === 0 || currentMissingLessons >= previousMissingLessons) {
+          break;
+        }
+
+        previousMissingLessons = currentMissingLessons;
       }
 
       if (availabilityOverridesUsed > 0) {
@@ -2395,8 +2786,48 @@ export default function TimetableGenerator() {
           const teacherName = teacherNameById.get(teacherId) || teacherId;
           const missing = expected - allocated;
 
+          const classTimetable = allTimetables[classId] || [];
+          const occupiedSlotKeys = new Set(
+            classTimetable.map((slot) => `${slot.day}|${slot.period}`)
+          );
+
+          const classEmptySlots = weekDays.flatMap((day) =>
+            sortedPeriods
+              .map((periodInfo) => periodInfo.period)
+              .filter((period) => !occupiedSlotKeys.has(`${day}|${period}`))
+              .map((period) => ({ day, period }))
+          );
+
+          const deficitTeacher = activeTeacherById.get(teacherId);
+          let probableCause = 'restrições combinadas de disponibilidade e conflitos com outras turmas';
+
+          if (!deficitTeacher) {
+            probableCause = 'professor não está ativo ou não foi encontrado na lista de docentes ativos';
+          } else if (classEmptySlots.length === 0) {
+            probableCause = 'turma sem slots vazios; depende de trocas entre aulas já ocupadas';
+          } else {
+            const compatibleEmptySlots = classEmptySlots.filter((slot) =>
+              isTeacherAvailableAtTime(deficitTeacher, slot.day, slot.period)
+            );
+
+            const compatibleButBusy = compatibleEmptySlots.filter(
+              (slot) => globalTeacherSchedule[slot.day][slot.period].has(teacherId)
+            ).length;
+
+            const compatibleAndFree = Math.max(0, compatibleEmptySlots.length - compatibleButBusy);
+
+            if (compatibleEmptySlots.length === 0) {
+              probableCause = 'há slots vazios, mas nenhum compatível com a disponibilidade do professor';
+            } else if (compatibleAndFree === 0) {
+              probableCause = 'professor só tem janelas compatíveis em horários já ocupados por ele em outras turmas';
+            } else {
+              probableCause =
+                `restaram bloqueios de troca (vazios=${classEmptySlots.length}, compatíveis=${compatibleEmptySlots.length}, livres=${compatibleAndFree})`;
+            }
+          }
+
           newConflicts.push(
-            `⚠️ ${classLabel}: ${teacherName} (${subjectName}) com déficit de ${missing} aula(s) (${allocated}/${expected})`
+            `⚠️ ${classLabel}: ${teacherName} (${subjectName}) com déficit de ${missing} aula(s) (${allocated}/${expected}) • causa provável: ${probableCause}`
           );
         }
       }
