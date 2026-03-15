@@ -4,6 +4,8 @@ import api from '../lib/axios';
 import toast from 'react-hot-toast';
 import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calendar, Clock, Trash2, Edit, FolderOpen } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface TeacherAvailability {
   [day: string]: {
@@ -3275,10 +3277,6 @@ export default function TimetableGenerator() {
         return;
       }
 
-      // Importar jsPDF dinamicamente
-      const { jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
-
       const pdf = new jsPDF('p', 'mm', 'a4');
       let isFirstPage = true;
 
@@ -4539,6 +4537,110 @@ export default function TimetableGenerator() {
           </div>
         </div>
       )}
+
+      {/* Painel de Resumo Global - Disciplinas e Professores por Dia/Semana/Mês/Ano */}
+      {Object.keys(generatedTimetables).length > 0 && classesForDisplay.length > 0 && (() => {
+        // Agregar totais de todos os painéis de todas as turmas e dias
+        let totalSubjWeeklyTarget = 0;
+        let totalSubjWeeklyGenerated = 0;
+        let totalTeacherWeeklyTarget = 0;
+        let totalTeacherWeeklyGenerated = 0;
+        let totalDailySlots = 0;
+        let totalDailyCapacity = 0;
+        const panelValues = Object.values(dayLoadCounterPanels);
+        for (const p of panelValues) {
+          totalSubjWeeklyTarget += p.subjectWeeklyTargetTotal;
+          totalSubjWeeklyGenerated += p.subjectWeeklyGeneratedTotal;
+          totalTeacherWeeklyTarget += p.teacherWeeklyTargetTotal;
+          totalTeacherWeeklyGenerated += p.teacherWeeklyGeneratedTotal;
+          totalDailySlots += p.totalGeneratedInDay;
+          totalDailyCapacity += p.dayCapacity;
+        }
+        // Remove duplicatas (cada turma contribui N vezes — uma por dia)
+        const nDays = weekDays.length || 5;
+        const nClasses = classesForDisplay.length || 1;
+        // teacherWeekly é global (conta todas as turmas), então dividir por nClasses para evitar duplicação
+        const subjWeeklyGen = Math.round(totalSubjWeeklyGenerated / nDays);
+        const subjWeeklyTarget = Math.round(totalSubjWeeklyTarget / nDays);
+        const teacherWeeklyGen = Math.round(totalTeacherWeeklyGenerated / nDays / nClasses);
+        const teacherWeeklyTarget = Math.round(totalTeacherWeeklyTarget / nDays / nClasses);
+        const dayAvgSlots = nDays > 0 ? Math.round(totalDailySlots / nClasses) : 0;
+        const dayAvgCap = nDays > 0 ? Math.round(totalDailyCapacity / nClasses / nDays) : 0;
+        const WEEKS = ACADEMIC_WEEKS_PER_YEAR;
+        const MONTHS = 10; // meses letivos
+        const subjMonthlyGen = Math.round(subjWeeklyGen * (WEEKS / MONTHS));
+        const subjMonthlyTarget = Math.round(subjWeeklyTarget * (WEEKS / MONTHS));
+        const subjAnnualGen = subjWeeklyGen * WEEKS;
+        const subjAnnualTarget = subjWeeklyTarget * WEEKS;
+        const teacherMonthlyGen = Math.round(teacherWeeklyGen * (WEEKS / MONTHS));
+        const teacherMonthlyTarget = Math.round(teacherWeeklyTarget * (WEEKS / MONTHS));
+        const teacherAnnualGen = teacherWeeklyGen * WEEKS;
+        const teacherAnnualTarget = teacherWeeklyTarget * WEEKS;
+        return (
+          <div className="card no-print bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-blue-100">
+            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Calendar size={18} className="text-blue-600" />
+              Resumo Geral — Disciplinas e Professores
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Disciplinas */}
+              <div className="bg-white rounded-xl border border-blue-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Disciplinas / Dia</p>
+                <p className="text-2xl font-black text-slate-800">{dayAvgSlots}<span className="text-sm font-normal text-slate-400">/{dayAvgCap} slots</span></p>
+                <p className="text-xs text-slate-500">Média de aulas por turma/dia</p>
+              </div>
+              <div className="bg-white rounded-xl border border-indigo-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Disciplinas / Semana</p>
+                <p className="text-2xl font-black text-slate-800">{subjWeeklyGen}<span className="text-sm font-normal text-slate-400">/{subjWeeklyTarget}</span></p>
+                <p className={`text-xs font-medium ${subjWeeklyTarget - subjWeeklyGen > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {subjWeeklyTarget - subjWeeklyGen > 0 ? `Faltam ${subjWeeklyTarget - subjWeeklyGen}` : '✓ Completo'}
+                </p>
+              </div>
+              <div className="bg-white rounded-xl border border-purple-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700">Disciplinas / Mês</p>
+                <p className="text-2xl font-black text-slate-800">{subjMonthlyGen}<span className="text-sm font-normal text-slate-400">/{subjMonthlyTarget}</span></p>
+                <p className="text-xs text-slate-500">{MONTHS} meses letivos</p>
+              </div>
+              <div className="bg-white rounded-xl border border-pink-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">Disciplinas / Ano</p>
+                <p className="text-2xl font-black text-slate-800">{subjAnnualGen}<span className="text-sm font-normal text-slate-400">/{subjAnnualTarget}</span></p>
+                <p className="text-xs text-slate-500">{WEEKS} semanas letivas</p>
+              </div>
+              {/* Professores */}
+              <div className="bg-white rounded-xl border border-teal-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-teal-700">Professores / Dia</p>
+                <p className="text-2xl font-black text-slate-800">
+                  {Object.values(dayLoadCounterPanels).reduce((acc, p) => {
+                    const daily = p.teacherCounters.filter(t => t.dailyGenerated > 0).length;
+                    return acc + daily;
+                  }, 0) / nDays / nClasses < 1
+                    ? Object.values(dayLoadCounterPanels).filter(p => p.teacherCounters.some(t => t.dailyGenerated > 0)).length
+                    : Math.round(Object.values(dayLoadCounterPanels).reduce((acc, p) => acc + p.teacherCounters.filter(t => t.dailyGenerated > 0).length, 0) / nDays / nClasses)}
+                </p>
+                <p className="text-xs text-slate-500">Com aula (média/turma/dia)</p>
+              </div>
+              <div className="bg-white rounded-xl border border-green-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-green-700">Professores / Semana</p>
+                <p className="text-2xl font-black text-slate-800">{teacherWeeklyGen}<span className="text-sm font-normal text-slate-400">/{teacherWeeklyTarget}</span></p>
+                <p className={`text-xs font-medium ${teacherWeeklyTarget - teacherWeeklyGen > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {teacherWeeklyTarget - teacherWeeklyGen > 0 ? `Faltam ${teacherWeeklyTarget - teacherWeeklyGen}` : '✓ Completo'}
+                </p>
+              </div>
+              <div className="bg-white rounded-xl border border-orange-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700">Professores / Mês</p>
+                <p className="text-2xl font-black text-slate-800">{teacherMonthlyGen}<span className="text-sm font-normal text-slate-400">/{teacherMonthlyTarget}</span></p>
+                <p className="text-xs text-slate-500">{MONTHS} meses letivos</p>
+              </div>
+              <div className="bg-white rounded-xl border border-red-200 p-3 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700">Professores / Ano</p>
+                <p className="text-2xl font-black text-slate-800">{teacherAnnualGen}<span className="text-sm font-normal text-slate-400">/{teacherAnnualTarget}</span></p>
+                <p className="text-xs text-slate-500">{WEEKS} semanas letivas</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-3">* Mês = média de {(WEEKS/MONTHS).toFixed(1)} semanas • Ano = {WEEKS} semanas letivas. Contagem agrega todas as turmas visíveis.</p>
+          </div>
+        );
+      })()}
 
       {/* Horários de Todas as Turmas */}
       {Object.keys(generatedTimetables).length > 0 && currentSchedule && (
