@@ -4540,7 +4540,11 @@ export default function TimetableGenerator() {
 
       {/* Painel de Resumo Global - Disciplinas e Professores por Dia/Semana/Mês/Ano */}
       {Object.keys(generatedTimetables).length > 0 && classesForDisplay.length > 0 && (() => {
-        // Agregar totais de todos os painéis de todas as turmas e dias
+        // ── helpers ──────────────────────────────────────────────────────────
+        const normId = (v: unknown) => String(v || '');
+        const dayAbbr = (d: string) => ({ 'Segunda': 'Seg', 'Terça': 'Ter', 'Quarta': 'Qua', 'Quinta': 'Qui', 'Sexta': 'Sex', 'Sábado': 'Sáb' }[d] ?? d.slice(0, 3));
+
+        // ── totais para os 8 cards ────────────────────────────────────────────
         let totalSubjWeeklyTarget = 0;
         let totalSubjWeeklyGenerated = 0;
         let totalTeacherWeeklyTarget = 0;
@@ -4556,10 +4560,8 @@ export default function TimetableGenerator() {
           totalDailySlots += p.totalGeneratedInDay;
           totalDailyCapacity += p.dayCapacity;
         }
-        // Remove duplicatas (cada turma contribui N vezes — uma por dia)
         const nDays = weekDays.length || 5;
         const nClasses = classesForDisplay.length || 1;
-        // teacherWeekly é global (conta todas as turmas), então dividir por nClasses para evitar duplicação
         const subjWeeklyGen = Math.round(totalSubjWeeklyGenerated / nDays);
         const subjWeeklyTarget = Math.round(totalSubjWeeklyTarget / nDays);
         const teacherWeeklyGen = Math.round(totalTeacherWeeklyGenerated / nDays / nClasses);
@@ -4567,7 +4569,7 @@ export default function TimetableGenerator() {
         const dayAvgSlots = nDays > 0 ? Math.round(totalDailySlots / nClasses) : 0;
         const dayAvgCap = nDays > 0 ? Math.round(totalDailyCapacity / nClasses / nDays) : 0;
         const WEEKS = ACADEMIC_WEEKS_PER_YEAR;
-        const MONTHS = 10; // meses letivos
+        const MONTHS = 10;
         const subjMonthlyGen = Math.round(subjWeeklyGen * (WEEKS / MONTHS));
         const subjMonthlyTarget = Math.round(subjWeeklyTarget * (WEEKS / MONTHS));
         const subjAnnualGen = subjWeeklyGen * WEEKS;
@@ -4576,68 +4578,292 @@ export default function TimetableGenerator() {
         const teacherMonthlyTarget = Math.round(teacherWeeklyTarget * (WEEKS / MONTHS));
         const teacherAnnualGen = teacherWeeklyGen * WEEKS;
         const teacherAnnualTarget = teacherWeeklyTarget * WEEKS;
+
+        // ── TABELA 1: Professor × Dia (aulas por dia somadas entre todas as turmas) ──
+        const teacherDayMap = new Map<string, { name: string; byDay: Record<string, number> }>();
+        for (const [key, panel] of Object.entries(dayLoadCounterPanels)) {
+          const pipeIdx = key.indexOf('|');
+          const day = key.slice(pipeIdx + 1);
+          for (const tc of panel.teacherCounters) {
+            if (tc.classDailyGenerated <= 0) continue;
+            if (!teacherDayMap.has(tc.teacherId)) {
+              teacherDayMap.set(tc.teacherId, { name: tc.teacherName, byDay: {} });
+            }
+            const entry = teacherDayMap.get(tc.teacherId)!;
+            entry.byDay[day] = (entry.byDay[day] || 0) + tc.classDailyGenerated;
+          }
+        }
+        const teacherDayRows = Array.from(teacherDayMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+
+        // ── TABELA 2: Professor → Disciplinas × Dia+Semana+Mês+Ano ──────────────
+        type SubjEntry = { name: string; byDay: Record<string, number>; weeklyTotal: number };
+        const teacherSubjMap = new Map<string, { name: string; subjects: Map<string, SubjEntry> }>();
+        for (const [, classSlots] of Object.entries(generatedTimetables)) {
+          for (const slot of (classSlots || [])) {
+            const tid = normId(slot.teacherId);
+            const sid = normId(slot.subjectId);
+            const day = String(slot.day || '');
+            if (!tid || !sid || !day || !weekDays.includes(day)) continue;
+            if (!teacherSubjMap.has(tid)) {
+              const t = (teachers as Teacher[]).find(t => normId((t as any).id || (t as any)._id) === tid);
+              teacherSubjMap.set(tid, { name: t?.name || tid, subjects: new Map() });
+            }
+            const te = teacherSubjMap.get(tid)!;
+            if (!te.subjects.has(sid)) {
+              const s = (subjects as any[]).find(s => normId(s.id || s._id) === sid);
+              te.subjects.set(sid, { name: s?.name || sid, byDay: {}, weeklyTotal: 0 });
+            }
+            const se = te.subjects.get(sid)!;
+            se.byDay[day] = (se.byDay[day] || 0) + 1;
+            se.weeklyTotal++;
+          }
+        }
+        const teacherSubjRows = Array.from(teacherSubjMap.entries())
+          .map(([, e]) => ({ name: e.name, subjects: Array.from(e.subjects.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt')) }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'pt'));
+
+        // ── print handler ─────────────────────────────────────────────────────
+        const handlePrintSummary = () => {
+          const el = document.getElementById('summary-panel-printable');
+          if (!el) return;
+          const win = window.open('', '_blank', 'width=1100,height=800');
+          if (!win) return;
+          win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Resumo Geral — Professores e Disciplinas</title><style>
+            body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
+            h2{color:#1e40af;margin-bottom:6px}
+            h3{color:#334155;font-size:13px;margin:18px 0 6px}
+            table{border-collapse:collapse;width:100%;margin-bottom:16px;font-size:12px}
+            th{background:#1e40af;color:#fff;padding:6px 8px;text-align:center;border:1px solid #93c5fd}
+            td{border:1px solid #cbd5e1;padding:5px 8px;text-align:center}
+            .left{text-align:left}
+            .teacher-hdr{background:#dbeafe;font-weight:700;text-align:left}
+            .subj-cell{padding-left:20px;text-align:left;color:#374151}
+            .ok{color:#16a34a;font-weight:bold}
+            .miss{color:#d97706;font-weight:bold}
+            @media print{body{padding:10px}h2{font-size:16px}}
+          </style></head><body>${el.innerHTML}</body></html>`);
+          win.document.close();
+          win.focus();
+          setTimeout(() => win.print(), 400);
+        };
+
         return (
           <div className="card no-print bg-gradient-to-br from-slate-50 to-blue-50 border-2 border-blue-100">
-            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Calendar size={18} className="text-blue-600" />
-              Resumo Geral — Disciplinas e Professores
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {/* Disciplinas */}
-              <div className="bg-white rounded-xl border border-blue-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Disciplinas / Dia</p>
-                <p className="text-2xl font-black text-slate-800">{dayAvgSlots}<span className="text-sm font-normal text-slate-400">/{dayAvgCap} slots</span></p>
-                <p className="text-xs text-slate-500">Média de aulas por turma/dia</p>
-              </div>
-              <div className="bg-white rounded-xl border border-indigo-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Disciplinas / Semana</p>
-                <p className="text-2xl font-black text-slate-800">{subjWeeklyGen}<span className="text-sm font-normal text-slate-400">/{subjWeeklyTarget}</span></p>
-                <p className={`text-xs font-medium ${subjWeeklyTarget - subjWeeklyGen > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                  {subjWeeklyTarget - subjWeeklyGen > 0 ? `Faltam ${subjWeeklyTarget - subjWeeklyGen}` : '✓ Completo'}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl border border-purple-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700">Disciplinas / Mês</p>
-                <p className="text-2xl font-black text-slate-800">{subjMonthlyGen}<span className="text-sm font-normal text-slate-400">/{subjMonthlyTarget}</span></p>
-                <p className="text-xs text-slate-500">{MONTHS} meses letivos</p>
-              </div>
-              <div className="bg-white rounded-xl border border-pink-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">Disciplinas / Ano</p>
-                <p className="text-2xl font-black text-slate-800">{subjAnnualGen}<span className="text-sm font-normal text-slate-400">/{subjAnnualTarget}</span></p>
-                <p className="text-xs text-slate-500">{WEEKS} semanas letivas</p>
-              </div>
-              {/* Professores */}
-              <div className="bg-white rounded-xl border border-teal-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-teal-700">Professores / Dia</p>
-                <p className="text-2xl font-black text-slate-800">
-                  {Object.values(dayLoadCounterPanels).reduce((acc, p) => {
-                    const daily = p.teacherCounters.filter(t => t.dailyGenerated > 0).length;
-                    return acc + daily;
-                  }, 0) / nDays / nClasses < 1
-                    ? Object.values(dayLoadCounterPanels).filter(p => p.teacherCounters.some(t => t.dailyGenerated > 0)).length
-                    : Math.round(Object.values(dayLoadCounterPanels).reduce((acc, p) => acc + p.teacherCounters.filter(t => t.dailyGenerated > 0).length, 0) / nDays / nClasses)}
-                </p>
-                <p className="text-xs text-slate-500">Com aula (média/turma/dia)</p>
-              </div>
-              <div className="bg-white rounded-xl border border-green-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-green-700">Professores / Semana</p>
-                <p className="text-2xl font-black text-slate-800">{teacherWeeklyGen}<span className="text-sm font-normal text-slate-400">/{teacherWeeklyTarget}</span></p>
-                <p className={`text-xs font-medium ${teacherWeeklyTarget - teacherWeeklyGen > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                  {teacherWeeklyTarget - teacherWeeklyGen > 0 ? `Faltam ${teacherWeeklyTarget - teacherWeeklyGen}` : '✓ Completo'}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl border border-orange-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700">Professores / Mês</p>
-                <p className="text-2xl font-black text-slate-800">{teacherMonthlyGen}<span className="text-sm font-normal text-slate-400">/{teacherMonthlyTarget}</span></p>
-                <p className="text-xs text-slate-500">{MONTHS} meses letivos</p>
-              </div>
-              <div className="bg-white rounded-xl border border-red-200 p-3 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700">Professores / Ano</p>
-                <p className="text-2xl font-black text-slate-800">{teacherAnnualGen}<span className="text-sm font-normal text-slate-400">/{teacherAnnualTarget}</span></p>
-                <p className="text-xs text-slate-500">{WEEKS} semanas letivas</p>
-              </div>
+            {/* cabeçalho com botão imprimir */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                <Calendar size={18} className="text-blue-600" />
+                Resumo Geral — Disciplinas e Professores
+              </h3>
+              <button
+                onClick={handlePrintSummary}
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                title="Imprimir este resumo"
+              >
+                <Printer size={14} />
+                Imprimir Resumo
+              </button>
             </div>
-            <p className="text-[10px] text-slate-400 mt-3">* Mês = média de {(WEEKS/MONTHS).toFixed(1)} semanas • Ano = {WEEKS} semanas letivas. Contagem agrega todas as turmas visíveis.</p>
+
+            {/* área imprimível */}
+            <div id="summary-panel-printable">
+              <h2 style={{ display: 'none' }}>Resumo Geral — Professores e Disciplinas</h2>
+
+              {/* 8 cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <div className="bg-white rounded-xl border border-blue-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-blue-700">Disciplinas / Dia</p>
+                  <p className="text-2xl font-black text-slate-800">{dayAvgSlots}<span className="text-sm font-normal text-slate-400">/{dayAvgCap} slots</span></p>
+                  <p className="text-xs text-slate-500">Média de aulas por turma/dia</p>
+                </div>
+                <div className="bg-white rounded-xl border border-indigo-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">Disciplinas / Semana</p>
+                  <p className="text-2xl font-black text-slate-800">{subjWeeklyGen}<span className="text-sm font-normal text-slate-400">/{subjWeeklyTarget}</span></p>
+                  <p className={`text-xs font-medium ${subjWeeklyTarget - subjWeeklyGen > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {subjWeeklyTarget - subjWeeklyGen > 0 ? `Faltam ${subjWeeklyTarget - subjWeeklyGen}` : '✓ Completo'}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl border border-purple-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700">Disciplinas / Mês</p>
+                  <p className="text-2xl font-black text-slate-800">{subjMonthlyGen}<span className="text-sm font-normal text-slate-400">/{subjMonthlyTarget}</span></p>
+                  <p className="text-xs text-slate-500">{MONTHS} meses letivos</p>
+                </div>
+                <div className="bg-white rounded-xl border border-pink-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-pink-700">Disciplinas / Ano</p>
+                  <p className="text-2xl font-black text-slate-800">{subjAnnualGen}<span className="text-sm font-normal text-slate-400">/{subjAnnualTarget}</span></p>
+                  <p className="text-xs text-slate-500">{WEEKS} semanas letivas</p>
+                </div>
+                <div className="bg-white rounded-xl border border-teal-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-teal-700">Professores / Dia</p>
+                  <p className="text-2xl font-black text-slate-800">
+                    {Math.round(Object.values(dayLoadCounterPanels).reduce((acc, p) => acc + p.teacherCounters.filter(t => t.classDailyGenerated > 0).length, 0) / nDays / nClasses) || 0}
+                  </p>
+                  <p className="text-xs text-slate-500">Com aula (média/turma/dia)</p>
+                </div>
+                <div className="bg-white rounded-xl border border-green-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-green-700">Professores / Semana</p>
+                  <p className="text-2xl font-black text-slate-800">{teacherWeeklyGen}<span className="text-sm font-normal text-slate-400">/{teacherWeeklyTarget}</span></p>
+                  <p className={`text-xs font-medium ${teacherWeeklyTarget - teacherWeeklyGen > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {teacherWeeklyTarget - teacherWeeklyGen > 0 ? `Faltam ${teacherWeeklyTarget - teacherWeeklyGen}` : '✓ Completo'}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl border border-orange-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700">Professores / Mês</p>
+                  <p className="text-2xl font-black text-slate-800">{teacherMonthlyGen}<span className="text-sm font-normal text-slate-400">/{teacherMonthlyTarget}</span></p>
+                  <p className="text-xs text-slate-500">{MONTHS} meses letivos</p>
+                </div>
+                <div className="bg-white rounded-xl border border-red-200 p-3 space-y-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-red-700">Professores / Ano</p>
+                  <p className="text-2xl font-black text-slate-800">{teacherAnnualGen}<span className="text-sm font-normal text-slate-400">/{teacherAnnualTarget}</span></p>
+                  <p className="text-xs text-slate-500">{WEEKS} semanas letivas</p>
+                </div>
+              </div>
+
+              {/* ── PLANILHA 1: Professores × Dia ───────────────────────────── */}
+              {teacherDayRows.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-1">
+                    📅 Planilha 1 — Professores por Dia da Semana
+                    <span className="text-xs font-normal text-slate-400 ml-1">(total de aulas somadas entre todas as turmas)</span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-blue-700 text-white">
+                          <th className="border border-blue-600 px-3 py-2 text-left font-bold min-w-[180px]">Professor</th>
+                          {weekDays.map(d => (
+                            <th key={d} className="border border-blue-600 px-3 py-2 font-bold text-center">{dayAbbr(d)}</th>
+                          ))}
+                          <th className="border border-blue-600 px-3 py-2 font-bold text-center">Total<br/>Semana</th>
+                          <th className="border border-blue-600 px-3 py-2 font-bold text-center">Est.<br/>Mês</th>
+                          <th className="border border-blue-600 px-3 py-2 font-bold text-center">Est.<br/>Ano</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teacherDayRows.map((row, idx) => {
+                          const weekTotal = weekDays.reduce((s, d) => s + (row.byDay[d] || 0), 0);
+                          const estMes = Math.round(weekTotal * (WEEKS / MONTHS));
+                          const estAno = weekTotal * WEEKS;
+                          return (
+                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50'}>
+                              <td className="border border-slate-200 px-3 py-1.5 font-semibold text-slate-800 text-left">{row.name}</td>
+                              {weekDays.map(d => (
+                                <td key={d} className={`border border-slate-200 px-3 py-1.5 text-center font-medium ${(row.byDay[d] || 0) > 0 ? 'text-blue-700' : 'text-slate-300'}`}>
+                                  {row.byDay[d] || '—'}
+                                </td>
+                              ))}
+                              <td className="border border-slate-200 px-3 py-1.5 text-center font-black text-blue-800">{weekTotal}</td>
+                              <td className="border border-slate-200 px-3 py-1.5 text-center text-indigo-700">{estMes}</td>
+                              <td className="border border-slate-200 px-3 py-1.5 text-center text-purple-700">{estAno}</td>
+                            </tr>
+                          );
+                        })}
+                        {/* linha de totais */}
+                        <tr className="bg-blue-100 font-bold border-t-2 border-blue-400">
+                          <td className="border border-slate-300 px-3 py-2 text-slate-800 font-black">TOTAL</td>
+                          {weekDays.map(d => (
+                            <td key={d} className="border border-slate-300 px-3 py-2 text-center text-blue-900">
+                              {teacherDayRows.reduce((s, r) => s + (r.byDay[d] || 0), 0)}
+                            </td>
+                          ))}
+                          <td className="border border-slate-300 px-3 py-2 text-center text-blue-900">
+                            {teacherDayRows.reduce((s, r) => s + weekDays.reduce((ss, d) => ss + (r.byDay[d] || 0), 0), 0)}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-center text-indigo-900">
+                            {Math.round(teacherDayRows.reduce((s, r) => s + weekDays.reduce((ss, d) => ss + (r.byDay[d] || 0), 0), 0) * (WEEKS / MONTHS))}
+                          </td>
+                          <td className="border border-slate-300 px-3 py-2 text-center text-purple-900">
+                            {teacherDayRows.reduce((s, r) => s + weekDays.reduce((ss, d) => ss + (r.byDay[d] || 0), 0), 0) * WEEKS}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ── PLANILHA 2: Professor / Disciplina × Dia + Totais ──────── */}
+              {teacherSubjRows.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-1">
+                    📚 Planilha 2 — Professores e Disciplinas por Semana
+                    <span className="text-xs font-normal text-slate-400 ml-1">(aulas alocadas no horário gerado)</span>
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-indigo-700 text-white">
+                          <th className="border border-indigo-600 px-3 py-2 text-left font-bold min-w-[220px]">Professor / Disciplina</th>
+                          {weekDays.map(d => (
+                            <th key={d} className="border border-indigo-600 px-2 py-2 font-bold text-center">{dayAbbr(d)}</th>
+                          ))}
+                          <th className="border border-indigo-600 px-2 py-2 font-bold text-center">Sem.</th>
+                          <th className="border border-indigo-600 px-2 py-2 font-bold text-center">Mês</th>
+                          <th className="border border-indigo-600 px-2 py-2 font-bold text-center">Ano</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teacherSubjRows.map((teacher, ti) => (
+                          <>
+                            {/* linha do professor */}
+                            <tr key={`t-${ti}`} className="bg-indigo-100">
+                              <td colSpan={weekDays.length + 4} className="border border-indigo-300 px-3 py-1.5 font-black text-indigo-900 text-left">
+                                👤 {teacher.name}
+                                <span className="ml-2 text-[10px] font-normal text-indigo-600">
+                                  {teacher.subjects.reduce((s, sub) => s + sub.weeklyTotal, 0)} aulas/sem
+                                </span>
+                              </td>
+                            </tr>
+                            {/* linhas das disciplinas */}
+                            {teacher.subjects.map((sub, si) => {
+                              const estMes = Math.round(sub.weeklyTotal * (WEEKS / MONTHS));
+                              const estAno = sub.weeklyTotal * WEEKS;
+                              return (
+                                <tr key={`t-${ti}-s-${si}`} className={si % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                  <td className="border border-slate-200 px-3 py-1 text-slate-700 text-left pl-6">
+                                    {sub.name}
+                                  </td>
+                                  {weekDays.map(d => (
+                                    <td key={d} className={`border border-slate-200 px-2 py-1 text-center font-medium ${(sub.byDay[d] || 0) > 0 ? 'text-indigo-700' : 'text-slate-200'}`}>
+                                      {sub.byDay[d] || '—'}
+                                    </td>
+                                  ))}
+                                  <td className="border border-slate-200 px-2 py-1 text-center font-black text-indigo-800">{sub.weeklyTotal}</td>
+                                  <td className="border border-slate-200 px-2 py-1 text-center text-purple-700">{estMes}</td>
+                                  <td className="border border-slate-200 px-2 py-1 text-center text-pink-700">{estAno}</td>
+                                </tr>
+                              );
+                            })}
+                            {/* subtotal do professor */}
+                            <tr key={`t-${ti}-total`} className="bg-indigo-50 border-b-2 border-indigo-300">
+                              <td className="border border-slate-300 px-3 py-1 font-bold text-indigo-800 pl-6 text-left">Subtotal</td>
+                              {weekDays.map(d => (
+                                <td key={d} className="border border-slate-300 px-2 py-1 text-center font-bold text-indigo-700">
+                                  {teacher.subjects.reduce((s, sub) => s + (sub.byDay[d] || 0), 0) || '—'}
+                                </td>
+                              ))}
+                              <td className="border border-slate-300 px-2 py-1 text-center font-black text-indigo-900">
+                                {teacher.subjects.reduce((s, sub) => s + sub.weeklyTotal, 0)}
+                              </td>
+                              <td className="border border-slate-300 px-2 py-1 text-center font-bold text-purple-800">
+                                {Math.round(teacher.subjects.reduce((s, sub) => s + sub.weeklyTotal, 0) * (WEEKS / MONTHS))}
+                              </td>
+                              <td className="border border-slate-300 px-2 py-1 text-center font-bold text-pink-800">
+                                {teacher.subjects.reduce((s, sub) => s + sub.weeklyTotal, 0) * WEEKS}
+                              </td>
+                            </tr>
+                          </>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] text-slate-400 mt-3">
+                * Mês = média de {(WEEKS / MONTHS).toFixed(1)} semanas • Ano = {WEEKS} semanas letivas. Contagem agrega todas as turmas visíveis.
+              </p>
+            </div>{/* fim summary-panel-printable */}
           </div>
         );
       })()}
