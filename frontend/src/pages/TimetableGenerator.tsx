@@ -520,29 +520,42 @@ export default function TimetableGenerator() {
     };
 
     // PRIORIDADE ABSOLUTA: Verificar disponibilidade estruturada (checkboxes)
-    // Mas só usar se foi REALMENTE configurada (tem pelo menos um dia com dados)
+    // Se houver qualquer configuração estruturada, tudo que não estiver explicitamente
+    // marcado como disponível passa a ser tratado como indisponível.
     if (teacher.availability && Object.keys(teacher.availability).length > 0) {
       const normalizedAvailability = new Map<string, { [period: number]: boolean }>();
-      for (const [key, value] of Object.entries(teacher.availability)) {
-        normalizedAvailability.set(normalizeDayKey(key), value);
-      }
+      let hasStructuredAvailability = false;
 
-      const availabilityKeys = new Set(normalizedAvailability.keys());
-      for (const dayAlias of getDayAliases(day, availabilityKeys)) {
-        const dayAvailability = normalizedAvailability.get(dayAlias);
-        if (!dayAvailability || Object.keys(dayAvailability).length === 0) {
+      for (const [key, value] of Object.entries(teacher.availability)) {
+        if (!value || typeof value !== 'object' || Object.keys(value).length === 0) {
           continue;
         }
 
-        const direct = (dayAvailability as any)[period];
-        if (direct !== undefined) {
-          return Boolean(direct);
+        normalizedAvailability.set(normalizeDayKey(key), value);
+        hasStructuredAvailability = true;
+      }
+
+      if (hasStructuredAvailability) {
+        const availabilityKeys = new Set(normalizedAvailability.keys());
+        for (const dayAlias of getDayAliases(day, availabilityKeys)) {
+          const dayAvailability = normalizedAvailability.get(dayAlias);
+          if (!dayAvailability || Object.keys(dayAvailability).length === 0) {
+            continue;
+          }
+
+          const direct = (dayAvailability as any)[period];
+          if (direct !== undefined) {
+            return Boolean(direct);
+          }
+
+          const shifted = (dayAvailability as any)[period + 1];
+          if (shifted !== undefined) {
+            return Boolean(shifted);
+          }
         }
 
-        const shifted = (dayAvailability as any)[period + 1];
-        if (shifted !== undefined) {
-          return Boolean(shifted);
-        }
+        // Estrutura existe, mas o período atual não foi marcado como disponível.
+        return false;
       }
     }
 
@@ -1387,6 +1400,9 @@ export default function TimetableGenerator() {
       const teacherAvailableSlotsByDay = new Map<string, Map<string, number>>();
       const teacherAvailableDaysById = new Map<string, number>();
       const teacherTotalAvailableSlotsById = new Map<string, number>();
+      const teacherAllowAvailabilityOverrideById = new Map<string, boolean>(
+        activeTeachers.map((teacher: Teacher) => [teacher.id, false])
+      );
       const teacherDailyQuotaById = new Map<string, Map<string, number>>();
       const normalizeDayToken = (value: string): string =>
         value
@@ -1449,6 +1465,8 @@ export default function TimetableGenerator() {
         teacherTotalAvailableSlotsById.set(teacher.id, totalAvailableSlots);
 
         const requiredLoad = teacherRequiredLoad.get(teacher.id) || 0;
+        const allowAvailabilityOverride = requiredLoad > totalAvailableSlots;
+        teacherAllowAvailabilityOverrideById.set(teacher.id, allowAvailabilityOverride);
         const quotaByDay = new Map<string, number>(weekDays.map((day) => [day, 0]));
 
         if (requiredLoad > 0) {
@@ -1538,7 +1556,8 @@ export default function TimetableGenerator() {
 
         const countOpenSlotsForTeacherInClass = (
           teacher: Teacher,
-          subjectId: string
+          subjectId: string,
+          canUseAvailabilityOverride: boolean
         ): number => {
           let count = 0;
 
@@ -1554,7 +1573,10 @@ export default function TimetableGenerator() {
                 continue;
               }
 
-              if (mode < 4 && !isTeacherAvailableAtTime(teacher, weekDay, candidatePeriod)) {
+              if (
+                !isTeacherAvailableAtTime(teacher, weekDay, candidatePeriod) &&
+                (mode < 4 || !canUseAvailabilityOverride)
+              ) {
                 continue;
               }
 
@@ -1678,7 +1700,10 @@ export default function TimetableGenerator() {
             if (!candidate) continue;
 
             const isAvailableAtTime = isTeacherAvailableAtTime(candidate, day, period);
-            if (!isAvailableAtTime && mode < 4) {
+            const canOverrideAvailability =
+              teacherAllowAvailabilityOverrideById.get(candidate.id) || false;
+
+            if (!isAvailableAtTime && (mode < 4 || !canOverrideAvailability)) {
               continue;
             }
 
@@ -1780,7 +1805,8 @@ export default function TimetableGenerator() {
 
             const openSlotsForTeacherInClass = countOpenSlotsForTeacherInClass(
               candidate,
-              lesson.subjectId
+              lesson.subjectId,
+              canOverrideAvailability
             );
 
             if (openSlotsForTeacherInClass <= 0) {
@@ -1798,8 +1824,11 @@ export default function TimetableGenerator() {
                 return false;
               }
 
-              if (mode < 4) {
-                return isTeacherAvailableAtTime(candidate, day, candidatePeriod);
+              if (
+                !isTeacherAvailableAtTime(candidate, day, candidatePeriod) &&
+                (mode < 4 || !canOverrideAvailability)
+              ) {
+                return false;
               }
 
               return true;
@@ -2101,6 +2130,10 @@ export default function TimetableGenerator() {
         if (!teacher) {
           return false;
         }
+        const teacherCanOverrideAvailability =
+          teacherAllowAvailabilityOverrideById.get(teacherId) || false;
+        const allowTeacherAvailabilityOverride =
+          allowAvailabilityOverride && teacherCanOverrideAvailability;
 
         const allSlots = Object.values(allTimetables).flat();
         const blockingSlot = allSlots.find((slot) => {
@@ -2134,7 +2167,7 @@ export default function TimetableGenerator() {
             }
 
             const teacherAvailableAtTime = isTeacherAvailableAtTime(teacher, day, period);
-            if (!allowAvailabilityOverride && !teacherAvailableAtTime) {
+            if (!allowTeacherAvailabilityOverride && !teacherAvailableAtTime) {
               continue;
             }
 
@@ -2147,7 +2180,7 @@ export default function TimetableGenerator() {
             classSchedule[blockingClassId][day].add(period);
             globalTeacherSchedule[day][period].add(teacherId);
 
-            if (allowAvailabilityOverride && !teacherAvailableAtTime) {
+            if (allowTeacherAvailabilityOverride && !teacherAvailableAtTime) {
               availabilityOverridesUsed++;
             }
 
@@ -2172,6 +2205,10 @@ export default function TimetableGenerator() {
           if (!displacedTeacher) {
             continue;
           }
+          const displacedCanOverrideAvailability =
+            teacherAllowAvailabilityOverrideById.get(displacedTeacherId) || false;
+          const allowDisplacedAvailabilityOverride =
+            allowAvailabilityOverride && displacedCanOverrideAvailability;
 
           if (globalTeacherSchedule[swapSlot.day][swapSlot.period].has(teacherId)) {
             continue;
@@ -2187,7 +2224,7 @@ export default function TimetableGenerator() {
             swapSlot.period
           );
 
-          if (!allowAvailabilityOverride && !teacherAvailableAtSwap) {
+          if (!allowTeacherAvailabilityOverride && !teacherAvailableAtSwap) {
             continue;
           }
 
@@ -2197,7 +2234,7 @@ export default function TimetableGenerator() {
             blockedPeriod
           );
 
-          if (!allowAvailabilityOverride && !displacedAvailableAtBlocked) {
+          if (!allowDisplacedAvailabilityOverride && !displacedAvailableAtBlocked) {
             continue;
           }
 
@@ -2213,14 +2250,12 @@ export default function TimetableGenerator() {
           swapSlot.day = blockedDay;
           swapSlot.period = blockedPeriod;
 
-          if (allowAvailabilityOverride) {
-            if (!teacherAvailableAtSwap) {
-              availabilityOverridesUsed++;
-            }
+          if (allowTeacherAvailabilityOverride && !teacherAvailableAtSwap) {
+            availabilityOverridesUsed++;
+          }
 
-            if (!displacedAvailableAtBlocked) {
-              availabilityOverridesUsed++;
-            }
+          if (allowDisplacedAvailabilityOverride && !displacedAvailableAtBlocked) {
+            availabilityOverridesUsed++;
           }
 
           return true;
@@ -2251,6 +2286,8 @@ export default function TimetableGenerator() {
           const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
           const teacher = activeTeacherById.get(teacherId);
           const targetCategory = subjectCategoryById.get(subjectId) || 'regular';
+          const canOverrideAvailability =
+            teacherAllowAvailabilityOverrideById.get(teacherId) || false;
 
           if (!teacher) {
             continue;
@@ -2266,7 +2303,7 @@ export default function TimetableGenerator() {
                 }
               | null = null;
 
-            for (const enforceAvailability of [true, false]) {
+            for (const enforceAvailability of canOverrideAvailability ? [true, false] : [true]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !chosenSlot; pass++) {
               for (const day of weekDays) {
@@ -2342,7 +2379,7 @@ export default function TimetableGenerator() {
                       day,
                       period,
                       classId,
-                      !enforceAvailability
+                      !enforceAvailability && canOverrideAvailability
                     );
 
                     if (!relocated) {
@@ -2353,7 +2390,8 @@ export default function TimetableGenerator() {
                   chosenSlot = {
                     day,
                     period,
-                    violatesAvailability: !availableAtTime
+                    violatesAvailability:
+                      !availableAtTime && !enforceAvailability && canOverrideAvailability
                   };
                   break;
                 }
@@ -2452,6 +2490,8 @@ export default function TimetableGenerator() {
             const classTimetable = allTimetables[classId] || [];
             const targetTeacher = activeTeacherById.get(teacherId);
             const targetCategory = subjectCategoryById.get(subjectId) || 'regular';
+            const canOverrideAvailability =
+              teacherAllowAvailabilityOverrideById.get(teacherId) || false;
 
             if (!targetTeacher) {
               continue;
@@ -2459,12 +2499,17 @@ export default function TimetableGenerator() {
 
             let repairedThisDeficit = false;
 
-            const rebalanceStrategies = [
-              { allowConsecutiveInSameClass: false, allowAvailabilityOverride: false },
-              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false },
-              { allowConsecutiveInSameClass: false, allowAvailabilityOverride: true },
-              { allowConsecutiveInSameClass: true, allowAvailabilityOverride: true }
-            ];
+            const rebalanceStrategies = canOverrideAvailability
+              ? [
+                  { allowConsecutiveInSameClass: false, allowAvailabilityOverride: false },
+                  { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false },
+                  { allowConsecutiveInSameClass: false, allowAvailabilityOverride: true },
+                  { allowConsecutiveInSameClass: true, allowAvailabilityOverride: true }
+                ]
+              : [
+                  { allowConsecutiveInSameClass: false, allowAvailabilityOverride: false },
+                  { allowConsecutiveInSameClass: true, allowAvailabilityOverride: false }
+                ];
 
             for (const strategy of rebalanceStrategies) {
               for (const slot of classTimetable) {
@@ -2559,7 +2604,7 @@ export default function TimetableGenerator() {
               actualAllocation.set(sourceKey, sourceAllocated - 1);
               actualAllocation.set(deficitEntry.allocationKey, (actualAllocation.get(deficitEntry.allocationKey) || 0) + 1);
 
-              if (!targetAvailableAtSlot) {
+              if (!targetAvailableAtSlot && strategy.allowAvailabilityOverride) {
                 availabilityOverridesUsed++;
               }
 
@@ -2621,6 +2666,8 @@ export default function TimetableGenerator() {
           const [classId, subjectId, teacherId] = deficitEntry.allocationKey.split('|');
           const targetTeacher = activeTeacherById.get(teacherId);
           const targetCategory = subjectCategoryById.get(subjectId) || 'regular';
+          const canOverrideAvailability =
+            teacherAllowAvailabilityOverrideById.get(teacherId) || false;
 
           if (!targetTeacher) {
             continue;
@@ -2641,7 +2688,7 @@ export default function TimetableGenerator() {
 
             let swapApplied = false;
 
-            for (const enforceAvailability of [true, false]) {
+            for (const enforceAvailability of canOverrideAvailability ? [true, false] : [true]) {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !swapApplied; pass++) {
               for (const occupiedSlot of classTimetable) {
@@ -2682,7 +2729,7 @@ export default function TimetableGenerator() {
                     occupiedSlot.day,
                     occupiedSlot.period,
                     classId,
-                    !enforceAvailability
+                    !enforceAvailability && canOverrideAvailability
                   );
 
                   if (!relocated) {
@@ -2725,6 +2772,8 @@ export default function TimetableGenerator() {
                 if (!displacedTeacher) {
                   continue;
                 }
+                const displacedCanOverrideAvailability =
+                  teacherAllowAvailabilityOverrideById.get(displacedTeacher.id) || false;
 
                 let relocation:
                   | {
@@ -2779,14 +2828,15 @@ export default function TimetableGenerator() {
                     emptySlot.period
                   );
 
-                  if (enforceAvailability && !displacedAvailable) {
+                  if ((enforceAvailability || !displacedCanOverrideAvailability) && !displacedAvailable) {
                     continue;
                   }
 
                   relocation = {
                     day: emptySlot.day,
                     period: emptySlot.period,
-                    violatesAvailability: !displacedAvailable
+                    violatesAvailability:
+                      !displacedAvailable && !enforceAvailability && displacedCanOverrideAvailability
                   };
                   break;
                 }
@@ -2822,7 +2872,11 @@ export default function TimetableGenerator() {
                   (actualAllocation.get(deficitEntry.allocationKey) || 0) + 1
                 );
 
-                if (!targetTeacherAvailable || relocation.violatesAvailability) {
+                if (!targetTeacherAvailable && !enforceAvailability && canOverrideAvailability) {
+                  availabilityOverridesUsed++;
+                }
+
+                if (relocation.violatesAvailability) {
                   availabilityOverridesUsed++;
                 }
 
