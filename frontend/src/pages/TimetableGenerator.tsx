@@ -1341,6 +1341,66 @@ export default function TimetableGenerator() {
         );
       }
 
+      // Mapeia vínculos com baixa viabilidade estrita para evitar déficits quando ainda há slots possíveis.
+      const strictFeasibleSlotsByAllocation = new Map<string, number>();
+      for (const [allocationKey] of expectedAllocation.entries()) {
+        const [classId, subjectId, teacherId] = allocationKey.split('|');
+        const teacher = activeTeacherById.get(teacherId);
+        if (!teacher) {
+          strictFeasibleSlotsByAllocation.set(allocationKey, 0);
+          continue;
+        }
+
+        const classTimetable = allTimetables[classId] || [];
+        let feasible = 0;
+
+        for (const day of weekDays) {
+          for (const periodInfo of sortedPeriods) {
+            const candidatePeriod = periodInfo.period;
+
+            if (classSchedule[classId][day].has(candidatePeriod)) {
+              continue;
+            }
+
+            if (globalTeacherSchedule[day][candidatePeriod].has(teacherId)) {
+              continue;
+            }
+
+            if (!isTeacherAvailableAtTime(teacher, day, candidatePeriod)) {
+              continue;
+            }
+
+            if (
+              hasConsecutiveSubjectInSameClass(
+                classTimetable,
+                subjectId,
+                classId,
+                day,
+                candidatePeriod
+              )
+            ) {
+              continue;
+            }
+
+            if (
+              hasConsecutiveTeacherInSameClass(
+                classTimetable,
+                teacherId,
+                classId,
+                day,
+                candidatePeriod
+              )
+            ) {
+              continue;
+            }
+
+            feasible++;
+          }
+        }
+
+        strictFeasibleSlotsByAllocation.set(allocationKey, feasible);
+      }
+
       // Aulas com poucos slots possíveis precisam ser priorizadas para evitar déficits no fim.
       const totalPeriods = currentSchedule?.periods?.length || 8;
       const estimateFeasibleSlotsForLesson = (lesson: LessonDemand): number => {
@@ -1637,6 +1697,7 @@ export default function TimetableGenerator() {
             0,
             (expectedAllocation.get(allocationKey) || 0) - (actualAllocation.get(allocationKey) || 0)
           );
+          const strictFeasibleSlots = strictFeasibleSlotsByAllocation.get(allocationKey) || 0;
 
           let softPenalty = 0;
           if (lessonCategory === 'study' && isEarlyPeriodForStudy(period, totalPeriods)) {
@@ -2007,6 +2068,10 @@ export default function TimetableGenerator() {
           const totalScore =
             bestTeacherForLesson.score +
             lesson.priority +
+            (remainingForAllocation > 0 && strictFeasibleSlots > 0
+              ? Math.max(0, remainingForAllocation - strictFeasibleSlots + 1) * 1800 +
+                (strictFeasibleSlots <= remainingForAllocation + 1 ? 900 : 0)
+              : 0) +
             remainingForAllocation * 160 +
             subjectFlexBonus +
             periodPreferenceScore +
@@ -2025,8 +2090,71 @@ export default function TimetableGenerator() {
         return bestPlacement;
       };
 
+      const refreshStrictFeasibleSlotsByAllocation = () => {
+        strictFeasibleSlotsByAllocation.clear();
+
+        for (const [allocationKey] of expectedAllocation.entries()) {
+          const [classId, subjectId, teacherId] = allocationKey.split('|');
+          const teacher = activeTeacherById.get(teacherId);
+          if (!teacher) {
+            strictFeasibleSlotsByAllocation.set(allocationKey, 0);
+            continue;
+          }
+
+          const classTimetable = allTimetables[classId] || [];
+          let feasible = 0;
+
+          for (const weekDay of weekDays) {
+            for (const periodInfo of sortedPeriods) {
+              const candidatePeriod = periodInfo.period;
+
+              if (!classSchedule[classId] || classSchedule[classId][weekDay]?.has(candidatePeriod)) {
+                continue;
+              }
+
+              if (globalTeacherSchedule[weekDay][candidatePeriod].has(teacherId)) {
+                continue;
+              }
+
+              if (!isTeacherAvailableAtTime(teacher, weekDay, candidatePeriod)) {
+                continue;
+              }
+
+              if (
+                hasConsecutiveSubjectInSameClass(
+                  classTimetable,
+                  subjectId,
+                  classId,
+                  weekDay,
+                  candidatePeriod
+                )
+              ) {
+                continue;
+              }
+
+              if (
+                hasConsecutiveTeacherInSameClass(
+                  classTimetable,
+                  teacherId,
+                  classId,
+                  weekDay,
+                  candidatePeriod
+                )
+              ) {
+                continue;
+              }
+
+              feasible++;
+            }
+          }
+
+          strictFeasibleSlotsByAllocation.set(allocationKey, feasible);
+        }
+      };
+
       let attemptMode = 0;
       while (attemptMode < 5 && lessonDemands.some((lesson) => !lesson.allocated)) {
+        refreshStrictFeasibleSlotsByAllocation();
         let allocatedThisMode = 0;
         let progress = true;
 
