@@ -1999,8 +1999,8 @@ export default function TimetableGenerator() {
 
               if (teacherDailyLoad === 0) {
                 if (freeSlotsTodayForTeacher === 0) {
-                  // Seria aula solitária no dia — penalizar fortemente
-                  teacherScore -= 380;
+                  // Aula solitária garantida no dia — penalizar muito fortemente
+                  teacherScore -= 600;
                 } else {
                   // Há espaço para mais aulas hoje: incentivo leve de agrupamento
                   teacherScore += 30;
@@ -2011,13 +2011,9 @@ export default function TimetableGenerator() {
               }
             }
 
-            // Regra 4: professores de baixa carga preferem blocos consecutivos entre turmas
+            // Regra 4: penalizar lacunas grandes e cruzamento manhã↔tarde (todos os professores)
             {
-              const totalRequired = teacherRequiredLoad.get(candidate.id) || 0;
-              const periodsTotalInWeek = (currentSchedule?.periods?.length || 8) * weekDays.length;
-              const isHighLoadTeacher = totalRequired >= Math.ceil(periodsTotalInWeek * 0.45);
-
-              if (!isHighLoadTeacher && teacherDailyLoad > 0) {
+              if (teacherDailyLoad > 0) {
                 const existingPeriodsToday = sortedPeriods
                   .filter(p => globalTeacherSchedule[day][p.period]?.has(candidate.id))
                   .map(p => p.period);
@@ -2027,14 +2023,28 @@ export default function TimetableGenerator() {
                   // Bônus por bloco consecutivo entre turmas distintas
                   teacherScore += 200;
                 } else {
-                  // Penalizar lacunas grandes para professores de baixa carga
                   const allProjectedPeriods = [...existingPeriodsToday, period].sort((a, b) => a - b);
                   let maxGapAcross = 0;
                   for (let gi = 1; gi < allProjectedPeriods.length; gi++) {
                     maxGapAcross = Math.max(maxGapAcross, allProjectedPeriods[gi] - allProjectedPeriods[gi - 1] - 1);
                   }
-                  if (maxGapAcross > 1) {
+                  // Penalidade progressiva por lacuna — todos os professores
+                  if (maxGapAcross > 3) {
+                    teacherScore -= maxGapAcross * 180;
+                  } else if (maxGapAcross > 1) {
                     teacherScore -= maxGapAcross * 90;
+                  }
+
+                  // Penalidade extra: cruzamento manhã ↔ tarde com lacuna grande
+                  const periodsPerDay = currentSchedule?.periods?.length || 8;
+                  const halfPeriods = Math.ceil(periodsPerDay / 2);
+                  const existingInMorning = existingPeriodsToday.some(p => p <= halfPeriods);
+                  const existingInAfternoon = existingPeriodsToday.some(p => p > halfPeriods);
+                  const crossesSession =
+                    (existingInMorning && period > halfPeriods) ||
+                    (existingInAfternoon && period <= halfPeriods);
+                  if (crossesSession && maxGapAcross > 2) {
+                    teacherScore -= 350;
                   }
                 }
               }
