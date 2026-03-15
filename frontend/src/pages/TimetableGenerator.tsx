@@ -35,6 +35,9 @@ interface Subject {
   gradeId?: string;
   gradeName?: string;
   isActive?: boolean;
+  weeklyHours?: number;
+  workloadHours?: number;
+  workload?: number;
 }
 
 
@@ -94,6 +97,45 @@ interface GenerationChecklist {
   summary: GenerationChecklistSummary;
 }
 
+interface SubjectLoadCounter {
+  subjectId: string;
+  subjectName: string;
+  weeklyTarget: number;
+  weeklyGenerated: number;
+  dailyGenerated: number;
+  annualTarget: number;
+  annualGenerated: number;
+  weeklyMissing: number;
+  annualMissing: number;
+}
+
+interface TeacherLoadCounter {
+  teacherId: string;
+  teacherName: string;
+  weeklyTarget: number;
+  weeklyGenerated: number;
+  dailyGenerated: number;
+  classDailyGenerated: number;
+  annualTarget: number;
+  annualGenerated: number;
+  weeklyMissing: number;
+  annualMissing: number;
+}
+
+interface DayLoadCounterPanel {
+  subjectCounters: SubjectLoadCounter[];
+  teacherCounters: TeacherLoadCounter[];
+  totalGeneratedInDay: number;
+  dayCapacity: number;
+  dayMissingCapacity: number;
+  subjectWeeklyTargetTotal: number;
+  subjectWeeklyGeneratedTotal: number;
+  subjectWeeklyMissingTotal: number;
+  teacherWeeklyTargetTotal: number;
+  teacherWeeklyGeneratedTotal: number;
+  teacherWeeklyMissingTotal: number;
+}
+
 type SubjectCategory = 'core' | 'study' | 'regular';
 
 export default function TimetableGenerator() {
@@ -116,6 +158,7 @@ export default function TimetableGenerator() {
   const [printFormat, setPrintFormat] = useState<'normal' | 'transposed'>('normal'); // Formato de impressão
 
   const allWeekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+  const ACADEMIC_WEEKS_PER_YEAR = 40;
   const weekDays = selectedDayFilter === 'all'
     ? allWeekDays
     : allWeekDays.includes(selectedDayFilter)
@@ -757,16 +800,23 @@ export default function TimetableGenerator() {
       score -= 45;
     }
 
+    // Regra 4: professores de alta carga toleram janelas de descanso;
+    // professores de baixa carga preferem blocos consecutivos (entre turmas)
+    const periodsInWeek = totalPeriods * weekDays.length;
+    const isHighLoad = requiredWeeklyLoad >= Math.ceil(periodsInWeek * 0.45);
+    const consecutiveBonus = isHighLoad ? 90 : 250;
+    const nearbyBonus = isHighLoad ? 40 : 110;
+
     if (teacherSlotsToday.length > 0) {
       score += 120;
 
       if (teacherSlotsToday.includes(period - 1) || teacherSlotsToday.includes(period + 1)) {
-        score += 180;
+        score += consecutiveBonus;
       } else {
         const nearestDistance = teacherSlotsToday.reduce((minDistance, teacherPeriod) => {
           return Math.min(minDistance, Math.abs(teacherPeriod - period));
         }, Number.POSITIVE_INFINITY);
-        score += Math.max(0, 90 - nearestDistance * 16);
+        score += Math.max(0, nearbyBonus - nearestDistance * 16);
       }
     } else {
       score += 25;
@@ -793,6 +843,14 @@ export default function TimetableGenerator() {
       score -= (blocks - 1) * 80;
       score -= first * 8;
       score -= last * 3;
+
+      // Regra 9: penalidade extra para cada janela com mais de 1 período consecutivo vazio
+      for (let k = 1; k < sorted.length; k++) {
+        const gapSize = sorted[k] - sorted[k - 1] - 1;
+        if (gapSize > 1) {
+          score -= (gapSize - 1) * 200;
+        }
+      }
 
       const projectedDayLoad = sorted.length;
       const softDailyLimit = Math.max(1, Math.ceil((requiredWeeklyLoad || projectedDayLoad) / Math.max(1, targetActiveDays)));
@@ -977,6 +1035,51 @@ export default function TimetableGenerator() {
     if (classes.length === 0) {
       toast.error('Cadastre turmas antes de gerar o horário');
       return;
+    }
+
+    // Pré-validação: alertar quando carga horária excede slots disponíveis do professor
+    if (currentSchedule && selectedDayFilter === 'all') {
+      const preClassesToGenerate = selectedClassFilter === 'all'
+        ? classes
+        : classes.filter((c: any) => c.id === selectedClassFilter);
+      const preClassIds = new Set(preClassesToGenerate.map((c: any) => c.id));
+      const preActiveTeachers = teachers.filter((t: Teacher) => t.isActive !== false);
+      const preActiveTeacherIds = new Set(preActiveTeachers.map((t: Teacher) => t.id));
+
+      const preRequired = new Map<string, number>();
+      for (const ts of teacherSubjects as TeacherSubject[]) {
+        if (!preActiveTeacherIds.has(ts.teacherId)) continue;
+        if (ts.classId && !preClassIds.has(ts.classId)) continue;
+        const hrs = typeof ts.weeklyHours === 'number' && ts.weeklyHours > 0 ? ts.weeklyHours : 0;
+        if (hrs <= 0) continue;
+        preRequired.set(ts.teacherId, (preRequired.get(ts.teacherId) || 0) + hrs);
+      }
+
+      const preWarnings: string[] = [];
+      for (const teacher of preActiveTeachers) {
+        const required = preRequired.get(teacher.id) || 0;
+        if (required <= 0) continue;
+        if (!teacher.availability || Object.keys(teacher.availability).length === 0) continue;
+        const availableSlots = weekDays.reduce((acc: number, day: string) => {
+          return acc + currentSchedule.periods.filter(
+            (p: { period: number }) => isTeacherAvailableAtTime(teacher, day, p.period)
+          ).length;
+        }, 0);
+        if (availableSlots === 0) {
+          preWarnings.push(`• ${teacher.name}: nenhum slot disponível (necessita ${required} aula(s))`);
+        } else if (required > availableSlots) {
+          preWarnings.push(`• ${teacher.name}: ${required} aula(s) necessária(s), mas apenas ${availableSlots} slot(s) disponível(is) na disponibilidade configurada`);
+        }
+      }
+
+      if (preWarnings.length > 0) {
+        const proceed = window.confirm(
+          `⚠️ Atenção — os seguintes professores têm mais aulas necessárias do que slots disponíveis na disponibilidade configurada:\n\n` +
+          preWarnings.join('\n') +
+          `\n\nO sistema tentará alocar fora da disponibilidade para completar a carga horária.\n\nDeseja continuar mesmo assim?`
+        );
+        if (!proceed) return;
+      }
     }
 
     setIsGenerating(true);
@@ -1790,6 +1893,59 @@ export default function TimetableGenerator() {
             if (Number.isFinite(teacherMaxLoad)) {
               const occupancyRatio = teacherMaxLoad > 0 ? currentTeacherLoad / teacherMaxLoad : 1;
               teacherScore -= occupancyRatio * 120;
+            }
+
+            // Regra 3: evitar professor com apenas 1 aula no dia
+            {
+              const freeSlotsTodayForTeacher = sortedPeriods.filter(p => {
+                const pp = p.period;
+                if (pp === period) return false;
+                if (globalTeacherSchedule[day][pp]?.has(candidate.id)) return false;
+                if (mode < 4 && !isTeacherAvailableAtTime(candidate, day, pp)) return false;
+                return true;
+              }).length;
+
+              if (teacherDailyLoad === 0) {
+                if (freeSlotsTodayForTeacher === 0) {
+                  // Seria aula solitária no dia — penalizar fortemente
+                  teacherScore -= 380;
+                } else {
+                  // Há espaço para mais aulas hoje: incentivo leve de agrupamento
+                  teacherScore += 30;
+                }
+              } else if (teacherDailyLoad === 1) {
+                // Segunda aula do dia: bônus por completar o par
+                teacherScore += 230;
+              }
+            }
+
+            // Regra 4: professores de baixa carga preferem blocos consecutivos entre turmas
+            {
+              const totalRequired = teacherRequiredLoad.get(candidate.id) || 0;
+              const periodsTotalInWeek = (currentSchedule?.periods?.length || 8) * weekDays.length;
+              const isHighLoadTeacher = totalRequired >= Math.ceil(periodsTotalInWeek * 0.45);
+
+              if (!isHighLoadTeacher && teacherDailyLoad > 0) {
+                const existingPeriodsToday = sortedPeriods
+                  .filter(p => globalTeacherSchedule[day][p.period]?.has(candidate.id))
+                  .map(p => p.period);
+                const isAdjacentAcrossClasses = existingPeriodsToday.some(p => Math.abs(p - period) === 1);
+
+                if (isAdjacentAcrossClasses) {
+                  // Bônus por bloco consecutivo entre turmas distintas
+                  teacherScore += 200;
+                } else {
+                  // Penalizar lacunas grandes para professores de baixa carga
+                  const allProjectedPeriods = [...existingPeriodsToday, period].sort((a, b) => a - b);
+                  let maxGapAcross = 0;
+                  for (let gi = 1; gi < allProjectedPeriods.length; gi++) {
+                    maxGapAcross = Math.max(maxGapAcross, allProjectedPeriods[gi] - allProjectedPeriods[gi - 1] - 1);
+                  }
+                  if (maxGapAcross > 1) {
+                    teacherScore -= maxGapAcross * 90;
+                  }
+                }
+              }
             }
 
             if (mode >= 4) {
@@ -2752,6 +2908,52 @@ export default function TimetableGenerator() {
         previousMissingLessons = currentMissingLessons;
       }
 
+      // Regra 8: compactar aulas para o início do dia, deixando slots vazios no fim
+      // (libera alunos mais cedo quando há lacunas por ausência de professor)
+      {
+        for (const classId of Object.keys(allTimetables)) {
+          for (const day of weekDays) {
+            const classTimetable = allTimetables[classId] || [];
+            const daySlots = classTimetable
+              .filter(s => s.day === day)
+              .sort((a, b) => a.period - b.period);
+
+            const allPeriodsInDay = sortedPeriods.map(p => p.period).sort((a, b) => a - b);
+
+            if (daySlots.length === 0 || daySlots.length >= allPeriodsInDay.length) continue;
+
+            for (let i = 0; i < daySlots.length; i++) {
+              const targetPeriod = allPeriodsInDay[i];
+              const slot = daySlots[i];
+
+              if (slot.period === targetPeriod) continue;
+              if (slot.period < targetPeriod) continue;
+
+              // Período alvo já ocupado pela mesma turma (outro slot já movido)
+              if (classSchedule[classId][day].has(targetPeriod)) continue;
+
+              // Professor ocupado em outra turma no período alvo
+              if (globalTeacherSchedule[day]?.[targetPeriod]?.has(slot.teacherId)) continue;
+
+              // Respeitar disponibilidade do professor no período alvo
+              const teacherForCompact = activeTeacherById.get(slot.teacherId);
+              if (!teacherForCompact) continue;
+              if (!isTeacherAvailableAtTime(teacherForCompact, day, targetPeriod)) continue;
+
+              // Mover slot para o período mais cedo disponível
+              const oldPeriod = slot.period;
+              globalTeacherSchedule[day][oldPeriod].delete(slot.teacherId);
+              classSchedule[classId][day].delete(oldPeriod);
+
+              slot.period = targetPeriod;
+
+              globalTeacherSchedule[day][targetPeriod].add(slot.teacherId);
+              classSchedule[classId][day].add(targetPeriod);
+            }
+          }
+        }
+      }
+
       if (availabilityOverridesUsed > 0) {
         newConflicts.push(
           `ℹ️ ${availabilityOverridesUsed} aula(s) foram alocadas fora da disponibilidade para cumprir a carga horária total.`
@@ -2861,6 +3063,14 @@ export default function TimetableGenerator() {
     return classTimetable.find(
       (slot) => slot.day === day && slot.period === period
     );
+  };
+
+  // Verifica se o professor de um slot está fora da disponibilidade naquele horário
+  const isAvailabilityViolated = (slot: TimetableSlot | undefined, day: string, period: number): boolean => {
+    if (!slot?.teacherId) return false;
+    const teacher = teachers.find((t: Teacher) => t.id === slot.teacherId);
+    if (!teacher) return false;
+    return !isTeacherAvailableAtTime(teacher, day, period);
   };
 
   // Função para imprimir
@@ -3273,6 +3483,481 @@ export default function TimetableGenerator() {
     }, 0);
   }, [generatedTimetables, visibleClassIdSet, weekDays]);
 
+  const dayLoadCounterPanels = useMemo(() => {
+    const toPositiveInteger = (value: unknown): number => {
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue)) {
+        return 0;
+      }
+      return Math.max(0, Math.floor(numericValue));
+    };
+
+    const normalizeId = (value: unknown): string => {
+      if (value === null || value === undefined) {
+        return '';
+      }
+      return String(value);
+    };
+
+    const incrementCounter = (target: Map<string, number>, key: string, amount = 1) => {
+      if (!key) {
+        return;
+      }
+      target.set(key, (target.get(key) || 0) + amount);
+    };
+
+    const incrementNestedCounter = (
+      target: Map<string, Map<string, number>>,
+      primaryKey: string,
+      secondaryKey: string,
+      amount = 1
+    ) => {
+      if (!primaryKey || !secondaryKey) {
+        return;
+      }
+
+      const nestedCounter = target.get(primaryKey) || new Map<string, number>();
+      nestedCounter.set(secondaryKey, (nestedCounter.get(secondaryKey) || 0) + amount);
+      target.set(primaryKey, nestedCounter);
+    };
+
+    const getClassConfiguredHours = (currentClass: any, subjectId: string): number => {
+      const weeklyHoursRaw = currentClass?.subjectWeeklyHours;
+      if (!weeklyHoursRaw || !subjectId) {
+        return 0;
+      }
+
+      if (weeklyHoursRaw instanceof Map) {
+        return toPositiveInteger(weeklyHoursRaw.get(subjectId));
+      }
+
+      if (typeof weeklyHoursRaw.get === 'function') {
+        return toPositiveInteger(weeklyHoursRaw.get(subjectId));
+      }
+
+      return toPositiveInteger(weeklyHoursRaw[subjectId]);
+    };
+
+    const referenceDays = new Set(allWeekDays);
+    const teacherById = new Map(
+      (teachers as Teacher[])
+        .map((teacher) => [normalizeId((teacher as any).id || (teacher as any)._id), teacher] as const)
+        .filter(([id]) => Boolean(id))
+    );
+    const subjectById = new Map(
+      (subjects as Subject[])
+        .map((subject) => [normalizeId((subject as any).id || (subject as any)._id), subject] as const)
+        .filter(([id]) => Boolean(id))
+    );
+
+    const globalTeacherWeeklyGenerated = new Map<string, number>();
+    const globalTeacherDailyGenerated = new Map<string, Map<string, number>>();
+
+    Object.values(generatedTimetables).forEach((classSlots) => {
+      (classSlots || []).forEach((slot) => {
+        if (!referenceDays.has(slot.day)) {
+          return;
+        }
+
+        const teacherId = normalizeId(slot.teacherId);
+        if (!teacherId) {
+          return;
+        }
+
+        incrementCounter(globalTeacherWeeklyGenerated, teacherId);
+        incrementNestedCounter(globalTeacherDailyGenerated, teacherId, slot.day);
+      });
+    });
+
+    type ClassLoadProfile = {
+      subjectNames: Map<string, string>;
+      teacherNames: Map<string, string>;
+      subjectWeeklyTarget: Map<string, number>;
+      teacherExpectedWeeklyInClass: Map<string, number>;
+      subjectWeeklyGenerated: Map<string, number>;
+      subjectDailyGenerated: Map<string, Map<string, number>>;
+      teacherWeeklyGeneratedInClass: Map<string, number>;
+      teacherDailyGeneratedInClass: Map<string, Map<string, number>>;
+      generatedInDay: Map<string, number>;
+    };
+
+    const classProfiles = new Map<string, ClassLoadProfile>();
+    const globalTeacherExpectedWeekly = new Map<string, number>();
+
+    classesForDisplay.forEach((currentClass: any) => {
+      const classId = normalizeId(currentClass?.id || currentClass?._id);
+      if (!classId) {
+        return;
+      }
+
+      const classSlots = generatedTimetables[classId] || [];
+      const subjectNames = new Map<string, string>();
+      const teacherNames = new Map<string, string>();
+      const subjectIds = new Set<string>();
+
+      const classSubjects = Array.isArray(currentClass?.subjects) ? currentClass.subjects : [];
+      classSubjects.forEach((classSubject: any) => {
+        const subjectId = normalizeId(classSubject?.id || classSubject?._id || classSubject?.subjectId);
+        if (!subjectId) {
+          return;
+        }
+
+        subjectIds.add(subjectId);
+        const fallbackSubject = subjectById.get(subjectId);
+        const subjectName = classSubject?.name || fallbackSubject?.name || `Disciplina ${subjectId}`;
+        subjectNames.set(subjectId, subjectName);
+      });
+
+      const classSubjectIds = Array.isArray(currentClass?.subjectIds) ? currentClass.subjectIds : [];
+      classSubjectIds.forEach((rawSubjectId: unknown) => {
+        const subjectId = normalizeId(rawSubjectId);
+        if (!subjectId) {
+          return;
+        }
+
+        subjectIds.add(subjectId);
+        if (!subjectNames.has(subjectId)) {
+          const fallbackSubject = subjectById.get(subjectId);
+          subjectNames.set(subjectId, fallbackSubject?.name || `Disciplina ${subjectId}`);
+        }
+      });
+
+      classSlots.forEach((slot) => {
+        if (!referenceDays.has(slot.day)) {
+          return;
+        }
+
+        const subjectId = normalizeId(slot.subjectId);
+        if (subjectId) {
+          subjectIds.add(subjectId);
+          if (!subjectNames.has(subjectId)) {
+            const fallbackSubject = subjectById.get(subjectId);
+            subjectNames.set(subjectId, fallbackSubject?.name || `Disciplina ${subjectId}`);
+          }
+        }
+
+        const teacherId = normalizeId(slot.teacherId);
+        if (teacherId && !teacherNames.has(teacherId)) {
+          const fallbackTeacher = teacherById.get(teacherId);
+          teacherNames.set(teacherId, fallbackTeacher?.name || `Professor ${teacherId}`);
+        }
+      });
+
+      const classAssignments = (teacherSubjects as TeacherSubject[]).filter((association) => {
+        const associationSubjectId = normalizeId(association.subjectId);
+        if (!associationSubjectId) {
+          return false;
+        }
+
+        const classMatch = association.classId === classId || !association.classId;
+        if (!classMatch) {
+          return false;
+        }
+
+        if (subjectIds.size === 0) {
+          return true;
+        }
+
+        return subjectIds.has(associationSubjectId);
+      });
+
+      const subjectWeeklyTarget = new Map<string, number>();
+      const teacherExpectedWeeklyInClass = new Map<string, number>();
+
+      subjectIds.forEach((subjectId) => {
+        const assignments = classAssignments.filter(
+          (association) => normalizeId(association.subjectId) === subjectId
+        );
+
+        const explicitAssignments = assignments.filter(
+          (association) =>
+            typeof association.weeklyHours === 'number' && Number(association.weeklyHours) > 0
+        );
+
+        const explicitRequested = explicitAssignments.reduce(
+          (sum, association) => sum + toPositiveInteger(association.weeklyHours),
+          0
+        );
+
+        const classConfiguredHours = getClassConfiguredHours(currentClass, subjectId);
+        const subjectDefaultHours = toPositiveInteger(subjectById.get(subjectId)?.weeklyHours);
+        const fallbackTarget = classConfiguredHours || subjectDefaultHours || 2;
+        const effectiveTarget = explicitRequested > 0 ? explicitRequested : fallbackTarget;
+
+        if (effectiveTarget > 0) {
+          subjectWeeklyTarget.set(subjectId, effectiveTarget);
+        }
+
+        if (assignments.length === 0) {
+          return;
+        }
+
+        const nonExplicitAssignments = assignments.filter(
+          (association) =>
+            !(typeof association.weeklyHours === 'number' && Number(association.weeklyHours) > 0)
+        );
+
+        const remainingForNonExplicit = Math.max(0, effectiveTarget - explicitRequested);
+        const baseHours =
+          nonExplicitAssignments.length > 0
+            ? Math.floor(remainingForNonExplicit / nonExplicitAssignments.length)
+            : 0;
+        const extraHours =
+          nonExplicitAssignments.length > 0
+            ? remainingForNonExplicit % nonExplicitAssignments.length
+            : 0;
+
+        const distributedHours = new Map<string, number>();
+        nonExplicitAssignments.forEach((association, index) => {
+          const associationTeacherId = normalizeId(association.teacherId);
+          if (!associationTeacherId) {
+            return;
+          }
+
+          distributedHours.set(associationTeacherId, baseHours + (index < extraHours ? 1 : 0));
+        });
+
+        assignments.forEach((association) => {
+          const associationTeacherId = normalizeId(association.teacherId);
+          if (!associationTeacherId) {
+            return;
+          }
+
+          if (!teacherNames.has(associationTeacherId)) {
+            const fallbackTeacher = teacherById.get(associationTeacherId);
+            teacherNames.set(
+              associationTeacherId,
+              fallbackTeacher?.name || `Professor ${associationTeacherId}`
+            );
+          }
+
+          const isExplicit =
+            typeof association.weeklyHours === 'number' && Number(association.weeklyHours) > 0;
+          const allocatedWeeklyHours = isExplicit
+            ? toPositiveInteger(association.weeklyHours)
+            : toPositiveInteger(distributedHours.get(associationTeacherId));
+
+          if (allocatedWeeklyHours <= 0) {
+            return;
+          }
+
+          incrementCounter(teacherExpectedWeeklyInClass, associationTeacherId, allocatedWeeklyHours);
+          incrementCounter(globalTeacherExpectedWeekly, associationTeacherId, allocatedWeeklyHours);
+        });
+      });
+
+      const subjectWeeklyGenerated = new Map<string, number>();
+      const subjectDailyGenerated = new Map<string, Map<string, number>>();
+      const teacherWeeklyGeneratedInClass = new Map<string, number>();
+      const teacherDailyGeneratedInClass = new Map<string, Map<string, number>>();
+      const generatedInDay = new Map<string, number>();
+
+      classSlots.forEach((slot) => {
+        if (!referenceDays.has(slot.day)) {
+          return;
+        }
+
+        incrementCounter(generatedInDay, slot.day);
+
+        const subjectId = normalizeId(slot.subjectId);
+        if (subjectId) {
+          incrementCounter(subjectWeeklyGenerated, subjectId);
+          incrementNestedCounter(subjectDailyGenerated, slot.day, subjectId);
+        }
+
+        const teacherId = normalizeId(slot.teacherId);
+        if (teacherId) {
+          incrementCounter(teacherWeeklyGeneratedInClass, teacherId);
+          incrementNestedCounter(teacherDailyGeneratedInClass, slot.day, teacherId);
+        }
+      });
+
+      classProfiles.set(classId, {
+        subjectNames,
+        teacherNames,
+        subjectWeeklyTarget,
+        teacherExpectedWeeklyInClass,
+        subjectWeeklyGenerated,
+        subjectDailyGenerated,
+        teacherWeeklyGeneratedInClass,
+        teacherDailyGeneratedInClass,
+        generatedInDay
+      });
+    });
+
+    const emptyPanel: DayLoadCounterPanel = {
+      subjectCounters: [],
+      teacherCounters: [],
+      totalGeneratedInDay: 0,
+      dayCapacity: currentSchedule?.periods?.length || 0,
+      dayMissingCapacity: currentSchedule?.periods?.length || 0,
+      subjectWeeklyTargetTotal: 0,
+      subjectWeeklyGeneratedTotal: 0,
+      subjectWeeklyMissingTotal: 0,
+      teacherWeeklyTargetTotal: 0,
+      teacherWeeklyGeneratedTotal: 0,
+      teacherWeeklyMissingTotal: 0
+    };
+
+    const dayPanels: Record<string, DayLoadCounterPanel> = {};
+    const dayCapacity = currentSchedule?.periods?.length || 0;
+
+    classesForDisplay.forEach((currentClass: any) => {
+      const classId = normalizeId(currentClass?.id || currentClass?._id);
+      if (!classId) {
+        return;
+      }
+
+      const profile = classProfiles.get(classId);
+      if (!profile) {
+        weekDays.forEach((day) => {
+          dayPanels[`${classId}|${day}`] = emptyPanel;
+        });
+        return;
+      }
+
+      weekDays.forEach((day) => {
+        const subjectsInDay = new Set<string>([
+          ...profile.subjectWeeklyTarget.keys(),
+          ...profile.subjectWeeklyGenerated.keys(),
+          ...(profile.subjectDailyGenerated.get(day)?.keys() || [])
+        ]);
+
+        const subjectCounters = Array.from(subjectsInDay).map((subjectId) => {
+          const weeklyTargetRaw = profile.subjectWeeklyTarget.get(subjectId) || 0;
+          const weeklyGenerated = profile.subjectWeeklyGenerated.get(subjectId) || 0;
+          const dailyGenerated = profile.subjectDailyGenerated.get(day)?.get(subjectId) || 0;
+          const weeklyTarget = weeklyTargetRaw > 0 ? weeklyTargetRaw : weeklyGenerated;
+          const weeklyMissing = Math.max(0, weeklyTarget - weeklyGenerated);
+
+          return {
+            subjectId,
+            subjectName: profile.subjectNames.get(subjectId) || `Disciplina ${subjectId}`,
+            weeklyTarget,
+            weeklyGenerated,
+            dailyGenerated,
+            annualTarget: weeklyTarget * ACADEMIC_WEEKS_PER_YEAR,
+            annualGenerated: weeklyGenerated * ACADEMIC_WEEKS_PER_YEAR,
+            weeklyMissing,
+            annualMissing: weeklyMissing * ACADEMIC_WEEKS_PER_YEAR
+          };
+        });
+
+        subjectCounters.sort((left, right) => {
+          if (right.weeklyMissing !== left.weeklyMissing) {
+            return right.weeklyMissing - left.weeklyMissing;
+          }
+          if (right.weeklyTarget !== left.weeklyTarget) {
+            return right.weeklyTarget - left.weeklyTarget;
+          }
+          return left.subjectName.localeCompare(right.subjectName);
+        });
+
+        const teachersInDay = new Set<string>([
+          ...profile.teacherExpectedWeeklyInClass.keys(),
+          ...profile.teacherWeeklyGeneratedInClass.keys(),
+          ...(profile.teacherDailyGeneratedInClass.get(day)?.keys() || [])
+        ]);
+
+        const teacherCounters = Array.from(teachersInDay).map((teacherId) => {
+          const configuredWeeklyLoad = toPositiveInteger(teacherById.get(teacherId)?.weeklyWorkload);
+          const expectedWeeklyInClass = profile.teacherExpectedWeeklyInClass.get(teacherId) || 0;
+          const expectedWeeklyGlobal = globalTeacherExpectedWeekly.get(teacherId) || 0;
+          const weeklyGenerated = globalTeacherWeeklyGenerated.get(teacherId) || 0;
+          const dailyGenerated = globalTeacherDailyGenerated.get(teacherId)?.get(day) || 0;
+          const classDailyGenerated = profile.teacherDailyGeneratedInClass.get(day)?.get(teacherId) || 0;
+          const weeklyTargetRaw = Math.max(
+            configuredWeeklyLoad,
+            expectedWeeklyGlobal,
+            expectedWeeklyInClass
+          );
+          const weeklyTarget = weeklyTargetRaw > 0 ? weeklyTargetRaw : weeklyGenerated;
+          const weeklyMissing = Math.max(0, weeklyTarget - weeklyGenerated);
+
+          return {
+            teacherId,
+            teacherName:
+              profile.teacherNames.get(teacherId) ||
+              teacherById.get(teacherId)?.name ||
+              `Professor ${teacherId}`,
+            weeklyTarget,
+            weeklyGenerated,
+            dailyGenerated,
+            classDailyGenerated,
+            annualTarget: weeklyTarget * ACADEMIC_WEEKS_PER_YEAR,
+            annualGenerated: weeklyGenerated * ACADEMIC_WEEKS_PER_YEAR,
+            weeklyMissing,
+            annualMissing: weeklyMissing * ACADEMIC_WEEKS_PER_YEAR
+          };
+        });
+
+        teacherCounters.sort((left, right) => {
+          if (right.weeklyMissing !== left.weeklyMissing) {
+            return right.weeklyMissing - left.weeklyMissing;
+          }
+          if (right.weeklyTarget !== left.weeklyTarget) {
+            return right.weeklyTarget - left.weeklyTarget;
+          }
+          return left.teacherName.localeCompare(right.teacherName);
+        });
+
+        const subjectWeeklyTargetTotal = subjectCounters.reduce(
+          (sum, counter) => sum + counter.weeklyTarget,
+          0
+        );
+        const subjectWeeklyGeneratedTotal = subjectCounters.reduce(
+          (sum, counter) => sum + counter.weeklyGenerated,
+          0
+        );
+        const subjectWeeklyMissingTotal = subjectCounters.reduce(
+          (sum, counter) => sum + counter.weeklyMissing,
+          0
+        );
+
+        const teacherWeeklyTargetTotal = teacherCounters.reduce(
+          (sum, counter) => sum + counter.weeklyTarget,
+          0
+        );
+        const teacherWeeklyGeneratedTotal = teacherCounters.reduce(
+          (sum, counter) => sum + counter.weeklyGenerated,
+          0
+        );
+        const teacherWeeklyMissingTotal = teacherCounters.reduce(
+          (sum, counter) => sum + counter.weeklyMissing,
+          0
+        );
+
+        const totalGeneratedInDay = profile.generatedInDay.get(day) || 0;
+
+        dayPanels[`${classId}|${day}`] = {
+          subjectCounters,
+          teacherCounters,
+          totalGeneratedInDay,
+          dayCapacity,
+          dayMissingCapacity: Math.max(0, dayCapacity - totalGeneratedInDay),
+          subjectWeeklyTargetTotal,
+          subjectWeeklyGeneratedTotal,
+          subjectWeeklyMissingTotal,
+          teacherWeeklyTargetTotal,
+          teacherWeeklyGeneratedTotal,
+          teacherWeeklyMissingTotal
+        };
+      });
+    });
+
+    return dayPanels;
+  }, [
+    ACADEMIC_WEEKS_PER_YEAR,
+    allWeekDays,
+    classesForDisplay,
+    currentSchedule,
+    generatedTimetables,
+    subjects,
+    teacherSubjects,
+    teachers,
+    weekDays
+  ]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -3484,6 +4169,7 @@ export default function TimetableGenerator() {
             </p>
             <ul className="text-xs text-blue-800 space-y-1 ml-4">
               <li>• <strong>🎯 PRIORIDADE MÁXIMA:</strong> Respeita observações e disponibilidades dos professores</li>
+              <li>• <strong>📵 Célula laranja:</strong> Professor alocado fora da disponibilidade (carga excede slots disponíveis)</li>
               <li>• <strong>📌 Compactação:</strong> Aulas concentradas nos primeiros períodos (janelas no final)</li>
               <li>• <strong>🚫 Evita aulas seguidas:</strong> Professor não dá duas aulas consecutivas na mesma turma</li>
               <li>• <strong>⚡ Maximiza sequências:</strong> Professor com máximo de aulas seguidas em turmas diferentes</li>
@@ -3733,17 +4419,20 @@ export default function TimetableGenerator() {
                                 }
                                 
                                 const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                                const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
 
                                 return (
                                   <td
                                     key={day}
-                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : ''}`}
+                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : ''}`}
                                     style={{
-                                      backgroundColor: hasConflict 
-                                        ? '#fee2e2' // bg-red-100
-                                        : subject?.color ? `${subject.color}20` : 'white',
+                                      backgroundColor: hasConflict
+                                        ? '#fee2e2'
+                                        : violatesAvailability
+                                          ? '#fff7ed'
+                                          : subject?.color ? `${subject.color}20` : 'white',
                                     }}
-                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : ''}
+                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
                                   >
                                     {/* Botão de editar (aparece ao passar o mouse) */}
                                     <button
@@ -3759,17 +4448,28 @@ export default function TimetableGenerator() {
                                         ⚠️
                                       </div>
                                     )}
+                                    {violatesAvailability && (
+                                      <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
+                                        📵
+                                      </div>
+                                    )}
                                     {subject && teacher ? (
                                       <div className={hasConflict ? 'relative' : ''}>
-                                        <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : 'text-gray-900'}`}>
+                                        <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
                                           {subject.name}
                                         </div>
-                                        <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : 'text-gray-600'}`}>
+                                        <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
                                           {teacher.name}
+                                          {violatesAvailability && <span className="ml-1">⚠️</span>}
                                         </div>
                                         {hasConflict && (
                                           <div className="text-xs font-bold text-red-600 mt-1">
                                             ⚠️ CONFLITO
+                                          </div>
+                                        )}
+                                        {violatesAvailability && (
+                                          <div className="text-xs font-bold text-orange-600 mt-1 no-print">
+                                            Fora da disp.
                                           </div>
                                         )}
                                       </div>
@@ -3832,17 +4532,20 @@ export default function TimetableGenerator() {
                               const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
                               const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
                               const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                              const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
 
                               return (
                                 <td
                                   key={periodInfo.period}
-                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : ''}`}
+                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : ''}`}
                                   style={{
-                                    backgroundColor: hasConflict 
+                                    backgroundColor: hasConflict
                                       ? '#fee2e2'
-                                      : subject?.color ? `${subject.color}20` : 'white',
+                                      : violatesAvailability
+                                        ? '#fff7ed'
+                                        : subject?.color ? `${subject.color}20` : 'white',
                                   }}
-                                  title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : ''}
+                                  title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
                                 >
                                   {/* Botão de editar */}
                                   <button
@@ -3858,17 +4561,28 @@ export default function TimetableGenerator() {
                                       ⚠️
                                     </div>
                                   )}
+                                  {violatesAvailability && (
+                                    <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
+                                      📵
+                                    </div>
+                                  )}
                                   {subject && teacher ? (
                                     <div className={hasConflict ? 'relative' : ''}>
-                                      <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : 'text-gray-900'}`}>
+                                      <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
                                         {subject.name}
                                       </div>
-                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : 'text-gray-600'}`}>
+                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
                                         {teacher.name}
+                                        {violatesAvailability && <span className="ml-1">⚠️</span>}
                                       </div>
                                       {hasConflict && (
                                         <div className="text-xs font-bold text-red-600 mt-1">
                                           ⚠️ CONFLITO
+                                        </div>
+                                      )}
+                                      {violatesAvailability && (
+                                        <div className="text-xs font-bold text-orange-600 mt-1 no-print">
+                                          Fora da disp.
                                         </div>
                                       )}
                                     </div>
@@ -3903,67 +4617,213 @@ export default function TimetableGenerator() {
               </div>
 
               <div className="space-y-6">
-                {weekDays.map((day) => (
-                  <div key={day} className="border border-gray-300 rounded-lg overflow-hidden">
-                    <div className="bg-primary-600 text-white p-3 font-bold text-center text-lg">
-                      {day}
-                    </div>
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border-b border-gray-300 p-3 text-left w-32">Horário</th>
-                          <th className="border-b border-gray-300 p-3 text-left">Disciplina</th>
-                          <th className="border-b border-gray-300 p-3 text-left">Professor</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
-                          const slot = getSlotData(currentClass.id, day, periodInfo.period);
-                          const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
-                          const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
-                          const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                {weekDays.map((day) => {
+                  const dayPanel = dayLoadCounterPanels[`${currentClass.id}|${day}`] || {
+                    subjectCounters: [],
+                    teacherCounters: [],
+                    totalGeneratedInDay: 0,
+                    dayCapacity: currentSchedule.periods.length,
+                    dayMissingCapacity: currentSchedule.periods.length,
+                    subjectWeeklyTargetTotal: 0,
+                    subjectWeeklyGeneratedTotal: 0,
+                    subjectWeeklyMissingTotal: 0,
+                    teacherWeeklyTargetTotal: 0,
+                    teacherWeeklyGeneratedTotal: 0,
+                    teacherWeeklyMissingTotal: 0
+                  };
+                  const teachersWithLessonsToday = dayPanel.teacherCounters.filter(
+                    (counter) => counter.dailyGenerated > 0
+                  ).length;
 
-                          return (
-                            <tr 
-                              key={periodInfo.period} 
-                              className={`hover:bg-gray-50 ${hasConflict ? 'bg-red-50 ring-2 ring-red-500' : ''}`}
-                              title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : ''}
-                            >
-                              <td className="border-b border-gray-200 p-3 bg-gray-50">
-                                <div className="text-sm font-bold">{periodInfo.period}º</div>
-                                <div className="text-xs text-gray-600">
-                                  {periodInfo.startTime} - {periodInfo.endTime}
+                  return (
+                    <div key={day} className="border border-gray-300 rounded-lg overflow-hidden">
+                      <div className="bg-primary-600 text-white p-3 font-bold text-center text-lg">
+                        {day}
+                      </div>
+
+                      <div className="flex flex-col lg:flex-row">
+                        <aside className="w-full lg:w-[25rem] border-b lg:border-b-0 lg:border-r border-gray-300 bg-slate-50 p-4 space-y-4">
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-800">Controle de Cargas</h4>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Comparativo do horário gerado entre disciplina e professor.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Disciplinas na semana</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {dayPanel.subjectWeeklyGeneratedTotal}/{dayPanel.subjectWeeklyTargetTotal}
+                              </p>
+                              <p className="text-amber-700">
+                                Faltam {dayPanel.subjectWeeklyMissingTotal}
+                              </p>
+                            </div>
+
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Professores na semana</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {dayPanel.teacherWeeklyGeneratedTotal}/{dayPanel.teacherWeeklyTargetTotal}
+                              </p>
+                              <p className="text-amber-700">
+                                Faltam {dayPanel.teacherWeeklyMissingTotal}
+                              </p>
+                            </div>
+
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Turma no dia</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {dayPanel.totalGeneratedInDay}/{dayPanel.dayCapacity}
+                              </p>
+                              <p className="text-amber-700">
+                                Faltam {dayPanel.dayMissingCapacity} slot(s)
+                              </p>
+                            </div>
+
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Professores no dia</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {teachersWithLessonsToday}
+                              </p>
+                              <p className="text-slate-600">Com aula neste dia</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700 mb-2">
+                              Disciplinas
+                            </h5>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {dayPanel.subjectCounters.length === 0 && (
+                                <div className="text-xs text-slate-500 bg-white border border-slate-200 rounded p-2">
+                                  Sem dados de disciplina para comparar.
                                 </div>
-                              </td>
-                              <td 
-                                className={`border-b border-gray-200 p-3 ${hasConflict ? 'ring-2 ring-red-500' : ''}`}
-                                style={{
-                                  backgroundColor: hasConflict 
-                                    ? '#fee2e2' 
-                                    : subject?.color ? `${subject.color}20` : 'white',
-                                }}
-                              >
-                                <div className={`font-semibold ${hasConflict ? 'text-red-900' : 'text-gray-900'}`}>
-                                  {subject?.name || '-'}
-                                  {hasConflict && (
-                                    <span className="ml-2 text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">
-                                      ⚠️ CONFLITO
+                              )}
+
+                              {dayPanel.subjectCounters.map((counter) => (
+                                <div key={counter.subjectId} className="rounded border border-slate-200 bg-white p-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-semibold text-slate-800 leading-tight">
+                                      {counter.subjectName}
+                                    </p>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${counter.weeklyMissing > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                      {counter.weeklyMissing > 0 ? `Falta ${counter.weeklyMissing}` : 'Completo'}
                                     </span>
-                                  )}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-slate-600 space-y-0.5">
+                                    <p>Semana: {counter.weeklyGenerated}/{counter.weeklyTarget}</p>
+                                    <p>Dia: {counter.dailyGenerated} aula(s)</p>
+                                    <p>Anual: {counter.annualGenerated}/{counter.annualTarget}</p>
+                                    <p>Falta para incrementar: {counter.weeklyMissing} semana • {counter.annualMissing} ano</p>
+                                  </div>
                                 </div>
-                              </td>
-                              <td className={`border-b border-gray-200 p-3 ${hasConflict ? 'text-red-700 font-bold' : ''}`}>
-                                <div className="text-sm">
-                                  {teacher?.name || '-'}
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700 mb-2">
+                              Professores
+                            </h5>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {dayPanel.teacherCounters.length === 0 && (
+                                <div className="text-xs text-slate-500 bg-white border border-slate-200 rounded p-2">
+                                  Sem dados de professor para comparar.
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
+                              )}
+
+                              {dayPanel.teacherCounters.map((counter) => (
+                                <div key={counter.teacherId} className="rounded border border-slate-200 bg-white p-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-semibold text-slate-800 leading-tight">
+                                      {counter.teacherName}
+                                    </p>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${counter.weeklyMissing > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                      {counter.weeklyMissing > 0 ? `Falta ${counter.weeklyMissing}` : 'Completo'}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-slate-600 space-y-0.5">
+                                    <p>Semana: {counter.weeklyGenerated}/{counter.weeklyTarget}</p>
+                                    <p>Dia: {counter.dailyGenerated} geral • {counter.classDailyGenerated} na turma</p>
+                                    <p>Anual: {counter.annualGenerated}/{counter.annualTarget}</p>
+                                    <p>Falta para incrementar: {counter.weeklyMissing} semana • {counter.annualMissing} ano</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </aside>
+
+                        <div className="flex-1 overflow-x-auto">
+                          <table className="min-w-full">
+                            <thead>
+                              <tr className="bg-gray-100">
+                                <th className="border-b border-gray-300 p-3 text-left w-32">Horário</th>
+                                <th className="border-b border-gray-300 p-3 text-left">Disciplina</th>
+                                <th className="border-b border-gray-300 p-3 text-left">Professor</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
+                                const slot = getSlotData(currentClass.id, day, periodInfo.period);
+                                const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
+                                const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
+                                const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                                const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+
+                                return (
+                                  <tr
+                                    key={periodInfo.period}
+                                    className={`hover:bg-gray-50 ${hasConflict ? 'bg-red-50 ring-2 ring-red-500' : violatesAvailability ? 'bg-orange-50 ring-1 ring-orange-400' : ''}`}
+                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
+                                  >
+                                    <td className="border-b border-gray-200 p-3 bg-gray-50">
+                                      <div className="text-sm font-bold">{periodInfo.period}º</div>
+                                      <div className="text-xs text-gray-600">
+                                        {periodInfo.startTime} - {periodInfo.endTime}
+                                      </div>
+                                    </td>
+                                    <td
+                                      className={`border-b border-gray-200 p-3 ${hasConflict ? 'ring-2 ring-red-500' : violatesAvailability ? 'ring-1 ring-orange-400' : ''}`}
+                                      style={{
+                                        backgroundColor: hasConflict
+                                          ? '#fee2e2'
+                                          : violatesAvailability
+                                            ? '#fff7ed'
+                                            : subject?.color ? `${subject.color}20` : 'white',
+                                      }}
+                                    >
+                                      <div className={`font-semibold ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
+                                        {subject?.name || '-'}
+                                        {hasConflict && (
+                                          <span className="ml-2 text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">
+                                            ⚠️ CONFLITO
+                                          </span>
+                                        )}
+                                        {violatesAvailability && (
+                                          <span className="ml-2 text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded no-print">
+                                            📵 Fora da disp.
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className={`border-b border-gray-200 p-3 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : ''}`}>
+                                      <div className="text-sm">
+                                        {teacher?.name || '-'}
+                                        {violatesAvailability && <span className="ml-1 no-print">⚠️</span>}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
