@@ -14,9 +14,11 @@ const router = express.Router();
 // Endpoint para buscar estatísticas completas do dashboard
 router.get('/dashboard', auth, async (req: AuthRequest, res) => {
   try {
-    const userId = req.user!.id;
+    const ownerUserId = String(req.user?.schoolId || req.user?.id || '');
+    const actorUserId = String(req.user?.id || '');
+    const scopedUserIds = Array.from(new Set([ownerUserId, actorUserId].filter(Boolean)));
     
-    console.log('📊 Buscando estatísticas para userId:', userId);
+    console.log('📊 Buscando estatísticas para userIds:', scopedUserIds);
 
     // Buscar dados básicos
     const [
@@ -30,54 +32,32 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       classes
     ] = await Promise.all([
       Teacher.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ]
+        userId: { $in: scopedUserIds }
       }),
       Subject.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ]
+        userId: { $in: scopedUserIds }
       }),
       Schedule.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ]
+        userId: { $in: scopedUserIds }
       }),
       Timetable.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ]
+        userId: { $in: scopedUserIds }
       }),
       GeneratedTimetable.find({ 
         $or: [
-          { userId: userId },
-          { userId: userId.toString() },
+          { userId: { $in: scopedUserIds } },
           { userId: { $exists: false } },
           { userId: null }
         ]
       }),
       EmergencySchedule.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ]
+        userId: { $in: scopedUserIds }
       }),
       TeacherSubject.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ]
+        userId: { $in: scopedUserIds }
       }),
       Class.find({ 
-        $or: [
-          { userId: userId },
-          { userId: userId.toString() }
-        ],
+        userId: { $in: scopedUserIds },
         isActive: true // Apenas turmas ativas
       })
     ]);

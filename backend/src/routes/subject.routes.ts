@@ -7,6 +7,14 @@ import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+const getScopedUserIds = (req: AuthRequest): string[] => {
+  const ownerUserId = req.user?.schoolId || req.user?.id;
+  const actorUserId = req.user?.id;
+  return Array.from(new Set([ownerUserId, actorUserId].filter(Boolean).map((id) => String(id))));
+};
+
+const getOwnerUserId = (req: AuthRequest): string => String(req.user?.schoolId || req.user?.id || '');
+
 // Criar componente curricular
 router.post('/', auth,
   [
@@ -19,9 +27,12 @@ router.post('/', auth,
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const ownerUserId = getOwnerUserId(req);
+
       const subject = new Subject({
         ...req.body,
-        userId: req.user!.id
+        userId: ownerUserId,
+        schoolId: ownerUserId
       });
 
       await subject.save();
@@ -35,8 +46,9 @@ router.post('/', auth,
 // Listar componentes curriculares
 router.get('/', auth, async (req: AuthRequest, res) => {
   try {
-    console.log('📚 GET /subjects - req.user.id:', req.user!.id);
-    const subjects = await Subject.find({ userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    console.log('📚 GET /subjects - scoped userIds:', scopedUserIds);
+    const subjects = await Subject.find({ userId: { $in: scopedUserIds } });
     const Class = require('../models/Class').default;
     
     // Adicionar informações das turmas com suas séries
@@ -69,8 +81,9 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 // Listar apenas componentes curriculares ATIVOS para o gerador de horário
 router.get('/active', auth, async (req: AuthRequest, res) => {
   try {
+    const scopedUserIds = getScopedUserIds(req);
     const activeSubjects = await Subject.find({ 
-      userId: req.user!.id,
+      userId: { $in: scopedUserIds },
       isActive: { $ne: false } // Pega todos onde isActive não seja false (true ou undefined)
     });
     
@@ -105,7 +118,8 @@ router.get('/active', auth, async (req: AuthRequest, res) => {
 // Listar componentes curriculares por usuário (para compatibilidade)
 router.get('/user/:userId', auth, async (req: AuthRequest, res) => {
   try {
-    const subjects = await Subject.find({ userId: req.params.userId });
+    const scopedUserIds = getScopedUserIds(req);
+    const subjects = await Subject.find({ userId: { $in: scopedUserIds } });
     
     // Adicionar informações do nível (Grade) se existir gradeId
     const subjectsWithGrade = await Promise.all(
@@ -128,7 +142,8 @@ router.get('/user/:userId', auth, async (req: AuthRequest, res) => {
 // Obter componente curricular por ID
 router.get('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const subject = await Subject.findOne({ _id: req.params.id, userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    const subject = await Subject.findOne({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!subject) {
       return res.status(404).json({ message: 'Componente curricular não encontrado' });
     }
@@ -144,8 +159,9 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     console.log('📥 Recebendo atualização de subject:', req.body);
     console.log('📥 weeklyHours recebido:', req.body.weeklyHours, 'tipo:', typeof req.body.weeklyHours);
     
+    const scopedUserIds = getScopedUserIds(req);
     const subject = await Subject.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user!.id },
+      { _id: req.params.id, userId: { $in: scopedUserIds } },
       req.body,
       { new: true, runValidators: true }
     );
@@ -163,7 +179,8 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 // Deletar componente curricular
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!subject) {
       return res.status(404).json({ message: 'Componente curricular não encontrado' });
     }

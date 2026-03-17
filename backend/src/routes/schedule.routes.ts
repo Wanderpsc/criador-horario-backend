@@ -7,6 +7,14 @@ import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+const getScopedUserIds = (req: AuthRequest): string[] => {
+  const ownerUserId = req.user?.schoolId || req.user?.id;
+  const actorUserId = req.user?.id;
+  return Array.from(new Set([ownerUserId, actorUserId].filter(Boolean).map((id) => String(id))));
+};
+
+const getOwnerUserId = (req: AuthRequest): string => String(req.user?.schoolId || req.user?.id || '');
+
 // Criar horário
 router.post('/', auth,
   [
@@ -19,6 +27,8 @@ router.post('/', auth,
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
       }
+
+      const ownerUserId = getOwnerUserId(req);
 
       console.log('📝 Criando horário - Dados recebidos:', JSON.stringify(req.body, null, 2));
 
@@ -37,7 +47,7 @@ router.post('/', auth,
       const schedule = new Schedule({
         ...req.body,
         periods,
-        userId: req.user!.id
+        userId: ownerUserId
       });
 
       await schedule.save();
@@ -54,8 +64,9 @@ router.post('/', auth,
 // Listar horários
 router.get('/', auth, async (req: AuthRequest, res) => {
   try {
-    console.log('⏰ GET /schedules - req.user.id:', req.user!.id);
-    const schedules = await Schedule.find({ userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    console.log('⏰ GET /schedules - scoped userIds:', scopedUserIds);
+    const schedules = await Schedule.find({ userId: { $in: scopedUserIds } });
     res.json(schedules);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -65,7 +76,8 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 // Obter horário por ID
 router.get('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const schedule = await Schedule.findOne({ _id: req.params.id, userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    const schedule = await Schedule.findOne({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!schedule) {
       return res.status(404).json({ message: 'Horário não encontrado' });
     }
@@ -78,8 +90,9 @@ router.get('/:id', auth, async (req: AuthRequest, res) => {
 // Gerar horário automaticamente a partir de um Schedule
 router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
   try {
-    const schedule = await Schedule.findOne({ _id: req.params.id, userId: req.user!.id });
-
+    const scopedUserIds = getScopedUserIds(req);
+    const ownerUserId = getOwnerUserId(req);
+    const schedule = await Schedule.findOne({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!schedule) {
       return res.status(404).json({ message: 'Horário não encontrado' });
     }
@@ -98,7 +111,7 @@ router.post('/:id/generate', auth, async (req: AuthRequest, res) => {
     const semester = String(scheduleData.semester || '1');
 
     const result = await generateTimetable({
-      userId: req.user!.id,
+      userId: ownerUserId,
       scheduleId: schedule._id.toString(),
       name: schedule.name,
       year,
@@ -146,8 +159,9 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 
     console.log(`✅ Períodos válidos: ${periods.length} de ${req.body.periods?.length || 0}`);
 
+    const scopedUserIds = getScopedUserIds(req);
     const schedule = await Schedule.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user!.id },
+      { _id: req.params.id, userId: { $in: scopedUserIds } },
       { ...req.body, periods },
       { new: true, runValidators: true }
     );
@@ -166,6 +180,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
+    const scopedUserIds = getScopedUserIds(req);
     
     // Validar formato do ID
     if (!id || id === 'undefined' || id === 'null') {
@@ -180,7 +195,7 @@ router.delete('/:id', auth, async (req: AuthRequest, res) => {
 
     const schedule = await Schedule.findOneAndDelete({ 
       _id: id, 
-      userId: req.user!.id 
+      userId: { $in: scopedUserIds }
     });
     
     if (!schedule) {

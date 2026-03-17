@@ -11,10 +11,19 @@ import Grade from '../models/Grade';
 
 const router = express.Router();
 
+const getScopedUserIds = (req: any): string[] => {
+  const ownerUserId = req.user?.schoolId || req.user?.id;
+  const actorUserId = req.user?.id;
+  return Array.from(new Set([ownerUserId, actorUserId].filter(Boolean).map((id) => String(id))));
+};
+
+const getOwnerUserId = (req: any): string => String(req.user?.schoolId || req.user?.id || '');
+
 // Listar todas as turmas do usuário
 router.get('/', auth, async (req: any, res: any) => {
   try {
-    const classes = await Class.find({ userId: req.user.id, isActive: true })
+    const scopedUserIds = getScopedUserIds(req);
+    const classes = await Class.find({ userId: { $in: scopedUserIds }, isActive: true })
       .populate('gradeId')
       .populate('subjectIds')
       .sort({ name: 1 });
@@ -87,9 +96,10 @@ router.get('/', auth, async (req: any, res: any) => {
 // Buscar turma por ID
 router.get('/:id', auth, async (req: any, res: any) => {
   try {
+    const scopedUserIds = getScopedUserIds(req);
     const classItem = await Class.findOne({ 
       _id: req.params.id, 
-      userId: req.user.id 
+      userId: { $in: scopedUserIds }
     }).populate('gradeId').populate('subjectIds');
     
     if (!classItem) {
@@ -154,14 +164,16 @@ router.post('/',
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const scopedUserIds = getScopedUserIds(req);
+      const ownerUserId = getOwnerUserId(req);
       const { gradeId, name, shift, capacity } = req.body;
 
-      console.log('📝 Tentando criar turma:', { userId: req.user.id, gradeId, name, shift, capacity });
+      console.log('📝 Tentando criar turma:', { ownerUserId, gradeId, name, shift, capacity });
 
       // Verificar se a série existe e pertence ao usuário
       const grade = await Grade.findOne({ 
         _id: gradeId, 
-        userId: req.user.id 
+        userId: { $in: scopedUserIds }
       });
       
       if (!grade) {
@@ -173,7 +185,7 @@ router.post('/',
 
       // Verificar se já existe uma turma ATIVA com esse nome para essa série
       const existing = await Class.findOne({ 
-        userId: req.user.id, 
+        userId: { $in: scopedUserIds },
         gradeId,
         name,
         isActive: true
@@ -185,7 +197,7 @@ router.post('/',
       }
 
       const classItem = new Class({
-        userId: req.user.id,
+        userId: ownerUserId,
         gradeId,
         name,
         shift,
@@ -225,9 +237,10 @@ router.put('/:id',
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const scopedUserIds = getScopedUserIds(req);
       const classItem = await Class.findOne({ 
         _id: req.params.id, 
-        userId: req.user.id 
+        userId: { $in: scopedUserIds }
       });
       
       if (!classItem) {
@@ -241,7 +254,7 @@ router.put('/:id',
       // Verificar se o novo nome já existe para outra turma
       if (name && name !== classItem.name) {
         const existing = await Class.findOne({
-          userId: req.user.id,
+          userId: { $in: scopedUserIds },
           gradeId: gradeId || classItem.gradeId,
           name: name,
           isActive: true,
@@ -313,9 +326,10 @@ router.put('/:id',
 // Deletar turma (soft delete)
 router.delete('/:id', auth, async (req: any, res: any) => {
   try {
+    const scopedUserIds = getScopedUserIds(req);
     const classItem = await Class.findOne({ 
       _id: req.params.id, 
-      userId: req.user.id 
+      userId: { $in: scopedUserIds }
     });
     
     if (!classItem) {

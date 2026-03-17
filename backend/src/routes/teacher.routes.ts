@@ -5,6 +5,14 @@ import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+const getScopedUserIds = (req: AuthRequest): string[] => {
+  const ownerUserId = req.user?.schoolId || req.user?.id;
+  const actorUserId = req.user?.id;
+  return Array.from(new Set([ownerUserId, actorUserId].filter(Boolean).map((id) => String(id))));
+};
+
+const getOwnerUserId = (req: AuthRequest): string => String(req.user?.schoolId || req.user?.id || '');
+
 // Criar professor
 router.post('/', auth,
   [
@@ -20,9 +28,12 @@ router.post('/', auth,
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const ownerUserId = getOwnerUserId(req);
+
       const teacher = new Teacher({
         ...req.body,
-        userId: req.user!.id
+        userId: ownerUserId,
+        schoolId: ownerUserId
       });
 
       await teacher.save();
@@ -36,9 +47,9 @@ router.post('/', auth,
 // Listar professores por escola
 router.get('/school/:schoolId', auth, async (req: AuthRequest, res) => {
   try {
+    const scopedUserIds = getScopedUserIds(req);
     const teachers = await Teacher.find({ 
-      schoolId: req.params.schoolId,
-      userId: req.user!.id 
+      userId: { $in: scopedUserIds }
     });
     res.json({ success: true, data: teachers });
   } catch (error: any) {
@@ -50,22 +61,16 @@ router.get('/school/:schoolId', auth, async (req: AuthRequest, res) => {
 // Listar todos os professores do usuário
 router.get('/', auth, async (req: AuthRequest, res) => {
   try {
-    console.log('📊 GET /teachers - req.user.id:', req.user!.id);
-    console.log('📊 Tipo de req.user.id:', typeof req.user!.id);
+    const scopedUserIds = getScopedUserIds(req);
+    console.log('📊 GET /teachers - scoped userIds:', scopedUserIds);
     
-    // Buscar com ambos os formatos (string e ObjectId)
-    const teachers = await Teacher.find({ 
-      $or: [
-        { userId: req.user!.id },
-        { userId: req.user!.id.toString() }
-      ]
-    });
+    const teachers = await Teacher.find({ userId: { $in: scopedUserIds } });
     
     console.log('📊 Professores encontrados:', teachers.length);
     if (teachers.length > 0) {
       console.log('📊 Exemplo de userId no banco:', teachers[0].userId, 'tipo:', typeof teachers[0].userId);
     } else {
-      console.log('⚠️ Nenhum professor encontrado com userId:', req.user!.id);
+      console.log('⚠️ Nenhum professor encontrado no escopo:', scopedUserIds);
     }
     
     res.json(teachers);
@@ -77,12 +82,8 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 
 router.get('/user/:userId', auth, async (req: AuthRequest, res) => {
   try {
-    const teachers = await Teacher.find({ 
-      $or: [
-        { userId: req.user!.id },
-        { userId: req.user!.id.toString() }
-      ]
-    });
+    const scopedUserIds = getScopedUserIds(req);
+    const teachers = await Teacher.find({ userId: { $in: scopedUserIds } });
     res.json({ success: true, data: teachers });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -92,7 +93,8 @@ router.get('/user/:userId', auth, async (req: AuthRequest, res) => {
 // Obter professor por ID
 router.get('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const teacher = await Teacher.findOne({ _id: req.params.id, userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    const teacher = await Teacher.findOne({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!teacher) {
       return res.status(404).json({ message: 'Professor não encontrado' });
     }
@@ -114,8 +116,9 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
       console.log('📅 Availability DETALHADA:', JSON.stringify(req.body.availability, null, 2));
     }
     
+    const scopedUserIds = getScopedUserIds(req);
     const teacher = await Teacher.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user!.id },
+      { _id: req.params.id, userId: { $in: scopedUserIds } },
       req.body,
       { new: true, runValidators: true }
     );
@@ -140,7 +143,8 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 // Deletar professor
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
-    const teacher = await Teacher.findOneAndDelete({ _id: req.params.id, userId: req.user!.id });
+    const scopedUserIds = getScopedUserIds(req);
+    const teacher = await Teacher.findOneAndDelete({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!teacher) {
       return res.status(404).json({ message: 'Professor não encontrado' });
     }

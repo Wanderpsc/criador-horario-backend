@@ -4,18 +4,26 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
+const getScopedUserIds = (req: any): string[] => {
+  const ownerUserId = req.user?.schoolId || req.user?.id;
+  const actorUserId = req.user?.id;
+  return Array.from(new Set([ownerUserId, actorUserId].filter(Boolean).map((id) => String(id))));
+};
+
+const getOwnerUserId = (req: any): string => String(req.user?.schoolId || req.user?.id || '');
+
 // Todas as rotas requerem autenticação
 router.use(authenticate);
 
 // Listar todas as associações do usuário com dados completos (para impressão/geração de horários)
 router.get('/complete/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const scopedUserIds = getScopedUserIds(req);
     const Teacher = require('../models/Teacher').default;
     const Subject = require('../models/Subject').default;
     const Class = require('../models/Class').default;
     
-    const associations = await TeacherSubject.find({ userId });
+    const associations = await TeacherSubject.find({ userId: { $in: scopedUserIds } });
     
     // Buscar dados completos
     const teacherIds = [...new Set(associations.map(a => a.teacherId))];
@@ -56,8 +64,8 @@ router.get('/complete/:userId', async (req, res) => {
 // Listar todas as associações do usuário
 router.get('/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
-    const associations = await TeacherSubject.find({ userId });
+    const scopedUserIds = getScopedUserIds(req);
+    const associations = await TeacherSubject.find({ userId: { $in: scopedUserIds } });
     res.json({ success: true, data: associations });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -89,7 +97,10 @@ router.get('/subject/:subjectId', async (req, res) => {
 // Criar associação
 router.post('/', async (req, res) => {
   try {
-    const { teacherId, subjectId, classId, userId } = req.body;
+    const ownerUserId = getOwnerUserId(req);
+    const { teacherId, subjectId, classId } = req.body;
+    const userId = ownerUserId;
+    const schoolId = ownerUserId;
     
     // Importar models necessários
     const Subject = require('../models/Subject').default;
@@ -107,6 +118,7 @@ router.post('/', async (req, res) => {
         _id: teacherId,
         name: 'Professor Importado', // Nome padrão - será atualizado depois
         userId: userId,
+        schoolId,
         cpf: '',
         email: '',
         phone: '',
@@ -135,6 +147,7 @@ router.post('/', async (req, res) => {
         _id: subjectId,
         name: 'Componente Importado', // Nome padrão - será atualizado depois
         userId: userId,
+        schoolId,
         weeklyHours: 2, // Valor padrão
         workloadHours: 80, // Valor padrão
         gradeIds: classItem?.gradeId ? [classItem.gradeId] : [],
@@ -170,7 +183,11 @@ router.post('/', async (req, res) => {
     }
     
     // Criar a associação
-    const association = new TeacherSubject(req.body);
+    const association = new TeacherSubject({
+      ...req.body,
+      userId,
+      schoolId
+    });
     await association.save();
     res.status(201).json({ success: true, data: association });
   } catch (error: any) {
@@ -188,7 +205,10 @@ router.post('/', async (req, res) => {
 // Criar múltiplas associações (em massa)
 router.post('/bulk', async (req, res) => {
   try {
-    const { teacherId, subjectIds, classIds, schoolId, userId } = req.body;
+    const ownerUserId = getOwnerUserId(req);
+    const { teacherId, subjectIds, classIds } = req.body;
+    const schoolId = ownerUserId;
+    const userId = ownerUserId;
     
     // Importar models necessários
     const Subject = require('../models/Subject').default;
@@ -206,6 +226,7 @@ router.post('/bulk', async (req, res) => {
         _id: teacherId,
         name: 'Professor Importado',
         userId: userId,
+        schoolId,
         cpf: '',
         email: '',
         phone: '',
@@ -235,6 +256,7 @@ router.post('/bulk', async (req, res) => {
           _id: subjectId,
           name: 'Componente Importado',
           userId: userId,
+          schoolId,
           weeklyHours: 2,
           workloadHours: 80,
           gradeIds: gradeIds,
@@ -327,12 +349,12 @@ router.post('/bulk', async (req, res) => {
 // 🔥 BULK DELETE - Deletar TODAS as associações de um usuário de uma vez
 router.delete('/bulk/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const scopedUserIds = getScopedUserIds(req);
     
-    // Deletar todas as associações do usuário
-    const result = await TeacherSubject.deleteMany({ userId });
+    // Deletar todas as associações do escopo do usuário autenticado
+    const result = await TeacherSubject.deleteMany({ userId: { $in: scopedUserIds } });
     
-    console.log(`✅ BULK DELETE: ${result.deletedCount} associações removidas para usuário ${userId}`);
+    console.log(`✅ BULK DELETE: ${result.deletedCount} associações removidas para escopo`, scopedUserIds);
     
     res.json({ 
       success: true, 
@@ -348,7 +370,8 @@ router.delete('/bulk/:userId', async (req, res) => {
 // Deletar associação individual
 router.delete('/:id', async (req, res) => {
   try {
-    await TeacherSubject.findByIdAndDelete(req.params.id);
+    const scopedUserIds = getScopedUserIds(req);
+    await TeacherSubject.findOneAndDelete({ _id: req.params.id, userId: { $in: scopedUserIds } });
     res.json({ success: true, message: 'Associação removida' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -358,7 +381,8 @@ router.delete('/:id', async (req, res) => {
 // Deletar todas associações de um professor
 router.delete('/teacher/:teacherId', async (req, res) => {
   try {
-    await TeacherSubject.deleteMany({ teacherId: req.params.teacherId });
+    const scopedUserIds = getScopedUserIds(req);
+    await TeacherSubject.deleteMany({ teacherId: req.params.teacherId, userId: { $in: scopedUserIds } });
     res.json({ success: true, message: 'Associações removidas' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });

@@ -10,10 +10,19 @@ import Grade from '../models/Grade';
 
 const router = express.Router();
 
+const getScopedUserIds = (req: any): string[] => {
+  const ownerUserId = req.user?.schoolId || req.user?.id;
+  const actorUserId = req.user?.id;
+  return Array.from(new Set([ownerUserId, actorUserId].filter(Boolean).map((id) => String(id))));
+};
+
+const getOwnerUserId = (req: any): string => String(req.user?.schoolId || req.user?.id || '');
+
 // Listar todas as séries do usuário
 router.get('/', auth, async (req: any, res: any) => {
   try {
-    const grades = await Grade.find({ userId: req.user.id, isActive: true })
+    const scopedUserIds = getScopedUserIds(req);
+    const grades = await Grade.find({ userId: { $in: scopedUserIds }, isActive: true })
       .sort({ order: 1 });
     
     res.json({ data: grades });
@@ -25,7 +34,8 @@ router.get('/', auth, async (req: any, res: any) => {
 // Listar todas as séries de um usuário específico
 router.get('/user/:userId', auth, async (req: any, res: any) => {
   try {
-    const grades = await Grade.find({ userId: req.params.userId, isActive: true })
+    const scopedUserIds = getScopedUserIds(req);
+    const grades = await Grade.find({ userId: { $in: scopedUserIds }, isActive: true })
       .sort({ order: 1 });
     
     res.json({ data: grades });
@@ -37,9 +47,10 @@ router.get('/user/:userId', auth, async (req: any, res: any) => {
 // Buscar série por ID
 router.get('/:id', auth, async (req: any, res: any) => {
   try {
+    const scopedUserIds = getScopedUserIds(req);
     const grade = await Grade.findOne({ 
       _id: req.params.id, 
-      userId: req.user.id 
+      userId: { $in: scopedUserIds }
     });
     
     if (!grade) {
@@ -67,11 +78,13 @@ router.post('/',
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const scopedUserIds = getScopedUserIds(req);
+      const ownerUserId = getOwnerUserId(req);
       const { name, level, order } = req.body;
 
       // Verificar se já existe
       const existing = await Grade.findOne({ 
-        userId: req.user.id, 
+        userId: { $in: scopedUserIds },
         name: name 
       });
       
@@ -80,7 +93,7 @@ router.post('/',
       }
 
       const grade = new Grade({
-        userId: req.user.id,
+        userId: ownerUserId,
         name,
         level,
         order: order || 0
@@ -109,9 +122,10 @@ router.put('/:id',
         return res.status(400).json({ errors: errors.array() });
       }
 
+      const scopedUserIds = getScopedUserIds(req);
       const grade = await Grade.findOne({ 
         _id: req.params.id, 
-        userId: req.user.id 
+        userId: { $in: scopedUserIds }
       });
       
       if (!grade) {
@@ -136,9 +150,10 @@ router.put('/:id',
 // Deletar série (soft delete)
 router.delete('/:id', auth, async (req: any, res: any) => {
   try {
+    const scopedUserIds = getScopedUserIds(req);
     const grade = await Grade.findOne({ 
       _id: req.params.id, 
-      userId: req.user.id 
+      userId: { $in: scopedUserIds }
     });
     
     if (!grade) {
