@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
-import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calendar, Clock, Trash2, Edit, FolderOpen } from 'lucide-react';
+import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calendar, Clock, Trash2, Edit, FolderOpen, FileSpreadsheet, Lock, Unlock } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -149,9 +149,10 @@ export default function TimetableGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'day-by-day' | 'spreadsheet'>('spreadsheet');
-  const [editModalData, setEditModalData] = useState<{ classId: string; day: string; period: number; currentSubjectId: string | null; currentTeacherId: string | null } | null>(null);
+  const [editModalData, setEditModalData] = useState<{ classId: string; day: string; period: number; currentSubjectId: string | null; currentTeacherId: string | null; isLocked: boolean } | null>(null);
   const [selectedSubjectForEdit, setSelectedSubjectForEdit] = useState<string>('');
   const [selectedTeacherForEdit, setSelectedTeacherForEdit] = useState<string>('');
+  const [lockedSlots, setLockedSlots] = useState<{ [slotKey: string]: boolean }>({});
   const [isSaving, setIsSaving] = useState(false);
   const [savedTimetablesList, setSavedTimetablesList] = useState<any[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -166,6 +167,10 @@ export default function TimetableGenerator() {
     : allWeekDays.includes(selectedDayFilter)
       ? [selectedDayFilter]
       : allWeekDays;
+
+  const getSlotLockKey = (classId: string, day: string, period: number): string => `${classId}|${day}|${period}`;
+  const isSlotLocked = (classId: string, day: string, period: number): boolean =>
+    Boolean(lockedSlots[getSlotLockKey(classId, day, period)]);
 
   // Traduzir turno
   const translateShift = (shift: string) => {
@@ -1117,6 +1122,7 @@ export default function TimetableGenerator() {
       const newConflicts: string[] = [];
       const expectedAllocation = new Map<string, number>();
       const actualAllocation = new Map<string, number>();
+      const lockedAllocationSeed = new Map<string, number>();
       const lessonDemands: LessonDemand[] = [];
       let availabilityOverridesUsed = 0;
 
@@ -1138,6 +1144,12 @@ export default function TimetableGenerator() {
           `${c.grade?.name || 'Sem série'} ${c.name || ''}`.trim()
         ])
       );
+      const selectedClassIds = new Set(classesToGenerate.map((currentClass: any) => String(currentClass.id)));
+      const lockedSlotKeys = new Set(Object.keys(lockedSlots));
+      const isGenerationLockedSlot = (classId: string, day: string, period: number): boolean =>
+        lockedSlotKeys.has(getSlotLockKey(classId, day, period));
+      const isGenerationLockedSlotData = (slot: TimetableSlot): boolean =>
+        isGenerationLockedSlot(slot.classId, slot.day, slot.period);
 
       weekDays.forEach(day => {
         globalTeacherSchedule[day] = {};
@@ -1154,6 +1166,73 @@ export default function TimetableGenerator() {
         });
       });
 
+      let seededLockedSlotsCount = 0;
+      for (const lockKey of lockedSlotKeys) {
+        const [classId, day, periodRaw] = lockKey.split('|');
+        const period = Number(periodRaw);
+
+        if (!selectedClassIds.has(classId)) {
+          continue;
+        }
+
+        if (!weekDays.includes(day) || !Number.isInteger(period)) {
+          continue;
+        }
+
+        const lockedSlot = (generatedTimetables[classId] || []).find(
+          (slot) => slot.day === day && slot.period === period
+        );
+
+        if (!lockedSlot?.subjectId || !lockedSlot?.teacherId) {
+          continue;
+        }
+
+        if (classSchedule[classId][day].has(period)) {
+          continue;
+        }
+
+        if (globalTeacherSchedule[day][period].has(lockedSlot.teacherId)) {
+          const conflictClass = Object.keys(allTimetables).find((candidateClassId) =>
+            (allTimetables[candidateClassId] || []).some(
+              (slot) =>
+                slot.day === day &&
+                slot.period === period &&
+                slot.teacherId === lockedSlot.teacherId &&
+                slot.classId !== classId
+            )
+          );
+
+          if (conflictClass) {
+            const teacherName = teacherNameById.get(lockedSlot.teacherId) || lockedSlot.teacherId;
+            const sourceClassLabel = classLabelById.get(conflictClass) || conflictClass;
+            const targetClassLabel = classLabelById.get(classId) || classId;
+            newConflicts.push(
+              `⚠️ Travamento conflitante: ${teacherName} travado em ${sourceClassLabel} e ${targetClassLabel} no ${day}, ${period}º período.`
+            );
+          }
+        }
+
+        const seededSlot: TimetableSlot = {
+          classId,
+          day,
+          period,
+          subjectId: lockedSlot.subjectId,
+          teacherId: lockedSlot.teacherId
+        };
+
+        allTimetables[classId].push(seededSlot);
+        classSchedule[classId][day].add(period);
+        globalTeacherSchedule[day][period].add(lockedSlot.teacherId);
+        teacherAssignedLoad.set(
+          lockedSlot.teacherId,
+          (teacherAssignedLoad.get(lockedSlot.teacherId) || 0) + 1
+        );
+
+        const allocationKey = `${classId}|${lockedSlot.subjectId}|${lockedSlot.teacherId}`;
+        lockedAllocationSeed.set(allocationKey, (lockedAllocationSeed.get(allocationKey) || 0) + 1);
+        seededLockedSlotsCount++;
+      }
+
       console.log('🎯 GERAÇÃO DE HORÁRIOS SEM CONFLITOS');
       console.log('📊 Turmas:', classesToGenerate.length);
       console.log('🎯 Filtro:', selectedClassFilter === 'all' ? 'Todas' : 'Turma específica');
@@ -1162,6 +1241,9 @@ export default function TimetableGenerator() {
       console.log('👨‍🏫 Professores ativos:', activeTeachers.length);
       console.log('⏰ Períodos por dia:', currentSchedule.periods.length);
       console.log('📅 Total de slots disponíveis por turma:', weekDays.length * currentSchedule.periods.length);
+      if (seededLockedSlotsCount > 0) {
+        console.log(`🔒 Aulas travadas preservadas na geração: ${seededLockedSlotsCount}`);
+      }
 
       if (teacherSubjects.length === 0) {
         toast.error('⚠️ Nenhuma associação professor-disciplina encontrada!\nConfigure em "Lotação de Professores"');
@@ -1330,6 +1412,50 @@ export default function TimetableGenerator() {
 
         if (!isPartialDayGeneration && classLessonsNeeded > totalSlotsAvailable) {
           newConflicts.push(`⚠️ ${currentClass.grade?.name} ${currentClass.name}: ${classLessonsNeeded} aulas necessárias, mas apenas ${totalSlotsAvailable} slots disponíveis`);
+        }
+      }
+
+      if (lockedAllocationSeed.size > 0) {
+        for (const [allocationKey, lockedCount] of lockedAllocationSeed.entries()) {
+          actualAllocation.set(allocationKey, (actualAllocation.get(allocationKey) || 0) + lockedCount);
+
+          const [classId, subjectId, teacherId] = allocationKey.split('|');
+
+          let remainingToMark = lockedCount;
+          for (const lesson of lessonDemands) {
+            if (remainingToMark <= 0) {
+              break;
+            }
+
+            if (lesson.allocated) {
+              continue;
+            }
+
+            if (lesson.classId !== classId || lesson.subjectId !== subjectId) {
+              continue;
+            }
+
+            if (lesson.requiredTeacherId) {
+              if (lesson.requiredTeacherId !== teacherId) {
+                continue;
+              }
+            } else if (!lesson.candidateTeacherIds.includes(teacherId)) {
+              continue;
+            }
+
+            lesson.allocated = true;
+            remainingToMark--;
+          }
+
+          if ((expectedAllocation.get(allocationKey) || 0) === 0) {
+            const classLabel = classLabelById.get(classId) || classId;
+            const subjectName = subjectNameById.get(subjectId) || subjectId;
+            const teacherName = teacherNameById.get(teacherId) || teacherId;
+
+            newConflicts.push(
+              `ℹ️ ${classLabel}: aula travada de ${subjectName} (${teacherName}) preservada fora da lotação cadastrada.`
+            );
+          }
         }
       }
 
@@ -2287,6 +2413,10 @@ export default function TimetableGenerator() {
           return false;
         }
 
+        if (isGenerationLockedSlotData(blockingSlot)) {
+          return false;
+        }
+
         const blockingClassId = blockingSlot.classId;
         const dayOrder = [blockedDay, ...weekDays.filter((day) => day !== blockedDay)];
 
@@ -2333,6 +2463,10 @@ export default function TimetableGenerator() {
         const blockingClassTimetable = allTimetables[blockingClassId] || [];
         for (const swapSlot of blockingClassTimetable) {
           if (swapSlot.day === blockedDay && swapSlot.period === blockedPeriod) {
+            continue;
+          }
+
+          if (isGenerationLockedSlotData(swapSlot)) {
             continue;
           }
 
@@ -2653,6 +2787,10 @@ export default function TimetableGenerator() {
 
             for (const strategy of rebalanceStrategies) {
               for (const slot of classTimetable) {
+              if (isGenerationLockedSlotData(slot)) {
+                continue;
+              }
+
               const sourceKey = `${classId}|${slot.subjectId}|${slot.teacherId}`;
               const sourceExpected = expectedAllocation.get(sourceKey) || 0;
               const sourceAllocated = actualAllocation.get(sourceKey) || 0;
@@ -2832,6 +2970,10 @@ export default function TimetableGenerator() {
               let allowConsecutiveInSameClass = false;
               for (let pass = 0; pass < 2 && !swapApplied; pass++) {
               for (const occupiedSlot of classTimetable) {
+                if (isGenerationLockedSlotData(occupiedSlot)) {
+                  continue;
+                }
+
                 const occupiedCategory = subjectCategoryById.get(occupiedSlot.subjectId) || 'regular';
                 if (occupiedSlot.subjectId === subjectId && occupiedSlot.teacherId === teacherId) {
                   continue;
@@ -3120,6 +3262,8 @@ export default function TimetableGenerator() {
               const targetPeriod = allPeriodsInDay[i];
               const slot = daySlots[i];
 
+              if (isGenerationLockedSlotData(slot)) continue;
+
               if (slot.period === targetPeriod) continue;
               if (slot.period < targetPeriod) continue;
 
@@ -3259,6 +3403,71 @@ export default function TimetableGenerator() {
     );
   };
 
+  const toggleSlotLock = (classId: string, day: string, period: number): boolean | null => {
+    const slot = getSlotData(classId, day, period);
+    if (!slot) {
+      toast.error('Preencha disciplina e professor antes de travar a célula');
+      return null;
+    }
+
+    const key = getSlotLockKey(classId, day, period);
+    const nextLocked = !Boolean(lockedSlots[key]);
+
+    setLockedSlots((prev) => {
+      const next = { ...prev };
+      if (nextLocked) {
+        next[key] = true;
+      } else {
+        delete next[key];
+      }
+      return next;
+    });
+
+    toast.success(nextLocked ? 'Aula travada neste slot' : 'Aula destravada neste slot');
+    return nextLocked;
+  };
+
+  const createBlankWorksheet = () => {
+    if (!selectedSchedule || !currentSchedule || !currentSchedule.periods || currentSchedule.periods.length === 0) {
+      toast.error('Selecione um tipo de horário com períodos configurados');
+      return;
+    }
+
+    const targetClasses = selectedClassFilter === 'all'
+      ? classes
+      : classes.filter((currentClass: any) => currentClass.id === selectedClassFilter);
+
+    if (!Array.isArray(targetClasses) || targetClasses.length === 0) {
+      toast.error('Nenhuma turma disponível para criar planilha em branco');
+      return;
+    }
+
+    if (Object.keys(generatedTimetables).length > 0) {
+      const confirmed = window.confirm(
+        'A grade atual será substituída por uma planilha em branco. Deseja continuar?'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    const blankTimetables = targetClasses.reduce((accumulator: { [classId: string]: TimetableSlot[] }, currentClass: any) => {
+      accumulator[currentClass.id] = [];
+      return accumulator;
+    }, {});
+
+    setGeneratedTimetables(blankTimetables);
+    setConflicts([]);
+    setLockedSlots({});
+    setViewMode('spreadsheet');
+    setPrintFormat('normal');
+
+    const classScope = selectedClassFilter === 'all'
+      ? `${targetClasses.length} turma(s)`
+      : `${targetClasses[0]?.name || 'turma selecionada'}`;
+    toast.success(`Planilha em branco criada para ${classScope}. Preencha manualmente as células.`);
+  };
+
   // Verifica se o professor de um slot está fora da disponibilidade naquele horário
   const isAvailabilityViolated = (slot: TimetableSlot | undefined, day: string, period: number): boolean => {
     if (!slot?.teacherId) return false;
@@ -3266,6 +3475,75 @@ export default function TimetableGenerator() {
     if (!teacher) return false;
     return !isTeacherAvailableAtTime(teacher, day, period);
   };
+
+  const liveSlotConflicts = useMemo(() => {
+    const classLabelById = new Map(
+      classes.map((currentClass: any) => {
+        const gradeLabel = currentClass.grade?.name ? `${currentClass.grade.name} - ` : '';
+        return [String(currentClass.id), `${gradeLabel}${currentClass.name || 'Turma'}`] as const;
+      })
+    );
+    const teacherNameById = new Map(
+      (teachers as Teacher[]).map((teacher) => [String((teacher as any).id || (teacher as any)._id || ''), teacher.name] as const)
+    );
+    const visibleDays = new Set(weekDays);
+    const slots = Object.values(generatedTimetables)
+      .flat()
+      .filter((slot) => slot && visibleDays.has(slot.day));
+
+    const teacherSlotUsage = new Map<string, Set<string>>();
+    const classSlotUsage = new Map<string, number>();
+
+    for (const slot of slots) {
+      const teacherId = String(slot.teacherId || '');
+      if (teacherId) {
+        const teacherSlotKey = `${slot.day}|${slot.period}|${teacherId}`;
+        const classesAtSlot = teacherSlotUsage.get(teacherSlotKey) || new Set<string>();
+        classesAtSlot.add(String(slot.classId));
+        teacherSlotUsage.set(teacherSlotKey, classesAtSlot);
+      }
+
+      const classSlotKey = `${slot.classId}|${slot.day}|${slot.period}`;
+      classSlotUsage.set(classSlotKey, (classSlotUsage.get(classSlotKey) || 0) + 1);
+    }
+
+    const detectedConflicts: string[] = [];
+
+    for (const [slotKey, classIds] of teacherSlotUsage.entries()) {
+      if (classIds.size < 2) {
+        continue;
+      }
+
+      const [day, periodRaw, teacherId] = slotKey.split('|');
+      const teacherName = teacherNameById.get(teacherId) || 'Professor sem nome';
+      const classLabels = Array.from(classIds)
+        .map((classId) => classLabelById.get(classId) || classId)
+        .join(', ');
+
+      detectedConflicts.push(
+        `⚠️ Conflito de horário: ${teacherName} em ${classIds.size} turmas no ${day}, ${periodRaw}º período (${classLabels})`
+      );
+    }
+
+    for (const [slotKey, count] of classSlotUsage.entries()) {
+      if (count < 2) {
+        continue;
+      }
+
+      const [classId, day, periodRaw] = slotKey.split('|');
+      const classLabel = classLabelById.get(classId) || classId;
+      detectedConflicts.push(
+        `⚠️ Conflito interno: ${classLabel} possui ${count} aulas no ${day}, ${periodRaw}º período`
+      );
+    }
+
+    return detectedConflicts;
+  }, [classes, teachers, generatedTimetables, weekDays]);
+
+  const combinedConflicts = useMemo(
+    () => Array.from(new Set([...conflicts, ...liveSlotConflicts])),
+    [conflicts, liveSlotConflicts]
+  );
 
   // Função para imprimir
   const handlePrint = () => {
@@ -3340,14 +3618,16 @@ export default function TimetableGenerator() {
       return;
     }
 
-    const hasCriticalConflicts = conflicts.some((conflict) => {
+    const hasCriticalConflicts = combinedConflicts.some((conflict) => {
       const normalized = conflict.toLowerCase();
       return (
         normalized.includes('déficit') ||
         normalized.includes('deficit') ||
         normalized.includes('não puderam ser alocadas') ||
         normalized.includes('nao puderam ser alocadas') ||
-        normalized.includes('fora da disponibilidade')
+        normalized.includes('fora da disponibilidade') ||
+        normalized.includes('conflito de horário') ||
+        normalized.includes('conflito interno')
       );
     });
 
@@ -3479,6 +3759,8 @@ export default function TimetableGenerator() {
       }
 
       setGeneratedTimetables(loadedTimetables);
+      setConflicts([]);
+      setLockedSlots({});
       console.log('✅ setGeneratedTimetables chamado com', Object.keys(loadedTimetables).length, 'turmas');
       toast.success('✅ Horários carregados!');
     } catch (error: any) {
@@ -3524,6 +3806,8 @@ export default function TimetableGenerator() {
       }
 
       setGeneratedTimetables(loadedTimetables);
+      setConflicts([]);
+      setLockedSlots({});
       toast.success('✅ Horários carregados com sucesso!');
     } catch (error: any) {
       if (error.response?.status === 404) {
@@ -3543,7 +3827,8 @@ export default function TimetableGenerator() {
       day,
       period,
       currentSubjectId: slot?.subjectId || null,
-      currentTeacherId: slot?.teacherId || null
+      currentTeacherId: slot?.teacherId || null,
+      isLocked: isSlotLocked(classId, day, period)
     });
     setSelectedSubjectForEdit(slot?.subjectId || '');
     setSelectedTeacherForEdit(slot?.teacherId || '');
@@ -3561,11 +3846,31 @@ export default function TimetableGenerator() {
     setSelectedTeacherForEdit('');
   };
 
+  const handleToggleLockFromModal = () => {
+    if (!editModalData) return;
+
+    const { classId, day, period } = editModalData;
+    const nextLocked = toggleSlotLock(classId, day, period);
+    if (nextLocked === null) {
+      return;
+    }
+
+    setEditModalData((prev) => {
+      if (!prev) return prev;
+      return { ...prev, isLocked: nextLocked };
+    });
+  };
+
   // Aplicar edição da célula
   const applyEdit = () => {
     if (!editModalData) return;
 
     const { classId, day, period } = editModalData;
+
+    if (isSlotLocked(classId, day, period)) {
+      toast.error('Destrave esta aula antes de editar o conteúdo da célula');
+      return;
+    }
 
     if (!selectedSubjectForEdit || !selectedTeacherForEdit) {
       toast.error('Selecione a disciplina e o professor');
@@ -3610,6 +3915,11 @@ export default function TimetableGenerator() {
 
     const { classId, day, period } = editModalData;
 
+    if (isSlotLocked(classId, day, period)) {
+      toast.error('Destrave esta aula antes de remover');
+      return;
+    }
+
     setGeneratedTimetables(prev => {
       const newClassTimetable = (prev[classId] || []).filter(
         slot => !(slot.day === day && slot.period === period)
@@ -3619,6 +3929,12 @@ export default function TimetableGenerator() {
         ...prev,
         [classId]: newClassTimetable
       };
+    });
+
+    setLockedSlots((prev) => {
+      const next = { ...prev };
+      delete next[getSlotLockKey(classId, day, period)];
+      return next;
     });
 
     closeEditModal();
@@ -3672,6 +3988,27 @@ export default function TimetableGenerator() {
       return total + visibleSlots.length;
     }, 0);
   }, [generatedTimetables, visibleClassIdSet, weekDays]);
+
+  const filteredLockedSlotsCount = useMemo(() => {
+    const allowedDays = new Set(weekDays);
+
+    return Object.entries(lockedSlots).reduce((total, [slotKey, isLocked]) => {
+      if (!isLocked) {
+        return total;
+      }
+
+      const [classId, day] = slotKey.split('|');
+      if (!classId || !day) {
+        return total;
+      }
+
+      if (!visibleClassIdSet.has(classId) || !allowedDays.has(day)) {
+        return total;
+      }
+
+      return total + 1;
+    }, 0);
+  }, [lockedSlots, visibleClassIdSet, weekDays]);
 
   const dayLoadCounterPanels = useMemo(() => {
     const toPositiveInteger = (value: unknown): number => {
@@ -4430,8 +4767,18 @@ export default function TimetableGenerator() {
             <RefreshCw size={20} className={isGenerating ? 'animate-spin' : ''} />
             {isGenerating 
               ? 'Gerando...' 
-              : `Gerar Horário (${selectedClassesCount} turma(s) • ${selectedDayLabel})`
+              : `Gerar Horário (${selectedClassesCount} turma(s) • ${selectedDayLabel} • ${filteredLockedSlotsCount} travada(s))`
             }
+          </button>
+
+          <button
+            onClick={createBlankWorksheet}
+            disabled={!selectedSchedule || !currentSchedule || isGenerating || classes.length === 0}
+            className="btn btn-outline flex items-center gap-2"
+            title="Criar planilha sem preenchimento para edição manual"
+          >
+            <FileSpreadsheet size={20} />
+            Planilha em Branco
           </button>
 
           <button
@@ -4520,14 +4867,14 @@ export default function TimetableGenerator() {
       </div>
 
       {/* Alertas de conflitos */}
-      {conflicts.length > 0 && (
+      {combinedConflicts.length > 0 && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded no-print">
           <div className="flex items-start gap-3">
             <AlertCircle className="text-red-500 flex-shrink-0" size={24} />
             <div>
               <h3 className="font-bold text-red-800">Conflitos Detectados</h3>
               <ul className="mt-2 space-y-1 text-sm text-red-700">
-                {conflicts.map((conflict, index) => (
+                {combinedConflicts.map((conflict, index) => (
                   <li key={index}>• {conflict}</li>
                 ))}
               </ul>
@@ -4536,7 +4883,7 @@ export default function TimetableGenerator() {
         </div>
       )}
 
-      {conflicts.length === 0 && Object.keys(generatedTimetables).length > 0 && (
+      {combinedConflicts.length === 0 && Object.keys(generatedTimetables).length > 0 && (
         <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded no-print">
           <div className="flex items-center gap-3">
             <CheckCircle className="text-green-500" size={24} />
@@ -4940,11 +5287,19 @@ export default function TimetableGenerator() {
                                 
                                 const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
                                 const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                                const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
+                                const cellTitle = hasConflict
+                                  ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
+                                  : violatesAvailability
+                                    ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
+                                    : slotLocked
+                                      ? '🔒 Aula travada neste slot'
+                                      : '';
 
                                 return (
                                   <td
                                     key={day}
-                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : ''}`}
+                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
                                     style={{
                                       backgroundColor: hasConflict
                                         ? '#fee2e2'
@@ -4952,7 +5307,7 @@ export default function TimetableGenerator() {
                                           ? '#fff7ed'
                                           : subject?.color ? `${subject.color}20` : 'white',
                                     }}
-                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
+                                    title={cellTitle}
                                   >
                                     {/* Botão de editar (aparece ao passar o mouse) */}
                                     <button
@@ -4962,6 +5317,23 @@ export default function TimetableGenerator() {
                                     >
                                       <Edit size={14} />
                                     </button>
+
+                                    {slot && (
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          toggleSlotLock(currentClass.id, day, periodInfo.period);
+                                        }}
+                                        className={`absolute bottom-1 left-1 transition-opacity p-1 text-white rounded shadow-lg no-print ${
+                                          slotLocked
+                                            ? 'opacity-100 bg-slate-700 hover:bg-slate-800'
+                                            : 'opacity-0 group-hover:opacity-100 bg-slate-500 hover:bg-slate-600'
+                                        }`}
+                                        title={slotLocked ? 'Destravar aula' : 'Travar aula'}
+                                      >
+                                        {slotLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                                      </button>
+                                    )}
                                     
                                     {hasConflict && (
                                       <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
@@ -4990,6 +5362,11 @@ export default function TimetableGenerator() {
                                         {violatesAvailability && (
                                           <div className="text-xs font-bold text-orange-600 mt-1 no-print">
                                             Fora da disp.
+                                          </div>
+                                        )}
+                                        {slotLocked && (
+                                          <div className="text-xs font-bold text-slate-700 mt-1 no-print">
+                                            🔒 Travada
                                           </div>
                                         )}
                                       </div>
@@ -5053,11 +5430,19 @@ export default function TimetableGenerator() {
                               const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
                               const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
                               const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                              const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
+                              const cellTitle = hasConflict
+                                ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
+                                : violatesAvailability
+                                  ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
+                                  : slotLocked
+                                    ? '🔒 Aula travada neste slot'
+                                    : '';
 
                               return (
                                 <td
                                   key={periodInfo.period}
-                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : ''}`}
+                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
                                   style={{
                                     backgroundColor: hasConflict
                                       ? '#fee2e2'
@@ -5065,7 +5450,7 @@ export default function TimetableGenerator() {
                                         ? '#fff7ed'
                                         : subject?.color ? `${subject.color}20` : 'white',
                                   }}
-                                  title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
+                                  title={cellTitle}
                                 >
                                   {/* Botão de editar */}
                                   <button
@@ -5075,6 +5460,23 @@ export default function TimetableGenerator() {
                                   >
                                     <Edit size={14} />
                                   </button>
+
+                                  {slot && (
+                                    <button
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        toggleSlotLock(currentClass.id, day, periodInfo.period);
+                                      }}
+                                      className={`absolute bottom-1 left-1 transition-opacity p-1 text-white rounded shadow-lg no-print ${
+                                        slotLocked
+                                          ? 'opacity-100 bg-slate-700 hover:bg-slate-800'
+                                          : 'opacity-0 group-hover:opacity-100 bg-slate-500 hover:bg-slate-600'
+                                      }`}
+                                      title={slotLocked ? 'Destravar aula' : 'Travar aula'}
+                                    >
+                                      {slotLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                                    </button>
+                                  )}
                                   
                                   {hasConflict && (
                                     <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
@@ -5103,6 +5505,11 @@ export default function TimetableGenerator() {
                                       {violatesAvailability && (
                                         <div className="text-xs font-bold text-orange-600 mt-1 no-print">
                                           Fora da disp.
+                                        </div>
+                                      )}
+                                      {slotLocked && (
+                                        <div className="text-xs font-bold text-slate-700 mt-1 no-print">
+                                          🔒 Travada
                                         </div>
                                       )}
                                     </div>
@@ -5361,7 +5768,7 @@ export default function TimetableGenerator() {
             <li>2. Selecione a <strong>Turma</strong> (ou todas as turmas)</li>
             <li>3. Selecione o <strong>Dia</strong> (Segunda a Sexta, ou Todos)</li>
             <li>4. Adicione <strong>Observações</strong> se necessário (opcional)</li>
-            <li>5. Clique em <strong>Gerar Horário</strong></li>
+            <li>5. Clique em <strong>Gerar Horário</strong> ou em <strong>Planilha em Branco</strong></li>
             <li>6. Escolha o <strong>Formato de Impressão</strong>: Padrão ou Transposto</li>
           </ol>
           <div className="mt-4 space-y-2">
@@ -5393,7 +5800,7 @@ export default function TimetableGenerator() {
 
       {/* Estatísticas */}
       {Object.keys(generatedTimetables).length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 no-print">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 no-print">
           <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <div className="text-3xl font-bold">{subjects.length}</div>
             <div className="text-sm opacity-90">Componentes</div>
@@ -5408,8 +5815,12 @@ export default function TimetableGenerator() {
             </div>
             <div className="text-sm opacity-90">Aulas Agendadas</div>
           </div>
+          <div className="card bg-gradient-to-br from-slate-600 to-slate-700 text-white">
+            <div className="text-3xl font-bold">{filteredLockedSlotsCount}</div>
+            <div className="text-sm opacity-90">Aulas Travadas</div>
+          </div>
           <div className="card bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-            <div className="text-3xl font-bold">{conflicts.length}</div>
+            <div className="text-3xl font-bold">{combinedConflicts.length}</div>
             <div className="text-sm opacity-90">Conflitos</div>
           </div>
         </div>
@@ -5477,6 +5888,13 @@ export default function TimetableGenerator() {
                 <p className="text-sm text-gray-600 mb-4">
                   <strong>Horário:</strong> {editModalData.day} - {editModalData.period}º período
                 </p>
+                {editModalData.currentSubjectId && (
+                  <div className={`mb-4 rounded-md px-3 py-2 text-xs font-semibold ${editModalData.isLocked ? 'bg-slate-100 text-slate-700 border border-slate-300' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                    {editModalData.isLocked
+                      ? '🔒 Esta aula está travada e não pode ser alterada até ser destravada.'
+                      : '🔓 Esta aula está destravada e pode ser alterada.'}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -5487,6 +5905,7 @@ export default function TimetableGenerator() {
                   value={selectedSubjectForEdit}
                   onChange={(e) => setSelectedSubjectForEdit(e.target.value)}
                   className="input w-full"
+                  disabled={editModalData.isLocked}
                 >
                   <option value="">Selecione a disciplina</option>
                   {subjects
@@ -5507,7 +5926,7 @@ export default function TimetableGenerator() {
                   value={selectedTeacherForEdit}
                   onChange={(e) => setSelectedTeacherForEdit(e.target.value)}
                   className="input w-full"
-                  disabled={!selectedSubjectForEdit}
+                  disabled={editModalData.isLocked || !selectedSubjectForEdit}
                 >
                   <option value="">Selecione o professor</option>
                   {teachers
@@ -5543,8 +5962,18 @@ export default function TimetableGenerator() {
             <div className="flex gap-2 mt-6">
               {editModalData.currentSubjectId && (
                 <button
+                  onClick={handleToggleLockFromModal}
+                  className={`btn btn-outline flex items-center gap-2 ${editModalData.isLocked ? 'text-slate-700 border-slate-500 hover:bg-slate-50' : 'text-amber-700 border-amber-500 hover:bg-amber-50'}`}
+                >
+                  {editModalData.isLocked ? <Unlock size={16} /> : <Lock size={16} />}
+                  {editModalData.isLocked ? 'Destravar' : 'Travar'}
+                </button>
+              )}
+              {editModalData.currentSubjectId && (
+                <button
                   onClick={removeSlot}
-                  className="btn btn-outline text-red-600 border-red-600 hover:bg-red-50 flex items-center gap-2"
+                  disabled={editModalData.isLocked}
+                  className="btn btn-outline text-red-600 border-red-600 hover:bg-red-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={16} />
                   Remover
@@ -5559,7 +5988,7 @@ export default function TimetableGenerator() {
               </button>
               <button
                 onClick={applyEdit}
-                disabled={!selectedSubjectForEdit || !selectedTeacherForEdit}
+                disabled={editModalData.isLocked || !selectedSubjectForEdit || !selectedTeacherForEdit}
                 className="btn btn-primary"
               >
                 Aplicar
