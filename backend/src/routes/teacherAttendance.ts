@@ -35,7 +35,7 @@ async function calculateSchoolDaysInPeriod(
         $gte: startDate,
         $lte: endDate
       },
-      isSchoolDay: true // Apenas dias letivos
+      dayType: { $in: ['regular', 'saturday'] } // Dias letivos (regular + sábado de reposição)
     });
 
     return schoolDays.length;

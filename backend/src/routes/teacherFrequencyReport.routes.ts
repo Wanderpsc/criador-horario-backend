@@ -35,10 +35,8 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
       return res.status(404).json({ message: 'Professor não encontrado' });
     }
 
-    // Buscar disciplinas que o professor leciona
-    const teacherSubjects = await TeacherSubject.find({ teacherId, schoolId })
-      .populate('subjectId')
-      .populate('classId');
+    // Buscar disciplinas que o professor leciona (campos são String, não ObjectId refs)
+    const teacherSubjects = await TeacherSubject.find({ teacherId, schoolId });
 
     // Buscar dias letivos do mês (regular + saturday)
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -51,15 +49,27 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
       dayType: { $in: ['regular', 'saturday'] }
     });
 
-    // Buscar horários gerados para calcular aulas por semana
-    const timetables = await GeneratedTimetable.find({ schoolId });
+    // Buscar horários gerados (campo é 'school', não 'schoolId')
+    const timetables = await GeneratedTimetable.find({ school: schoolId });
+
+    // Pré-carregar disciplinas e turmas (Subject tem schoolId, Class tem userId)
+    const timetableClassIds = [...new Set(timetables.map((t: any) => t.classId?.toString()).filter(Boolean))];
+    const timetableSubjectIds = [...new Set(
+      timetables.flatMap((t: any) => t.slots?.map((s: any) => s.subjectId?.toString()).filter(Boolean) || [])
+    )];
+    const allSubjects = await Subject.find(timetableSubjectIds.length > 0 ? { _id: { $in: timetableSubjectIds } } : { schoolId });
+    const allClasses = await Class.find(timetableClassIds.length > 0 ? { _id: { $in: timetableClassIds } } : {});
+    const subjectMap = new Map(allSubjects.map((s: any) => [s._id.toString(), s]));
+    const classMap = new Map(allClasses.map((c: any) => [c._id.toString(), c]));
 
     // Calcular aulas por disciplina/turma
     const workloadBySubjectClass: any[] = [];
 
     for (const ts of teacherSubjects) {
-      const subject: any = ts.subjectId;
-      const classObj: any = ts.classId;
+      const subjectId = ts.subjectId?.toString();
+      const classId = ts.classId?.toString();
+      const subject = subjectId ? subjectMap.get(subjectId) : null;
+      const classObj = classId ? classMap.get(classId) : null;
 
       if (!subject || !classObj) continue;
 
@@ -71,16 +81,16 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
         const timetable = timetables.find((t: any) => 
           t.slots?.some((s: any) => 
             s.teacherId === teacherId && 
-            s.subjectId === ts.subjectId && 
-            s.classId === ts.classId
+            s.subjectId === subjectId && 
+            s.classId === classId
           )
         );
 
         if (timetable) {
           weeklyClasses = timetable.slots.filter((s: any) => 
             s.teacherId === teacherId && 
-            s.subjectId === ts.subjectId && 
-            s.classId === ts.classId
+            s.subjectId === subjectId && 
+            s.classId === classId
           ).length;
         }
       }
@@ -91,9 +101,9 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
 
       workloadBySubjectClass.push({
         subjectId: subject._id,
-        subjectName: subject.name,
+        subjectName: (subject as any).name,
         classId: classObj._id,
-        className: classObj.name,
+        className: (classObj as any).name,
         weeklyClasses,
         totalSchoolDays: schoolDays.length,
         predictedClasses,
@@ -105,8 +115,8 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
 
     res.json({
       teacherId: teacher._id,
-      teacherName: teacher.name,
-      weeklyWorkload: teacher.weeklyWorkload || 0,
+      teacherName: (teacher as any).name,
+      weeklyWorkload: (teacher as any).weeklyWorkload || 0,
       month,
       year,
       totalSchoolDays: schoolDays.length,
@@ -139,22 +149,63 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
 
     const reports = [];
 
+    // Pré-carregar dados compartilhados (fora do loop de professores para performance)
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+    const schoolDays = await SchoolDay.find({
+      schoolId,
+      date: { $gte: startDate, $lte: endDate },
+      dayType: { $in: ['regular', 'saturday'] }
+    });
+
+    // Buscar horários gerados (campo é 'school', não 'schoolId')
+    const timetables = await GeneratedTimetable.find({ school: schoolId });
+
+    // Pré-carregar todas as disciplinas e turmas para evitar N+1 queries
+    // Subject tem schoolId, Class tem userId - usar IDs dos horários para carregar
+    const allClassIds = [...new Set(timetables.map((t: any) => t.classId?.toString()).filter(Boolean))];
+    const allSubjectIds = [...new Set(
+      timetables.flatMap((t: any) => t.slots?.map((s: any) => s.subjectId?.toString()).filter(Boolean) || [])
+    )];
+    const allSubjects = await Subject.find(allSubjectIds.length > 0 ? { _id: { $in: allSubjectIds } } : { schoolId });
+    const allClasses = await Class.find(allClassIds.length > 0 ? { _id: { $in: allClassIds } } : {});
+    const subjectMap = new Map(allSubjects.map((s: any) => [s._id.toString(), s]));
+    const classMap = new Map(allClasses.map((c: any) => [c._id.toString(), c]));
+
+    // Mapear dias da semana para comparação com slots do horário
+    const getDayName = (schoolDay: any): string => {
+      // Se for sábado de reposição, usar o dia que ele segue
+      if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
+        const weekdayMap: { [key: string]: string } = {
+          'monday': 'Segunda',
+          'tuesday': 'Terça',
+          'wednesday': 'Quarta',
+          'thursday': 'Quinta',
+          'friday': 'Sexta'
+        };
+        return weekdayMap[schoolDay.followWeekday] || '';
+      }
+      // Dia normal - schoolDay.date é um Date object do MongoDB
+      const dateObj = new Date(schoolDay.date);
+      const dayMap: { [key: number]: string } = {
+        0: 'Domingo',
+        1: 'Segunda',
+        2: 'Terça',
+        3: 'Quarta',
+        4: 'Quinta',
+        5: 'Sexta',
+        6: 'Sábado'
+      };
+      return dayMap[dateObj.getUTCDay()] || '';
+    };
+
     for (const teacher of teachers) {
-      // Buscar disciplinas e turmas do professor
+      // Buscar disciplinas e turmas do professor (TeacherSubject tem String IDs, não refs)
       const teacherSubjects = await TeacherSubject.find({ 
         teacherId: teacher._id, 
         schoolId 
-      }).populate('subjectId').populate('classId');
-
-      // Buscar dias letivos do mês
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const lastDay = new Date(Number(year), Number(month), 0).getDate();
-      const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
-
-      const schoolDays = await SchoolDay.find({
-        schoolId,
-        date: { $gte: startDate, $lte: endDate },
-        dayType: { $in: ['regular', 'saturday'] }
       });
 
       // Buscar registros de frequência do mês
@@ -168,53 +219,39 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       let totalPredicted = 0;
       let totalGiven = 0;
 
-      // Buscar horários gerados para contar aulas previstas
-      const timetables = await GeneratedTimetable.find({ school: schoolId });
-      
+      // Rastrear pares subjectId+classId já processados via TeacherSubject
+      const processedPairs = new Set<string>();
+
       for (const ts of teacherSubjects) {
-        const subject: any = ts.subjectId;
-        const classObj: any = ts.classId;
+        // subjectId e classId são String simples (sem ref), NÃO usar .populate()
+        const subjectId = ts.subjectId?.toString();
+        const classId = ts.classId?.toString();
+
+        if (!subjectId || !classId) continue;
+
+        // Buscar documentos reais de Subject e Class pelo mapa pré-carregado
+        const subject = subjectMap.get(subjectId);
+        const classObj = classMap.get(classId);
 
         if (!subject || !classObj) continue;
+
+        const pairKey = `${subjectId}_${classId}`;
+        processedPairs.add(pairKey);
 
         // CONTAR AULAS PREVISTAS por disciplina/turma no calendário letivo
         let predicted = 0;
         
         for (const schoolDay of schoolDays) {
-          const dateObj = new Date(schoolDay.date);
-          let targetDay: string;
-          
-          // Se for sábado de reposição, usar o dia que ele segue
-          if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
-            const weekdayMap: { [key: string]: string } = {
-              'monday': 'Segunda',
-              'tuesday': 'Terça',
-              'wednesday': 'Quarta',
-              'thursday': 'Quinta',
-              'friday': 'Sexta'
-            };
-            targetDay = weekdayMap[schoolDay.followWeekday];
-          } else {
-            // Dia normal
-            const dayOfWeek = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
-            const dayMap: { [key: string]: string } = {
-              'segunda-feira': 'Segunda',
-              'terça-feira': 'Terça',
-              'quarta-feira': 'Quarta',
-              'quinta-feira': 'Quinta',
-              'sexta-feira': 'Sexta',
-              'sábado': 'Sábado'
-            };
-            targetDay = dayMap[dayOfWeek.toLowerCase()];
-          }
+          const targetDay = getDayName(schoolDay);
+          if (!targetDay) continue;
           
           // Contar aulas do professor nesta disciplina/turma neste dia
           for (const timetable of timetables) {
-            if (timetable.slots && timetable.classId.toString() === classObj._id.toString()) {
+            if (timetable.slots && timetable.classId?.toString() === classId) {
               const classesInDay = timetable.slots.filter((slot: any) => 
                 slot.day === targetDay &&
                 slot.teacherId === teacher._id.toString() &&
-                slot.subjectId === subject._id.toString()
+                slot.subjectId === subjectId
               ).length;
               
               predicted += classesInDay;
@@ -229,8 +266,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           if (record.classes && Array.isArray(record.classes)) {
             const classesGiven = record.classes.filter((cls: any) => 
               cls.status === 'present' &&
-              cls.subjectId === subject._id.toString() &&
-              cls.classId === classObj._id.toString()
+              cls.subjectId === subjectId &&
+              cls.classId === classId
             ).length;
             
             given += classesGiven;
@@ -245,9 +282,9 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
 
         subjectClassDetails.push({
           subjectId: subject._id,
-          subjectName: subject.name,
+          subjectName: (subject as any).name,
           classId: classObj._id,
-          className: classObj.name,
+          className: (classObj as any).name,
           predictedClasses: predicted,
           givenClasses: given,
           deficit,
@@ -255,19 +292,78 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         });
       }
 
+      // FALLBACK: Incluir pares de disciplina/turma dos registros de frequência
+      // que NÃO estão em TeacherSubject (ex: aulas do horário sem lotação cadastrada)
+      for (const record of attendanceRecords) {
+        if (!record.classes || !Array.isArray(record.classes)) continue;
+        
+        for (const cls of record.classes as any[]) {
+          const pairKey = `${cls.subjectId}_${cls.classId}`;
+          if (processedPairs.has(pairKey)) continue;
+          processedPairs.add(pairKey);
+
+          // Contar aulas dadas desta combinação em TODOS os registros
+          let given = 0;
+          for (const r of attendanceRecords) {
+            if (r.classes && Array.isArray(r.classes)) {
+              given += r.classes.filter((c: any) =>
+                c.status === 'present' &&
+                c.subjectId === cls.subjectId &&
+                c.classId === cls.classId
+              ).length;
+            }
+          }
+
+          // Contar aulas previstas do horário
+          let predicted = 0;
+          for (const schoolDay of schoolDays) {
+            const targetDay = getDayName(schoolDay);
+            if (!targetDay) continue;
+            for (const timetable of timetables) {
+              if (timetable.slots && timetable.classId?.toString() === cls.classId) {
+                predicted += timetable.slots.filter((slot: any) =>
+                  slot.day === targetDay &&
+                  slot.teacherId === teacher._id.toString() &&
+                  slot.subjectId === cls.subjectId
+                ).length;
+              }
+            }
+          }
+
+          const deficit = predicted > given ? predicted - given : 0;
+          const surplus = given > predicted ? given - predicted : 0;
+          totalPredicted += predicted;
+          totalGiven += given;
+
+          subjectClassDetails.push({
+            subjectId: cls.subjectId,
+            subjectName: cls.subjectName || (subjectMap.get(cls.subjectId) as any)?.name || 'Disciplina',
+            classId: cls.classId,
+            className: cls.className || (classMap.get(cls.classId) as any)?.name || 'Turma',
+            predictedClasses: predicted,
+            givenClasses: given,
+            deficit,
+            surplus
+          });
+        }
+      }
+
       const totalDeficit = totalPredicted > totalGiven ? totalPredicted - totalGiven : 0;
       const totalSurplus = totalGiven > totalPredicted ? totalGiven - totalPredicted : 0;
 
-      reports.push({
-        teacherId: teacher._id,
-        teacherName: teacher.name,
-        weeklyWorkload: teacher.weeklyWorkload || 0,
-        totalPredictedClasses: totalPredicted,
-        totalGivenClasses: totalGiven,
-        totalDeficit,
-        totalSurplus,
-        subjectClassDetails
-      });
+      // Incluir professor no relatório se tiver dados (TeacherSubject OU frequência)
+      if (subjectClassDetails.length > 0 || attendanceRecords.length > 0) {
+        reports.push({
+          teacherId: teacher._id,
+          teacherName: teacher.name,
+          weeklyWorkload: (teacher as any).weeklyWorkload || 0,
+          totalPredictedClasses: totalPredicted,
+          totalGivenClasses: totalGiven,
+          totalDeficit,
+          totalSurplus,
+          subjectClassDetails
+        });
+      }
     }
 
     res.json({
