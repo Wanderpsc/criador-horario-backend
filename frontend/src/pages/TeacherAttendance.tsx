@@ -760,13 +760,18 @@ export default function TeacherAttendance() {
     status: 'present' | 'absent'
   ) => {
     try {
-      const payload = {
+      const payload: any = {
         teacherId,
         date: selectedDate,
         period,
         status,
         scheduleId: scheduledData?.scheduleId // ✅ Adicionar scheduleId específico
       };
+      
+      // Se é sábado letivo, enviar o dia da semana correspondente
+      if (isSaturday && saturdayWeekday) {
+        payload.followWeekday = saturdayWeekday;
+      }
       
       console.log('📤 [handleClassStatusChange] Enviando:', payload);
       

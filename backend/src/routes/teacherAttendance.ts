@@ -406,7 +406,7 @@ router.post('/', auth, async (req: AuthRequest, res) => {
 
 // Atualizar status de uma aula específica
 router.put('/class-status', auth, async (req: AuthRequest, res) => {
-  const { teacherId, date, period, status, scheduleId } = req.body;
+  const { teacherId, date, period, status, scheduleId, followWeekday } = req.body;
   const schoolId = req.user?.schoolId;
   
   try {
@@ -453,7 +453,20 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       console.log('📝 [class-status] Criando registro automático...');
       
       const targetDate = new Date(date);
-      const dayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
+      const rawDayOfWeek = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][targetDate.getDay()];
+      
+      // Se é sábado e veio followWeekday, usar o dia correspondente para buscar no horário
+      const followWeekdayMap: { [key: string]: string } = {
+        'monday': 'Segunda',
+        'tuesday': 'Terça',
+        'wednesday': 'Quarta',
+        'thursday': 'Quinta',
+        'friday': 'Sexta'
+      };
+      const isSat = targetDate.getDay() === 6;
+      const dayOfWeek = (isSat && followWeekday && followWeekdayMap[String(followWeekday).toLowerCase()])
+        ? followWeekdayMap[String(followWeekday).toLowerCase()]
+        : rawDayOfWeek;
       
       // Buscar TODOS os horários da escola
       console.log(`📚 [class-status] Buscando TODOS os horários da escola...`);
@@ -1279,10 +1292,16 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       return res.json({
         date,
         dayOfWeek: targetDay,
+        isSaturdayClass: isSaturday && !!queryFollowWeekday,
+        followWeekday: isSaturday ? String(queryFollowWeekday || '') : '',
         teachers: Object.values(teacherClasses),
         scheduleId: null,
-        scheduleName: 'Horário Padrão (Dia não cadastrado no calendário)',
-        message: 'Usando horário padrão do dia da semana. Cadastre este dia no Calendário Letivo para melhor controle.',
+        scheduleName: isSaturday && queryFollowWeekday
+          ? `Sábado Letivo — Horário de ${targetDay}`
+          : 'Horário Padrão (Dia não cadastrado no calendário)',
+        message: isSaturday && queryFollowWeekday
+          ? `Sábado letivo usando grade de ${targetDay}. Cadastre este dia no Calendário Letivo para melhor controle.`
+          : 'Usando horário padrão do dia da semana. Cadastre este dia no Calendário Letivo para melhor controle.',
         warning: true,
         allPeriods: defaultPeriods
       });
