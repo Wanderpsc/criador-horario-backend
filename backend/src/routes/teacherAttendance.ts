@@ -6,6 +6,7 @@ import SchoolDay from '../models/SchoolDay';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
 import Teacher from '../models/Teacher';
+import TeacherSubject from '../models/TeacherSubject';
 import Schedule from '../models/Schedule';
 import TeacherPayment from '../models/TeacherPayment';
 import { auth, AuthRequest } from '../middleware/auth';
@@ -878,7 +879,7 @@ router.get('/teacher-subject-report/:teacherId', auth, async (req: AuthRequest, 
   }
 });
 
-// Obter estatísticas de frequência
+// Obter estatísticas de frequência — AULAS PREVISTAS BASEADAS NA LOTAÇÃO (TeacherSubject)
 router.get('/statistics', auth, async (req: AuthRequest, res) => {
   try {
     const { startDate, endDate, teacherId, bySubject } = req.query;
@@ -888,62 +889,121 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
       return res.status(400).json({ message: 'School ID não encontrado' });
     }
 
+    // 1. Buscar registros de frequência no período
     let query: any = { schoolId };
-
     if (startDate && endDate) {
-      query.date = {
-        $gte: startDate,
-        $lte: endDate
-      };
+      query.date = { $gte: startDate, $lte: endDate };
     }
-
     if (teacherId) {
       query.teacherId = teacherId;
     }
-
     const records = await TeacherAttendance.find(query);
 
-    // Calcular quantos dias letivos tem no período
+    // 2. Calcular dias letivos no período (do calendário)
     let schoolDaysInPeriod = 0;
     if (startDate && endDate) {
       schoolDaysInPeriod = await calculateSchoolDaysInPeriod(
-        schoolId,
-        startDate as string,
-        endDate as string
+        schoolId, startDate as string, endDate as string
       );
     }
 
-    // Se bySubject=true, agrupar por disciplina/turma
+    // 3. Buscar TODAS as lotações (TeacherSubject) da escola — fonte de verdade para aulas previstas
+    const allTeacherSubjectEntries = await TeacherSubject.find({ schoolId });
+
+    // 4. Pré-carregar disciplinas para fallback de weeklyHours e nomes
+    const subjectIds = [...new Set(allTeacherSubjectEntries.map(ts => ts.subjectId).filter(Boolean))];
+    const allSubjects = await Subject.find(subjectIds.length > 0 ? { _id: { $in: subjectIds } } : { schoolId });
+    const subjectMap = new Map(allSubjects.map((s: any) => [s._id.toString(), s]));
+
+    // 5. Pré-carregar turmas para nomes
+    const classIds = [...new Set(allTeacherSubjectEntries.map(ts => ts.classId).filter(Boolean))];
+    const allClasses = await Class.find(classIds.length > 0 ? { _id: { $in: classIds } } : {});
+    const classMap = new Map(allClasses.map((c: any) => [c._id.toString(), c]));
+
+    // Helper: weeklyHours da lotação (TeacherSubject) com fallback para Subject
+    const getWeeklyHours = (ts: any): number => {
+      if (ts.weeklyHours != null && ts.weeklyHours > 0) return ts.weeklyHours;
+      const subject = subjectMap.get(ts.subjectId?.toString());
+      return (subject as any)?.weeklyHours || 0;
+    };
+
+    // Helper: calcular aulas previstas = weeklyHours × (diasLetivos / 5)
+    const calcExpected = (weeklyHours: number): number => {
+      if (weeklyHours <= 0 || schoolDaysInPeriod <= 0) return 0;
+      return Math.round(weeklyHours * (schoolDaysInPeriod / 5));
+    };
+
+    // ======= MODO BY SUBJECT (por professor+disciplina+turma) =======
     if (bySubject === 'true') {
       const subjectStats: { [key: string]: any } = {};
 
+      // a) Inicializar a partir da LOTAÇÃO (TeacherSubject)
+      for (const ts of allTeacherSubjectEntries) {
+        const tId = ts.teacherId?.toString();
+        const sId = ts.subjectId?.toString();
+        const cId = ts.classId?.toString() || '';
+        if (!tId || !sId) continue;
+
+        const weeklyHours = getWeeklyHours(ts);
+        const subject = subjectMap.get(sId);
+        const classObj = cId ? classMap.get(cId) : null;
+
+        const key = `${tId}_${sId}_${cId}`;
+        subjectStats[key] = {
+          subjectId: sId,
+          subjectName: (subject as any)?.name || 'Disciplina',
+          classId: cId,
+          className: (classObj as any)?.name || '',
+          grade: '',
+          teacherId: tId,
+          teacherName: '',
+          scheduledClasses: calcExpected(weeklyHours),
+          givenClasses: 0,
+          absentClasses: 0,
+          pendingClasses: 0,
+          deficit: 0,
+          dates: [],
+          weeklyHours,
+          annualWorkload: weeklyHours * 40
+        };
+      }
+
+      // b) Contabilizar aulas dadas/ausentes/pendentes dos registros de frequência
       records.forEach(record => {
         if (!record.classes || record.classes.length === 0) return;
-
         record.classes.forEach((cls: any) => {
-          const key = `${cls.subjectId}_${cls.classId}`;
+          const tId = record.teacherId?.toString();
+          const sId = cls.subjectId?.toString();
+          const cId = cls.classId?.toString() || '';
+          const key = `${tId}_${sId}_${cId}`;
 
           if (!subjectStats[key]) {
+            // Registro de frequência sem lotação correspondente
             subjectStats[key] = {
-              subjectId: cls.subjectId,
-              subjectName: cls.subjectName,
-              classId: cls.classId,
-              className: cls.className,
-              grade: cls.grade,
-              teacherId: record.teacherId,
-              teacherName: record.teacherName,
-              scheduledClasses: 0, // Será calculado corretamente
+              subjectId: sId,
+              subjectName: cls.subjectName || 'Disciplina',
+              classId: cId,
+              className: cls.className || '',
+              grade: cls.grade || '',
+              teacherId: tId,
+              teacherName: record.teacherName || '',
+              scheduledClasses: 0,
               givenClasses: 0,
               absentClasses: 0,
               pendingClasses: 0,
               deficit: 0,
               dates: [],
               weeklyHours: 0,
-              annualWorkload: 0 // NOVO: carga horária anual
+              annualWorkload: 0
             };
           }
 
-          // Contar aulas dadas/ausentes/pendentes
+          // Atualizar nomes dos registros
+          if (cls.subjectName) subjectStats[key].subjectName = cls.subjectName;
+          if (cls.className) subjectStats[key].className = cls.className;
+          if (cls.grade) subjectStats[key].grade = cls.grade;
+          if (record.teacherName) subjectStats[key].teacherName = record.teacherName;
+
           if (cls.status === 'present') {
             subjectStats[key].givenClasses += 1;
           } else if (cls.status === 'absent') {
@@ -957,54 +1017,35 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
         });
       });
 
-      // NOVO: Calcular scheduledClasses baseado na CARGA HORÁRIA ANUAL
+      // c) Preencher nomes de professor que faltam (entradas vindas apenas da lotação)
+      const allActiveTeachers = await Teacher.find({ schoolId, isActive: true });
+      const teacherNameMap = new Map(allActiveTeachers.map((t: any) => [t._id.toString(), t.name]));
       for (const key in subjectStats) {
         const stat = subjectStats[key];
-        
-        // Buscar informações da disciplina
-        const Subject = mongoose.model('Subject');
-        const subject = await Subject.findById(stat.subjectId);
-        
-        if (subject) {
-          stat.annualWorkload = subject.workload || subject.workloadHours || subject.hours || 0;
-          stat.weeklyHours = subject.weeklyHours || 0;
+        if (!stat.teacherName && stat.teacherId) {
+          stat.teacherName = teacherNameMap.get(stat.teacherId) || 'Professor';
         }
-        
-        // Calcular aulas previstas BASEADO NA CARGA HORÁRIA ANUAL
-        if (schoolDaysInPeriod > 0 && startDate && endDate) {
-          stat.scheduledClasses = await calculateExpectedClassesFromAnnualWorkload(
-            stat.subjectId,
-            schoolId,
-            startDate as string,
-            endDate as string
-          );
-        } else {
-          // Se não houver período definido, manter a contagem de aulas registradas
-          stat.scheduledClasses = stat.givenClasses + stat.absentClasses + stat.pendingClasses;
+        if (!stat.className && stat.classId) {
+          const cls = classMap.get(stat.classId);
+          if (cls) stat.className = (cls as any).name;
         }
-        
-        // Calcular déficit
         stat.deficit = stat.scheduledClasses - stat.givenClasses;
       }
 
       return res.json(Object.values(subjectStats));
     }
 
-    // Estatísticas por professor (padrão) - COM CÁLCULO CORRETO DE AULAS PREVISTAS
+    // ======= MODO GERAL (por professor) =======
     const teacherStats: { [key: string]: any } = {};
-    const teacherSubjects: { [key: string]: Set<string> } = {}; // Rastrear disciplinas únicas por professor
 
-    // NOVA LÓGICA: Buscar TODOS os professores ativos, não apenas os que têm registros
-    const Teacher = mongoose.model('Teacher');
+    // a) Buscar todos os professores ativos
     const allActiveTeachers = await Teacher.find({ schoolId, isActive: true });
-    
-    console.log(`📊 [statistics] Encontrados ${allActiveTeachers.length} professores ativos`);
-    
-    // Inicializar estatísticas para todos os professores ativos
+
+    // b) Inicializar estatísticas
     for (const teacher of allActiveTeachers) {
-      const teacherId = teacher._id.toString();
-      teacherStats[teacherId] = {
-        teacherId,
+      const tid = teacher._id.toString();
+      teacherStats[tid] = {
+        teacherId: tid,
         teacherName: teacher.name,
         totalScheduledClasses: 0,
         totalPresentClasses: 0,
@@ -1013,91 +1054,41 @@ router.get('/statistics', auth, async (req: AuthRequest, res) => {
         attendanceRate: 0,
         workload: 0,
       };
-      teacherSubjects[teacherId] = new Set();
     }
 
-    // Coletar aulas dadas/ausentes dos registros existentes
+    // c) Contabilizar aulas dadas/ausentes dos registros
     records.forEach(record => {
-      const teacherId = record.teacherId;
-      
-      if (teacherStats[teacherId]) {
-        // Contar aulas dadas e ausentes dos registros
-        teacherStats[teacherId].totalPresentClasses += record.totalPresentClasses || 0;
-        teacherStats[teacherId].totalAbsentClasses += record.totalAbsentClasses || 0;
-        teacherStats[teacherId].totalPendingClasses += record.totalPendingClasses || 0;
-
-        // Coletar disciplinas únicas dos registros
-        if (record.classes && Array.isArray(record.classes)) {
-          record.classes.forEach((cls: any) => {
-            if (cls.subjectId) {
-              teacherSubjects[teacherId].add(cls.subjectId);
-            }
-          });
-        }
+      const tid = record.teacherId;
+      if (teacherStats[tid]) {
+        teacherStats[tid].totalPresentClasses += record.totalPresentClasses || 0;
+        teacherStats[tid].totalAbsentClasses += record.totalAbsentClasses || 0;
+        teacherStats[tid].totalPendingClasses += record.totalPendingClasses || 0;
       }
     });
 
-    // BUSCAR DISCIPLINAS DE TODOS OS PROFESSORES (mesmo sem registros de frequência)
-    // Para calcular aulas previstas corretamente
-    const GeneratedTimetable = mongoose.model('GeneratedTimetable');
-    const timetables = await GeneratedTimetable.find({ school: schoolId });
-    
-    console.log(`📚 [statistics] Encontrados ${timetables.length} horários gerados`);
-    
-    // Extrair disciplinas dos horários para cada professor
-    for (const timetable of timetables) {
-      if (timetable.slots && Array.isArray(timetable.slots)) {
-        timetable.slots.forEach((slot: any) => {
-          const teacherId = slot.teacherId?.toString();
-          if (teacherId && teacherSubjects[teacherId] && slot.subjectId) {
-            teacherSubjects[teacherId].add(slot.subjectId.toString());
-          }
-        });
-      }
-    }
+    // d) Calcular aulas previstas a partir da LOTAÇÃO (TeacherSubject.weeklyHours)
+    for (const teacher of allActiveTeachers) {
+      const tid = teacher._id.toString();
+      const tsEntries = allTeacherSubjectEntries.filter(ts => ts.teacherId === tid);
 
-    // Agora calcular totalScheduledClasses BASEADO NA CARGA HORÁRIA ANUAL de cada disciplina
-    for (const teacherId in teacherStats) {
-      const stat = teacherStats[teacherId];
-      let totalExpectedClasses = 0;
-
-      // Para cada disciplina que o professor leciona, calcular aulas previstas
-      const subjectIds = Array.from(teacherSubjects[teacherId]);
-      
-      console.log(`👨‍🏫 [statistics] Professor ${stat.teacherName}: ${subjectIds.length} disciplinas`);
-      
-      for (const subjectId of subjectIds) {
-        if (startDate && endDate) {
-          const expectedForSubject = await calculateExpectedClassesFromAnnualWorkload(
-            subjectId as string,
-            schoolId,
-            startDate as string,
-            endDate as string
-          );
-          console.log(`  📖 [statistics] Disciplina ${subjectId}: ${expectedForSubject} aulas previstas`);
-          totalExpectedClasses += expectedForSubject;
-        }
+      let totalExpected = 0;
+      for (const ts of tsEntries) {
+        const wh = getWeeklyHours(ts);
+        totalExpected += calcExpected(wh);
       }
 
-      // Se houver período definido E aulas calculadas, usar cálculo baseado em carga anual
-      if (startDate && endDate && totalExpectedClasses > 0) {
-        stat.totalScheduledClasses = totalExpectedClasses;
-        console.log(`  ✅ [statistics] Total previsto: ${totalExpectedClasses} aulas`);
-      } else if (stat.totalPresentClasses > 0 || stat.totalAbsentClasses > 0 || stat.totalPendingClasses > 0) {
-        // Fallback: usar soma das aulas registradas (apenas se houver algum registro)
-        stat.totalScheduledClasses = stat.totalPresentClasses + stat.totalAbsentClasses + stat.totalPendingClasses;
-        console.log(`  ⚠️ [statistics] Usando fallback (registros): ${stat.totalScheduledClasses} aulas`);
-      } else {
-        // Sem aulas previstas e sem registros - deixar zerado
-        stat.totalScheduledClasses = 0;
-        console.log(`  ⚠️ [statistics] Nenhuma aula encontrada`);
+      if (totalExpected > 0) {
+        teacherStats[tid].totalScheduledClasses = totalExpected;
+      } else if (teacherStats[tid].totalPresentClasses > 0 || teacherStats[tid].totalAbsentClasses > 0) {
+        teacherStats[tid].totalScheduledClasses =
+          teacherStats[tid].totalPresentClasses + teacherStats[tid].totalAbsentClasses + teacherStats[tid].totalPendingClasses;
       }
 
-      // Calcular taxa de presença e carga horária
-      if (stat.totalScheduledClasses > 0) {
-        stat.attendanceRate = (stat.totalPresentClasses / stat.totalScheduledClasses) * 100;
+      if (teacherStats[tid].totalScheduledClasses > 0) {
+        teacherStats[tid].attendanceRate =
+          (teacherStats[tid].totalPresentClasses / teacherStats[tid].totalScheduledClasses) * 100;
       }
-      stat.workload = stat.totalPresentClasses * 0.833; // 50min por aula
+      teacherStats[tid].workload = teacherStats[tid].totalPresentClasses * 0.833;
     }
 
     res.json(Object.values(teacherStats));

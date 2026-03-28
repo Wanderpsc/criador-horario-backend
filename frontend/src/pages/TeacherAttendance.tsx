@@ -123,7 +123,7 @@ export default function TeacherAttendance() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
+  const [reportType, setReportType] = useState<'daily' | 'weekly' | 'monthly' | 'bimonthly' | 'quarterly' | 'semiannual' | 'yearly'>('daily');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [expandedTeachers, setExpandedTeachers] = useState<Set<string>>(new Set());
@@ -187,7 +187,37 @@ export default function TeacherAttendance() {
           end: endOfMonth.toISOString().split('T')[0]
         };
       }
-      
+
+      case 'bimonthly': {
+        const bimonth = Math.floor(date.getMonth() / 2) * 2;
+        const startOfBi = new Date(date.getFullYear(), bimonth, 1);
+        const endOfBi = new Date(date.getFullYear(), bimonth + 2, 0);
+        return {
+          start: startOfBi.toISOString().split('T')[0],
+          end: endOfBi.toISOString().split('T')[0]
+        };
+      }
+
+      case 'quarterly': {
+        const quarter = Math.floor(date.getMonth() / 3) * 3;
+        const startOfQ = new Date(date.getFullYear(), quarter, 1);
+        const endOfQ = new Date(date.getFullYear(), quarter + 3, 0);
+        return {
+          start: startOfQ.toISOString().split('T')[0],
+          end: endOfQ.toISOString().split('T')[0]
+        };
+      }
+
+      case 'semiannual': {
+        const half = date.getMonth() < 6 ? 0 : 6;
+        const startOfH = new Date(date.getFullYear(), half, 1);
+        const endOfH = new Date(date.getFullYear(), half + 6, 0);
+        return {
+          start: startOfH.toISOString().split('T')[0],
+          end: endOfH.toISOString().split('T')[0]
+        };
+      }
+
       case 'yearly': {
         // Primeiro dia do ano
         const startOfYear = new Date(date.getFullYear(), 0, 1);
@@ -304,14 +334,14 @@ export default function TeacherAttendance() {
 
   // Buscar registros de frequência já salvos
   const { data: attendanceRecords, refetch: refetchAttendance } = useQuery({
-    queryKey: ['attendance-records', selectedDate, startDate, endDate, reportType],
+    queryKey: ['attendance-records', dateRange.start, dateRange.end, reportType],
     queryFn: async () => {
       const params: any = {};
       if (reportType === 'daily') {
-        params.date = selectedDate;
+        params.date = dateRange.start;
       } else {
-        params.startDate = startDate || selectedDate;
-        params.endDate = endDate || selectedDate;
+        params.startDate = dateRange.start;
+        params.endDate = dateRange.end;
       }
       const response = await api.get('/teacher-attendance', { params });
       return response.data;
@@ -375,40 +405,19 @@ export default function TeacherAttendance() {
       return 40; // Valor padrão se não houver calendário
     }
 
-    // Buscar início e fim do ano letivo no calendário
     const currentYear = new Date().getFullYear();
     const yearStart = new Date(currentYear, 0, 1);
     const yearEnd = new Date(currentYear, 11, 31);
-    
-    // Filtrar eventos de feriado e recesso no ano
-    const holidays = calendarEvents.filter((event: any) => 
-      (event.dayType === 'holiday' || event.dayType === 'recess') &&
-      new Date(event.date) >= yearStart &&
-      new Date(event.date) <= yearEnd
-    );
 
-    // Contar dias úteis no ano (seg-sex, excluindo feriados)
-    let workingDaysInYear = 0;
-    const currentDate = new Date(yearStart);
-    
-    while (currentDate <= yearEnd) {
-      const dayOfWeek = currentDate.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const isHoliday = holidays.some((h: any) => {
-        const holidayDate = typeof h.date === 'string' ? h.date.split('T')[0] : new Date(h.date).toISOString().split('T')[0];
-        return holidayDate === dateStr;
-      });
-      
-      if (!isWeekend && !isHoliday) {
-        workingDaysInYear++;
-      }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    // Converter dias em semanas (assumindo 5 dias por semana)
-    return Math.floor(workingDaysInYear / 5);
+    // Contar dias letivos reais do calendário (regular + saturday)
+    const schoolDays = calendarEvents.filter((event: any) => {
+      if (event.dayType !== 'regular' && event.dayType !== 'saturday') return false;
+      const eventDate = new Date(typeof event.date === 'string' ? event.date + 'T12:00:00' : event.date);
+      return eventDate >= yearStart && eventDate <= yearEnd;
+    });
+
+    const weeks = Math.floor(schoolDays.length / 5);
+    return weeks > 0 ? weeks : 40;
   }, [calendarEvents]);
 
   // Calcular quantos dias da semana têm aula baseado no horário selecionado
@@ -523,78 +532,32 @@ export default function TeacherAttendance() {
 
   const teacherWorkload: TeacherSubjectWorkload[] = teacherWorkloadData || [];
 
-  // Calcular dias letivos no período selecionado
+  // Calcular dias letivos no período selecionado — baseado no calendário real
   const workingDaysInPeriod = useMemo(() => {
     if (calendarEvents.length === 0) {
       // Se não tiver calendário, usar estimativa padrão
       if (reportType === 'daily') return 1;
       if (reportType === 'weekly') return schoolDaysPerWeek;
-      if (reportType === 'monthly') return schoolDaysPerWeek * 4; // ~4 semanas
+      if (reportType === 'monthly') return schoolDaysPerWeek * 4;
+      if (reportType === 'bimonthly') return schoolDaysPerWeek * 8;
+      if (reportType === 'quarterly') return schoolDaysPerWeek * 12;
+      if (reportType === 'semiannual') return schoolDaysPerWeek * 20;
       if (reportType === 'yearly') return schoolDaysPerWeek * totalSchoolWeeks;
       return 1;
     }
 
     const start = new Date(dateRange.start + 'T00:00:00');
     const end = new Date(dateRange.end + 'T23:59:59');
-    
-    // Filtrar eventos de feriado e recesso no período
-    const holidays = calendarEvents.filter((event: any) => 
-      (event.dayType === 'holiday' || event.dayType === 'recess') &&
-      new Date(event.date) >= start &&
-      new Date(event.date) <= end
-    );
 
-    // Contar dias úteis (seg-sex, excluindo feriados)
-    let workingDays = 0;
-    const currentDate = new Date(start);
-    
-    while (currentDate <= end) {
-      const dayOfWeek = currentDate.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Domingo ou Sábado
-      const dateStr = currentDate.toISOString().split('T')[0];
-      const isHoliday = holidays.some((h: any) => {
-        const holidayDate = typeof h.date === 'string' ? h.date.split('T')[0] : new Date(h.date).toISOString().split('T')[0];
-        return holidayDate === dateStr;
-      });
-      
-      if (!isWeekend && !isHoliday) {
-        workingDays++;
-      }
-      
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    return workingDays;
-  }, [calendarEvents, dateRange, reportType, schoolDaysPerWeek, totalSchoolWeeks]);
-
-  // Calcular aulas previstas baseado no horário selecionado
-  const scheduledClassesPerWeek = useMemo(() => {
-    if (!selectedTimetableData || !selectedTimetableData.schedule) {
-      return new Map<string, number>(); // Map de "teacherId-subjectId-classId" -> quantidade de aulas por semana
-    }
-
-    const classCountMap = new Map<string, number>();
-    
-    // Iterar sobre todos os dias da semana no horário
-    Object.keys(selectedTimetableData.schedule).forEach(day => {
-      const daySchedule = selectedTimetableData.schedule[day];
-      
-      // Iterar sobre todas as turmas
-      Object.keys(daySchedule).forEach(classId => {
-        const classSchedule = daySchedule[classId];
-        
-        // Iterar sobre todos os períodos
-        classSchedule.forEach((period: any) => {
-          if (period && period.teacherId && period.subjectId) {
-            const key = `${period.teacherId}-${period.subjectId}-${classId}`;
-            classCountMap.set(key, (classCountMap.get(key) || 0) + 1);
-          }
-        });
-      });
+    // Contar dias letivos reais do calendário no período (regular + saturday)
+    const schoolDays = calendarEvents.filter((event: any) => {
+      if (event.dayType !== 'regular' && event.dayType !== 'saturday') return false;
+      const eventDate = new Date(typeof event.date === 'string' ? event.date + 'T12:00:00' : event.date);
+      return eventDate >= start && eventDate <= end;
     });
-    
-    return classCountMap;
-  }, [selectedTimetableData]);
+
+    return schoolDays.length > 0 ? schoolDays.length : 1;
+  }, [calendarEvents, dateRange, reportType, schoolDaysPerWeek, totalSchoolWeeks]);
 
   // Calcular relatório de déficit/saldo baseado na frequência
   const workloadDeficitReport = useMemo(() => {
@@ -606,26 +569,13 @@ export default function TeacherAttendance() {
 
     teacherWorkload.forEach(teacher => {
       teacher.subjects.forEach(subject => {
-        // Chave para buscar aulas previstas no horário
-        const scheduleKey = `${teacher.teacherId}-${subject.subjectId}-${subject.classId || ''}`;
-        const classesPerWeek = scheduledClassesPerWeek.get(scheduleKey) || 0;
+        // Usar weeklyHours da LOTAÇÃO (TeacherSubject) — fonte de verdade
+        const classesPerWeek = subject.weeklyHours;
         
-        // Calcular aulas previstas baseado no horário e dias letivos
+        // Calcular aulas previstas: weeklyHours × (diasLetivos / 5)
         let expectedClasses = 0;
-        if (reportType === 'daily') {
-          // Aulas previstas no dia (média)
-          expectedClasses = classesPerWeek / 5;
-        } else if (reportType === 'weekly') {
-          // Aulas previstas na semana (do horário)
-          expectedClasses = classesPerWeek;
-        } else if (reportType === 'monthly') {
-          // Aulas previstas no mês (semanas * aulas/semana)  
-          const weeksInPeriod = workingDaysInPeriod / 5;
-          expectedClasses = classesPerWeek * weeksInPeriod;
-        } else if (reportType === 'yearly') {
-          // Aulas previstas no ano (40 semanas * aulas/semana)
-          const weeksInPeriod = workingDaysInPeriod / 5;
-          expectedClasses = classesPerWeek * weeksInPeriod;
+        if (classesPerWeek > 0 && workingDaysInPeriod > 0) {
+          expectedClasses = Math.round(classesPerWeek * (workingDaysInPeriod / 5));
         }
 
         // Buscar frequência do professor para esta disciplina no período
@@ -693,7 +643,7 @@ export default function TeacherAttendance() {
       if (a.status === 'ok' && b.status === 'warning') return 1;
       return Math.abs(b.deficitClasses) - Math.abs(a.deficitClasses);
     });
-  }, [teacherWorkload, scheduledClassesPerWeek, attendanceList, reportType, workingDaysInPeriod]);
+  }, [teacherWorkload, attendanceList, workingDaysInPeriod]);
 
   // Mesclar dados agendados com registros salvos
   const getMergedTeacherData = () => {
@@ -1981,7 +1931,7 @@ export default function TeacherAttendance() {
         </h2>
 
         {/* Filtros de Relatório */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 no-print">
+        <div className="flex flex-wrap gap-2 mb-6 no-print">
           <button
             onClick={() => {
               setReportType('daily');
@@ -2034,6 +1984,63 @@ export default function TeacherAttendance() {
           >
             <Clock size={18} className="inline mr-2" />
             Mensal
+          </button>
+          <button
+            onClick={() => {
+              setReportType('bimonthly');
+              const today = new Date(selectedDate + 'T12:00:00');
+              const bimonth = Math.floor(today.getMonth() / 2) * 2;
+              const s = new Date(today.getFullYear(), bimonth, 1);
+              const e = new Date(today.getFullYear(), bimonth + 2, 0);
+              setStartDate(s.toISOString().split('T')[0]);
+              setEndDate(e.toISOString().split('T')[0]);
+            }}
+            className={`btn ${
+              reportType === 'bimonthly'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-teal-100'
+            }`}
+          >
+            <Calendar size={18} className="inline mr-2" />
+            Bimestral
+          </button>
+          <button
+            onClick={() => {
+              setReportType('quarterly');
+              const today = new Date(selectedDate + 'T12:00:00');
+              const quarter = Math.floor(today.getMonth() / 3) * 3;
+              const s = new Date(today.getFullYear(), quarter, 1);
+              const e = new Date(today.getFullYear(), quarter + 3, 0);
+              setStartDate(s.toISOString().split('T')[0]);
+              setEndDate(e.toISOString().split('T')[0]);
+            }}
+            className={`btn ${
+              reportType === 'quarterly'
+                ? 'bg-amber-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
+            }`}
+          >
+            <TrendingUp size={18} className="inline mr-2" />
+            Trimestral
+          </button>
+          <button
+            onClick={() => {
+              setReportType('semiannual');
+              const today = new Date(selectedDate + 'T12:00:00');
+              const half = today.getMonth() < 6 ? 0 : 6;
+              const s = new Date(today.getFullYear(), half, 1);
+              const e = new Date(today.getFullYear(), half + 6, 0);
+              setStartDate(s.toISOString().split('T')[0]);
+              setEndDate(e.toISOString().split('T')[0]);
+            }}
+            className={`btn ${
+              reportType === 'semiannual'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-indigo-100'
+            }`}
+          >
+            <BarChart3 size={18} className="inline mr-2" />
+            Semestral
           </button>
           <button
             onClick={() => {
@@ -2399,7 +2406,7 @@ export default function TeacherAttendance() {
             </div>
             <div className="text-right">
               <div className="text-sm text-orange-600 font-semibold">
-                Período: {reportType === 'daily' ? 'Diário' : reportType === 'weekly' ? 'Semanal' : reportType === 'monthly' ? 'Mensal' : 'Anual'}
+                Período: {reportType === 'daily' ? 'Diário' : reportType === 'weekly' ? 'Semanal' : reportType === 'monthly' ? 'Mensal' : reportType === 'bimonthly' ? 'Bimestral' : reportType === 'quarterly' ? 'Trimestral' : reportType === 'semiannual' ? 'Semestral' : 'Anual'}
               </div>
               <div className="text-3xl font-bold text-orange-900">
                 {workloadDeficitReport.filter(r => r.status === 'critical').length}
