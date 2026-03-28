@@ -299,6 +299,18 @@ const SchoolCalendar: React.FC = () => {
     }
   };
 
+  const handleDeleteEmergencySchedule = async (id: string) => {
+    if (!window.confirm('Deseja realmente excluir este horário emergencial?')) return;
+
+    try {
+      await emergencyScheduleAPI.delete(id);
+      toast.success('Horário emergencial excluído com sucesso!');
+      loadData();
+    } catch (error) {
+      toast.error('Erro ao excluir horário emergencial');
+    }
+  };
+
   const getDaysInMonth = () => {
     const year = selectedMonth.getFullYear();
     const month = selectedMonth.getMonth();
@@ -462,10 +474,13 @@ const SchoolCalendar: React.FC = () => {
 
       {/* Statistics Cards */}
       {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
             <div className="text-sm text-gray-600">Total de Dias Letivos (Ano)</div>
             <div className="text-2xl font-bold text-gray-900">{statistics.totalDays}</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {statistics.regularDays || 0} regulares + {statistics.saturdayDays || 0} sábados
+            </div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
             <div className="text-sm text-gray-600">Dias Trabalhados</div>
@@ -480,13 +495,6 @@ const SchoolCalendar: React.FC = () => {
           <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
             <div className="text-sm text-gray-600">Taxa de Conclusão</div>
             <div className="text-2xl font-bold text-gray-900">{statistics.completionRate}%</div>
-          </div>
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-4 rounded-lg shadow text-white">
-            <div className="text-sm font-semibold opacity-90">Total Letivo (Ano)</div>
-            <div className="text-3xl font-bold">{(statistics.regularDays || 0) + (statistics.saturdayDays || 0)}</div>
-            <div className="text-xs mt-1 opacity-80">
-              {statistics.regularDays || 0} regulares + {statistics.saturdayDays || 0} sábados
-            </div>
           </div>
         </div>
       )}
@@ -586,7 +594,14 @@ const SchoolCalendar: React.FC = () => {
                               <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
                                 <div className="flex items-center gap-1 text-red-700 font-bold mb-1">
                                   <AlertTriangle className="w-3 h-3" />
-                                  <span>HORÁRIO EMERGENCIAL</span>
+                                  <span className="flex-1">HORÁRIO EMERGENCIAL</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteEmergencySchedule(emergency._id || emergency.id); }}
+                                    className="ml-auto text-red-400 hover:text-red-700 transition-colors"
+                                    title="Excluir horário emergencial"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
                                 </div>
                                 <div className="text-red-600 text-xs">
                                   <div className="font-medium">Ausente(s):</div>
@@ -676,7 +691,14 @@ const SchoolCalendar: React.FC = () => {
                               <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded">
                                 <div className="flex items-center gap-1 text-red-700 font-bold mb-1">
                                   <AlertTriangle className="w-3 h-3" />
-                                  <span className="text-xs">EMERGENCIAL</span>
+                                  <span className="text-xs flex-1">EMERGENCIAL</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteEmergencySchedule(emergency._id || emergency.id); }}
+                                    className="ml-auto text-red-400 hover:text-red-700 transition-colors"
+                                    title="Excluir horário emergencial"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
                                 </div>
                                 <div className="text-red-600 text-xs">
                                   <div className="truncate">{teachersList}</div>
@@ -786,88 +808,82 @@ const SchoolCalendar: React.FC = () => {
 
         {/* Legend */}
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5" />
+          <h3 className="font-bold text-lg mb-5 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-blue-600" />
             Legenda do Calendário
           </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Tipos de Dia */}
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm text-gray-700">Tipos de Dia:</h4>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-50 border-2 border-blue-300 rounded"></div>
-              <span className="text-sm">Dia Regular (Pendente)</span>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
+
+            {/* Coluna 1 — Dias Regulares */}
+            <div className="space-y-2 min-w-0">
+              <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-500 border-b pb-1">Dias Regulares</h4>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-blue-100 border-2 border-blue-400 flex-shrink-0"></div>
+                <span className="text-sm text-gray-700">Pendente</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-blue-400 border-2 border-blue-600 flex-shrink-0 shadow-sm"></div>
+                <span className="text-sm font-semibold text-gray-800">Cumprido</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-gray-300 border-2 border-gray-500 flex-shrink-0 opacity-80"></div>
+                <span className="text-sm text-gray-500 italic">Passado não cumprido</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-300 border-2 border-blue-600 rounded shadow-md"></div>
-              <span className="text-sm font-semibold">Dia Regular (Cumprido)</span>
+
+            {/* Coluna 2 — Sábados */}
+            <div className="space-y-2 min-w-0">
+              <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-500 border-b pb-1">Sábados Letivos</h4>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-purple-100 border-2 border-purple-400 flex-shrink-0"></div>
+                <span className="text-sm text-gray-700">Pendente</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-purple-400 border-2 border-purple-600 flex-shrink-0 shadow-sm"></div>
+                <span className="text-sm font-semibold text-gray-800">Cumprido</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-purple-50 border-2 border-purple-300 rounded"></div>
-              <span className="text-sm">Sábado Letivo (Pendente)</span>
+
+            {/* Coluna 3 — Não Letivos */}
+            <div className="space-y-2 min-w-0">
+              <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-500 border-b pb-1">Não Letivos</h4>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-red-300 border-2 border-red-500 flex-shrink-0"></div>
+                <span className="text-sm text-gray-700">Feriado</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-yellow-300 border-2 border-yellow-500 flex-shrink-0"></div>
+                <span className="text-sm text-gray-700">Recesso</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-purple-300 border-2 border-purple-600 rounded shadow-md"></div>
-              <span className="text-sm font-semibold">Sábado Letivo (Cumprido)</span>
+
+            {/* Coluna 4 — Horários */}
+            <div className="space-y-2 min-w-0">
+              <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-500 border-b pb-1">Horários</h4>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-300 flex-shrink-0 whitespace-nowrap">
+                  <Check className="w-3 h-3" /> NORMAL
+                </span>
+                <span className="text-sm text-gray-700">Regular ativo</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-300 flex-shrink-0 whitespace-nowrap">
+                  <AlertTriangle className="w-3 h-3" /> EMERG.
+                </span>
+                <span className="text-sm text-gray-700">Emergencial</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-red-200 border-2 border-red-500 rounded shadow-sm"></div>
-              <span className="text-sm">Feriado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-yellow-200 border-2 border-yellow-500 rounded shadow-sm"></div>
-              <span className="text-sm">Recesso</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-300 border-2 border-gray-600 rounded opacity-80"></div>
-              <span className="text-sm">Dia Passado (Não Cumprido)</span>
-            </div>
+
           </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm text-gray-700">Status:</h4>
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium">
-                ✓ Cumprido
-              </div>
-              <span className="text-sm">Dia letivo cumprido</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs font-medium">
-                ○ Pendente
-              </div>
-              <span className="text-sm">Dia letivo pendente</span>
-            </div>
+          <div className="mt-5 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>💡 Dica:</strong> Clique em qualquer dia para adicionar ou editar informações.
+              Use as observações para registrar motivos de feriados, recessos ou eventos especiais.
+              Dias passados que não foram cumpridos aparecem em cinza automaticamente.
+            </p>
           </div>
-
-          {/* Horários */}
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm text-gray-700">Horários:</h4>
-            <div className="flex items-center gap-2">
-              <div className="px-2 py-1 bg-red-50 border border-red-200 rounded text-xs text-red-700 font-bold">
-                <AlertTriangle className="w-3 h-3 inline mr-1" />
-                EMERGENCIAL
-              </div>
-              <span className="text-sm">Horário emergencial ativo</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="px-2 py-1 bg-green-50 border border-green-200 rounded text-xs text-green-700 font-medium">
-                <Check className="w-3 h-3 inline mr-1" />
-                NORMAL
-              </div>
-              <span className="text-sm">Horário normal</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-sm text-blue-800">
-            <strong>💡 Dica:</strong> Clique em qualquer dia para adicionar ou editar informações. 
-            Use as observações para registrar motivos de feriados, recessos ou eventos especiais.
-            Dias passados que não foram cumpridos aparecem em cinza automaticamente.
-          </p>
-        </div>
         </div>
       </div>
 

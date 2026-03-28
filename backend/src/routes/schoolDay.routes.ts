@@ -73,16 +73,19 @@ router.get('/school/:schoolId/statistics', auth, async (req: Request, res: Respo
     const schoolDays = await SchoolDay.find(query);
 
     const totalDays = schoolDays.length;
-    const completedDays = schoolDays.filter((d) => d.isCompleted).length;
-    const remainingDays = totalDays - completedDays;
-    const completionRate = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
+    const regularDays = schoolDays.filter((d) => d.dayType === 'regular').length;
+    const saturdayDays = schoolDays.filter((d) => d.dayType === 'saturday').length;
+    const totalLetivos = regularDays + saturdayDays;
+    const completedDays = schoolDays.filter((d) => d.isCompleted && (d.dayType === 'regular' || d.dayType === 'saturday')).length;
+    const remainingDays = totalLetivos - completedDays;
+    const completionRate = totalLetivos > 0 ? Math.round((completedDays / totalLetivos) * 100) : 0;
 
     const statistics = {
-      totalDays,
+      totalDays: totalLetivos,
       completedDays,
       remainingDays,
-      regularDays: schoolDays.filter((d) => d.dayType === 'regular').length,
-      saturdayDays: schoolDays.filter((d) => d.dayType === 'saturday').length,
+      regularDays,
+      saturdayDays,
       holidays: schoolDays.filter((d) => d.dayType === 'holiday').length,
       recessDays: schoolDays.filter((d) => d.dayType === 'recess').length,
       completionRate
