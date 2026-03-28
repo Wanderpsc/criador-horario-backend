@@ -66,13 +66,37 @@
   animation: slide-up 0.3s ease-out;
 }
 
+/* Uniform cell height for timetable tables (needed for consistent PDF/print rendering) */
+.print-timetable-table {
+  table-layout: fixed !important;
+}
+.print-timetable-table td,
+.print-timetable-table th {
+  height: 48px;
+  min-height: 48px;
+  overflow: hidden;
+  vertical-align: middle;
+  box-sizing: border-box;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 3px 4px;
+  word-break: break-word;
+}
+
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
   .no-print {
     display: none !important;
   }
   
   body {
     background: white;
+    margin: 0;
+    padding: 0;
   }
   
   .print-page-break {
@@ -81,13 +105,21 @@
   }
 
   .print-container {
+    width: 100% !important;
+    min-height: calc(210mm - 16mm);
     box-shadow: none !important;
-    border: 1px solid #ddd !important;
+    border: 1px solid #222 !important;
+    border-radius: 0 !important;
+    padding: 10px !important;
+    margin: 0 !important;
     page-break-after: always;
     break-after: always;
     page-break-inside: avoid;
     break-inside: avoid;
-    margin-bottom: 0;
+    overflow: visible !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .print-container:last-child {
@@ -96,13 +128,62 @@
   }
 
   .print-header {
-    margin-bottom: 20px;
-    padding-bottom: 10px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
     border-bottom: 2px solid #333;
     page-break-inside: avoid;
     break-inside: avoid;
     page-break-after: avoid;
     break-after: avoid;
+  }
+
+  .print-container .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .print-container .print-timetable-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border: 1px solid #222 !important;
+    empty-cells: show !important;
+    font-size: 9px !important;
+  }
+
+  .print-container .print-timetable-table th,
+  .print-container .print-timetable-table td {
+    border: 1px solid #222 !important;
+    padding: 4px !important;
+    line-height: 1.15 !important;
+    vertical-align: middle !important;
+    word-break: break-word !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-container .print-left-col-time {
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+  }
+
+  .print-container .print-left-col-class {
+    width: 86px !important;
+    min-width: 86px !important;
+    max-width: 86px !important;
+  }
+
+  .print-container .print-timetable-table .text-sm {
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+
+  .print-container .print-timetable-table .text-xs {
+    font-size: 8px !important;
+    line-height: 1.05 !important;
   }
 
   table {

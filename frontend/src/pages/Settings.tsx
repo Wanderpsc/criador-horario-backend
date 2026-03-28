@@ -24,7 +24,7 @@ interface Permissions {
 }
 
 interface SchoolUser {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: 'admin' | 'user';
@@ -219,7 +219,7 @@ export default function Settings() {
 
   const handleEditPermissions = (user: SchoolUser) => {
     console.log('🎯 handleEditPermissions - User:', user);
-    console.log('🎯 User ID:', user._id);
+    console.log('🎯 User ID:', user.id);
     console.log('🎯 User Permissions:', user.permissions);
     setSelectedUser(user);
     setEditingPermissions(JSON.parse(JSON.stringify(user.permissions)));
@@ -259,7 +259,7 @@ export default function Settings() {
       if (formData.password) {
         updateData.password = formData.password;
       }
-      updateUserMutation.mutate({ id: selectedUser._id, data: updateData });
+      updateUserMutation.mutate({ id: selectedUser.id, data: updateData });
     } else {
       createUserMutation.mutate(formData);
     }
@@ -267,7 +267,7 @@ export default function Settings() {
 
   const handleSavePermissions = () => {
     console.log('🔵 handleSavePermissions - selectedUser:', selectedUser);
-    console.log('🔵 selectedUser._id:', selectedUser?._id);
+    console.log('🔵 selectedUser.id:', selectedUser?.id);
     console.log('🔵 editingPermissions:', editingPermissions);
     
     if (!selectedUser) {
@@ -276,23 +276,23 @@ export default function Settings() {
       return;
     }
     
-    if (!selectedUser._id) {
-      console.error('❌ selectedUser._id é undefined!');
+    if (!selectedUser.id) {
+      console.error('❌ selectedUser.id é undefined!');
       console.error('❌ selectedUser completo:', JSON.stringify(selectedUser, null, 2));
       toast.error('Erro: ID do usuário não encontrado');
       return;
     }
     
-    console.log('✅ Salvando permissões para usuário:', selectedUser._id);
+    console.log('✅ Salvando permissões para usuário:', selectedUser.id);
     updateUserMutation.mutate({
-      id: selectedUser._id,
+      id: selectedUser.id,
       data: { permissions: editingPermissions }
     });
   };
 
   const handleDeleteUser = (user: SchoolUser) => {
     if (window.confirm(`Tem certeza que deseja excluir o usuário ${user.name}?`)) {
-      deleteUserMutation.mutate(user._id);
+      deleteUserMutation.mutate(user.id);
     }
   };
 
@@ -326,7 +326,7 @@ export default function Settings() {
       toast.error('Senha deve ter no mínimo 6 caracteres');
       return;
     }
-    resetPasswordMutation.mutate({ id: selectedUser._id, newPassword });
+    resetPasswordMutation.mutate({ id: selectedUser.id, newPassword });
   };
 
   const togglePermission = (resource: string, action: string) => {
@@ -530,7 +530,7 @@ export default function Settings() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {users.map((user) => (
-              <tr key={user._id} className="hover:bg-gray-50">
+              <tr key={user.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center">

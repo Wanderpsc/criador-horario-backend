@@ -128,6 +128,7 @@ export default function TeacherAttendance() {
   const [endDate, setEndDate] = useState('');
   const [expandedTeachers, setExpandedTeachers] = useState<Set<string>>(new Set());
   const [selectedTimetableId, setSelectedTimetableId] = useState<string>('auto');
+  const [saturdayWeekday, setSaturdayWeekday] = useState<string>('');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printOptions, setPrintOptions] = useState({
     generalReport: true,
@@ -141,6 +142,19 @@ export default function TeacherAttendance() {
   const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
   const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
   const [paymentReceiptData, setPaymentReceiptData] = useState<any>(null);
+
+  // Detectar se a data selecionada é um sábado
+  const isSaturday = useMemo(() => {
+    const d = new Date(selectedDate + 'T12:00:00');
+    return d.getDay() === 6; // 6 = sábado
+  }, [selectedDate]);
+
+  // Resetar saturdayWeekday quando mudar a data e não for sábado
+  useEffect(() => {
+    if (!isSaturday) {
+      setSaturdayWeekday('');
+    }
+  }, [selectedDate, isSaturday]);
 
   // Calcular datas automáticas baseado no tipo de relatório
   const getDateRangeForReportType = () => {
@@ -269,11 +283,14 @@ export default function TeacherAttendance() {
 
   // Buscar aulas agendadas para o dia
   const { data: scheduledData, isLoading: loadingScheduled, error: scheduledError } = useQuery({
-    queryKey: ['scheduled-classes', selectedDate, selectedTimetableId],
+    queryKey: ['scheduled-classes', selectedDate, selectedTimetableId, saturdayWeekday],
     queryFn: async () => {
       try {
-        const params = selectedTimetableId !== 'auto' ? `?scheduleId=${selectedTimetableId}` : '';
-        const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}${params}`);
+        const queryParams: string[] = [];
+        if (selectedTimetableId !== 'auto') queryParams.push(`scheduleId=${selectedTimetableId}`);
+        if (isSaturday && saturdayWeekday) queryParams.push(`followWeekday=${saturdayWeekday}`);
+        const qs = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+        const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}${qs}`);
         console.log('👨‍🏫 BACKEND RETORNOU:', response.data.teachers?.length || 0, 'professores para', selectedDate);
         console.log('📋 Detalhes:', response.data);
         return response.data;
@@ -282,7 +299,7 @@ export default function TeacherAttendance() {
         return { teachers: [], dayOfWeek: '', date: selectedDate };
       }
     },
-    enabled: !!selectedDate
+    enabled: !!selectedDate && (!isSaturday || !!saturdayWeekday)
   });
 
   // Buscar registros de frequência já salvos
@@ -301,6 +318,19 @@ export default function TeacherAttendance() {
     },
     enabled: !!selectedDate
   });
+
+  // Normalizar retorno da API para evitar crashes quando vier objeto em vez de array
+  const calendarEvents: any[] = Array.isArray(calendarData)
+    ? calendarData
+    : Array.isArray((calendarData as any)?.data)
+      ? (calendarData as any).data
+      : [];
+
+  const attendanceList: AttendanceRecord[] = Array.isArray(attendanceRecords)
+    ? attendanceRecords
+    : Array.isArray((attendanceRecords as any)?.data)
+      ? (attendanceRecords as any).data
+      : [];
 
   const teachers: any[] = scheduledData?.teachers || [];
 
@@ -339,98 +369,9 @@ export default function TeacherAttendance() {
     gcTime: 0
   });
 
-  // Buscar lotação de professores (teacher-subjects) para exibir cargas horárias
-  const { data: teacherWorkloadData } = useQuery({
-    queryKey: ['teacher-workload', user?.id, totalSchoolWeeks, schoolDaysPerWeek],
-    queryFn: async () => {
-      try {
-        if (!user?.id) {
-          console.log('⚠️ userId não disponível para buscar lotações');
-          return [];
-        }
-        
-        // Buscar todas as lotações de professores
-        const response = await api.get(`/teacher-subjects/${user.id}`);
-        const associations = response.data.data || [];
-        
-        // Buscar professores e disciplinas para pegar os nomes
-        const teachersRes = await api.get(`/teachers/user/${user.id}`);
-        const subjectsRes = await api.get(`/subjects/user/${user.id}`);
-        const classesRes = await api.get('/classes');
-        
-        const teachers = teachersRes.data.data || [];
-        const subjects = subjectsRes.data.data || [];
-        const classes = classesRes.data.data || [];
-        
-        // Agrupar por professor
-        const teacherMap = new Map<string, TeacherSubjectWorkload>();
-        
-        associations.forEach((assoc: any) => {
-          const teacher = teachers.find((t: any) => t.id === assoc.teacherId || t._id === assoc.teacherId);
-          const subject = subjects.find((s: any) => s.id === assoc.subjectId || s._id === assoc.subjectId);
-          const classItem = classes.find((c: any) => c.id === assoc.classId || c._id === assoc.classId);
-          
-          if (!teacher || !subject) return;
-          
-          const teacherId = teacher.id || teacher._id;
-          const teacherName = teacher.name;
-          
-          if (!teacherMap.has(teacherId)) {
-            teacherMap.set(teacherId, {
-              teacherId,
-              teacherName,
-              subjects: [],
-              totalWeeklyHours: 0,
-              totalAnnualHours: 0,
-              totalMonthlyHours: 0
-            });
-          }
-          
-          const workload = teacherMap.get(teacherId)!;
-          
-          // Pegar carga horária: primeiro tenta do assoc, depois do subject, senão usa 0
-          const weeklyHours = assoc.weeklyHours || subject.weeklyHours || 0;
-          
-          // Cálculos de carga horária DINÂMICOS (baseados no calendário e horário)
-          const annualHours = weeklyHours * totalSchoolWeeks; // Semanas letivas reais do calendário
-          const monthlyHours = annualHours / 12; // Distribuir proporcionalmente em 12 meses
-          const dailyHours = weeklyHours / schoolDaysPerWeek; // Dias letivos reais da semana
-          
-          workload.subjects.push({
-            subjectId: subject.id || subject._id,
-            subjectName: subject.name,
-            classId: classItem ? (classItem.id || classItem._id) : undefined,
-            className: classItem ? classItem.name : undefined,
-            weeklyHours,
-            annualHours,
-            monthlyHours,
-            dailyHours
-          });
-          
-          workload.totalWeeklyHours += weeklyHours;
-          workload.totalAnnualHours += annualHours;
-          workload.totalMonthlyHours += monthlyHours;
-        });
-        
-        // Converter para array e ordenar por nome do professor
-        return Array.from(teacherMap.values()).sort((a, b) => 
-          a.teacherName.localeCompare(b.teacherName)
-        );
-      } catch (error) {
-        console.error('Erro ao buscar cargas horárias:', error);
-        return [];
-      }
-    },
-    enabled: !!user?.id && totalSchoolWeeks > 0 && schoolDaysPerWeek > 0,
-    staleTime: 0, // Sempre buscar dados frescos
-    gcTime: 0 // Não manter cache
-  });
-
-  const teacherWorkload: TeacherSubjectWorkload[] = teacherWorkloadData || [];
-
   // Calcular total de semanas letivas no ano baseado no calendário escolar
   const totalSchoolWeeks = useMemo(() => {
-    if (!calendarData || calendarData.length === 0) {
+    if (calendarEvents.length === 0) {
       return 40; // Valor padrão se não houver calendário
     }
 
@@ -440,7 +381,7 @@ export default function TeacherAttendance() {
     const yearEnd = new Date(currentYear, 11, 31);
     
     // Filtrar eventos de feriado e recesso no ano
-    const holidays = calendarData.filter((event: any) => 
+    const holidays = calendarEvents.filter((event: any) => 
       (event.dayType === 'holiday' || event.dayType === 'recess') &&
       new Date(event.date) >= yearStart &&
       new Date(event.date) <= yearEnd
@@ -468,7 +409,7 @@ export default function TeacherAttendance() {
     
     // Converter dias em semanas (assumindo 5 dias por semana)
     return Math.floor(workingDaysInYear / 5);
-  }, [calendarData]);
+  }, [calendarEvents]);
 
   // Calcular quantos dias da semana têm aula baseado no horário selecionado
   const schoolDaysPerWeek = useMemo(() => {
@@ -493,9 +434,98 @@ export default function TeacherAttendance() {
     return daysWithClasses.size || 5; // Retorna número de dias com aula ou 5 se não encontrar
   }, [selectedTimetableData]);
 
+  // Buscar lotação de professores (teacher-subjects) para exibir cargas horárias
+  const { data: teacherWorkloadData } = useQuery({
+    queryKey: ['teacher-workload', user?.id, totalSchoolWeeks, schoolDaysPerWeek],
+    queryFn: async () => {
+      try {
+        if (!user?.id) {
+          console.log('⚠️ userId não disponível para buscar lotações');
+          return [];
+        }
+
+        // Buscar todas as lotações de professores
+        const response = await api.get(`/teacher-subjects/${user.id}`);
+        const associations = response.data.data || [];
+
+        // Buscar professores e disciplinas para pegar os nomes
+        const teachersRes = await api.get(`/teachers/user/${user.id}`);
+        const subjectsRes = await api.get(`/subjects/user/${user.id}`);
+        const classesRes = await api.get('/classes');
+
+        const teachers = teachersRes.data.data || [];
+        const subjects = subjectsRes.data.data || [];
+        const classes = classesRes.data.data || [];
+
+        // Agrupar por professor
+        const teacherMap = new Map<string, TeacherSubjectWorkload>();
+
+        associations.forEach((assoc: any) => {
+          const teacher = teachers.find((t: any) => t.id === assoc.teacherId || t._id === assoc.teacherId);
+          const subject = subjects.find((s: any) => s.id === assoc.subjectId || s._id === assoc.subjectId);
+          const classItem = classes.find((c: any) => c.id === assoc.classId || c._id === assoc.classId);
+
+          if (!teacher || !subject) return;
+
+          const teacherId = teacher.id || teacher._id;
+          const teacherName = teacher.name;
+
+          if (!teacherMap.has(teacherId)) {
+            teacherMap.set(teacherId, {
+              teacherId,
+              teacherName,
+              subjects: [],
+              totalWeeklyHours: 0,
+              totalAnnualHours: 0,
+              totalMonthlyHours: 0
+            });
+          }
+
+          const workload = teacherMap.get(teacherId)!;
+
+          // Pegar carga horária: primeiro tenta do assoc, depois do subject, senão usa 0
+          const weeklyHours = assoc.weeklyHours || subject.weeklyHours || 0;
+
+          // Cálculos de carga horária DINÂMICOS (baseados no calendário e horário)
+          const annualHours = weeklyHours * totalSchoolWeeks; // Semanas letivas reais do calendário
+          const monthlyHours = annualHours / 12; // Distribuir proporcionalmente em 12 meses
+          const dailyHours = weeklyHours / schoolDaysPerWeek; // Dias letivos reais da semana
+
+          workload.subjects.push({
+            subjectId: subject.id || subject._id,
+            subjectName: subject.name,
+            classId: classItem ? (classItem.id || classItem._id) : undefined,
+            className: classItem ? classItem.name : undefined,
+            weeklyHours,
+            annualHours,
+            monthlyHours,
+            dailyHours
+          });
+
+          workload.totalWeeklyHours += weeklyHours;
+          workload.totalAnnualHours += annualHours;
+          workload.totalMonthlyHours += monthlyHours;
+        });
+
+        // Converter para array e ordenar por nome do professor
+        return Array.from(teacherMap.values()).sort((a, b) =>
+          a.teacherName.localeCompare(b.teacherName)
+        );
+      } catch (error) {
+        console.error('Erro ao buscar cargas horárias:', error);
+        return [];
+      }
+    },
+    enabled: !!user?.id && totalSchoolWeeks > 0 && schoolDaysPerWeek > 0,
+    staleTime: 0, // Sempre buscar dados frescos
+    gcTime: 0 // Não manter cache
+  });
+
+  const teacherWorkload: TeacherSubjectWorkload[] = teacherWorkloadData || [];
+
   // Calcular dias letivos no período selecionado
   const workingDaysInPeriod = useMemo(() => {
-    if (!calendarData || calendarData.length === 0) {
+    if (calendarEvents.length === 0) {
       // Se não tiver calendário, usar estimativa padrão
       if (reportType === 'daily') return 1;
       if (reportType === 'weekly') return schoolDaysPerWeek;
@@ -508,7 +538,7 @@ export default function TeacherAttendance() {
     const end = new Date(dateRange.end + 'T23:59:59');
     
     // Filtrar eventos de feriado e recesso no período
-    const holidays = calendarData.filter((event: any) => 
+    const holidays = calendarEvents.filter((event: any) => 
       (event.dayType === 'holiday' || event.dayType === 'recess') &&
       new Date(event.date) >= start &&
       new Date(event.date) <= end
@@ -535,7 +565,7 @@ export default function TeacherAttendance() {
     }
     
     return workingDays;
-  }, [calendarData, dateRange, reportType, schoolDaysPerWeek, totalSchoolWeeks]);
+  }, [calendarEvents, dateRange, reportType, schoolDaysPerWeek, totalSchoolWeeks]);
 
   // Calcular aulas previstas baseado no horário selecionado
   const scheduledClassesPerWeek = useMemo(() => {
@@ -600,8 +630,8 @@ export default function TeacherAttendance() {
 
         // Buscar frequência do professor para esta disciplina no período
         let givenClasses = 0;
-        if (attendanceRecords) {
-          const teacherRecords = attendanceRecords.filter(
+        if (attendanceList.length > 0) {
+          const teacherRecords = attendanceList.filter(
             (record: AttendanceRecord) => record.teacherId === teacher.teacherId
           );
 
@@ -663,7 +693,7 @@ export default function TeacherAttendance() {
       if (a.status === 'ok' && b.status === 'warning') return 1;
       return Math.abs(b.deficitClasses) - Math.abs(a.deficitClasses);
     });
-  }, [teacherWorkload, scheduledClassesPerWeek, attendanceRecords, reportType, workingDaysInPeriod]);
+  }, [teacherWorkload, scheduledClassesPerWeek, attendanceList, reportType, workingDaysInPeriod]);
 
   // Mesclar dados agendados com registros salvos
   const getMergedTeacherData = () => {
@@ -671,7 +701,7 @@ export default function TeacherAttendance() {
 
     return teachers.map(teacher => {
       // Buscar registro salvo
-      const savedRecord = attendanceRecords?.find(
+      const savedRecord = attendanceList.find(
         (r: AttendanceRecord) => r.teacherId === teacher.teacherId && r.date === selectedDate
       );
 
@@ -877,11 +907,11 @@ export default function TeacherAttendance() {
     }
     
     // Fallback: gerar localmente se não houver dados do backend
-    if (!attendanceRecords || attendanceRecords.length === 0) return [];
+    if (attendanceList.length === 0) return [];
 
     const reportMap: { [key: string]: AttendanceReport } = {};
 
-    attendanceRecords.forEach((record: AttendanceRecord) => {
+    attendanceList.forEach((record: AttendanceRecord) => {
       if (!reportMap[record.teacherId]) {
         reportMap[record.teacherId] = {
           teacherId: record.teacherId,
@@ -930,11 +960,11 @@ export default function TeacherAttendance() {
     }
     
     // Fallback: gerar localmente se não houver dados do backend
-    if (!attendanceRecords || attendanceRecords.length === 0) return [];
+    if (attendanceList.length === 0) return [];
 
     const deficitMap: { [key: string]: SubjectDeficit } = {};
 
-    attendanceRecords.forEach((record: AttendanceRecord) => {
+    attendanceList.forEach((record: AttendanceRecord) => {
       if (!record.classes || record.classes.length === 0) return;
 
       record.classes.forEach((cls) => {
@@ -1491,7 +1521,7 @@ export default function TeacherAttendance() {
           📝 Registro de Frequência Diária
         </h2>
 
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`mb-6 grid grid-cols-1 ${isSaturday ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               📅 Data do Registro
@@ -1509,8 +1539,34 @@ export default function TeacherAttendance() {
                 month: 'long', 
                 year: 'numeric' 
               })}
+              {isSaturday && (
+                <span className="ml-1 text-amber-600 font-semibold">— Sábado Letivo</span>
+              )}
             </p>
           </div>
+
+          {isSaturday && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                📆 Dia da Semana Correspondente
+              </label>
+              <select
+                value={saturdayWeekday}
+                onChange={(e) => setSaturdayWeekday(e.target.value)}
+                className={`input w-full ${!saturdayWeekday ? 'border-amber-400 ring-1 ring-amber-300' : 'border-green-400'}`}
+              >
+                <option value="">Selecione o dia da semana...</option>
+                <option value="monday">Segunda-feira</option>
+                <option value="tuesday">Terça-feira</option>
+                <option value="wednesday">Quarta-feira</option>
+                <option value="thursday">Quinta-feira</option>
+                <option value="friday">Sexta-feira</option>
+              </select>
+              <p className="text-xs text-amber-600 mt-1">
+                Selecione qual dia da semana este sábado letivo segue
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1533,6 +1589,33 @@ export default function TeacherAttendance() {
             </p>
           </div>
         </div>
+
+        {/* Alerta de sábado letivo */}
+        {isSaturday && !saturdayWeekday && (
+          <div className="mb-4 p-4 bg-amber-50 border-l-4 border-amber-500 rounded">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={20} />
+              <div>
+                <p className="text-sm text-amber-800 font-semibold">
+                  📆 Sábado Letivo Detectado
+                </p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Selecione o dia da semana correspondente a este sábado letivo para carregar a grade de horários correta.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isSaturday && saturdayWeekday && (
+          <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 rounded">
+            <p className="text-sm text-green-800">
+              📆 <strong>Sábado Letivo</strong> — Usando grade de horários de <strong>
+                {{ monday: 'Segunda-feira', tuesday: 'Terça-feira', wednesday: 'Quarta-feira', thursday: 'Quinta-feira', friday: 'Sexta-feira' }[saturdayWeekday]}
+              </strong>
+            </p>
+          </div>
+        )}
 
         {/* Mensagem informativa sobre o horário usado */}
         {scheduledData?.scheduleId && (

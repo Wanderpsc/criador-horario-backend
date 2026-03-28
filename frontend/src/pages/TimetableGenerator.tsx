@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
@@ -159,6 +159,13 @@ export default function TimetableGenerator() {
   const [saveTitle, setSaveTitle] = useState('');
   const [observations, setObservations] = useState<string>('');
   const [printFormat, setPrintFormat] = useState<'normal' | 'transposed'>('normal'); // Formato de impressão
+  const [subjectSearchTerm, setSubjectSearchTerm] = useState('');
+  const [currentSavedTitle, setCurrentSavedTitle] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const pendingAutoSaveRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const AUTOSAVE_KEY = 'timetable_autosave';
 
   const allWeekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
   const ACADEMIC_WEEKS_PER_YEAR = 40;
@@ -430,6 +437,74 @@ export default function TimetableGenerator() {
   useEffect(() => {
     loadSavedTimetablesList();
   }, []);
+
+  // Restaurar auto-save do localStorage ao montar
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(AUTOSAVE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.generatedTimetables && Object.keys(parsed.generatedTimetables).length > 0) {
+          setGeneratedTimetables(parsed.generatedTimetables);
+          if (parsed.lockedSlots) setLockedSlots(parsed.lockedSlots);
+          if (parsed.selectedSchedule) setSelectedSchedule(parsed.selectedSchedule);
+          console.log('🔄 Auto-save restaurado do localStorage');
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao restaurar auto-save:', e);
+    }
+  }, []);
+
+  // Salvar no localStorage quando generatedTimetables muda
+  useEffect(() => {
+    if (Object.keys(generatedTimetables).length > 0) {
+      try {
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+          generatedTimetables,
+          lockedSlots,
+          selectedSchedule,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.error('Erro ao auto-salvar:', e);
+      }
+    }
+  }, [generatedTimetables, lockedSlots, selectedSchedule]);
+
+  // Auto-save para o backend quando pendingAutoSaveRef é true
+  useEffect(() => {
+    if (!pendingAutoSaveRef.current || !currentSavedTitle || Object.keys(generatedTimetables).length === 0 || !selectedSchedule) {
+      return;
+    }
+    pendingAutoSaveRef.current = false;
+    setHasUnsavedChanges(true);
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        console.log('💾 Auto-salvando no backend:', currentSavedTitle);
+        await api.post('/generated-timetables?strictCompliance=false', {
+          scheduleId: selectedSchedule,
+          timetables: generatedTimetables,
+          title: currentSavedTitle
+        });
+        setHasUnsavedChanges(false);
+        console.log('✅ Auto-save backend concluído');
+      } catch (error) {
+        console.error('❌ Erro no auto-save backend:', error);
+      }
+    }, 1000);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [generatedTimetables, currentSavedTitle, selectedSchedule]);
 
   // Função para carregar lista de horários salvos
   const loadSavedTimetablesList = async () => {
@@ -3565,7 +3640,12 @@ export default function TimetableGenerator() {
         return;
       }
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const margin = 5;
+      const pageW = 297 - 2 * margin; // 287mm
+      const pageH = 210 - 2 * margin; // 200mm
+      // Largura fixa em pixels para renderizar o container (proporção ~A4 landscape)
+      const renderWidth = 1120;
       let isFirstPage = true;
 
       for (const container of Array.from(printContainers)) {
@@ -3574,18 +3654,50 @@ export default function TimetableGenerator() {
         }
         isFirstPage = false;
 
-        const canvas = await html2canvas(container as HTMLElement, {
-          scale: 2,
+        const el = container as HTMLElement;
+        // Salvar estilos originais
+        const origStyle = el.getAttribute('style') || '';
+        // Forçar largura fixa para captura consistente
+        el.style.width = renderWidth + 'px';
+        el.style.maxWidth = renderWidth + 'px';
+        el.style.minWidth = renderWidth + 'px';
+        el.style.padding = '12px';
+        el.style.boxShadow = 'none';
+
+        const canvas = await html2canvas(el, {
+          scale: 2.5,
           useCORS: true,
           logging: false,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          windowWidth: renderWidth + 40
         });
 
+        // Restaurar estilos originais
+        if (origStyle) {
+          el.setAttribute('style', origStyle);
+        } else {
+          el.removeAttribute('style');
+        }
+
         const imgData = canvas.toDataURL('image/png');
-        const imgWidth = 190; // largura em mm (A4 = 210mm, com margem de 10mm)
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        // Calcular proporção para caber na página mantendo aspect ratio
+        const imgAspect = canvas.width / canvas.height;
+        const pageAspect = pageW / pageH;
+        let imgW: number, imgH: number;
+        if (imgAspect > pageAspect) {
+          // Imagem mais larga proporcionalmente — ajustar pela largura
+          imgW = pageW;
+          imgH = pageW / imgAspect;
+        } else {
+          // Imagem mais alta proporcionalmente — ajustar pela altura
+          imgH = pageH;
+          imgW = pageH * imgAspect;
+        }
+        // Centralizar na página
+        const offsetX = margin + (pageW - imgW) / 2;
+        const offsetY = margin + (pageH - imgH) / 2;
         
-        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', offsetX, offsetY, imgW, imgH);
       }
 
       pdf.save(`horarios-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -3699,6 +3811,8 @@ export default function TimetableGenerator() {
           position: 'top-center',
         }
       );
+      setCurrentSavedTitle(saveTitle.trim());
+      setHasUnsavedChanges(false);
       setShowSaveDialog(false);
       setSaveTitle('');
       loadSavedTimetablesList();
@@ -3761,6 +3875,8 @@ export default function TimetableGenerator() {
       setGeneratedTimetables(loadedTimetables);
       setConflicts([]);
       setLockedSlots({});
+      setCurrentSavedTitle(title);
+      setHasUnsavedChanges(false);
       console.log('✅ setGeneratedTimetables chamado com', Object.keys(loadedTimetables).length, 'turmas');
       toast.success('✅ Horários carregados!');
     } catch (error: any) {
@@ -3832,6 +3948,7 @@ export default function TimetableGenerator() {
     });
     setSelectedSubjectForEdit(slot?.subjectId || '');
     setSelectedTeacherForEdit(slot?.teacherId || '');
+    setSubjectSearchTerm('');
   };
 
   // Função para compartilhar
@@ -3844,6 +3961,7 @@ export default function TimetableGenerator() {
     setEditModalData(null);
     setSelectedSubjectForEdit('');
     setSelectedTeacherForEdit('');
+    setSubjectSearchTerm('');
   };
 
   const handleToggleLockFromModal = () => {
@@ -3906,6 +4024,8 @@ export default function TimetableGenerator() {
     });
 
     closeEditModal();
+    pendingAutoSaveRef.current = true;
+    setHasUnsavedChanges(true);
     toast.success('Horário atualizado!');
   };
 
@@ -3938,6 +4058,8 @@ export default function TimetableGenerator() {
     });
 
     closeEditModal();
+    pendingAutoSaveRef.current = true;
+    setHasUnsavedChanges(true);
     toast.success('Aula removida!');
   };
 
@@ -4848,6 +4970,11 @@ export default function TimetableGenerator() {
                 <Download size={20} className={isSaving ? 'animate-pulse' : ''} />
                 {isSaving ? 'Salvando...' : 'Salvar'}
               </button>
+              {currentSavedTitle && (
+                <span className={`text-xs self-center ${hasUnsavedChanges ? 'text-amber-600' : 'text-green-600'}`}>
+                  {hasUnsavedChanges ? `⚠️ Alterações não salvas em "${currentSavedTitle}"` : `✅ Salvando em "${currentSavedTitle}"`}
+                </span>
+              )}
 
               <button onClick={handlePrint} className="btn btn-outline flex items-center gap-2">
                 <Printer size={20} />
@@ -4893,6 +5020,549 @@ export default function TimetableGenerator() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Horários de Todas as Turmas */}
+      {Object.keys(generatedTimetables).length > 0 && currentSchedule && (
+        <>
+          {classesForDisplay.length === 0 && (
+            <div className="card bg-amber-50 border-l-4 border-amber-500 no-print">
+              <p className="text-sm text-amber-800">
+                Nenhuma turma com horário encontrado para o filtro selecionado.
+              </p>
+            </div>
+          )}
+
+          {/* Visualização em Planilha Normal */}
+          {classesForDisplay.length > 0 && viewMode === 'spreadsheet' && printFormat === 'normal' && (
+            <div className="space-y-8">
+              {classesForDisplay.map((currentClass: any) => {
+                return (
+                  <div key={currentClass.id} className="card print-container">
+                    <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
+                      {user?.schoolName && (
+                        <h1 className="text-lg font-bold text-center text-gray-800 mb-1">{user.schoolName}</h1>
+                      )}
+                      <h2 className="text-2xl font-bold text-center text-primary-700">
+                        {currentClass.grade?.name || 'Série'} - {currentClass.name}
+                      </h2>
+                      <p className="text-center text-gray-600">
+                        {translateShift(currentClass.shift)} • {currentSchedule.name}
+                      </p>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse print-timetable-table">
+                        <thead>
+                          <tr className="bg-primary-600 text-white">
+                            <th className="border border-gray-300 p-3 text-left font-bold">Horário</th>
+                            {weekDays.map((day) => (
+                              <th key={day} className="border border-gray-300 p-3 text-center font-bold">
+                                {day}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => (
+                            <tr key={periodInfo.period} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
+                                <div className="text-sm">{periodInfo.period}º Horário</div>
+                                <div className="text-xs text-gray-600">
+                                  {periodInfo.startTime} - {periodInfo.endTime}
+                                </div>
+                              </td>
+                              {weekDays.map((day) => {
+                                const slot = getSlotData(currentClass.id, day, periodInfo.period);
+                                const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
+                                const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
+                                
+                                // Debug: mostrar se não encontrar
+                                if (slot && !subject) {
+                                  console.log(`⚠️ Disciplina não encontrada: slot.subjectId="${slot.subjectId}" | Disciplinas disponíveis:`, subjects.map(s => s.id));
+                                }
+                                if (slot && !teacher) {
+                                  console.log(`⚠️ Professor não encontrado: slot.teacherId="${slot.teacherId}" | Professores disponíveis:`, teachers.map(t => t.id));
+                                }
+                                
+                                const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                                const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                                const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
+                                const cellTitle = hasConflict
+                                  ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
+                                  : violatesAvailability
+                                    ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
+                                    : slotLocked
+                                      ? '🔒 Aula travada neste slot'
+                                      : '';
+
+                                return (
+                                  <td
+                                    key={day}
+                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
+                                    style={{
+                                      backgroundColor: hasConflict
+                                        ? '#fee2e2'
+                                        : violatesAvailability
+                                          ? '#fff7ed'
+                                          : subject?.color ? `${subject.color}20` : 'white',
+                                    }}
+                                    title={cellTitle}
+                                  >
+                                    {/* Botão de editar (aparece ao passar o mouse) */}
+                                    <button
+                                      onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
+                                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
+                                      title="Editar"
+                                    >
+                                      <Edit size={14} />
+                                    </button>
+
+                                    {slot && (
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          toggleSlotLock(currentClass.id, day, periodInfo.period);
+                                        }}
+                                        className={`absolute bottom-1 left-1 transition-opacity p-1 text-white rounded shadow-lg no-print ${
+                                          slotLocked
+                                            ? 'opacity-100 bg-slate-700 hover:bg-slate-800'
+                                            : 'opacity-0 group-hover:opacity-100 bg-slate-500 hover:bg-slate-600'
+                                        }`}
+                                        title={slotLocked ? 'Destravar aula' : 'Travar aula'}
+                                      >
+                                        {slotLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                                      </button>
+                                    )}
+                                    
+                                    {hasConflict && (
+                                      <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
+                                        ⚠️
+                                      </div>
+                                    )}
+                                    {violatesAvailability && (
+                                      <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
+                                        📵
+                                      </div>
+                                    )}
+                                    {subject && teacher ? (
+                                      <div className={hasConflict ? 'relative' : ''}>
+                                        <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
+                                          {subject.name}
+                                        </div>
+                                        <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
+                                          {teacher.name}
+                                          {violatesAvailability && <span className="ml-1">⚠️</span>}
+                                        </div>
+                                        {hasConflict && (
+                                          <div className="text-xs font-bold text-red-600 mt-1">
+                                            ⚠️ CONFLITO
+                                          </div>
+                                        )}
+                                        {violatesAvailability && (
+                                          <div className="text-xs font-bold text-orange-600 mt-1 no-print">
+                                            Fora da disp.
+                                          </div>
+                                        )}
+                                        {slotLocked && (
+                                          <div className="text-xs font-bold text-slate-700 mt-1 no-print">
+                                            🔒 Travada
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Visualização em Planilha Transposta (Períodos no topo, Turmas na lateral) */}
+          {classesForDisplay.length > 0 && viewMode === 'spreadsheet' && printFormat === 'transposed' && (
+            <div className="space-y-8">
+              {weekDays.map((day) => (
+                <div key={day} className="card print-container">
+                  <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
+                    {user?.schoolName && (
+                      <h1 className="text-lg font-bold text-center text-gray-800 mb-1">{user.schoolName}</h1>
+                    )}
+                    <h2 className="text-2xl font-bold text-center text-primary-700">
+                      {day}
+                    </h2>
+                    <p className="text-center text-gray-600">
+                      {currentSchedule.name}
+                    </p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse print-timetable-table">
+                      <thead>
+                        <tr className="bg-primary-600 text-white">
+                          <th className="border border-gray-300 p-3 text-left font-bold">Turma</th>
+                          {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => (
+                            <th key={periodInfo.period} className="border border-gray-300 p-3 text-center font-bold">
+                              <div className="text-sm">{periodInfo.period}º</div>
+                              <div className="text-xs font-normal">
+                                {periodInfo.startTime}-{periodInfo.endTime}
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classesForDisplay.map((currentClass: any) => (
+                          <tr key={currentClass.id} className="hover:bg-gray-50">
+                            <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
+                              <div className="text-sm">{currentClass.grade?.name || 'Série'}</div>
+                              <div className="text-xs text-gray-600">{currentClass.name}</div>
+                              <div className="text-xs text-gray-500">{translateShift(currentClass.shift)}</div>
+                            </td>
+                            {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
+                              const slot = getSlotData(currentClass.id, day, periodInfo.period);
+                              const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
+                              const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
+                              const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                              const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                              const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
+                              const cellTitle = hasConflict
+                                ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
+                                : violatesAvailability
+                                  ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
+                                  : slotLocked
+                                    ? '🔒 Aula travada neste slot'
+                                    : '';
+
+                              return (
+                                <td
+                                  key={periodInfo.period}
+                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
+                                  style={{
+                                    backgroundColor: hasConflict
+                                      ? '#fee2e2'
+                                      : violatesAvailability
+                                        ? '#fff7ed'
+                                        : subject?.color ? `${subject.color}20` : 'white',
+                                  }}
+                                  title={cellTitle}
+                                >
+                                  {/* Botão de editar */}
+                                  <button
+                                    onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
+                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
+                                    title="Editar"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+
+                                  {slot && (
+                                    <button
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        toggleSlotLock(currentClass.id, day, periodInfo.period);
+                                      }}
+                                      className={`absolute bottom-1 left-1 transition-opacity p-1 text-white rounded shadow-lg no-print ${
+                                        slotLocked
+                                          ? 'opacity-100 bg-slate-700 hover:bg-slate-800'
+                                          : 'opacity-0 group-hover:opacity-100 bg-slate-500 hover:bg-slate-600'
+                                      }`}
+                                      title={slotLocked ? 'Destravar aula' : 'Travar aula'}
+                                    >
+                                      {slotLocked ? <Lock size={12} /> : <Unlock size={12} />}
+                                    </button>
+                                  )}
+                                  
+                                  {hasConflict && (
+                                    <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
+                                      ⚠️
+                                    </div>
+                                  )}
+                                  {violatesAvailability && (
+                                    <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
+                                      📵
+                                    </div>
+                                  )}
+                                  {subject && teacher ? (
+                                    <div className={hasConflict ? 'relative' : ''}>
+                                      <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
+                                        {subject.name}
+                                      </div>
+                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
+                                        {teacher.name}
+                                        {violatesAvailability && <span className="ml-1">⚠️</span>}
+                                      </div>
+                                      {hasConflict && (
+                                        <div className="text-xs font-bold text-red-600 mt-1">
+                                          ⚠️ CONFLITO
+                                        </div>
+                                      )}
+                                      {violatesAvailability && (
+                                        <div className="text-xs font-bold text-orange-600 mt-1 no-print">
+                                          Fora da disp.
+                                        </div>
+                                      )}
+                                      {slotLocked && (
+                                        <div className="text-xs font-bold text-slate-700 mt-1 no-print">
+                                          🔒 Travada
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Visualização Dia a Dia */}
+          {classesForDisplay.length > 0 && viewMode === 'day-by-day' && (
+        <div className="space-y-8">
+          {classesForDisplay.map((currentClass: any) => (
+            <div key={currentClass.id} className="card print-container">
+              <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
+                {user?.schoolName && (
+                  <h1 className="text-lg font-bold text-center text-gray-800 mb-1">{user.schoolName}</h1>
+                )}
+                <h2 className="text-2xl font-bold text-center text-primary-700">
+                  {currentClass.grade?.name || 'Série'} - {currentClass.name}
+                </h2>
+                <p className="text-center text-gray-600">
+                  {translateShift(currentClass.shift)} • {currentSchedule.name}
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {weekDays.map((day) => {
+                  const dayPanel = dayLoadCounterPanels[`${currentClass.id}|${day}`] || {
+                    subjectCounters: [],
+                    teacherCounters: [],
+                    totalGeneratedInDay: 0,
+                    dayCapacity: currentSchedule.periods.length,
+                    dayMissingCapacity: currentSchedule.periods.length,
+                    subjectWeeklyTargetTotal: 0,
+                    subjectWeeklyGeneratedTotal: 0,
+                    subjectWeeklyMissingTotal: 0,
+                    teacherWeeklyTargetTotal: 0,
+                    teacherWeeklyGeneratedTotal: 0,
+                    teacherWeeklyMissingTotal: 0
+                  };
+                  const teachersWithLessonsToday = dayPanel.teacherCounters.filter(
+                    (counter) => counter.dailyGenerated > 0
+                  ).length;
+
+                  return (
+                    <div key={day} className="border border-gray-300 rounded-lg overflow-hidden">
+                      <div className="bg-primary-600 text-white p-3 font-bold text-center text-lg">
+                        {day}
+                      </div>
+
+                      <div className="flex flex-col lg:flex-row">
+                        <aside className="w-full lg:w-[25rem] border-b lg:border-b-0 lg:border-r border-gray-300 bg-slate-50 p-4 space-y-4">
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-800">Controle de Cargas</h4>
+                            <p className="text-xs text-slate-600 mt-1">
+                              Comparativo do horário gerado entre disciplina e professor.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Disciplinas na semana</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {dayPanel.subjectWeeklyGeneratedTotal}/{dayPanel.subjectWeeklyTargetTotal}
+                              </p>
+                              <p className="text-amber-700">
+                                Faltam {dayPanel.subjectWeeklyMissingTotal}
+                              </p>
+                            </div>
+
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Professores na semana</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {dayPanel.teacherWeeklyGeneratedTotal}/{dayPanel.teacherWeeklyTargetTotal}
+                              </p>
+                              <p className="text-amber-700">
+                                Faltam {dayPanel.teacherWeeklyMissingTotal}
+                              </p>
+                            </div>
+
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Turma no dia</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {dayPanel.totalGeneratedInDay}/{dayPanel.dayCapacity}
+                              </p>
+                              <p className="text-amber-700">
+                                Faltam {dayPanel.dayMissingCapacity} slot(s)
+                              </p>
+                            </div>
+
+                            <div className="rounded border border-slate-200 bg-white p-2">
+                              <p className="text-slate-500">Professores no dia</p>
+                              <p className="text-sm font-bold text-slate-800">
+                                {teachersWithLessonsToday}
+                              </p>
+                              <p className="text-slate-600">Com aula neste dia</p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700 mb-2">
+                              Disciplinas
+                            </h5>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {dayPanel.subjectCounters.length === 0 && (
+                                <div className="text-xs text-slate-500 bg-white border border-slate-200 rounded p-2">
+                                  Sem dados de disciplina para comparar.
+                                </div>
+                              )}
+
+                              {dayPanel.subjectCounters.map((counter) => (
+                                <div key={counter.subjectId} className="rounded border border-slate-200 bg-white p-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-semibold text-slate-800 leading-tight">
+                                      {counter.subjectName}
+                                    </p>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${counter.weeklyMissing > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                      {counter.weeklyMissing > 0 ? `Falta ${counter.weeklyMissing}` : 'Completo'}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-slate-600 space-y-0.5">
+                                    <p>Semana: {counter.weeklyGenerated}/{counter.weeklyTarget}</p>
+                                    <p>Dia: {counter.dailyGenerated} aula(s)</p>
+                                    <p>Anual: {counter.annualGenerated}/{counter.annualTarget}</p>
+                                    <p>Falta para incrementar: {counter.weeklyMissing} semana • {counter.annualMissing} ano</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700 mb-2">
+                              Professores
+                            </h5>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {dayPanel.teacherCounters.length === 0 && (
+                                <div className="text-xs text-slate-500 bg-white border border-slate-200 rounded p-2">
+                                  Sem dados de professor para comparar.
+                                </div>
+                              )}
+
+                              {dayPanel.teacherCounters.map((counter) => (
+                                <div key={counter.teacherId} className="rounded border border-slate-200 bg-white p-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-semibold text-slate-800 leading-tight">
+                                      {counter.teacherName}
+                                    </p>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${counter.weeklyMissing > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                      {counter.weeklyMissing > 0 ? `Falta ${counter.weeklyMissing}` : 'Completo'}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-slate-600 space-y-0.5">
+                                    <p>Semana: {counter.weeklyGenerated}/{counter.weeklyTarget}</p>
+                                    <p>Dia: {counter.dailyGenerated} geral • {counter.classDailyGenerated} na turma</p>
+                                    <p>Anual: {counter.annualGenerated}/{counter.annualTarget}</p>
+                                    <p>Falta para incrementar: {counter.weeklyMissing} semana • {counter.annualMissing} ano</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </aside>
+
+                        <div className="flex-1 overflow-x-auto">
+                          <table className="min-w-full">
+                            <thead>
+                              <tr className="bg-gray-100">
+                                <th className="border-b border-gray-300 p-3 text-left w-32">Horário</th>
+                                <th className="border-b border-gray-300 p-3 text-left">Disciplina</th>
+                                <th className="border-b border-gray-300 p-3 text-left">Professor</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
+                                const slot = getSlotData(currentClass.id, day, periodInfo.period);
+                                const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
+                                const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
+                                const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
+                                const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+
+                                return (
+                                  <tr
+                                    key={periodInfo.period}
+                                    className={`hover:bg-gray-50 ${hasConflict ? 'bg-red-50 ring-2 ring-red-500' : violatesAvailability ? 'bg-orange-50 ring-1 ring-orange-400' : ''}`}
+                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
+                                  >
+                                    <td className="border-b border-gray-200 p-3 bg-gray-50">
+                                      <div className="text-sm font-bold">{periodInfo.period}º</div>
+                                      <div className="text-xs text-gray-600">
+                                        {periodInfo.startTime} - {periodInfo.endTime}
+                                      </div>
+                                    </td>
+                                    <td
+                                      className={`border-b border-gray-200 p-3 ${hasConflict ? 'ring-2 ring-red-500' : violatesAvailability ? 'ring-1 ring-orange-400' : ''}`}
+                                      style={{
+                                        backgroundColor: hasConflict
+                                          ? '#fee2e2'
+                                          : violatesAvailability
+                                            ? '#fff7ed'
+                                            : subject?.color ? `${subject.color}20` : 'white',
+                                      }}
+                                    >
+                                      <div className={`font-semibold ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
+                                        {subject?.name || '-'}
+                                        {hasConflict && (
+                                          <span className="ml-2 text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">
+                                            ⚠️ CONFLITO
+                                          </span>
+                                        )}
+                                        {violatesAvailability && (
+                                          <span className="ml-2 text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded no-print">
+                                            📵 Fora da disp.
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className={`border-b border-gray-200 p-3 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : ''}`}>
+                                      <div className="text-sm">
+                                        {teacher?.name || '-'}
+                                        {violatesAvailability && <span className="ml-1 no-print">⚠️</span>}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+          )}
+        </>
       )}
 
       {/* Painel de Resumo Global - Disciplinas e Professores por Dia/Semana/Mês/Ano */}
@@ -5225,540 +5895,6 @@ export default function TimetableGenerator() {
         );
       })()}
 
-      {/* Horários de Todas as Turmas */}
-      {Object.keys(generatedTimetables).length > 0 && currentSchedule && (
-        <>
-          {classesForDisplay.length === 0 && (
-            <div className="card bg-amber-50 border-l-4 border-amber-500 no-print">
-              <p className="text-sm text-amber-800">
-                Nenhuma turma com horário encontrado para o filtro selecionado.
-              </p>
-            </div>
-          )}
-
-          {/* Visualização em Planilha Normal */}
-          {classesForDisplay.length > 0 && viewMode === 'spreadsheet' && printFormat === 'normal' && (
-            <div className="space-y-8">
-              {classesForDisplay.map((currentClass: any) => {
-                return (
-                  <div key={currentClass.id} className="card print-container">
-                    <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
-                      <h2 className="text-2xl font-bold text-center text-primary-700">
-                        {currentClass.grade?.name || 'Série'} - {currentClass.name}
-                      </h2>
-                      <p className="text-center text-gray-600">
-                        {translateShift(currentClass.shift)} • {currentSchedule.name}
-                      </p>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border-collapse">
-                        <thead>
-                          <tr className="bg-primary-600 text-white">
-                            <th className="border border-gray-300 p-3 text-left font-bold">Horário</th>
-                            {weekDays.map((day) => (
-                              <th key={day} className="border border-gray-300 p-3 text-center font-bold">
-                                {day}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => (
-                            <tr key={periodInfo.period} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
-                                <div className="text-sm">{periodInfo.period}º Horário</div>
-                                <div className="text-xs text-gray-600">
-                                  {periodInfo.startTime} - {periodInfo.endTime}
-                                </div>
-                              </td>
-                              {weekDays.map((day) => {
-                                const slot = getSlotData(currentClass.id, day, periodInfo.period);
-                                const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
-                                const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
-                                
-                                // Debug: mostrar se não encontrar
-                                if (slot && !subject) {
-                                  console.log(`⚠️ Disciplina não encontrada: slot.subjectId="${slot.subjectId}" | Disciplinas disponíveis:`, subjects.map(s => s.id));
-                                }
-                                if (slot && !teacher) {
-                                  console.log(`⚠️ Professor não encontrado: slot.teacherId="${slot.teacherId}" | Professores disponíveis:`, teachers.map(t => t.id));
-                                }
-                                
-                                const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
-                                const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
-                                const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
-                                const cellTitle = hasConflict
-                                  ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
-                                  : violatesAvailability
-                                    ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
-                                    : slotLocked
-                                      ? '🔒 Aula travada neste slot'
-                                      : '';
-
-                                return (
-                                  <td
-                                    key={day}
-                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
-                                    style={{
-                                      backgroundColor: hasConflict
-                                        ? '#fee2e2'
-                                        : violatesAvailability
-                                          ? '#fff7ed'
-                                          : subject?.color ? `${subject.color}20` : 'white',
-                                    }}
-                                    title={cellTitle}
-                                  >
-                                    {/* Botão de editar (aparece ao passar o mouse) */}
-                                    <button
-                                      onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
-                                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
-                                      title="Editar"
-                                    >
-                                      <Edit size={14} />
-                                    </button>
-
-                                    {slot && (
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          toggleSlotLock(currentClass.id, day, periodInfo.period);
-                                        }}
-                                        className={`absolute bottom-1 left-1 transition-opacity p-1 text-white rounded shadow-lg no-print ${
-                                          slotLocked
-                                            ? 'opacity-100 bg-slate-700 hover:bg-slate-800'
-                                            : 'opacity-0 group-hover:opacity-100 bg-slate-500 hover:bg-slate-600'
-                                        }`}
-                                        title={slotLocked ? 'Destravar aula' : 'Travar aula'}
-                                      >
-                                        {slotLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                                      </button>
-                                    )}
-                                    
-                                    {hasConflict && (
-                                      <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
-                                        ⚠️
-                                      </div>
-                                    )}
-                                    {violatesAvailability && (
-                                      <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
-                                        📵
-                                      </div>
-                                    )}
-                                    {subject && teacher ? (
-                                      <div className={hasConflict ? 'relative' : ''}>
-                                        <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
-                                          {subject.name}
-                                        </div>
-                                        <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
-                                          {teacher.name}
-                                          {violatesAvailability && <span className="ml-1">⚠️</span>}
-                                        </div>
-                                        {hasConflict && (
-                                          <div className="text-xs font-bold text-red-600 mt-1">
-                                            ⚠️ CONFLITO
-                                          </div>
-                                        )}
-                                        {violatesAvailability && (
-                                          <div className="text-xs font-bold text-orange-600 mt-1 no-print">
-                                            Fora da disp.
-                                          </div>
-                                        )}
-                                        {slotLocked && (
-                                          <div className="text-xs font-bold text-slate-700 mt-1 no-print">
-                                            🔒 Travada
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Visualização em Planilha Transposta (Períodos no topo, Turmas na lateral) */}
-          {classesForDisplay.length > 0 && viewMode === 'spreadsheet' && printFormat === 'transposed' && (
-            <div className="space-y-8">
-              {weekDays.map((day) => (
-                <div key={day} className="card print-container">
-                  <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
-                    <h2 className="text-2xl font-bold text-center text-primary-700">
-                      {day}
-                    </h2>
-                    <p className="text-center text-gray-600">
-                      {currentSchedule.name}
-                    </p>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse">
-                      <thead>
-                        <tr className="bg-primary-600 text-white">
-                          <th className="border border-gray-300 p-3 text-left font-bold">Turma</th>
-                          {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => (
-                            <th key={periodInfo.period} className="border border-gray-300 p-3 text-center font-bold">
-                              <div className="text-sm">{periodInfo.period}º</div>
-                              <div className="text-xs font-normal">
-                                {periodInfo.startTime}-{periodInfo.endTime}
-                              </div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {classesForDisplay.map((currentClass: any) => (
-                          <tr key={currentClass.id} className="hover:bg-gray-50">
-                            <td className="border border-gray-300 p-3 bg-gray-100 font-semibold">
-                              <div className="text-sm">{currentClass.grade?.name || 'Série'}</div>
-                              <div className="text-xs text-gray-600">{currentClass.name}</div>
-                              <div className="text-xs text-gray-500">{translateShift(currentClass.shift)}</div>
-                            </td>
-                            {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
-                              const slot = getSlotData(currentClass.id, day, periodInfo.period);
-                              const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
-                              const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
-                              const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
-                              const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
-                              const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
-                              const cellTitle = hasConflict
-                                ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
-                                : violatesAvailability
-                                  ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
-                                  : slotLocked
-                                    ? '🔒 Aula travada neste slot'
-                                    : '';
-
-                              return (
-                                <td
-                                  key={periodInfo.period}
-                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
-                                  style={{
-                                    backgroundColor: hasConflict
-                                      ? '#fee2e2'
-                                      : violatesAvailability
-                                        ? '#fff7ed'
-                                        : subject?.color ? `${subject.color}20` : 'white',
-                                  }}
-                                  title={cellTitle}
-                                >
-                                  {/* Botão de editar */}
-                                  <button
-                                    onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
-                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
-                                    title="Editar"
-                                  >
-                                    <Edit size={14} />
-                                  </button>
-
-                                  {slot && (
-                                    <button
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        toggleSlotLock(currentClass.id, day, periodInfo.period);
-                                      }}
-                                      className={`absolute bottom-1 left-1 transition-opacity p-1 text-white rounded shadow-lg no-print ${
-                                        slotLocked
-                                          ? 'opacity-100 bg-slate-700 hover:bg-slate-800'
-                                          : 'opacity-0 group-hover:opacity-100 bg-slate-500 hover:bg-slate-600'
-                                      }`}
-                                      title={slotLocked ? 'Destravar aula' : 'Travar aula'}
-                                    >
-                                      {slotLocked ? <Lock size={12} /> : <Unlock size={12} />}
-                                    </button>
-                                  )}
-                                  
-                                  {hasConflict && (
-                                    <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
-                                      ⚠️
-                                    </div>
-                                  )}
-                                  {violatesAvailability && (
-                                    <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
-                                      📵
-                                    </div>
-                                  )}
-                                  {subject && teacher ? (
-                                    <div className={hasConflict ? 'relative' : ''}>
-                                      <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
-                                        {subject.name}
-                                      </div>
-                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
-                                        {teacher.name}
-                                        {violatesAvailability && <span className="ml-1">⚠️</span>}
-                                      </div>
-                                      {hasConflict && (
-                                        <div className="text-xs font-bold text-red-600 mt-1">
-                                          ⚠️ CONFLITO
-                                        </div>
-                                      )}
-                                      {violatesAvailability && (
-                                        <div className="text-xs font-bold text-orange-600 mt-1 no-print">
-                                          Fora da disp.
-                                        </div>
-                                      )}
-                                      {slotLocked && (
-                                        <div className="text-xs font-bold text-slate-700 mt-1 no-print">
-                                          🔒 Travada
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Visualização Dia a Dia */}
-          {classesForDisplay.length > 0 && viewMode === 'day-by-day' && (
-        <div className="space-y-8">
-          {classesForDisplay.map((currentClass: any) => (
-            <div key={currentClass.id} className="card print-container">
-              <div className="mb-6 print-header border-b-4 border-primary-600 pb-4">
-                <h2 className="text-2xl font-bold text-center text-primary-700">
-                  {currentClass.grade?.name || 'Série'} - {currentClass.name}
-                </h2>
-                <p className="text-center text-gray-600">
-                  {translateShift(currentClass.shift)} • {currentSchedule.name}
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                {weekDays.map((day) => {
-                  const dayPanel = dayLoadCounterPanels[`${currentClass.id}|${day}`] || {
-                    subjectCounters: [],
-                    teacherCounters: [],
-                    totalGeneratedInDay: 0,
-                    dayCapacity: currentSchedule.periods.length,
-                    dayMissingCapacity: currentSchedule.periods.length,
-                    subjectWeeklyTargetTotal: 0,
-                    subjectWeeklyGeneratedTotal: 0,
-                    subjectWeeklyMissingTotal: 0,
-                    teacherWeeklyTargetTotal: 0,
-                    teacherWeeklyGeneratedTotal: 0,
-                    teacherWeeklyMissingTotal: 0
-                  };
-                  const teachersWithLessonsToday = dayPanel.teacherCounters.filter(
-                    (counter) => counter.dailyGenerated > 0
-                  ).length;
-
-                  return (
-                    <div key={day} className="border border-gray-300 rounded-lg overflow-hidden">
-                      <div className="bg-primary-600 text-white p-3 font-bold text-center text-lg">
-                        {day}
-                      </div>
-
-                      <div className="flex flex-col lg:flex-row">
-                        <aside className="w-full lg:w-[25rem] border-b lg:border-b-0 lg:border-r border-gray-300 bg-slate-50 p-4 space-y-4">
-                          <div>
-                            <h4 className="text-sm font-bold text-slate-800">Controle de Cargas</h4>
-                            <p className="text-xs text-slate-600 mt-1">
-                              Comparativo do horário gerado entre disciplina e professor.
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div className="rounded border border-slate-200 bg-white p-2">
-                              <p className="text-slate-500">Disciplinas na semana</p>
-                              <p className="text-sm font-bold text-slate-800">
-                                {dayPanel.subjectWeeklyGeneratedTotal}/{dayPanel.subjectWeeklyTargetTotal}
-                              </p>
-                              <p className="text-amber-700">
-                                Faltam {dayPanel.subjectWeeklyMissingTotal}
-                              </p>
-                            </div>
-
-                            <div className="rounded border border-slate-200 bg-white p-2">
-                              <p className="text-slate-500">Professores na semana</p>
-                              <p className="text-sm font-bold text-slate-800">
-                                {dayPanel.teacherWeeklyGeneratedTotal}/{dayPanel.teacherWeeklyTargetTotal}
-                              </p>
-                              <p className="text-amber-700">
-                                Faltam {dayPanel.teacherWeeklyMissingTotal}
-                              </p>
-                            </div>
-
-                            <div className="rounded border border-slate-200 bg-white p-2">
-                              <p className="text-slate-500">Turma no dia</p>
-                              <p className="text-sm font-bold text-slate-800">
-                                {dayPanel.totalGeneratedInDay}/{dayPanel.dayCapacity}
-                              </p>
-                              <p className="text-amber-700">
-                                Faltam {dayPanel.dayMissingCapacity} slot(s)
-                              </p>
-                            </div>
-
-                            <div className="rounded border border-slate-200 bg-white p-2">
-                              <p className="text-slate-500">Professores no dia</p>
-                              <p className="text-sm font-bold text-slate-800">
-                                {teachersWithLessonsToday}
-                              </p>
-                              <p className="text-slate-600">Com aula neste dia</p>
-                            </div>
-                          </div>
-
-                          <div>
-                            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700 mb-2">
-                              Disciplinas
-                            </h5>
-                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                              {dayPanel.subjectCounters.length === 0 && (
-                                <div className="text-xs text-slate-500 bg-white border border-slate-200 rounded p-2">
-                                  Sem dados de disciplina para comparar.
-                                </div>
-                              )}
-
-                              {dayPanel.subjectCounters.map((counter) => (
-                                <div key={counter.subjectId} className="rounded border border-slate-200 bg-white p-2">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-xs font-semibold text-slate-800 leading-tight">
-                                      {counter.subjectName}
-                                    </p>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${counter.weeklyMissing > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                      {counter.weeklyMissing > 0 ? `Falta ${counter.weeklyMissing}` : 'Completo'}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1 text-[11px] text-slate-600 space-y-0.5">
-                                    <p>Semana: {counter.weeklyGenerated}/{counter.weeklyTarget}</p>
-                                    <p>Dia: {counter.dailyGenerated} aula(s)</p>
-                                    <p>Anual: {counter.annualGenerated}/{counter.annualTarget}</p>
-                                    <p>Falta para incrementar: {counter.weeklyMissing} semana • {counter.annualMissing} ano</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700 mb-2">
-                              Professores
-                            </h5>
-                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                              {dayPanel.teacherCounters.length === 0 && (
-                                <div className="text-xs text-slate-500 bg-white border border-slate-200 rounded p-2">
-                                  Sem dados de professor para comparar.
-                                </div>
-                              )}
-
-                              {dayPanel.teacherCounters.map((counter) => (
-                                <div key={counter.teacherId} className="rounded border border-slate-200 bg-white p-2">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-xs font-semibold text-slate-800 leading-tight">
-                                      {counter.teacherName}
-                                    </p>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${counter.weeklyMissing > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                                      {counter.weeklyMissing > 0 ? `Falta ${counter.weeklyMissing}` : 'Completo'}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1 text-[11px] text-slate-600 space-y-0.5">
-                                    <p>Semana: {counter.weeklyGenerated}/{counter.weeklyTarget}</p>
-                                    <p>Dia: {counter.dailyGenerated} geral • {counter.classDailyGenerated} na turma</p>
-                                    <p>Anual: {counter.annualGenerated}/{counter.annualTarget}</p>
-                                    <p>Falta para incrementar: {counter.weeklyMissing} semana • {counter.annualMissing} ano</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </aside>
-
-                        <div className="flex-1 overflow-x-auto">
-                          <table className="min-w-full">
-                            <thead>
-                              <tr className="bg-gray-100">
-                                <th className="border-b border-gray-300 p-3 text-left w-32">Horário</th>
-                                <th className="border-b border-gray-300 p-3 text-left">Disciplina</th>
-                                <th className="border-b border-gray-300 p-3 text-left">Professor</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {currentSchedule.periods.map((periodInfo: { period: number; startTime: string; endTime: string }) => {
-                                const slot = getSlotData(currentClass.id, day, periodInfo.period);
-                                const subject = slot ? subjects.find((s: Subject) => s.id === slot.subjectId) : null;
-                                const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
-                                const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
-                                const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
-
-                                return (
-                                  <tr
-                                    key={periodInfo.period}
-                                    className={`hover:bg-gray-50 ${hasConflict ? 'bg-red-50 ring-2 ring-red-500' : violatesAvailability ? 'bg-orange-50 ring-1 ring-orange-400' : ''}`}
-                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
-                                  >
-                                    <td className="border-b border-gray-200 p-3 bg-gray-50">
-                                      <div className="text-sm font-bold">{periodInfo.period}º</div>
-                                      <div className="text-xs text-gray-600">
-                                        {periodInfo.startTime} - {periodInfo.endTime}
-                                      </div>
-                                    </td>
-                                    <td
-                                      className={`border-b border-gray-200 p-3 ${hasConflict ? 'ring-2 ring-red-500' : violatesAvailability ? 'ring-1 ring-orange-400' : ''}`}
-                                      style={{
-                                        backgroundColor: hasConflict
-                                          ? '#fee2e2'
-                                          : violatesAvailability
-                                            ? '#fff7ed'
-                                            : subject?.color ? `${subject.color}20` : 'white',
-                                      }}
-                                    >
-                                      <div className={`font-semibold ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
-                                        {subject?.name || '-'}
-                                        {hasConflict && (
-                                          <span className="ml-2 text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">
-                                            ⚠️ CONFLITO
-                                          </span>
-                                        )}
-                                        {violatesAvailability && (
-                                          <span className="ml-2 text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded no-print">
-                                            📵 Fora da disp.
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className={`border-b border-gray-200 p-3 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : ''}`}>
-                                      <div className="text-sm">
-                                        {teacher?.name || '-'}
-                                        {violatesAvailability && <span className="ml-1 no-print">⚠️</span>}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-          )}
-        </>
-      )}
-
       {/* Instruções */}
       {Object.keys(generatedTimetables).length === 0 && (
         <div className="card bg-blue-50 border-l-4 border-blue-500 no-print">
@@ -5901,15 +6037,25 @@ export default function TimetableGenerator() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Disciplina *
                 </label>
+                <input
+                  type="text"
+                  placeholder="Buscar disciplina..."
+                  value={subjectSearchTerm}
+                  onChange={(e) => setSubjectSearchTerm(e.target.value)}
+                  className="input w-full mb-1"
+                  disabled={editModalData.isLocked}
+                />
                 <select
+                  size={6}
                   value={selectedSubjectForEdit}
                   onChange={(e) => setSelectedSubjectForEdit(e.target.value)}
                   className="input w-full"
                   disabled={editModalData.isLocked}
                 >
-                  <option value="">Selecione a disciplina</option>
                   {subjects
                     .filter((s: Subject) => s.isActive !== false)
+                    .filter((s: Subject) => s.name.toLowerCase().includes(subjectSearchTerm.toLowerCase()))
+                    .sort((a: Subject, b: Subject) => a.name.localeCompare(b.name, 'pt-BR'))
                     .map((subject: Subject) => (
                       <option key={subject.id} value={subject.id}>
                         {subject.name}
