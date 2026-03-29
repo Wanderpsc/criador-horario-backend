@@ -861,17 +861,17 @@ const SchoolCalendar: React.FC = () => {
             {/* Coluna 4 — Horários */}
             <div className="space-y-2 min-w-0">
               <h4 className="font-semibold text-xs uppercase tracking-wider text-gray-500 border-b pb-1">Horários</h4>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 border border-green-300 flex-shrink-0 whitespace-nowrap">
                   <Check className="w-3 h-3" /> NORMAL
                 </span>
-                <span className="text-sm text-gray-700">Regular ativo</span>
+                <span className="text-sm text-gray-700 truncate">Ativo</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 border border-red-300 flex-shrink-0 whitespace-nowrap">
                   <AlertTriangle className="w-3 h-3" /> EMERG.
                 </span>
-                <span className="text-sm text-gray-700">Emergencial</span>
+                <span className="text-sm text-gray-700 truncate">Emergencial</span>
               </div>
             </div>
 

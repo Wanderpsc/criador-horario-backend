@@ -149,13 +149,6 @@ export default function TeacherAttendance() {
     return d.getDay() === 6; // 6 = sábado
   }, [selectedDate]);
 
-  // Resetar saturdayWeekday quando mudar a data e não for sábado
-  useEffect(() => {
-    if (!isSaturday) {
-      setSaturdayWeekday('');
-    }
-  }, [selectedDate, isSaturday]);
-
   // Calcular datas automáticas baseado no tipo de relatório
   const getDateRangeForReportType = () => {
     const date = new Date(selectedDate + 'T12:00:00');
@@ -276,6 +269,24 @@ export default function TeacherAttendance() {
     },
     enabled: !!user?.schoolId
   });
+
+  // Auto-popular saturdayWeekday do calendário, ou resetar se não for sábado
+  useEffect(() => {
+    if (!isSaturday) {
+      setSaturdayWeekday('');
+      return;
+    }
+    // Buscar followWeekday do SchoolDay no calendário
+    if (calendarData && Array.isArray(calendarData)) {
+      const schoolDay = calendarData.find((d: any) => {
+        const dDate = new Date(d.date).toISOString().split('T')[0];
+        return dDate === selectedDate;
+      });
+      if (schoolDay?.followWeekday) {
+        setSaturdayWeekday(schoolDay.followWeekday);
+      }
+    }
+  }, [selectedDate, isSaturday, calendarData]);
 
   // Buscar horário completo do timetable selecionado
   const { data: selectedTimetableData } = useQuery({
