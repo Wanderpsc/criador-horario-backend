@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Check, X, Plus, Edit2, Trash2, Download, FileText, AlertTriangle } from 'lucide-react';
+import { Calendar, Check, X, Plus, Edit2, Trash2, Download, FileText, AlertTriangle, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { schoolDayAPI, scheduleAPI, emergencyScheduleAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -442,6 +442,201 @@ const SchoolCalendar: React.FC = () => {
     return compareDate < today;
   };
 
+  const handlePrint = () => {
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
+    const monthName = selectedMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const days = getDaysInMonth();
+    const monthStats = getMonthStatistics();
+    const ytdStats = getYearToDateStatistics();
+    const weekdayLabels: Record<string, string> = {
+      monday: 'Segunda-feira',
+      tuesday: 'Terça-feira',
+      wednesday: 'Quarta-feira',
+      thursday: 'Quinta-feira',
+      friday: 'Sexta-feira',
+    };
+
+    // Build calendar rows
+    let calendarRows = '';
+    for (let i = 0; i < days.length; i += 7) {
+      const week = days.slice(i, i + 7);
+      calendarRows += '<tr>';
+      week.forEach(date => {
+        if (date.getTime() === 0) {
+          calendarRows += '<td class="empty"></td>';
+          return;
+        }
+        const schoolDay = getSchoolDayForDate(date);
+        const isPast = isDayPast(date);
+        let cellClass = '';
+        let content = `<div class="day-number">${date.getDate()}</div>`;
+
+        if (schoolDay) {
+          cellClass = schoolDay.dayType;
+          if (schoolDay.isCompleted) cellClass += ' completed';
+          if (isPast && !schoolDay.isCompleted && (schoolDay.dayType === 'regular' || schoolDay.dayType === 'saturday')) {
+            cellClass += ' past-incomplete';
+          }
+
+          content += `<div class="day-type">${getDayTypeLabel(schoolDay.dayType)}</div>`;
+
+          if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
+            content += `<div class="follow-weekday">📅 Segue: ${weekdayLabels[schoolDay.followWeekday] || schoolDay.followWeekday}</div>`;
+          }
+
+          if (schoolDay.notes) {
+            content += `<div class="notes">📝 ${schoolDay.notes.replace(/\n/g, ', ')}</div>`;
+          }
+
+          if (schoolDay.isCompleted) {
+            content += '<div class="status completed-status">✓ Cumprido</div>';
+          } else {
+            content += '<div class="status pending-status">○ Pendente</div>';
+          }
+        }
+
+        calendarRows += `<td class="${cellClass}">${content}</td>`;
+      });
+      calendarRows += '</tr>';
+    }
+
+    // Saturday reference summary
+    const saturdayDays = schoolDays.filter(d => d.dayType === 'saturday' && d.followWeekday);
+    let saturdayRefHtml = '';
+    if (saturdayDays.length > 0) {
+      saturdayRefHtml = `
+        <div class="saturday-ref">
+          <h3>📅 Sábados Letivos — Correspondência de Dias</h3>
+          <table class="ref-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Segue horário de</th>
+                <th>Observações</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${saturdayDays.map(d => {
+                const dateObj = new Date(d.date + 'T12:00:00');
+                return `<tr>
+                  <td>${dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
+                  <td><strong>${weekdayLabels[d.followWeekday!] || d.followWeekday}</strong></td>
+                  <td>${d.notes ? d.notes.replace(/\n/g, ', ') : '—'}</td>
+                  <td>${d.isCompleted ? '✓ Cumprido' : '○ Pendente'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    const printHtml = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Calendário Letivo — ${monthName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; color: #222; padding: 20px; }
+    h1 { text-align: center; font-size: 22px; margin-bottom: 4px; }
+    .subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 16px; }
+    .stats-bar { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; font-size: 12px; }
+    .stats-bar span { padding: 4px 10px; border-radius: 4px; }
+    .stats-bar .regular { background: #dbeafe; color: #1e40af; }
+    .stats-bar .saturday { background: #f3e8ff; color: #7c3aed; }
+    .stats-bar .total { background: #d1fae5; color: #065f46; font-weight: bold; }
+    .stats-bar .cumpridos { background: #fef3c7; color: #92400e; }
+
+    table.calendar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    table.calendar th { background: #f3f4f6; padding: 6px; text-align: center; font-size: 12px; border: 1px solid #d1d5db; }
+    table.calendar td { border: 1px solid #d1d5db; vertical-align: top; padding: 4px; min-height: 80px; height: 90px; font-size: 11px; }
+    table.calendar td.empty { background: #f9fafb; }
+
+    .day-number { font-weight: bold; font-size: 14px; margin-bottom: 2px; }
+    .day-type { font-size: 10px; font-weight: bold; margin-bottom: 2px; }
+    .follow-weekday { font-size: 10px; color: #7c3aed; font-weight: bold; background: #f3e8ff; padding: 1px 4px; border-radius: 3px; margin-bottom: 2px; }
+    .notes { font-size: 9px; color: #555; font-style: italic; margin-bottom: 2px; word-break: break-word; }
+    .status { font-size: 9px; font-weight: bold; }
+    .completed-status { color: #047857; }
+    .pending-status { color: #9ca3af; }
+
+    td.regular { background: #eff6ff; }
+    td.regular.completed { background: #93c5fd; }
+    td.saturday { background: #f5f3ff; border: 2px solid #a78bfa !important; }
+    td.saturday.completed { background: #c4b5fd; border: 2px solid #7c3aed !important; }
+    td.holiday { background: #fef2f2; }
+    td.recess { background: #fefce8; }
+    td.past-incomplete { background: #e5e7eb !important; opacity: 0.8; }
+
+    .saturday-ref { margin-top: 20px; page-break-inside: avoid; }
+    .saturday-ref h3 { font-size: 14px; margin-bottom: 8px; color: #7c3aed; border-bottom: 2px solid #a78bfa; padding-bottom: 4px; }
+    table.ref-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.ref-table th { background: #f5f3ff; padding: 6px 8px; text-align: left; border: 1px solid #d1d5db; color: #7c3aed; }
+    table.ref-table td { padding: 5px 8px; border: 1px solid #d1d5db; }
+    table.ref-table tr:nth-child(even) { background: #faf5ff; }
+
+    .legend { margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; justify-content: center; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-color { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #999; display: inline-block; }
+
+    .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 8px; }
+
+    @media print {
+      body { padding: 10px; }
+      @page { size: landscape; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 Calendário Letivo — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}</h1>
+  <div class="subtitle">Gerado em ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+
+  <div class="stats-bar">
+    <span class="regular">Regulares: ${monthStats.regularDays}</span>
+    <span class="saturday">Sábados Letivos: ${monthStats.saturdayDays}</span>
+    <span class="total">Total Mês: ${monthStats.totalSchoolDays}</span>
+    <span class="cumpridos">Cumpridos: ${monthStats.completedSchoolDays}</span>
+    <span class="total">Acumulado Ano: ${ytdStats.totalSchoolDays}</span>
+  </div>
+
+  <table class="calendar">
+    <thead>
+      <tr>
+        <th>Dom</th><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th><th>Sáb</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${calendarRows}
+    </tbody>
+  </table>
+
+  ${saturdayRefHtml}
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-color" style="background:#eff6ff;border-color:#93c5fd"></span> Regular Pendente</div>
+    <div class="legend-item"><span class="legend-color" style="background:#93c5fd;border-color:#2563eb"></span> Regular Cumprido</div>
+    <div class="legend-item"><span class="legend-color" style="background:#f5f3ff;border-color:#a78bfa"></span> Sábado Letivo Pendente</div>
+    <div class="legend-item"><span class="legend-color" style="background:#c4b5fd;border-color:#7c3aed"></span> Sábado Letivo Cumprido</div>
+    <div class="legend-item"><span class="legend-color" style="background:#fef2f2;border-color:#f87171"></span> Feriado</div>
+    <div class="legend-item"><span class="legend-color" style="background:#fefce8;border-color:#facc15"></span> Recesso</div>
+    <div class="legend-item"><span class="legend-color" style="background:#e5e7eb;border-color:#6b7280"></span> Passado não cumprido</div>
+  </div>
+
+  <div class="footer">© ${new Date().getFullYear()} Wander Pires Silva Coelho — Sistema Criador de Horário de Aula</div>
+
+  <script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+    }
+  };
+
   const previousMonth = () => {
     setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1));
   };
@@ -457,19 +652,29 @@ const SchoolCalendar: React.FC = () => {
           <Calendar className="w-8 h-8" />
           Calendário Letivo
         </h1>
-        <button
-          onClick={() => {
-            setEditingDay(null);
-            setFormData({ date: '', dayType: 'regular', scheduleId: '', notes: '', followWeekday: '' });
-            setSelectedNotes([]);
-            setSearchNote('');
-            setShowModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Novo Dia Letivo
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handlePrint}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+            title="Imprimir Calendário Letivo"
+          >
+            <Printer className="w-5 h-5" />
+            Imprimir
+          </button>
+          <button
+            onClick={() => {
+              setEditingDay(null);
+              setFormData({ date: '', dayType: 'regular', scheduleId: '', notes: '', followWeekday: '' });
+              setSelectedNotes([]);
+              setSearchNote('');
+              setShowModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Novo Dia Letivo
+          </button>
+        </div>
       </div>
 
       {/* Statistics Cards */}

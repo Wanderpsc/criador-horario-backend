@@ -89,7 +89,7 @@ const TeacherFrequencyReport: React.FC = () => {
       detail => detail.className.toLowerCase().includes(filterClass.toLowerCase())
     );
     return teacherMatch && subjectMatch && classMatch;
-  }) || [];
+  }).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR')) || [];
 
   // Calcular estatísticas gerais
   const totalDeficit = filteredReports.reduce((sum, r) => sum + r.totalDeficit, 0);
@@ -394,20 +394,30 @@ const TeacherFrequencyReport: React.FC = () => {
                             <td className="px-4 py-2 text-center">{detail.predictedClasses}</td>
                             <td className="px-4 py-2 text-center">{detail.givenClasses}</td>
                             <td className="px-4 py-2 text-center">
-                              {detail.deficit > 0 && (
-                                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-                                  ❌ -{detail.deficit} aulas
-                                </span>
-                              )}
-                              {detail.surplus > 0 && (
+                              {detail.predictedClasses > 0 ? (
+                                <>
+                                  {detail.deficit > 0 && (
+                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                                      ❌ -{detail.deficit} aulas ({Math.round((detail.givenClasses / detail.predictedClasses) * 100)}%)
+                                    </span>
+                                  )}
+                                  {detail.surplus > 0 && (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                      ✅ +{detail.surplus} aulas ({Math.round((detail.givenClasses / detail.predictedClasses) * 100)}%)
+                                    </span>
+                                  )}
+                                  {detail.deficit === 0 && detail.surplus === 0 && (
+                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                      ✓ 100% Em dia
+                                    </span>
+                                  )}
+                                </>
+                              ) : detail.givenClasses > 0 ? (
                                 <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                                  ✅ +{detail.surplus} aulas
+                                  ✅ +{detail.givenClasses} aulas extras
                                 </span>
-                              )}
-                              {detail.deficit === 0 && detail.surplus === 0 && (
-                                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                                  ✓ Em dia
-                                </span>
+                              ) : (
+                                <span className="text-gray-400 text-xs">Sem aulas previstas</span>
                               )}
                             </td>
                           </tr>

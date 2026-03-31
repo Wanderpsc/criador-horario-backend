@@ -38,14 +38,13 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
     // Buscar disciplinas que o professor leciona (campos são String, não ObjectId refs)
     const teacherSubjects = await TeacherSubject.find({ teacherId, schoolId });
 
-    // Buscar dias letivos do mês (regular + saturday)
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const lastDay = new Date(Number(year), Number(month), 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+    // Buscar dias letivos do mês (regular + saturday) — usar Date objects para query correta
+    const startOfMonth = new Date(Number(year), Number(month) - 1, 1);
+    const endOfMonth = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
 
     const schoolDays = await SchoolDay.find({
       schoolId,
-      date: { $gte: startDate, $lte: endDate },
+      date: { $gte: startOfMonth, $lte: endOfMonth },
       dayType: { $in: ['regular', 'saturday'] }
     });
 
@@ -150,13 +149,17 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
     const reports = [];
 
     // Pré-carregar dados compartilhados (fora do loop de professores para performance)
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    // Usar Date objects para query correta (SchoolDay.date é campo Date)
+    const startOfMonth = new Date(Number(year), Number(month) - 1, 1);
+    const endOfMonth = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
+    // Strings para query de TeacherAttendance (date é campo String)
+    const startDateStr = `${year}-${String(month).padStart(2, '0')}-01`;
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+    const endDateStr = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
     const schoolDays = await SchoolDay.find({
       schoolId,
-      date: { $gte: startDate, $lte: endDate },
+      date: { $gte: startOfMonth, $lte: endOfMonth },
       dayType: { $in: ['regular', 'saturday'] }
     });
 
@@ -208,11 +211,11 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         schoolId 
       });
 
-      // Buscar registros de frequência do mês
+      // Buscar registros de frequência do mês (TeacherAttendance.date é String)
       const attendanceRecords = await TeacherAttendance.find({
         schoolId,
         teacherId: teacher._id,
-        date: { $gte: startDate, $lte: endDate }
+        date: { $gte: startDateStr, $lte: endDateStr }
       });
 
       const subjectClassDetails = [];
@@ -365,6 +368,9 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         });
       }
     }
+
+    // Ordenar relatórios alfabeticamente por nome do professor
+    reports.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR'));
 
     res.json({
       month,

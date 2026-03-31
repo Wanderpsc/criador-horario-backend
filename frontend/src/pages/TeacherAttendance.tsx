@@ -22,7 +22,8 @@ import {
   Maximize2,
   ChevronUp,
   ChevronDown,
-  DollarSign
+  DollarSign,
+  Search
 } from 'lucide-react';
 
 interface ClassAttendance {
@@ -142,6 +143,7 @@ export default function TeacherAttendance() {
   const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
   const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
   const [paymentReceiptData, setPaymentReceiptData] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Detectar se a data selecionada é um sábado
   const isSaturday = useMemo(() => {
@@ -671,23 +673,29 @@ export default function TeacherAttendance() {
         return savedRecord;
       }
 
-      // Usar dados agendados com status pending
+      // Usar dados agendados com status presente (padrão até que se marque falta)
+      const defaultClasses = (teacher.classes || []).map((cls: any) => ({ ...cls, status: 'present' as const }));
       return {
         teacherId: teacher.teacherId,
         teacherName: teacher.teacherName,
         date: selectedDate,
         dayOfWeek: scheduledData?.dayOfWeek || '',
-        classes: teacher.classes || [],
-        totalScheduledClasses: teacher.classes?.length || 0,
-        totalPresentClasses: 0,
+        classes: defaultClasses,
+        totalScheduledClasses: defaultClasses.length,
+        totalPresentClasses: defaultClasses.length,
         totalAbsentClasses: 0,
-        totalPendingClasses: teacher.classes?.length || 0,
-        attendanceRate: 0
+        totalPendingClasses: 0,
+        attendanceRate: defaultClasses.length > 0 ? 100 : 0
       };
-    });
+    }).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR'));
   };
 
   const mergedData = getMergedTeacherData();
+
+  // Filtrar por busca de professor
+  const displayTeachers = searchQuery.trim()
+    ? mergedData.filter(t => t.teacherName.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+    : mergedData;
 
   // Expandir/Recolher todos os professores
   const toggleAllTeachers = () => {
@@ -1667,6 +1675,35 @@ export default function TeacherAttendance() {
           </>
         )}
 
+        {/* Campo de busca por professor */}
+        {mergedData.length > 0 && (
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="🔍 Buscar professor por nome..."
+                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-lg"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <p className="text-sm text-gray-500 mt-1">
+                Mostrando {displayTeachers.length} de {mergedData.length} professor(es)
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Lista de Professores com Aulas */}
         <div className="space-y-4">
           {mergedData.length === 0 ? (
@@ -1709,8 +1746,14 @@ export default function TeacherAttendance() {
                 </div>
               )}
             </div>
+          ) : displayTeachers.length === 0 ? (
+            <div className="text-center p-8 bg-yellow-50 rounded-lg border-2 border-dashed border-yellow-300">
+              <Search className="mx-auto text-yellow-400 mb-3" size={48} />
+              <p className="text-yellow-700 font-semibold mb-2">Nenhum professor encontrado para "{searchQuery}"</p>
+              <p className="text-sm text-yellow-600">Tente outro termo de busca</p>
+            </div>
           ) : (
-            mergedData.map((teacher: AttendanceRecord) => {
+            displayTeachers.map((teacher: AttendanceRecord) => {
               const isExpanded = expandedTeachers.has(teacher.teacherId);
               const hasAbsent = teacher.totalAbsentClasses > 0;
               const allPresent = teacher.totalPresentClasses === teacher.totalScheduledClasses;
