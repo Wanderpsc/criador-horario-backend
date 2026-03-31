@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import PrintHeader from './PrintHeader';
 import { 
   Home, 
   Users, 
@@ -622,6 +623,7 @@ export default function Layout() {
 
           {/* Page content */}
           <div className="p-6">
+            <PrintHeader />
             <Outlet />
           </div>
 

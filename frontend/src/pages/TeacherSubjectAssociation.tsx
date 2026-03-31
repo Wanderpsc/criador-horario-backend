@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
 import { Search, X } from 'lucide-react';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss } from '../utils/printHeader';
 
 interface Teacher {
   id: string;
@@ -261,7 +262,8 @@ const TeacherSubjectAssociation: React.FC = () => {
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const header = await loadPrintHeader();
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -295,6 +297,7 @@ const TeacherSubjectAssociation: React.FC = () => {
             line-height: 1.4;
             color: #000;
           }
+          ${printHeaderCss}
           .header {
             text-align: center;
             margin-bottom: 30px;
@@ -373,6 +376,7 @@ const TeacherSubjectAssociation: React.FC = () => {
         </style>
       </head>
       <body>
+        ${buildPrintHeaderHtml(header)}
         <div class="header">
           <h1>${user?.schoolName || 'Escola'}</h1>
           <h2>Lotação de Professores</h2>
@@ -428,7 +432,8 @@ const TeacherSubjectAssociation: React.FC = () => {
     printWindow.document.close();
   };
 
-  const handlePrintBySubject = () => {
+  const handlePrintBySubject = async () => {
+    const header = await loadPrintHeader();
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -462,6 +467,7 @@ const TeacherSubjectAssociation: React.FC = () => {
             line-height: 1.4;
             color: #000;
           }
+          ${printHeaderCss}
           .header {
             text-align: center;
             margin-bottom: 30px;
@@ -535,6 +541,7 @@ const TeacherSubjectAssociation: React.FC = () => {
         </style>
       </head>
       <body>
+        ${buildPrintHeaderHtml(header)}
         <div class="header">
           <h1>${user?.schoolName || 'Escola'}</h1>
           <h2>Componentes Curriculares e Professores Lotados</h2>

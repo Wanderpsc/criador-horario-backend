@@ -1,7 +1,8 @@
-import { Building, Save, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Building, Save, User, Printer, Upload, X, Eye } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { invalidatePrintHeaderCache, buildPrintHeaderHtml, printHeaderCss, type PrintHeaderData } from '../utils/printHeader';
 
 interface ResponsibleData {
   responsibleName: string;
@@ -27,8 +28,20 @@ export default function SchoolSettings() {
   const [loading, setLoading] = useState(false);
   const [editingResponsible, setEditingResponsible] = useState(false);
 
+  // Print Header States
+  const [printHeaderData, setPrintHeaderData] = useState<PrintHeaderData>({
+    emblemBase64: '',
+    line1: '',
+    line2: '',
+    line3: '',
+  });
+  const [editingPrintHeader, setEditingPrintHeader] = useState(false);
+  const [savingPrintHeader, setSavingPrintHeader] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     loadSchoolData();
+    loadPrintHeaderData();
   }, []);
 
   const loadSchoolData = async () => {
@@ -53,6 +66,73 @@ export default function SchoolSettings() {
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
     }
+  };
+
+  const loadPrintHeaderData = async () => {
+    try {
+      const response = await api.get('/schools/print-header');
+      if (response.data.success) {
+        setPrintHeaderData({
+          emblemBase64: response.data.data.printHeader?.emblemBase64 || '',
+          line1: response.data.data.printHeader?.line1 || '',
+          line2: response.data.data.printHeader?.line2 || '',
+          line3: response.data.data.printHeader?.line3 || '',
+          schoolName: response.data.data.schoolName || '',
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar cabeçalho:', error);
+    }
+  };
+
+  const handleSavePrintHeader = async () => {
+    setSavingPrintHeader(true);
+    try {
+      await api.put('/schools/print-header', {
+        emblemBase64: printHeaderData.emblemBase64,
+        line1: printHeaderData.line1,
+        line2: printHeaderData.line2,
+        line3: printHeaderData.line3,
+      });
+      invalidatePrintHeaderCache();
+      toast.success('Cabeçalho de impressão salvo com sucesso!');
+      setEditingPrintHeader(false);
+    } catch (error: any) {
+      console.error('Erro ao salvar cabeçalho:', error);
+      toast.error(error.response?.data?.message || 'Erro ao salvar cabeçalho');
+    } finally {
+      setSavingPrintHeader(false);
+    }
+  };
+
+  const handleEmblemUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Imagem muito grande (máximo 2MB)');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Arquivo deve ser uma imagem (PNG, JPG, etc.)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setPrintHeaderData({ ...printHeaderData, emblemBase64: ev.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePreviewPrintHeader = () => {
+    const headerHtml = buildPrintHeaderHtml(printHeaderData);
+    const win = window.open('', '_blank', 'width=700,height=300');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pré-visualização do Cabeçalho</title><style>
+      body { font-family: Arial, sans-serif; margin: 30px; background: #f5f5f5; }
+      .preview-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+      ${printHeaderCss}
+    </style></head><body><div class="preview-box">${headerHtml || '<p style="text-align:center;color:#999;">Nenhum cabeçalho configurado</p>'}</div></body></html>`);
+    win.document.close();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -280,6 +360,184 @@ export default function SchoolSettings() {
                 onChange={(e) => setResponsibleData({...responsibleData, responsibleEmail: e.target.value})}
                 placeholder="email@exemplo.com"
                 required
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Cabeçalho de Impressão */}
+      <div className="mt-8 card">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Printer className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-2xl font-bold text-gray-900">Cabeçalho de Impressão</h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePreviewPrintHeader}
+              className="btn bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Pré-visualizar
+            </button>
+            {!editingPrintHeader ? (
+              <button
+                onClick={() => setEditingPrintHeader(true)}
+                className="btn btn-primary"
+              >
+                Editar
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditingPrintHeader(false);
+                    loadPrintHeaderData();
+                  }}
+                  className="btn bg-gray-300 text-gray-700 hover:bg-gray-400"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSavePrintHeader}
+                  disabled={savingPrintHeader}
+                  className="btn btn-primary flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {savingPrintHeader ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-6">
+          🖨️ Configure o cabeçalho padrão que aparecerá em todas as impressões do sistema: lista de professores, lotação, horários, calendário letivo, relatórios de frequência e demais relatórios.
+        </p>
+
+        {!editingPrintHeader ? (
+          <div className="space-y-4">
+            {/* Preview estático */}
+            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 bg-gray-50">
+              <div className="flex items-center justify-center gap-4">
+                {printHeaderData.emblemBase64 ? (
+                  <img
+                    src={printHeaderData.emblemBase64}
+                    alt="Emblema"
+                    className="w-16 h-16 object-contain rounded"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs text-center">
+                    Sem emblema
+                  </div>
+                )}
+                <div className="text-center">
+                  <p className="text-lg font-bold text-indigo-900">
+                    {printHeaderData.line1 || printHeaderData.schoolName || <span className="text-orange-500 italic text-sm">Linha 1 não definida</span>}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {printHeaderData.line2 || <span className="text-orange-500 italic text-xs">Linha 2 não definida</span>}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {printHeaderData.line3 || <span className="text-orange-500 italic text-xs">Linha 3 não definida</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Upload Emblema */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Emblema / Brasão / Logotipo
+              </label>
+              <div className="flex items-center gap-4">
+                {printHeaderData.emblemBase64 ? (
+                  <div className="relative">
+                    <img
+                      src={printHeaderData.emblemBase64}
+                      alt="Emblema"
+                      className="w-20 h-20 object-contain rounded border-2 border-indigo-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPrintHeaderData({ ...printHeaderData, emblemBase64: '' })}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-20 h-20 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                  >
+                    <Upload className="w-6 h-6 text-gray-400" />
+                    <span className="text-xs text-gray-400 mt-1">Upload</span>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEmblemUpload}
+                  className="hidden"
+                />
+                <div className="text-sm text-gray-500">
+                  <p>Formatos aceitos: PNG, JPG, SVG</p>
+                  <p>Tamanho máximo: 2MB</p>
+                  {printHeaderData.emblemBase64 && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-indigo-600 hover:underline mt-1"
+                    >
+                      Trocar imagem
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Linhas do cabeçalho */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 1 — Nome da Instituição / Secretaria
+              </label>
+              <input
+                type="text"
+                className="input"
+                value={printHeaderData.line1}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line1: e.target.value })}
+                placeholder="Ex: Secretaria de Estado da Educação do Piauí"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 2 — Subtítulo / Nome da Escola
+              </label>
+              <input
+                type="text"
+                className="input"
+                value={printHeaderData.line2}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line2: e.target.value })}
+                placeholder="Ex: Centro Estadual de Tempo Integral - CETI"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 3 — Endereço / Informação Complementar
+              </label>
+              <input
+                type="text"
+                className="input"
+                value={printHeaderData.line3}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line3: e.target.value })}
+                placeholder="Ex: Rua das Flores, 123 - Teresina/PI - CEP 64000-000"
               />
             </div>
           </div>

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { scheduleAPI, teacherAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit2, Trash2, X, Printer, Download, FileSpreadsheet } from 'lucide-react';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss } from '../utils/printHeader';
 
 interface TeacherAvailability {
   [day: string]: { // 'segunda', 'terça', etc.
@@ -196,7 +197,8 @@ export default function Teachers() {
   };
 
   // Função para imprimir em formato de planilha
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const header = await loadPrintHeader();
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -221,6 +223,7 @@ export default function Teachers() {
             line-height: 1.3;
             color: #000;
           }
+          ${printHeaderCss}
           .header {
             text-align: center;
             margin-bottom: 20px;
@@ -283,6 +286,7 @@ export default function Teachers() {
         </style>
       </head>
       <body>
+        ${buildPrintHeaderHtml(header)}
         <div class="header">
           <h1>${user?.schoolName || 'Escola'}</h1>
           <h2>Lista de Professores Cadastrados</h2>

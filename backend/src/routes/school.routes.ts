@@ -242,4 +242,70 @@ router.put('/responsible', auth, async (req: any, res: Response) => {
   }
 });
 
+/**
+ * GET /api/schools/print-header
+ * Retorna o cabeçalho de impressão da escola
+ */
+router.get('/print-header', auth, async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    const school = await User.findById(req.user.schoolId || req.user.id).select('printHeader schoolName');
+    if (!school) {
+      return res.status(404).json({ success: false, message: 'Escola não encontrada' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        printHeader: school.printHeader || {},
+        schoolName: school.schoolName || ''
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao buscar cabeçalho:', error);
+    return res.status(500).json({ success: false, message: 'Erro ao buscar cabeçalho', error: error.message });
+  }
+});
+
+/**
+ * PUT /api/schools/print-header
+ * Atualiza o cabeçalho de impressão da escola
+ */
+router.put('/print-header', auth, async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ success: false, message: 'Não autenticado' });
+    }
+
+    const { emblemBase64, line1, line2, line3 } = req.body;
+
+    // Validar tamanho do base64 (max ~2MB)
+    if (emblemBase64 && emblemBase64.length > 2 * 1024 * 1024) {
+      return res.status(400).json({ success: false, message: 'Imagem muito grande (máximo 2MB)' });
+    }
+
+    const updatedSchool = await User.findByIdAndUpdate(
+      req.user.id,
+      { printHeader: { emblemBase64, line1, line2, line3 } },
+      { new: true }
+    ).select('printHeader');
+
+    if (!updatedSchool) {
+      return res.status(404).json({ success: false, message: 'Escola não encontrada' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Cabeçalho de impressão atualizado com sucesso',
+      data: updatedSchool.printHeader
+    });
+  } catch (error: any) {
+    console.error('❌ Erro ao atualizar cabeçalho:', error);
+    return res.status(500).json({ success: false, message: 'Erro ao atualizar cabeçalho', error: error.message });
+  }
+});
+
 export default router;

@@ -57,6 +57,14 @@ export interface IUser extends Document {
   privacyVersion?: string;
   copyrightAcknowledged: boolean;
   
+  // Cabeçalho de Impressão
+  printHeader?: {
+    emblemBase64?: string;
+    line1?: string;
+    line2?: string;
+    line3?: string;
+  };
+
   // Recuperação de senha
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
@@ -127,6 +135,14 @@ const userSchema = new Schema<IUser>(
     privacyVersion: { type: String },
     copyrightAcknowledged: { type: Boolean, default: false },
     
+    // Cabeçalho de Impressão
+    printHeader: {
+      emblemBase64: { type: String },
+      line1: { type: String },
+      line2: { type: String },
+      line3: { type: String },
+    },
+
     // Recuperação de senha
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
