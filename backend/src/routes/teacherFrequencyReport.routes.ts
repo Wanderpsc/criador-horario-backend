@@ -225,6 +225,16 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       // Rastrear pares subjectId+classId já processados via TeacherSubject
       const processedPairs = new Set<string>();
 
+      // Indexar registros de frequência por data para lookup rápido
+      const attendanceByDate = new Map<string, any>();
+      for (const record of attendanceRecords) {
+        attendanceByDate.set(record.date, record);
+      }
+
+      // Data de hoje para saber quais dias já passaram
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
       for (const ts of teacherSubjects) {
         // subjectId e classId são String simples (sem ref), NÃO usar .populate()
         const subjectId = ts.subjectId?.toString();
@@ -241,39 +251,49 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         const pairKey = `${subjectId}_${classId}`;
         processedPairs.add(pairKey);
 
-        // CONTAR AULAS PREVISTAS por disciplina/turma no calendário letivo
+        // CONTAR AULAS PREVISTAS e DADAS por disciplina/turma dia a dia
         let predicted = 0;
+        let given = 0;
         
         for (const schoolDay of schoolDays) {
           const targetDay = getDayName(schoolDay);
           if (!targetDay) continue;
           
-          // Contar aulas do professor nesta disciplina/turma neste dia
+          // Contar aulas do professor nesta disciplina/turma neste dia no horário
+          let scheduledInDay = 0;
           for (const timetable of timetables) {
             if (timetable.slots && timetable.classId?.toString() === classId) {
-              const classesInDay = timetable.slots.filter((slot: any) => 
+              scheduledInDay += timetable.slots.filter((slot: any) => 
                 slot.day === targetDay &&
                 slot.teacherId === teacher._id.toString() &&
                 slot.subjectId === subjectId
               ).length;
-              
-              predicted += classesInDay;
             }
           }
-        }
+          
+          predicted += scheduledInDay;
 
-        // CONTAR AULAS DADAS por disciplina/turma nos registros de frequência
-        let given = 0;
-        
-        for (const record of attendanceRecords) {
-          if (record.classes && Array.isArray(record.classes)) {
-            const classesGiven = record.classes.filter((cls: any) => 
-              cls.status === 'present' &&
-              cls.subjectId === subjectId &&
-              cls.classId === classId
-            ).length;
-            
-            given += classesGiven;
+          // Só contar aulas dadas para dias que já passaram (até hoje)
+          const schoolDayDate = new Date(schoolDay.date);
+          if (schoolDayDate <= today && scheduledInDay > 0) {
+            // Formatar data como string YYYY-MM-DD para buscar no registro de frequência
+            const dayStr = schoolDayDate.toISOString().split('T')[0];
+            const record = attendanceByDate.get(dayStr);
+
+            if (record && record.classes && Array.isArray(record.classes)) {
+              // Tem registro de frequência: contar aulas com status 'present'
+              const classesPresent = record.classes.filter((cls: any) => 
+                cls.status === 'present' &&
+                cls.subjectId === subjectId &&
+                cls.classId === classId
+              ).length;
+              // Aulas com status 'absent' explícito não contam
+              given += classesPresent;
+            } else {
+              // SEM registro de frequência para este dia passado:
+              // Assumir que todas as aulas previstas foram dadas (professor presente)
+              given += scheduledInDay;
+            }
           }
         }
 
@@ -305,30 +325,40 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           if (processedPairs.has(pairKey)) continue;
           processedPairs.add(pairKey);
 
-          // Contar aulas dadas desta combinação em TODOS os registros
+          // Contar aulas dadas/previstas dia a dia (mesma lógica)
           let given = 0;
-          for (const r of attendanceRecords) {
-            if (r.classes && Array.isArray(r.classes)) {
-              given += r.classes.filter((c: any) =>
-                c.status === 'present' &&
-                c.subjectId === cls.subjectId &&
-                c.classId === cls.classId
-              ).length;
-            }
-          }
-
-          // Contar aulas previstas do horário
           let predicted = 0;
+
           for (const schoolDay of schoolDays) {
             const targetDay = getDayName(schoolDay);
             if (!targetDay) continue;
+
+            let scheduledInDay = 0;
             for (const timetable of timetables) {
               if (timetable.slots && timetable.classId?.toString() === cls.classId) {
-                predicted += timetable.slots.filter((slot: any) =>
+                scheduledInDay += timetable.slots.filter((slot: any) =>
                   slot.day === targetDay &&
                   slot.teacherId === teacher._id.toString() &&
                   slot.subjectId === cls.subjectId
                 ).length;
+              }
+            }
+
+            predicted += scheduledInDay;
+
+            const schoolDayDate = new Date(schoolDay.date);
+            if (schoolDayDate <= today && scheduledInDay > 0) {
+              const dayStr = schoolDayDate.toISOString().split('T')[0];
+              const dayRecord = attendanceByDate.get(dayStr);
+
+              if (dayRecord && dayRecord.classes && Array.isArray(dayRecord.classes)) {
+                given += dayRecord.classes.filter((c: any) =>
+                  c.status === 'present' &&
+                  c.subjectId === cls.subjectId &&
+                  c.classId === cls.classId
+                ).length;
+              } else {
+                given += scheduledInDay;
               }
             }
           }
