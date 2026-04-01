@@ -60,6 +60,7 @@ export interface IUser extends Document {
   // Cabeçalho de Impressão
   printHeader?: {
     emblemBase64?: string;
+    emblemBase64Right?: string;
     line1?: string;
     line2?: string;
     line3?: string;
@@ -138,6 +139,7 @@ const userSchema = new Schema<IUser>(
     // Cabeçalho de Impressão
     printHeader: {
       emblemBase64: { type: String },
+      emblemBase64Right: { type: String },
       line1: { type: String },
       line2: { type: String },
       line3: { type: String },

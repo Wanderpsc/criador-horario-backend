@@ -284,7 +284,7 @@ router.put('/print-header', auth, async (req: any, res: Response) => {
       return res.status(401).json({ success: false, message: 'Não autenticado' });
     }
 
-    const { emblemBase64, line1, line2, line3 } = req.body;
+    const { emblemBase64, emblemBase64Right, line1, line2, line3 } = req.body;
 
     // Validar tamanho do base64 (max ~2MB)
     if (emblemBase64 && emblemBase64.length > 2 * 1024 * 1024) {
@@ -294,7 +294,7 @@ router.put('/print-header', auth, async (req: any, res: Response) => {
     const schoolId = req.user.schoolId || req.user.id;
     const updatedSchool = await User.findByIdAndUpdate(
       schoolId,
-      { printHeader: { emblemBase64, line1, line2, line3 } },
+      { printHeader: { emblemBase64, emblemBase64Right, line1, line2, line3 } },
       { new: true }
     ).select('printHeader');
 
