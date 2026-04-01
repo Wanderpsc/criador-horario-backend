@@ -73,8 +73,10 @@ router.get('/profile', auth, async (req: any, res: Response) => {
         message: 'Não autenticado'
       });
     }
-    
-    const school = await User.findById(req.user.id).select('-password');
+
+    const schoolId = req.user.schoolId || req.user.id;
+    console.log('   Buscando escola com ID (schoolId||id):', schoolId);
+    const school = await User.findById(schoolId).select('-password');
     console.log('   Escola encontrada:', school ? `✅ ${school.schoolName || school.email}` : '❌ NÃO ENCONTRADA');
     
     if (!school) {
@@ -128,14 +130,15 @@ router.put('/profile', auth, async (req: any, res: Response) => {
       });
     }
 
-    console.log('   Atualizando escola ID:', req.user.id);
+    const schoolId = req.user.schoolId || req.user.id;
+    console.log('   Atualizando escola ID (schoolId||id):', schoolId);
     const updateData: any = { schoolName };
     if (workingDays) updateData.workingDays = workingDays;
     if (academicYear) updateData.academicYear = academicYear;
 
     // Atualiza a escola
     const updatedSchool = await User.findByIdAndUpdate(
-      req.user.id,
+      schoolId,
       updateData,
       { new: true }
     ).select('-password');
@@ -199,13 +202,14 @@ router.put('/responsible', auth, async (req: any, res: Response) => {
       });
     }
 
-    console.log('   Buscando escola com ID:', req.user.id);
-    const schoolBefore = await User.findById(req.user.id);
+    const schoolId = req.user.schoolId || req.user.id;
+    console.log('   Buscando escola com ID (schoolId||id):', schoolId);
+    const schoolBefore = await User.findById(schoolId);
     console.log('   Escola antes da atualização:', schoolBefore ? `✅ ${schoolBefore.schoolName || schoolBefore.email}` : '❌ NÃO ENCONTRADA');
 
     // Atualiza a escola
     const updatedSchool = await User.findByIdAndUpdate(
-      req.user.id,
+      schoolId,
       {
         responsibleName,
         responsibleCPF,
@@ -287,8 +291,9 @@ router.put('/print-header', auth, async (req: any, res: Response) => {
       return res.status(400).json({ success: false, message: 'Imagem muito grande (máximo 2MB)' });
     }
 
+    const schoolId = req.user.schoolId || req.user.id;
     const updatedSchool = await User.findByIdAndUpdate(
-      req.user.id,
+      schoolId,
       { printHeader: { emblemBase64, line1, line2, line3 } },
       { new: true }
     ).select('printHeader');
