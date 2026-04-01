@@ -64,6 +64,10 @@ export interface IUser extends Document {
     line1?: string;
     line2?: string;
     line3?: string;
+    line4?: string;
+    line5?: string;
+    line6?: string;
+    line7?: string;
   };
 
   // Recuperação de senha
@@ -143,6 +147,10 @@ const userSchema = new Schema<IUser>(
       line1: { type: String },
       line2: { type: String },
       line3: { type: String },
+      line4: { type: String },
+      line5: { type: String },
+      line6: { type: String },
+      line7: { type: String },
     },
 
     // Recuperação de senha
