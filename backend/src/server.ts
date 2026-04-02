@@ -50,6 +50,7 @@ import statsRoutes from './routes/stats.routes';
 import verifyRoutes from './routes/verify.routes';
 import schoolUsersRoutes from './routes/schoolUsers';
 import auditLogsRoutes from './routes/auditLogs';
+import publicRoutes from './routes/public.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
@@ -162,6 +163,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Middleware de auditoria (deve vir antes das rotas)
 app.use(auditMiddleware);
+
+// Rotas públicas (sem autenticação - painel de TV)
+app.use('/api/public', publicRoutes);
 
 // Rotas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit especial para autenticação
