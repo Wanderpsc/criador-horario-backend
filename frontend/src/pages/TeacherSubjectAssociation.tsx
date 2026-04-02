@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
 import { Search, X } from 'lucide-react';
-import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss } from '../utils/printHeader';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface Teacher {
   id: string;
@@ -298,6 +298,7 @@ const TeacherSubjectAssociation: React.FC = () => {
             color: #000;
           }
           ${printHeaderCss}
+          ${printFooterCss}
           .header {
             text-align: center;
             margin-bottom: 30px;
@@ -355,14 +356,6 @@ const TeacherSubjectAssociation: React.FC = () => {
             font-size: 9pt;
             margin-left: 3px;
           }
-          .footer {
-            margin-top: 40px;
-            padding-top: 15px;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            font-size: 9pt;
-            color: #888;
-          }
           .summary {
             margin: 20px 0;
             padding: 10px;
@@ -414,10 +407,7 @@ const TeacherSubjectAssociation: React.FC = () => {
             `;
           }).join('')}
 
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} ${user?.schoolName || 'Sistema de Horários'} - Todos os direitos reservados</p>
-          <p>Documento gerado pelo Sistema Criador de Horário de Aula Escolar</p>
-        </div>
+        ${buildPrintFooterHtml()}
 
         <script>
           window.onload = function() {
@@ -468,6 +458,7 @@ const TeacherSubjectAssociation: React.FC = () => {
             color: #000;
           }
           ${printHeaderCss}
+          ${printFooterCss}
           .header {
             text-align: center;
             margin-bottom: 30px;
@@ -519,14 +510,6 @@ const TeacherSubjectAssociation: React.FC = () => {
           .class {
             color: #7c3aed;
             margin-left: 5px;
-          }
-          .footer {
-            margin-top: 40px;
-            padding-top: 15px;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            font-size: 9pt;
-            color: #888;
           }
           .summary {
             margin: 20px 0;
@@ -580,10 +563,7 @@ const TeacherSubjectAssociation: React.FC = () => {
             `;
           }).join('')}
 
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} ${user?.schoolName || 'Sistema de Horários'} - Todos os direitos reservados</p>
-          <p>Documento gerado pelo Sistema Criador de Horário de Aula Escolar</p>
-        </div>
+        ${buildPrintFooterHtml()}
 
         <script>
           window.onload = function() {

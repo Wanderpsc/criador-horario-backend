@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
-import { Tv, ExternalLink, Calendar, AlertTriangle, Settings } from 'lucide-react';
+import { Tv, ExternalLink, Calendar, AlertTriangle, Settings, Copy, Share2, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function DisplayPanelConfig() {
@@ -87,6 +87,59 @@ export default function DisplayPanelConfig() {
     console.log('🔗 URL gerada:', url);
     window.open(url, '_blank', 'fullscreen=yes');
     toast.success('Painel de TV aberto em nova janela');
+  };
+
+  const getShareableUrl = (): string | null => {
+    if (!isEmergencyMode && !selectedNormalId) return null;
+    if (isEmergencyMode && !selectedEmergencyId) return null;
+
+    const params = new URLSearchParams();
+    if (isEmergencyMode) {
+      params.append('emergencyId', selectedEmergencyId);
+      params.append('mode', 'emergency');
+    } else {
+      params.append('timetableId', selectedNormalId);
+      params.append('mode', 'normal');
+    }
+    return `${window.location.origin}/#/display-panel?${params.toString()}`;
+  };
+
+  const copyLink = () => {
+    const url = getShareableUrl();
+    if (!url) {
+      toast.error('Selecione um horário primeiro');
+      return;
+    }
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Link copiado para a área de transferência!');
+    }).catch(() => {
+      // Fallback para navegadores sem clipboard API
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      toast.success('Link copiado!');
+    });
+  };
+
+  const shareLink = () => {
+    const url = getShareableUrl();
+    if (!url) {
+      toast.error('Selecione um horário primeiro');
+      return;
+    }
+    const text = isEmergencyMode
+      ? '🚨 Horário Emergencial - Painel de TV'
+      : '📅 Horário de Aulas - Painel de TV';
+    if (navigator.share) {
+      navigator.share({ title: text, url }).catch(() => {});
+    } else {
+      // Fallback: abrir WhatsApp Web
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(text + '\n' + url)}`;
+      window.open(waUrl, '_blank');
+    }
   };
 
   return (
@@ -259,6 +312,35 @@ export default function DisplayPanelConfig() {
             Abrir Painel de TV em Tela Cheia
           </button>
 
+          {/* Botões de Compartilhamento */}
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <button
+              onClick={copyLink}
+              disabled={(!isEmergencyMode && !selectedNormalId) || (isEmergencyMode && !selectedEmergencyId)}
+              className="btn bg-purple-500 bg-opacity-30 hover:bg-opacity-50 text-white font-semibold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 border border-purple-300 border-opacity-40"
+            >
+              <Copy size={18} />
+              Copiar Link
+            </button>
+            <button
+              onClick={shareLink}
+              disabled={(!isEmergencyMode && !selectedNormalId) || (isEmergencyMode && !selectedEmergencyId)}
+              className="btn bg-green-500 bg-opacity-30 hover:bg-opacity-50 text-white font-semibold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 border border-green-300 border-opacity-40"
+            >
+              <Share2 size={18} />
+              Compartilhar
+            </button>
+          </div>
+
+          {getShareableUrl() && (
+            <div className="bg-white bg-opacity-10 rounded-lg px-4 py-2 max-w-xl mx-auto">
+              <p className="text-xs text-purple-200 mb-1">Link público do painel:</p>
+              <p className="text-sm text-white font-mono break-all select-all cursor-pointer" onClick={copyLink}>
+                {getShareableUrl()}
+              </p>
+            </div>
+          )}
+
           <p className="text-sm text-purple-200">
             💡 O painel será aberto em uma nova janela em modo tela cheia, ideal para TVs e monitores
           </p>
@@ -273,10 +355,11 @@ export default function DisplayPanelConfig() {
             <h3 className="font-bold text-blue-900 mb-2">Como usar:</h3>
             <ol className="list-decimal list-inside space-y-1 text-blue-800 text-sm">
               <li>Selecione um horário normal OU um horário emergencial</li>
-              <li>Clique em "Abrir Painel de TV em Tela Cheia"</li>
-              <li>O painel abrirá em uma nova janela otimizada para TVs</li>
-              <li>Deixe a janela aberta na TV para exibição contínua</li>
-              <li>Para alterar o horário, volte a esta página e selecione outro</li>
+              <li>Clique em "Abrir Painel de TV em Tela Cheia" para visualizar</li>
+              <li>Use <strong>"Copiar Link"</strong> para copiar o endereço e enviar para professores</li>
+              <li>Use <strong>"Compartilhar"</strong> para enviar via WhatsApp ou outros apps</li>
+              <li>Os professores abrem o link no celular/computador — <strong>não precisa de login</strong></li>
+              <li>O painel atualiza automaticamente a cada 60 segundos</li>
             </ol>
           </div>
         </div>

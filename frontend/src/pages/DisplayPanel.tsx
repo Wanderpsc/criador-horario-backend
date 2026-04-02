@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../lib/axios';
-import { Clock, Wifi, WifiOff, Grid3x3, List, BookOpen, MapPin, User } from 'lucide-react';
+import publicApi from '../lib/publicApi';
+import { Clock, Wifi, WifiOff, Grid3x3, List, BookOpen, MapPin, User, Calendar } from 'lucide-react';
 import AnalogClock from '../components/AnalogClock';
 
 interface TimetableSlot {
@@ -47,6 +47,8 @@ export default function DisplayPanel({
   const [autoChangePeriod, setAutoChangePeriod] = useState(true); // Controle de mudança automática de período
   const [lastPeriod, setLastPeriod] = useState<number | null>(null); // Rastrear último período para detectar mudança
   const [alarmPlayed, setAlarmPlayed] = useState<boolean>(false); // Controlar se o alarme de aviso já foi tocado
+  const [overrideDateTime, setOverrideDateTime] = useState<string>(''); // Data/hora simulada para teste
+  const [showSimulator, setShowSimulator] = useState(false); // Toggle do painel de simulação
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // LER PARÂMETROS DA URL (configuração vinda de DisplayPanelConfig)
@@ -191,12 +193,13 @@ export default function DisplayPanel({
     }
   };
 
-  // Buscar lista de horários disponíveis
+  // Buscar lista de horários disponíveis (via rota pública por ID)
   const { data: availableTimetables = [], isLoading: isLoadingAvailable } = useQuery({
-    queryKey: ['availableTimetables'],
+    queryKey: ['availableTimetables', selectedTimetableId],
     queryFn: async () => {
+      if (!selectedTimetableId) return [];
       try {
-        const response = await api.get('/generated-timetables/all');
+        const response = await publicApi.get(`/public/timetable/${selectedTimetableId}`);
         return response.data.data || [];
       } catch (error) {
         console.error('Erro ao buscar lista de horários:', error);
@@ -204,14 +207,16 @@ export default function DisplayPanel({
       }
     },
     refetchInterval: false,
+    enabled: !!selectedTimetableId,
   });
 
-  // Buscar horários emergenciais
+  // Buscar horários emergenciais (via rota pública por ID)
   const { data: emergencySchedules = [], isLoading: isLoadingEmergency } = useQuery({
-    queryKey: ['emergency-schedules'],
+    queryKey: ['emergency-schedules', selectedEmergencyId],
     queryFn: async () => {
+      if (!selectedEmergencyId) return [];
       try {
-        const response = await api.get('/emergency-schedules');
+        const response = await publicApi.get(`/public/emergency-schedule/${selectedEmergencyId}`);
         return response.data.data || [];
       } catch (error) {
         console.error('Erro ao buscar horários emergenciais:', error);
@@ -219,6 +224,7 @@ export default function DisplayPanel({
       }
     },
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
+    enabled: !!selectedEmergencyId,
   });
   
   // LOG DE MONITORAMENTO DO ESTADO EMERGENCIAL
@@ -280,20 +286,27 @@ export default function DisplayPanel({
   // Selecionar automaticamente o dia atual na primeira carga
   useEffect(() => {
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const today = days[new Date().getDay()];
+    const effectiveTime = overrideDateTime ? new Date(overrideDateTime) : new Date();
+    const today = days[effectiveTime.getDay()];
     if (['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].includes(today)) {
       setSelectedDay(today);
     }
-  }, []);
+  }, [overrideDateTime]);
 
-  // Atualizar relógio a cada segundo
+  // Atualizar relógio a cada segundo (ou fixar na data/hora simulada)
   useEffect(() => {
+    if (overrideDateTime) {
+      // Modo simulação: fixar no horário escolhido
+      setCurrentTime(new Date(overrideDateTime));
+      return;
+    }
+    // Modo real: atualizar a cada segundo
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [overrideDateTime]);
 
   // Alternar entre modos a cada 60 segundos (ou manter em grade)
   useEffect(() => {
@@ -328,7 +341,7 @@ export default function DisplayPanel({
             return [];
           }
 
-          const response = await api.get('/emergency-schedules');
+          const response = await publicApi.get(`/public/emergency-schedule/${selectedEmergencyId}`);
           const allSchedules = response.data.data;
           
           if (!allSchedules || allSchedules.length === 0) {
@@ -374,7 +387,7 @@ export default function DisplayPanel({
           
           try {
             // Buscar horário base SEM popular (mais rápido) - apenas para pegar os classIds
-            const allTimetablesResponse = await api.get('/generated-timetables/all');
+            const allTimetablesResponse = await publicApi.get(`/public/timetable/${selectedSchedule.scheduleId}`);
             const allTimetables = allTimetablesResponse.data?.data || allTimetablesResponse.data;
             const baseSchedule = allTimetables.find((t: any) => 
               (t._id === selectedSchedule.scheduleId || t.id === selectedSchedule.scheduleId)
@@ -387,7 +400,7 @@ export default function DisplayPanel({
               
               // Buscar dados das turmas em paralelo (mais rápido)
               const classPromises = classIds.map(classId => 
-                api.get(`/classes/${classId}`)
+                publicApi.get(`/public/class/${classId}`)
                   .then(response => {
                     const classData = response.data.data;
                     return {
@@ -463,7 +476,7 @@ export default function DisplayPanel({
         // Modo Normal
         console.log('🔍 Buscando horário ID:', selectedTimetableId);
         
-        const response = await api.get('/generated-timetables/all');
+        const response = await publicApi.get(`/public/timetable/${selectedTimetableId}`);
         const allTimetables = response.data.data;
         console.log('📚 Total de horários disponíveis:', allTimetables.length);
         
@@ -528,7 +541,7 @@ export default function DisplayPanel({
           
           for (const classId of missingClassIds) {
             try {
-              const response = await api.get(`/classes/${classId}`);
+              const response = await publicApi.get(`/public/class/${classId}`);
               const classData = response.data.data;
               classesMap.set(classId, {
                 className: classData.name || classId,
@@ -1046,6 +1059,8 @@ export default function DisplayPanel({
                 🔔 TESTAR SOM
               </button>
             </div>
+
+
           </div>
           
           <div className="text-right flex items-center gap-6">
@@ -1649,6 +1664,73 @@ export default function DisplayPanel({
           Atualização automática a cada {refreshInterval} segundos
         </p>
       </footer>
+
+      {/* Botão Flutuante de Simulação de Data/Hora */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        {/* Indicador de simulação ativa */}
+        {overrideDateTime && !showSimulator && (
+          <div className="bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-bold animate-pulse shadow-lg">
+            ⚠ SIMULAÇÃO: {new Date(overrideDateTime).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </div>
+        )}
+
+        {/* Painel de simulação expandido */}
+        {showSimulator && (
+          <div className="bg-gray-800 border-2 border-orange-500 rounded-xl p-5 shadow-2xl w-80">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar size={20} className="text-orange-400" />
+                <span className="text-white font-bold text-lg">Simular Data/Hora</span>
+              </div>
+              <button
+                onClick={() => setShowSimulator(false)}
+                className="text-gray-400 hover:text-white text-xl font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-gray-400 text-xs mb-3">
+              Escolha uma data e hora para testar como o painel ficaria naquele momento.
+            </p>
+            <input
+              type="datetime-local"
+              value={overrideDateTime}
+              onChange={(e) => setOverrideDateTime(e.target.value)}
+              className={`w-full bg-gray-900 text-white border-2 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 ${
+                overrideDateTime 
+                  ? 'border-orange-500 focus:ring-orange-400' 
+                  : 'border-gray-600 focus:ring-gray-400'
+              }`}
+            />
+            {overrideDateTime && (
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-orange-400 text-sm font-semibold animate-pulse">
+                  ⚠ Simulação ativa
+                </span>
+                <button
+                  onClick={() => setOverrideDateTime('')}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-bold transition-colors"
+                >
+                  ✕ Voltar ao Tempo Real
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Botão toggle */}
+        <button
+          onClick={() => setShowSimulator(!showSimulator)}
+          className={`p-4 rounded-full shadow-2xl text-xl transition-all hover:scale-110 ${
+            overrideDateTime
+              ? 'bg-orange-600 hover:bg-orange-700 text-white ring-4 ring-orange-400 animate-pulse'
+              : 'bg-gray-700 hover:bg-gray-600 text-gray-300 ring-2 ring-gray-500'
+          }`}
+          title="Simular data/hora para teste"
+        >
+          <Calendar size={24} />
+        </button>
+      </div>
     </div>
   );
 }

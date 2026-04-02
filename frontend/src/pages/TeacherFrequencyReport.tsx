@@ -11,11 +11,15 @@ import {
   CheckCircle,
   Calendar,
   Clock,
-  Download
+  Download,
+  X,
+  Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
+import WorkloadCharts from '../components/WorkloadCharts';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml, type PrintHeaderData } from '../utils/printHeader';
 
 interface SubjectClassDetail {
   subjectId: string;
@@ -79,6 +83,13 @@ const TeacherFrequencyReport: React.FC = () => {
   const [teacherWorkload, setTeacherWorkload] = useState<TeacherSubjectWorkload[]>([]);
   const [workloadPeriod, setWorkloadPeriod] = useState<'all' | 'daily' | 'weekly' | 'monthly' | 'annual'>('all');
 
+  // Print states
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printMode, setPrintMode] = useState<'all' | 'select'>('all');
+  const [selectedTeachersToPrint, setSelectedTeachersToPrint] = useState<Set<string>>(new Set());
+  const [printSearchTerm, setPrintSearchTerm] = useState('');
+  const [printSection, setPrintSection] = useState<'frequency' | 'workload' | 'both'>('both');
+
   useEffect(() => {
     loadReport();
   }, [month, year]);
@@ -89,7 +100,7 @@ const TeacherFrequencyReport: React.FC = () => {
 
   // Recalcular workload quando mês/ano ou dados auxiliares mudam
   useEffect(() => {
-    if (timetableData && calendarEvents.length > 0 && user?.id) {
+    if (user?.id) {
       loadTeacherWorkload(calendarEvents, timetableData);
     }
   }, [month, year, timetableData, calendarEvents]);
@@ -110,18 +121,23 @@ const TeacherFrequencyReport: React.FC = () => {
   };
 
   const loadCalendarAndTimetable = async () => {
-    try {
-      let calData: any[] = [];
-      let ttData: any = null;
+    let calData: any[] = [];
+    let ttData: any = null;
 
-      // Buscar calendário escolar
-      if (user?.schoolId) {
-        const calRes = await api.get(`/schooldays/school/${user.schoolId}`);
+    // Buscar calendário escolar (independente)
+    try {
+      const schoolScope = user?.schoolId || user?.id;
+      if (schoolScope) {
+        const calRes = await api.get(`/schooldays/school/${schoolScope}`);
         calData = Array.isArray(calRes.data) ? calRes.data : calRes.data?.data || [];
         setCalendarEvents(calData);
       }
+    } catch (error) {
+      console.error('Erro ao carregar calendário:', error);
+    }
 
-      // Buscar horário padrão
+    // Buscar horário padrão (independente)
+    try {
       const ttRes = await api.get('/generated-timetables');
       const timetables = ttRes.data || [];
       if (timetables.length > 0) {
@@ -135,13 +151,13 @@ const TeacherFrequencyReport: React.FC = () => {
           console.log('📋 Dados do horário:', { keys: Object.keys(ttData || {}), hasData: !!ttData?.data });
         }
       }
-
-      // Carregar workload com os dados locais (não depende do state)
-      if (user?.id && calData.length > 0 && ttData) {
-        await loadTeacherWorkload(calData, ttData);
-      }
     } catch (error) {
-      console.error('Erro ao carregar dados auxiliares:', error);
+      console.error('Erro ao carregar horário:', error);
+    }
+
+    // Carregar workload SEMPRE, independente de calendário/horário
+    if (user?.id) {
+      await loadTeacherWorkload(calData, ttData);
     }
   };
 
@@ -165,51 +181,46 @@ const TeacherFrequencyReport: React.FC = () => {
       // Cada slot tem: { day, period, teacherId, subjectId, classId }
       const allSlots: Array<{ day: string; teacherId: string; subjectId: string; classId: string }> = [];
       
-      // Tentar múltiplas formas de acessar os dados do horário
-      const scheduleData = ttResp?.data || ttResp?.schedule || ttResp;
-      console.log('📊 scheduleData keys:', scheduleData ? Object.keys(scheduleData) : 'null');
-      
-      if (scheduleData && typeof scheduleData === 'object') {
-        Object.entries(scheduleData).forEach(([key, classSlots]: [string, any]) => {
-          // Ignorar campos de controle da resposta da API
-          if (['success', 'message', 'data', 'schedule', '_id', '__v', 'createdAt', 'updatedAt', 'name', 'schoolId', 'userId', 'isDefault', 'scheduleId'].includes(key)) return;
-          if (Array.isArray(classSlots)) {
-            classSlots.forEach((slot: any) => {
-              if (slot && slot.teacherId) {
+      // Extrair dados do horário — navegar pela estrutura da resposta
+      const extractSlots = (obj: any) => {
+        if (!obj || typeof obj !== 'object') return;
+        Object.entries(obj).forEach(([key, val]: [string, any]) => {
+          // Chaves de controle da API — pular
+          if (['success', 'message', '_id', '__v', 'createdAt', 'updatedAt', 'name', 'schoolId', 'userId', 'isDefault', 'scheduleId', 'title', 'school'].includes(key)) return;
+          // Se 'data' contiver o objeto de turmas, descer nele
+          if (key === 'data' && typeof val === 'object' && !Array.isArray(val)) {
+            extractSlots(val);
+            return;
+          }
+          if (key === 'schedule' && typeof val === 'object' && !Array.isArray(val)) {
+            extractSlots(val);
+            return;
+          }
+          // Array de slots por turma
+          if (Array.isArray(val)) {
+            val.forEach((slot: any) => {
+              if (slot && slot.teacherId && slot.day) {
                 allSlots.push({
                   day: slot.day,
-                  teacherId: slot.teacherId,
-                  subjectId: slot.subjectId || '',
-                  classId: slot.classId || key
+                  teacherId: String(slot.teacherId),
+                  subjectId: String(slot.subjectId || ''),
+                  classId: String(slot.classId || key)
                 });
               }
             });
           }
         });
-      }
-      
-      // Se não encontrou slots no nível raiz, tentar dentro de .data
-      if (allSlots.length === 0 && scheduleData?.data && typeof scheduleData.data === 'object') {
-        Object.entries(scheduleData.data).forEach(([key, classSlots]: [string, any]) => {
-          if (['success', 'message'].includes(key)) return;
-          if (Array.isArray(classSlots)) {
-            classSlots.forEach((slot: any) => {
-              if (slot && slot.teacherId) {
-                allSlots.push({
-                  day: slot.day,
-                  teacherId: slot.teacherId,
-                  subjectId: slot.subjectId || '',
-                  classId: slot.classId || key
-                });
-              }
-            });
-          }
-        });
-      }
+      };
+      extractSlots(ttResp);
       
       console.log('📊 Total de slots extraídos do horário:', allSlots.length);
       if (allSlots.length > 0) {
         console.log('📊 Exemplo de slot:', allSlots[0]);
+        // Log de IDs únicos para debug
+        const uniqueTeachers = [...new Set(allSlots.map(s => s.teacherId))];
+        const uniqueSubjects = [...new Set(allSlots.map(s => s.subjectId))];
+        console.log('📊 Professores no horário:', uniqueTeachers.length, uniqueTeachers.slice(0, 3));
+        console.log('📊 Disciplinas no horário:', uniqueSubjects.length);
       }
 
       // Mapeamento de followWeekday para nome do dia no horário
@@ -242,17 +253,33 @@ const TeacherFrequencyReport: React.FC = () => {
 
       const teacherMap = new Map<string, TeacherSubjectWorkload>();
 
+      // Log dos IDs dos professores/disciplinas da lotação vs horário para diagnóstico
+      if (associations.length > 0 && allSlots.length > 0) {
+        const firstAssoc = associations[0];
+        const firstTeacher = teachers.find((t: any) => t.id === firstAssoc.teacherId || t._id === firstAssoc.teacherId);
+        console.log('🔍 Debug IDs - Lotação teacherId:', firstAssoc.teacherId, 
+          '-> Teacher id:', firstTeacher?.id, '_id:', firstTeacher?._id);
+        console.log('🔍 Debug IDs - Lotação subjectId:', firstAssoc.subjectId);
+        console.log('🔍 Debug IDs - Slot exemplo teacherId:', allSlots[0].teacherId, 'subjectId:', allSlots[0].subjectId);
+      }
+
       associations.forEach((assoc: any) => {
-        const teacher = teachers.find((t: any) => t.id === assoc.teacherId || t._id === assoc.teacherId);
-        const subject = subjects.find((s: any) => s.id === assoc.subjectId || s._id === assoc.subjectId);
-        const classItem = classes.find((c: any) => c.id === assoc.classId || c._id === assoc.classId);
+        const teacher = teachers.find((t: any) => 
+          String(t.id) === String(assoc.teacherId) || String(t._id) === String(assoc.teacherId)
+        );
+        const subject = subjects.find((s: any) => 
+          String(s.id) === String(assoc.subjectId) || String(s._id) === String(assoc.subjectId)
+        );
+        const classItem = classes.find((c: any) => 
+          String(c.id) === String(assoc.classId) || String(c._id) === String(assoc.classId)
+        );
 
         if (!teacher || !subject) return;
 
-        const teacherId = teacher.id || teacher._id;
+        const teacherId = String(teacher.id || teacher._id);
         const teacherName = teacher.name;
-        const subjectId = subject.id || subject._id;
-        const classId = classItem ? (classItem.id || classItem._id) : undefined;
+        const subjectId = String(subject.id || subject._id);
+        const classId = classItem ? String(classItem.id || classItem._id) : undefined;
 
         if (!teacherMap.has(teacherId)) {
           teacherMap.set(teacherId, {
@@ -267,36 +294,72 @@ const TeacherFrequencyReport: React.FC = () => {
 
         const workload = teacherMap.get(teacherId)!;
 
-        // Contar aulas SEMANAIS do horário base para esta combinação professor-disciplina-turma
+        // Contar aulas SEMANAIS — prioridade correta:
+        // 1. assoc.weeklyHours (override explícito na lotação)
+        // 2. classItem.subjectWeeklyHours[subjectId] (horas definidas na turma)
+        // 3. Slots do horário gerado (contagem real)
+        // 4. subject.weeklyHours (padrão da disciplina)
+        // 5. Fallback: 2
+
         const teacherSlots = allSlots.filter(s =>
-          s.teacherId === teacherId &&
-          s.subjectId === subjectId &&
-          (classId ? s.classId === classId : true)
+          String(s.teacherId) === teacherId &&
+          String(s.subjectId) === subjectId &&
+          (classId ? String(s.classId) === classId : true)
         );
-        const weeklyHours = teacherSlots.length;
 
-        // Carga horária ANUAL: weeklyHours × 40 semanas letivas
-        // Regra: 1 aula/semana = 40, 2 = 80, 3 = 120, 4 = 160, 5 = 200
-        // Se não houver slots no horário, usa o campo da disciplina como fallback
-        const annualHours = weeklyHours > 0
-          ? weeklyHours * 40
-          : Math.round(subject.workload || subject.workloadHours || subject.hours || 0);
+        // Buscar horas específicas da turma para esta disciplina
+        const classSubjectHours = classId && classItem?.subjectWeeklyHours
+          ? (classItem.subjectWeeklyHours[subjectId] || classItem.subjectWeeklyHours[assoc.subjectId])
+          : undefined;
 
-        // Contar aulas por dia da semana (para cálculo diário e mensal)
+        // Carga horária SEMANAL — da lotação ou do horário base (sempre inteiro)
+        let weeklyHours: number;
+        if (assoc.weeklyHours !== undefined && assoc.weeklyHours > 0) {
+          weeklyHours = Math.round(assoc.weeklyHours);          // 1. Override da lotação
+        } else if (classSubjectHours !== undefined && classSubjectHours > 0) {
+          weeklyHours = Math.round(classSubjectHours);          // 2. Horas da turma
+        } else if (teacherSlots.length > 0) {
+          weeklyHours = teacherSlots.length;                    // 3. Slots do horário (já inteiro)
+        } else {
+          weeklyHours = Math.round(subject.weeklyHours || 2);   // 4/5. Disciplina ou fallback
+        }
+
+        // Contar aulas por dia da semana no horário base (para cálculo diário e mensal)
         const slotsPerDay: Record<string, number> = {};
         teacherSlots.forEach(s => {
           slotsPerDay[s.day] = (slotsPerDay[s.day] || 0) + 1;
         });
 
-        // DIÁRIA: média de aulas nos dias em que leciona (arredondada para inteiro)
+        // Carga horária DIÁRIA — aulas desta disciplina por dia letivo (inteiro)
         const daysWithClasses = Object.keys(slotsPerDay).length;
-        const dailyHours = daysWithClasses > 0 ? Math.round(weeklyHours / daysWithClasses) : 0;
+        let dailyHours: number;
+        if (daysWithClasses > 0) {
+          // Do horário base: média de aulas por dia arredondada para inteiro
+          dailyHours = Math.ceil(weeklyHours / daysWithClasses);
+        } else if (weeklyHours > 0) {
+          // Sem horário base: estimar usando dias letivos da semana
+          const workingDays = Object.keys(schoolDaysByDayName).length || 5;
+          dailyHours = Math.ceil(weeklyHours / workingDays);
+        } else {
+          dailyHours = 0;
+        }
 
-        // MENSAL: para cada dia da semana com aula, multiplicar pelo nº de dias letivos desse dia no mês
+        // Carga horária MENSAL — baseada no horário base × dias letivos do mês (inteiro)
         let monthlyHours = 0;
-        Object.entries(slotsPerDay).forEach(([dayName, count]) => {
-          monthlyHours += count * (schoolDaysByDayName[dayName] || 0);
-        });
+        if (Object.keys(slotsPerDay).length > 0) {
+          // Com horário base: para cada dia da semana com aula, multiplicar pelo nº de dias letivos desse dia no mês
+          Object.entries(slotsPerDay).forEach(([dayName, count]) => {
+            monthlyHours += count * (schoolDaysByDayName[dayName] || 0);
+          });
+        } else if (weeklyHours > 0) {
+          // Sem horário base: estimar via nº semanas no mês
+          const totalSchoolDays = Object.values(schoolDaysByDayName).reduce((a, b) => a + b, 0);
+          const weekdaysWithSchool = Object.keys(schoolDaysByDayName).length || 5;
+          monthlyHours = Math.round(weeklyHours * totalSchoolDays / weekdaysWithSchool);
+        }
+
+        // Carga horária ANUAL — semanal × 40 semanas letivas (inteiro)
+        const annualHours = weeklyHours * 40;
 
         workload.subjects.push({
           subjectId,
@@ -314,24 +377,276 @@ const TeacherFrequencyReport: React.FC = () => {
         workload.totalMonthlyHours += monthlyHours;
       });
 
-      setTeacherWorkload(
-        Array.from(teacherMap.values()).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR'))
-      );
+      const result = Array.from(teacherMap.values()).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR'));
+      
+      // Resumo de diagnóstico
+      console.log('📊 RESUMO WORKLOAD:');
+      console.log('   Associações:', associations.length, '| Professores:', teachers.length, '| Slots horário:', allSlots.length);
+      console.log('   Dias letivos no mês:', schoolDaysByDayName);
+      console.log('   Professores com carga calculada:', result.length);
+      if (result.length > 0) {
+        const first = result[0];
+        console.log('   Exemplo:', first.teacherName, '- semanal:', first.totalWeeklyHours, 
+          '| disciplinas:', first.subjects.map(s => s.subjectName + '(' + s.weeklyHours + 'h/sem, ' + s.dailyHours + 'h/dia)').join(', '));
+      }
+
+      setTeacherWorkload(result);
     } catch (error) {
       console.error('Erro ao buscar cargas horárias:', error);
     }
   };
 
-  // Recarregar workload quando parâmetros mudam (mês, ano, horário, calendário)
-  useEffect(() => {
-    if (user?.id) {
-      loadTeacherWorkload();
-    }
-  }, [month, year, timetableData, calendarEvents]);
+  // Filtrar dados
+  const filteredReports = reportData?.reports.filter(report => {
+    const teacherMatch = !filterTeacher || report.teacherName.toLowerCase().includes(filterTeacher.toLowerCase());
+    const subjectMatch = !filterSubject || report.subjectClassDetails.some(
+      detail => detail.subjectName.toLowerCase().includes(filterSubject.toLowerCase())
+    );
+    const classMatch = !filterClass || report.subjectClassDetails.some(
+      detail => detail.className.toLowerCase().includes(filterClass.toLowerCase())
+    );
+    return teacherMatch && subjectMatch && classMatch;
+  }).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR')) || [];
 
-  const handlePrint = () => {
-    window.print();
+  // Calcular estatísticas gerais
+  const totalDeficit = filteredReports.reduce((sum, r) => sum + r.totalDeficit, 0);
+  const totalSurplus = filteredReports.reduce((sum, r) => sum + r.totalSurplus, 0);
+  const totalPredicted = filteredReports.reduce((sum, r) => sum + r.totalPredictedClasses, 0);
+  const totalGiven = filteredReports.reduce((sum, r) => sum + r.totalGivenClasses, 0);
+
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  const handleOpenPrintModal = () => {
+    setShowPrintModal(true);
+    setPrintMode('all');
+    setSelectedTeachersToPrint(new Set());
+    setPrintSearchTerm('');
+    setPrintSection('both');
   };
+
+  const handleExecutePrint = async () => {
+    const headerData = await loadPrintHeader();
+    const headerHtml = buildPrintHeaderHtml(headerData);
+
+    // Determine which teachers to include
+    const teachersForFrequency = printMode === 'all'
+      ? filteredReports
+      : filteredReports.filter(r => selectedTeachersToPrint.has(r.teacherId));
+
+    const teachersForWorkload = printMode === 'all'
+      ? teacherWorkload
+      : teacherWorkload.filter(t => selectedTeachersToPrint.has(t.teacherId));
+
+    if (teachersForFrequency.length === 0 && teachersForWorkload.length === 0) {
+      toast.error('Nenhum professor selecionado para impressão');
+      return;
+    }
+
+    // Build frequency section HTML
+    let frequencyHtml = '';
+    if (printSection === 'frequency' || printSection === 'both') {
+      const buildSituationCell = (d: SubjectClassDetail) => {
+        if (d.deficit > 0) return '<span style="color:#dc2626;font-weight:bold;">-' + d.deficit + '</span>';
+        if (d.surplus > 0) return '<span style="color:#7c3aed;font-weight:bold;">+' + d.surplus + '</span>';
+        return '<span style="color:#16a34a;">✓ Em dia</span>';
+      };
+
+      const buildDeficitLabel = (report: TeacherReport) => {
+        let extra = '';
+        if (report.totalDeficit > 0) extra += ' | Déficit: <strong style="color:#dc2626;">-' + report.totalDeficit + '</strong>';
+        if (report.totalSurplus > 0) extra += ' | Saldo: <strong style="color:#7c3aed;">+' + report.totalSurplus + '</strong>';
+        return extra;
+      };
+
+      const buildDetailRows = (details: SubjectClassDetail[]) => {
+        return details.map((d, i) => {
+          const bg = i % 2 === 0 ? '#fff' : '#f8fafc';
+          return '<tr style="background:' + bg + ';">'
+            + '<td style="border:1px solid #e5e7eb;padding:4px 8px;">' + d.subjectName + '</td>'
+            + '<td style="border:1px solid #e5e7eb;padding:4px 8px;">' + d.className + '</td>'
+            + '<td style="border:1px solid #e5e7eb;padding:4px 8px;text-align:center;">' + d.predictedClasses + '</td>'
+            + '<td style="border:1px solid #e5e7eb;padding:4px 8px;text-align:center;">' + d.givenClasses + '</td>'
+            + '<td style="border:1px solid #e5e7eb;padding:4px 8px;text-align:center;">' + buildSituationCell(d) + '</td>'
+            + '</tr>';
+        }).join('');
+      };
+
+      const teacherBlocks = teachersForFrequency.map((report, idx) => {
+        const pageBreak = printMode === 'select' && idx < teachersForFrequency.length - 1
+          ? '<div style="page-break-after:always;"></div>' : '';
+        return '<div style="margin-bottom:20px;' + (printMode === 'select' ? 'page-break-inside:avoid;' : '') + '">'
+          + '<div style="background:#f0f4ff;padding:10px 14px;border-radius:6px;margin-bottom:6px;border-left:4px solid #3b82f6;">'
+          + '<strong style="font-size:13pt;color:#1e3a5f;">' + report.teacherName + '</strong>'
+          + '<span style="margin-left:12px;font-size:10pt;color:#555;">Carga Semanal: ' + report.weeklyWorkload + 'h</span>'
+          + '<span style="margin-left:12px;font-size:10pt;">'
+          + 'Previsto: <strong>' + report.totalPredictedClasses + '</strong> | '
+          + 'Dado: <strong style="color:#16a34a;">' + report.totalGivenClasses + '</strong>'
+          + buildDeficitLabel(report)
+          + '</span></div>'
+          + '<table style="width:100%;border-collapse:collapse;font-size:9pt;">'
+          + '<thead><tr style="background:#e0e7ff;">'
+          + '<th style="border:1px solid #c7d2fe;padding:5px 8px;text-align:left;">Disciplina</th>'
+          + '<th style="border:1px solid #c7d2fe;padding:5px 8px;text-align:left;">Turma</th>'
+          + '<th style="border:1px solid #c7d2fe;padding:5px 8px;text-align:center;">Previsto</th>'
+          + '<th style="border:1px solid #c7d2fe;padding:5px 8px;text-align:center;">Dado</th>'
+          + '<th style="border:1px solid #c7d2fe;padding:5px 8px;text-align:center;">Situação</th>'
+          + '</tr></thead><tbody>'
+          + buildDetailRows(report.subjectClassDetails)
+          + '</tbody></table></div>' + pageBreak;
+      }).join('');
+
+      frequencyHtml = '<h2 style="font-size:16pt;color:#1e3a5f;margin:20px 0 10px;border-bottom:2px solid #1e3a5f;padding-bottom:6px;">'
+        + 'Relatório de Frequência — ' + monthNames[month - 1] + '/' + year
+        + '</h2>' + teacherBlocks;
+    }
+
+    // Build workload section HTML
+    let workloadHtml = '';
+    if (printSection === 'workload' || printSection === 'both') {
+      const buildSubjectsList = (subjects: TeacherSubjectWorkload['subjects']) => {
+        return subjects.map(s => {
+          const cls = s.className ? ' <span style="font-size:8pt;color:#3b82f6;">(' + s.className + ')</span>' : '';
+          return '<div style="margin-bottom:3px;">' + s.subjectName + cls + '</div>';
+        }).join('');
+      };
+
+      const buildHoursColumn = (subjects: TeacherSubjectWorkload['subjects'], field: 'dailyHours' | 'weeklyHours' | 'monthlyHours' | 'annualHours', total: number) => {
+        const rows = subjects.map(s => '<div style="margin-bottom:3px;">' + s[field] + 'h</div>').join('');
+        return rows + '<div style="border-top:1px solid #999;margin-top:4px;padding-top:3px;font-weight:bold;">' + total + 'h</div>';
+      };
+
+      const workloadRows = teachersForWorkload.map((t, idx) => {
+        const bg = idx % 2 === 0 ? '#eff6ff' : '#fff';
+        const dailyTotal = t.subjects.reduce((s, subj) => s + subj.dailyHours, 0);
+        return '<tr style="background:' + bg + ';">'
+          + '<td style="border:1px solid #d1d5db;padding:6px 8px;vertical-align:top;">'
+          + '<strong>' + t.teacherName + '</strong>'
+          + '<br/><span style="font-size:8pt;color:#666;">' + t.subjects.length + ' disciplina(s)</span></td>'
+          + '<td style="border:1px solid #d1d5db;padding:6px 8px;vertical-align:top;">' + buildSubjectsList(t.subjects) + '</td>'
+          + '<td style="border:1px solid #d1d5db;padding:6px 8px;text-align:center;vertical-align:top;">' + buildHoursColumn(t.subjects, 'dailyHours', dailyTotal) + '</td>'
+          + '<td style="border:1px solid #d1d5db;padding:6px 8px;text-align:center;vertical-align:top;">' + buildHoursColumn(t.subjects, 'weeklyHours', t.totalWeeklyHours) + '</td>'
+          + '<td style="border:1px solid #d1d5db;padding:6px 8px;text-align:center;vertical-align:top;">' + buildHoursColumn(t.subjects, 'monthlyHours', t.totalMonthlyHours) + '</td>'
+          + '<td style="border:1px solid #d1d5db;padding:6px 8px;text-align:center;vertical-align:top;">' + buildHoursColumn(t.subjects, 'annualHours', t.totalAnnualHours) + '</td>'
+          + '</tr>';
+      }).join('');
+
+      const totDailyAll = teachersForWorkload.reduce((sum, t) => sum + t.subjects.reduce((s, subj) => s + subj.dailyHours, 0), 0);
+      const totWeeklyAll = teachersForWorkload.reduce((sum, t) => sum + t.totalWeeklyHours, 0);
+      const totMonthlyAll = teachersForWorkload.reduce((sum, t) => sum + t.totalMonthlyHours, 0);
+      const totAnnualAll = teachersForWorkload.reduce((sum, t) => sum + t.totalAnnualHours, 0);
+
+      workloadHtml = (printSection === 'both' ? '<div style="page-break-before:always;"></div>' : '')
+        + '<h2 style="font-size:16pt;color:#1e3a5f;margin:20px 0 10px;border-bottom:2px solid #1e3a5f;padding-bottom:6px;">'
+        + 'Relação Geral de Cargas Horárias — ' + monthNames[month - 1] + '/' + year + '</h2>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:9pt;"><thead>'
+        + '<tr style="background:#1e3a8a;color:#fff;">'
+        + '<th style="border:1px solid #3b82f6;padding:8px;text-align:left;">Professor</th>'
+        + '<th style="border:1px solid #3b82f6;padding:8px;text-align:left;">Disciplinas Lotadas</th>'
+        + '<th style="border:1px solid #3b82f6;padding:8px;text-align:center;">Diária</th>'
+        + '<th style="border:1px solid #3b82f6;padding:8px;text-align:center;">Semanal</th>'
+        + '<th style="border:1px solid #3b82f6;padding:8px;text-align:center;">Mensal</th>'
+        + '<th style="border:1px solid #3b82f6;padding:8px;text-align:center;">Anual</th>'
+        + '</tr></thead><tbody>'
+        + workloadRows
+        + '</tbody><tfoot>'
+        + '<tr style="background:#e0e7ff;font-weight:bold;">'
+        + '<td colspan="2" style="border:1px solid #d1d5db;padding:8px;text-align:right;">TOTAIS GERAIS:</td>'
+        + '<td style="border:1px solid #d1d5db;padding:8px;text-align:center;">' + totDailyAll + 'h</td>'
+        + '<td style="border:1px solid #d1d5db;padding:8px;text-align:center;">' + totWeeklyAll + 'h</td>'
+        + '<td style="border:1px solid #d1d5db;padding:8px;text-align:center;">' + totMonthlyAll + 'h</td>'
+        + '<td style="border:1px solid #d1d5db;padding:8px;text-align:center;">' + totAnnualAll + 'h</td>'
+        + '</tr></tfoot></table>';
+    }
+
+    // Open print window
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      toast.error('Popup bloqueado. Permita popups para imprimir.');
+      return;
+    }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Relatório de Frequência — ${monthNames[month - 1]}/${year}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; padding: 20px; }
+  ${printHeaderCss}
+  ${printFooterCss}
+  @media print {
+    @page { size: A4; margin: 12mm; }
+    body { padding: 0; }
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print-footer {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid #d1d5db;
+    text-align: center;
+    font-size: 8pt;
+    color: #9ca3af;
+  }
+</style>
+</head><body>
+  ${headerHtml}
+  ${frequencyHtml}
+  ${workloadHtml}
+  <div class="print-footer">
+    Relatório gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+    — Sistema Criador de Horário de Aula © ${new Date().getFullYear()}
+  </div>
+  ${buildPrintFooterHtml()}
+</body></html>`);
+
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 400);
+
+    setShowPrintModal(false);
+  };
+
+  const toggleTeacherSelection = (teacherId: string) => {
+    setSelectedTeachersToPrint(prev => {
+      const next = new Set(prev);
+      if (next.has(teacherId)) {
+        next.delete(teacherId);
+      } else {
+        next.add(teacherId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllTeachersForPrint = () => {
+    const allIds = new Set<string>();
+    filteredReports.forEach(r => allIds.add(r.teacherId));
+    teacherWorkload.forEach(t => allIds.add(t.teacherId));
+    setSelectedTeachersToPrint(allIds);
+  };
+
+  const deselectAllTeachersForPrint = () => {
+    setSelectedTeachersToPrint(new Set());
+  };
+
+  // Merge teacher lists for print selection
+  const allTeachersForPrintSelection = React.useMemo(() => {
+    const map = new Map<string, string>();
+    filteredReports.forEach(r => map.set(r.teacherId, r.teacherName));
+    teacherWorkload.forEach(t => map.set(t.teacherId, t.teacherName));
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [filteredReports, teacherWorkload]);
+
+  const filteredTeachersForPrint = printSearchTerm
+    ? allTeachersForPrintSelection.filter(t => t.name.toLowerCase().includes(printSearchTerm.toLowerCase()))
+    : allTeachersForPrintSelection;
 
   const handleExportCSV = () => {
     if (!filteredReports || filteredReports.length === 0) {
@@ -362,24 +677,6 @@ const TeacherFrequencyReport: React.FC = () => {
 
     toast.success('Relatório exportado com sucesso!');
   };
-
-  // Filtrar dados
-  const filteredReports = reportData?.reports.filter(report => {
-    const teacherMatch = !filterTeacher || report.teacherName.toLowerCase().includes(filterTeacher.toLowerCase());
-    const subjectMatch = !filterSubject || report.subjectClassDetails.some(
-      detail => detail.subjectName.toLowerCase().includes(filterSubject.toLowerCase())
-    );
-    const classMatch = !filterClass || report.subjectClassDetails.some(
-      detail => detail.className.toLowerCase().includes(filterClass.toLowerCase())
-    );
-    return teacherMatch && subjectMatch && classMatch;
-  }).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR')) || [];
-
-  // Calcular estatísticas gerais
-  const totalDeficit = filteredReports.reduce((sum, r) => sum + r.totalDeficit, 0);
-  const totalSurplus = filteredReports.reduce((sum, r) => sum + r.totalSurplus, 0);
-  const totalPredicted = filteredReports.reduce((sum, r) => sum + r.totalPredictedClasses, 0);
-  const totalGiven = filteredReports.reduce((sum, r) => sum + r.totalGivenClasses, 0);
 
   // Agrupar por disciplina
   const groupBySubject = () => {
@@ -451,11 +748,6 @@ const TeacherFrequencyReport: React.FC = () => {
     return Array.from(classMap.values());
   };
 
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
   return (
     <div className="p-6 no-print">
       {/* Cabeçalho */}
@@ -476,7 +768,7 @@ const TeacherFrequencyReport: React.FC = () => {
             Exportar CSV
           </button>
           <button
-            onClick={handlePrint}
+            onClick={handleOpenPrintModal}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             <Printer className="w-5 h-5" />
@@ -1147,6 +1439,14 @@ const TeacherFrequencyReport: React.FC = () => {
         </div>
       </div>
 
+      {/* Gráficos de Análise */}
+      <WorkloadCharts
+        teacherWorkload={teacherWorkload}
+        filteredReports={filteredReports}
+        monthName={monthNames[month - 1]}
+        year={year}
+      />
+
       {/* Estilos de Impressão */}
       <style>{`
         @media print {
@@ -1203,6 +1503,183 @@ const TeacherFrequencyReport: React.FC = () => {
           }
         }
       `}</style>
+
+      {/* Modal de Impressão */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <Printer className="w-6 h-6 text-white" />
+                <h2 className="text-xl font-bold text-white">Opções de Impressão</h2>
+              </div>
+              <button
+                onClick={() => setShowPrintModal(false)}
+                className="text-white/80 hover:text-white transition p-1"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Seção a imprimir */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  📄 O que imprimir?
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: 'both' as const, label: 'Frequência + Carga Horária', icon: '📊' },
+                    { key: 'frequency' as const, label: 'Só Frequência', icon: '📋' },
+                    { key: 'workload' as const, label: 'Só Carga Horária', icon: '⏰' },
+                  ].map(opt => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setPrintSection(opt.key)}
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition text-center ${
+                        printSection === opt.key
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="text-lg mb-1">{opt.icon}</div>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Modo de seleção */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  👥 Quais professores?
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPrintMode('all')}
+                    className={`p-4 rounded-xl border-2 text-left transition ${
+                      printMode === 'all'
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Users className="w-5 h-5 text-blue-600" />
+                      <span className="font-bold text-gray-900">Todos os Professores</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Imprime relatório completo de todos os {allTeachersForPrintSelection.length} professores, sem cortes entre eles
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => setPrintMode('select')}
+                    className={`p-4 rounded-xl border-2 text-left transition ${
+                      printMode === 'select'
+                        ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Search className="w-5 h-5 text-indigo-600" />
+                      <span className="font-bold text-gray-900">Selecionar por Nome</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Escolha um ou mais professores para imprimir individualmente (cada um em página separada)
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Lista de seleção de professores */}
+              {printMode === 'select' && (
+                <div className="border-2 border-indigo-200 rounded-xl p-4 bg-indigo-50/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-gray-700">
+                      Selecione os professores ({selectedTeachersToPrint.size} de {allTeachersForPrintSelection.length})
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={selectAllTeachersForPrint}
+                        className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        Selecionar Todos
+                      </button>
+                      <button
+                        onClick={deselectAllTeachersForPrint}
+                        className="text-xs px-3 py-1 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Busca */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={printSearchTerm}
+                      onChange={e => setPrintSearchTerm(e.target.value)}
+                      placeholder="Buscar professor..."
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
+                    />
+                  </div>
+
+                  {/* Lista */}
+                  <div className="max-h-48 overflow-y-auto space-y-1">
+                    {filteredTeachersForPrint.map(teacher => (
+                      <label
+                        key={teacher.id}
+                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition ${
+                          selectedTeachersToPrint.has(teacher.id)
+                            ? 'bg-indigo-100 border border-indigo-300'
+                            : 'bg-white border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedTeachersToPrint.has(teacher.id)}
+                          onChange={() => toggleTeacherSelection(teacher.id)}
+                          className="w-4 h-4 text-indigo-600 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-800">{teacher.name}</span>
+                      </label>
+                    ))}
+                    {filteredTeachersForPrint.length === 0 && (
+                      <p className="text-center text-sm text-gray-400 py-4">Nenhum professor encontrado</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t bg-gray-50 rounded-b-2xl flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                💡 O cabeçalho institucional configurado em Configurações será incluído automaticamente.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowPrintModal(false)}
+                  className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleExecutePrint}
+                  disabled={printMode === 'select' && selectedTeachersToPrint.size === 0}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

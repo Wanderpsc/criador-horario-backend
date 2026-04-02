@@ -3,7 +3,7 @@ import { Calendar, Check, X, Plus, Edit2, Trash2, Download, FileText, AlertTrian
 import toast from 'react-hot-toast';
 import { schoolDayAPI, scheduleAPI, emergencyScheduleAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, type PrintHeaderData } from '../utils/printHeader';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml, type PrintHeaderData } from '../utils/printHeader';
 
 interface SchoolDay {
   id: string;
@@ -893,7 +893,7 @@ const SchoolCalendar: React.FC = () => {
     .legend-item { display: flex; align-items: center; gap: 8px; background: white; padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.04); }
     .legend-color { width: 18px; height: 18px; border-radius: 6px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.15), inset 0 -1px 0 rgba(0,0,0,0.1); }
 
-    .footer { margin-top: 24px; text-align: center; font-size: 10px; color: #94a3b8; padding-top: 16px; border-top: 2px solid transparent; border-image: linear-gradient(90deg, transparent, #0f9b58, #2d8f5e, #6dd5a0, transparent) 1; letter-spacing: 0.5px; }
+    ${printFooterCss}
 
     @media print {
       body { padding: 0; background: white !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -949,6 +949,7 @@ const SchoolCalendar: React.FC = () => {
   </div>
 
   <div class="footer">© ${new Date().getFullYear()} Wander Pires Silva Coelho — Sistema Criador de Horário de Aula</div>
+  ${buildPrintFooterHtml()}
 </div>
   <script>window.onload = function() { window.print(); }</script>
 </body>

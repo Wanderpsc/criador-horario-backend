@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { AlertTriangle, Calendar, Clock, User, Zap, RefreshCw, Save, Printer, List, Bell, Send, Eye, FileText, Trash2, Info, CheckCircle } from 'lucide-react';
+import { printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface Class {
   _id?: string;
@@ -2466,9 +2467,10 @@ export default function EmergencySchedule() {
                                 h3 { color: #312e81; margin-top: 30px; page-break-before: always; }
                                 h3:first-of-type { page-break-before: auto; }
                                 @page { margin: 1cm; }
+                                ${printFooterCss}
                               </style>
                             </head>
-                            <body>${printContent}</body>
+                            <body>${printContent}${buildPrintFooterHtml()}</body>
                           </html>
                         `);
                         printWindow.document.close();
@@ -2633,12 +2635,14 @@ export default function EmergencySchedule() {
                                     tr:nth-child(even) { background-color: #ffedd5; }
                                     .no-print { display: none; }
                                     @page { margin: 1.5cm; }
+                                    ${printFooterCss}
                                   </style>
                                 </head>
                                 <body>
                                   <h2>📋 Débitos Pendentes de Professores</h2>
                                   <p><strong>Data:</strong> ${new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
                                   ${printContent}
+                                  ${buildPrintFooterHtml()}
                                 </body>
                               </html>
                             `);

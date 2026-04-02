@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { scheduleAPI, teacherAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit2, Trash2, X, Printer, Download, FileSpreadsheet } from 'lucide-react';
-import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss } from '../utils/printHeader';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface TeacherAvailability {
   [day: string]: { // 'segunda', 'terça', etc.
@@ -224,6 +224,7 @@ export default function Teachers() {
             color: #000;
           }
           ${printHeaderCss}
+          ${printFooterCss}
           .header {
             text-align: center;
             margin-bottom: 20px;
@@ -266,14 +267,6 @@ export default function Teachers() {
           .status-inativo {
             color: #dc2626;
             font-weight: bold;
-          }
-          .footer {
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            font-size: 8pt;
-            color: #666;
           }
           .summary {
             margin: 10px 0;
@@ -338,6 +331,8 @@ export default function Teachers() {
           <p>© ${new Date().getFullYear()} ${user?.schoolName || 'Sistema de Horários'} - Todos os direitos reservados</p>
           <p>Documento gerado pelo Sistema Criador de Horário de Aula Escolar</p>
         </div>
+
+        ${buildPrintFooterHtml()}
 
         <script>
           window.onload = function() {

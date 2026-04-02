@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, Plus, Edit2, Trash2, Key, CheckCircle, XCircle, 
-  Shield, Save, X, Eye, EyeOff, FileText, AlertCircle 
+  Shield, Save, X, Eye, EyeOff, FileText, AlertCircle,
+  Printer, Upload, Building
 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { invalidatePrintHeaderCache, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml, type PrintHeaderData } from '../utils/printHeader';
 
 interface Permission {
   create?: boolean;
@@ -102,6 +104,132 @@ export default function Settings() {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // Print Header States
+  const [printHeaderData, setPrintHeaderData] = useState<PrintHeaderData>({
+    emblemBase64: '',
+    emblemBase64Right: '',
+    line1: '',
+    line2: '',
+    line3: '',
+    line4: '',
+    line5: '',
+    line6: '',
+    line7: '',
+  });
+  const [editingPrintHeader, setEditingPrintHeader] = useState(false);
+  const [savingPrintHeader, setSavingPrintHeader] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRightRef = useRef<HTMLInputElement>(null);
+
+  // School settings states
+  const [schoolFormData, setSchoolFormData] = useState({
+    schoolName: '',
+    workingDays: 5,
+    academicYear: new Date().getFullYear()
+  });
+
+  useEffect(() => {
+    loadPrintHeaderData();
+    loadSchoolProfile();
+  }, []);
+
+  const loadSchoolProfile = async () => {
+    try {
+      const response = await api.get('/schools/profile');
+      if (response.data.success) {
+        const data = response.data.data;
+        setSchoolFormData({
+          schoolName: data.schoolName || '',
+          workingDays: data.workingDays || 5,
+          academicYear: data.academicYear || new Date().getFullYear()
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar dados da escola:', error);
+    }
+  };
+
+  const loadPrintHeaderData = async () => {
+    try {
+      const response = await api.get('/schools/print-header');
+      if (response.data.success) {
+        setPrintHeaderData({
+          emblemBase64: response.data.data.printHeader?.emblemBase64 || '',
+          emblemBase64Right: response.data.data.printHeader?.emblemBase64Right || '',
+          line1: response.data.data.printHeader?.line1 || '',
+          line2: response.data.data.printHeader?.line2 || '',
+          line3: response.data.data.printHeader?.line3 || '',
+          line4: response.data.data.printHeader?.line4 || '',
+          line5: response.data.data.printHeader?.line5 || '',
+          line6: response.data.data.printHeader?.line6 || '',
+          line7: response.data.data.printHeader?.line7 || '',
+          schoolName: response.data.data.schoolName || '',
+        });
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar cabeçalho:', error);
+    }
+  };
+
+  const handleSavePrintHeader = async () => {
+    setSavingPrintHeader(true);
+    try {
+      await api.put('/schools/print-header', {
+        emblemBase64: printHeaderData.emblemBase64,
+        emblemBase64Right: printHeaderData.emblemBase64Right,
+        line1: printHeaderData.line1,
+        line2: printHeaderData.line2,
+        line3: printHeaderData.line3,
+        line4: printHeaderData.line4,
+        line5: printHeaderData.line5,
+        line6: printHeaderData.line6,
+        line7: printHeaderData.line7,
+      });
+      invalidatePrintHeaderCache();
+      toast.success('Cabeçalho de impressão salvo com sucesso!');
+      setEditingPrintHeader(false);
+    } catch (error: any) {
+      console.error('Erro ao salvar cabeçalho:', error);
+      toast.error(error.response?.data?.message || 'Erro ao salvar cabeçalho');
+    } finally {
+      setSavingPrintHeader(false);
+    }
+  };
+
+  const handleEmblemUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'left' | 'right' = 'left') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Imagem muito grande (máximo 2MB)');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Arquivo deve ser uma imagem (PNG, JPG, etc.)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const field = side === 'right' ? 'emblemBase64Right' : 'emblemBase64';
+      setPrintHeaderData({ ...printHeaderData, [field]: ev.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePreviewPrintHeader = () => {
+    const headerHtml = buildPrintHeaderHtml(printHeaderData);
+    const win = window.open('', '_blank', 'width=700,height=300');
+    if (!win) return;
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pré-visualização do Cabeçalho</title><style>'
+      + 'body { font-family: Arial, sans-serif; margin: 30px; background: #f5f5f5; }'
+      + '.preview-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }'
+      + printHeaderCss
+      + printFooterCss
+      + '</style></head><body><div class="preview-box">'
+      + (headerHtml || '<p style="text-align:center;color:#999;">Nenhum cabeçalho configurado</p>')
+      + '</div>' + buildPrintFooterHtml() + '</body></html>');
+    win.document.close();
+  };
 
   // Fetch users
   const { data: users = [], isLoading } = useQuery<SchoolUser[]>({
@@ -1032,6 +1160,324 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Configurações da Escola */}
+      <div className="mt-8 bg-white rounded-lg shadow p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Building className="w-6 h-6 text-primary-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Configurações da Escola</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Escola</label>
+            <p className="text-lg font-semibold text-gray-900">{schoolFormData.schoolName || '—'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dias de Aula / Semana</label>
+            <p className="text-lg font-semibold text-gray-900">{schoolFormData.workingDays}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ano Letivo</label>
+            <p className="text-lg font-semibold text-gray-900">{schoolFormData.academicYear}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Cabeçalho de Impressão */}
+      <div className="mt-6 bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Printer className="w-6 h-6 text-indigo-600" />
+            <h2 className="text-2xl font-bold text-gray-900">Cabeçalho de Impressão</h2>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handlePreviewPrintHeader}
+              className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-lg transition flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              Pré-visualizar
+            </button>
+            {!editingPrintHeader ? (
+              <button
+                onClick={() => setEditingPrintHeader(true)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+              >
+                Editar
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setEditingPrintHeader(false);
+                    loadPrintHeaderData();
+                  }}
+                  className="bg-gray-300 text-gray-700 hover:bg-gray-400 px-3 py-2 rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSavePrintHeader}
+                  disabled={savingPrintHeader}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {savingPrintHeader ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-6">
+          🖨️ Configure o cabeçalho institucional com emblema que aparecerá em todas as impressões do sistema.
+        </p>
+
+        {!editingPrintHeader ? (
+          <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 bg-gray-50">
+            <div className="flex items-center justify-center gap-4">
+              {printHeaderData.emblemBase64 ? (
+                <img
+                  src={printHeaderData.emblemBase64}
+                  alt="Emblema Esquerdo"
+                  className="w-16 h-16 object-contain rounded"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs text-center">
+                  Sem emblema
+                </div>
+              )}
+              <div className="text-center flex-1">
+                <p className="text-lg font-bold text-indigo-900">
+                  {printHeaderData.line1 || printHeaderData.schoolName || <span className="text-orange-500 italic text-sm">Linha 1 não definida</span>}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {printHeaderData.line2 || <span className="text-orange-500 italic text-xs">Linha 2 não definida</span>}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {printHeaderData.line3 || <span className="text-orange-500 italic text-xs">Linha 3 não definida</span>}
+                </p>
+                {printHeaderData.line4 && <p className="text-xs text-gray-500">{printHeaderData.line4}</p>}
+                {printHeaderData.line5 && <p className="text-xs text-gray-500">{printHeaderData.line5}</p>}
+                {printHeaderData.line6 && <p className="text-xs text-gray-500">{printHeaderData.line6}</p>}
+                {printHeaderData.line7 && <p className="text-xs text-gray-500">{printHeaderData.line7}</p>}
+              </div>
+              {printHeaderData.emblemBase64Right ? (
+                <img
+                  src={printHeaderData.emblemBase64Right}
+                  alt="Emblema Direito"
+                  className="w-16 h-16 object-contain rounded"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded bg-gray-200 flex items-center justify-center text-gray-400 text-xs text-center">
+                  Sem emblema
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Upload Emblemas - Esquerdo e Direito */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Emblema Esquerdo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🏆 Emblema Esquerdo (Ex: Brasão do Estado)
+                </label>
+                <div className="flex items-center gap-4">
+                  {printHeaderData.emblemBase64 ? (
+                    <div className="relative">
+                      <img
+                        src={printHeaderData.emblemBase64}
+                        alt="Emblema Esquerdo"
+                        className="w-20 h-20 object-contain rounded border-2 border-indigo-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPrintHeaderData({ ...printHeaderData, emblemBase64: '' })}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-20 h-20 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                    >
+                      <Upload className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-400 mt-1">Upload</span>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleEmblemUpload(e, 'left')}
+                    className="hidden"
+                  />
+                  <div className="text-sm text-gray-500">
+                    <p>PNG, JPG, SVG (máx 2MB)</p>
+                    {printHeaderData.emblemBase64 && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-indigo-600 hover:underline mt-1"
+                      >
+                        Trocar imagem
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Emblema Direito */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  🏫 Emblema Direito (Ex: Logo da Escola)
+                </label>
+                <div className="flex items-center gap-4">
+                  {printHeaderData.emblemBase64Right ? (
+                    <div className="relative">
+                      <img
+                        src={printHeaderData.emblemBase64Right}
+                        alt="Emblema Direito"
+                        className="w-20 h-20 object-contain rounded border-2 border-indigo-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPrintHeaderData({ ...printHeaderData, emblemBase64Right: '' })}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => fileInputRightRef.current?.click()}
+                      className="w-20 h-20 rounded border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                    >
+                      <Upload className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-400 mt-1">Upload</span>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRightRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleEmblemUpload(e, 'right')}
+                    className="hidden"
+                  />
+                  <div className="text-sm text-gray-500">
+                    <p>PNG, JPG, SVG (máx 2MB)</p>
+                    {printHeaderData.emblemBase64Right && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRightRef.current?.click()}
+                        className="text-indigo-600 hover:underline mt-1"
+                      >
+                        Trocar imagem
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Linhas do cabeçalho */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 1 — Nome da Instituição / Secretaria
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line1}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line1: e.target.value })}
+                placeholder="Ex: Secretaria de Estado da Educação do Piauí"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 2 — Subtítulo / Nome da Escola
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line2}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line2: e.target.value })}
+                placeholder="Ex: CETI Desembargador Amaral"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 3 — Endereço / Informação Complementar
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line3}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line3: e.target.value })}
+                placeholder="Ex: Rua das Flores, 123 - Teresina/PI - CEP 64000-000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 4 (opcional)
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line4}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line4: e.target.value })}
+                placeholder="Ex: Telefone / CNPJ"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 5 (opcional)
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line5}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line5: e.target.value })}
+                placeholder="Ex: E-mail institucional"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 6 (opcional)
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line6}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line6: e.target.value })}
+                placeholder="Ex: Informação complementar"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Linha 7 (opcional)
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                value={printHeaderData.line7}
+                onChange={(e) => setPrintHeaderData({ ...printHeaderData, line7: e.target.value })}
+                placeholder="Ex: Informação complementar"
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Link para Logs de Auditoria */}
       <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border border-purple-200">
