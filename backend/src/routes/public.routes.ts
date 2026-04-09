@@ -30,11 +30,24 @@ router.get('/timetable/:id', async (req, res) => {
     let timetables = await GeneratedTimetable.find({ $or: orConditions })
       .sort({ createdAt: -1 }).limit(50).lean();
 
+    // Se encontrou por _id (1 documento), expandir para todos os irmãos pelo mesmo scheduleId
+    if (isValidObjectId && timetables.length > 0) {
+      const scheduleIds = [...new Set(timetables.map((tt: any) => String(tt.scheduleId)).filter(Boolean))];
+      if (scheduleIds.length > 0) {
+        const siblings = await GeneratedTimetable.find({
+          scheduleId: { $in: scheduleIds }
+        }).sort({ createdAt: -1 }).limit(500).lean();
+        if (siblings.length > timetables.length) {
+          timetables = siblings;
+        }
+      }
+    }
+
     if (!timetables.length && isValidObjectId) {
       const single = await GeneratedTimetable.findById(id).lean();
       if (single) {
         timetables = await GeneratedTimetable.find({
-          school: single.school,
+          school: (single as any).school,
           title: single.title
         }).sort({ createdAt: -1 }).limit(50).lean();
       }
