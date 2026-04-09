@@ -61,6 +61,8 @@ export interface IUser extends Document {
   printHeader?: {
     emblemBase64?: string;
     emblemBase64Right?: string;
+    emblemSizeLeft?: number;
+    emblemSizeRight?: number;
     line1?: string;
     line2?: string;
     line3?: string;
@@ -144,6 +146,8 @@ const userSchema = new Schema<IUser>(
     printHeader: {
       emblemBase64: { type: String },
       emblemBase64Right: { type: String },
+      emblemSizeLeft: { type: Number },
+      emblemSizeRight: { type: Number },
       line1: { type: String },
       line2: { type: String },
       line3: { type: String },
