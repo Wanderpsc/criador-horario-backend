@@ -83,7 +83,7 @@ export default function DisplayPanelConfig() {
       params.append('mode', 'normal');
     }
 
-    const url = `/display-panel?${params.toString()}`;
+    const url = `/#/display-panel?${params.toString()}`;
     console.log('🔗 URL gerada:', url);
     window.open(url, '_blank', 'fullscreen=yes');
     toast.success('Painel de TV aberto em nova janela');

@@ -8,19 +8,24 @@ import Grade from '../models/Grade';
 
 const router = Router();
 
-// GET /api/public/timetable/:id - Buscar horário gerado por ID (público, sem autenticação)
+// GET /api/public/timetable/:id - Buscar horário gerado por ID ou título (público, sem autenticação)
 router.get('/timetable/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const mongoose = require('mongoose');
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+
+    // Construir query baseado no tipo do id
+    const orConditions: any[] = [{ scheduleId: id }, { title: id }];
+    if (isValidObjectId) {
+      orConditions.unshift({ _id: id });
+    }
 
     const timetables = await GeneratedTimetable.find({ 
-      $or: [
-        { _id: id },
-        { scheduleId: id }
-      ]
+      $or: orConditions
     }).sort({ createdAt: -1 }).limit(50);
 
-    if (!timetables.length) {
+    if (!timetables.length && isValidObjectId) {
       // Tentar buscar pelo título agrupado — o id pode ser de um dos documentos do grupo
       const single = await GeneratedTimetable.findById(id);
       if (single) {

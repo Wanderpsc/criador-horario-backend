@@ -53,12 +53,20 @@ export default function DisplayPanel({
 
   // LER PARÂMETROS DA URL (configuração vinda de DisplayPanelConfig)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    // HashRouter coloca a query string depois de #/caminho?params
+    // Ex: /#/display-panel?timetableId=xyz → window.location.hash = '#/display-panel?timetableId=xyz'
+    const hashPart = window.location.hash; // '#/display-panel?...'
+    const hashQuery = hashPart.includes('?') ? hashPart.split('?')[1] : '';
+    // Fallback para query string normal (caso aberto sem hash)
+    const rawQuery = hashQuery || window.location.search.replace(/^\?/, '');
+    const params = new URLSearchParams(rawQuery);
     const mode = params.get('mode');
     const timetableId = params.get('timetableId');
     const emergencyId = params.get('emergencyId');
 
     console.log('🔗 Parâmetros da URL detectados:');
+    console.log('   hash:', hashPart);
+    console.log('   rawQuery:', rawQuery);
     console.log('   mode:', mode);
     console.log('   timetableId:', timetableId);
     console.log('   emergencyId:', emergencyId);
