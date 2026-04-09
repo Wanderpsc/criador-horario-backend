@@ -27,16 +27,16 @@ interface DisplayPanelProps {
 }
 
 type SlotStatus = 'completed' | 'ongoing' | 'upcoming' | 'scheduled';
-type ViewMode = 'grid' | 'cards' | 'airport' | 'display';
+type ViewMode = 'grid' | 'cards' | 'airport' | 'display' | 'alltable';
 
 export default function DisplayPanel({ 
 
   autoRefresh = true, 
-  refreshInterval = 60 
+  refreshInterval = 10 
 }: DisplayPanelProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isConnected, setIsConnected] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('display'); // Começar com modo display (letreiro)
+  const [viewMode, setViewMode] = useState<ViewMode>('alltable'); // Começar com tabela transposta de todas as turmas
   const [lastAlertTime, setLastAlertTime] = useState<string>('');
   const [selectedTimetableId, setSelectedTimetableId] = useState<string>('');
   const [selectedDay, setSelectedDay] = useState<string>('Segunda'); // Dia selecionado para visualização
@@ -214,7 +214,8 @@ export default function DisplayPanel({
         return [];
       }
     },
-    refetchInterval: false,
+    refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
+    staleTime: 0,
     enabled: !!selectedTimetableId,
   });
 
@@ -324,6 +325,16 @@ export default function DisplayPanel({
     // }, 60000); // 60 segundos
     
     // return () => clearInterval(viewTimer);
+  }, []);
+
+  // Keep-alive: pinga o backend a cada 4 minutos para o Render nunca entrar em sleep
+  useEffect(() => {
+    const ping = () => {
+      publicApi.get('/health').catch(() => {/* ignora erro no keep-alive */});
+    };
+    ping(); // pinga imediatamente ao montar para acordar o Render desde o inicio
+    const keepAlive = setInterval(ping, 4 * 60 * 1000); // 4 minutos
+    return () => clearInterval(keepAlive);
   }, []);
 
   // Buscar horários gerados (com suporte a modo emergencial)
@@ -594,7 +605,9 @@ export default function DisplayPanel({
       }
     },
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
-    retry: 3,
+    staleTime: 0,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(5000 * 2 ** attempt, 30000), // 5s, 10s, max 30s
     enabled: (!!selectedTimetableId && !isEmergencyMode) || (isEmergencyMode && !!selectedEmergencyId),
   });
 
@@ -1093,15 +1106,15 @@ export default function DisplayPanel({
                 )}
                 <button
                   onClick={() => {
-                    const modes: ViewMode[] = ['display', 'airport', 'grid', 'cards'];
+                    const modes: ViewMode[] = ['alltable', 'display', 'airport', 'grid', 'cards'];
                     const currentIndex = modes.indexOf(viewMode);
                     const nextIndex = (currentIndex + 1) % modes.length;
                     setViewMode(modes[nextIndex]);
                   }}
                   className="ml-4 p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                  title={`Modo: ${viewMode === 'display' ? 'Display' : viewMode === 'grid' ? 'Grade' : viewMode === 'airport' ? 'Aeroporto' : 'Cards'}`}
+                  title={`Modo: ${viewMode === 'alltable' ? 'Todas Turmas' : viewMode === 'display' ? 'Display' : viewMode === 'grid' ? 'Grade' : viewMode === 'airport' ? 'Aeroporto' : 'Cards'}`}
                 >
-                  {viewMode === 'grid' ? <Grid3x3 size={20} /> : viewMode === 'cards' ? <List size={20} /> : <MapPin size={20} />}
+                  {viewMode === 'alltable' ? <Grid3x3 size={20} /> : viewMode === 'grid' ? <Grid3x3 size={20} /> : viewMode === 'cards' ? <List size={20} /> : <MapPin size={20} />}
                 </button>
               </div>
             </div>
@@ -1268,6 +1281,172 @@ export default function DisplayPanel({
           </table>
           </div>
           )}
+        </>
+      )}
+
+      {/* TABELA TRANSPOSTA - Todas as turmas × todos os períodos, período atual destacado */}
+      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'alltable' && (
+        <>
+          {/* Abas de Dias da Semana */}
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-2">
+            {weekDays.map(day => {
+              const daySlots = fullWeekGrid[day] || {};
+              const hasSlots = Object.keys(daySlots).length > 0;
+              const isToday = day === currentDay;
+              const isSelected = day === selectedDay;
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  disabled={!hasSlots}
+                  className={`px-5 py-2 rounded-lg font-bold text-base transition-all whitespace-nowrap ${
+                    isSelected ? 'bg-yellow-500 text-gray-900 shadow-lg scale-105'
+                    : hasSlots ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  } ${isToday && !isSelected ? 'ring-2 ring-yellow-400' : ''}`}
+                >
+                  {day}{isToday && <span className="ml-2">📍</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+          {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
+            <div className="text-center py-20">
+              <BookOpen size={80} className="mx-auto mb-4 text-yellow-500" />
+              <h2 className="text-4xl font-bold text-white mb-4">Sem Aulas em {selectedDay}</h2>
+              <p className="text-xl text-gray-400 mt-4">💡 Selecione outro dia acima para ver os horários.</p>
+            </div>
+          ) : (() => {
+            // Detectar período ativo (em andamento ou próximo em até 30 min)
+            const now = currentTime;
+            let activePeriod: number | null = null;
+            for (const period of allPeriods) {
+              const periodSlots = fullWeekGrid[selectedDay][period] || {};
+              const firstSlot = Object.values(periodSlots)[0] as any;
+              if (firstSlot && firstSlot.startTime && firstSlot.endTime) {
+                const [sh, sm] = firstSlot.startTime.split(':').map(Number);
+                const [eh, em] = firstSlot.endTime.split(':').map(Number);
+                const start = new Date(now); start.setHours(sh, sm, 0, 0);
+                const end = new Date(now); end.setHours(eh, em, 0, 0);
+                if (now >= start && now <= end) { activePeriod = period; break; }
+                const diff = Math.floor((start.getTime() - now.getTime()) / 60000);
+                if (diff > 0 && diff <= 30 && activePeriod === null) activePeriod = period;
+              }
+            }
+
+            return (
+              <table className="w-full border-collapse text-sm">
+                <thead className="sticky top-0 z-20">
+                  <tr>
+                    <th className="border-2 border-gray-600 p-3 text-left sticky left-0 z-30 bg-gray-900 min-w-[130px]">
+                      <div className="text-base font-black text-yellow-400">TURMA</div>
+                    </th>
+                    {allPeriods.map(period => {
+                      const periodSlots = fullWeekGrid[selectedDay][period] || {};
+                      const firstSlot = Object.values(periodSlots)[0] as any;
+                      const isActive = period === activePeriod;
+                      return (
+                        <th
+                          key={period}
+                          className={`border-2 p-2 text-center min-w-[140px] transition-colors ${
+                            isActive
+                              ? 'border-yellow-400 bg-yellow-900 text-yellow-300'
+                              : 'border-gray-600 bg-gray-900 text-gray-300'
+                          }`}
+                        >
+                          <div className={`font-black ${isActive ? 'text-2xl' : 'text-xl'}`}>{period}º</div>
+                          {firstSlot && (
+                            <div className="text-xs font-mono text-gray-400 mt-0.5">
+                              {firstSlot.startTime}–{firstSlot.endTime}
+                            </div>
+                          )}
+                          {isActive && (
+                            <div className="text-xs font-bold text-yellow-300 animate-pulse mt-1">⏰ AGORA</div>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allClassesList.map((classInfo, classIndex) => {
+                    const { className, gradeName } = classInfo;
+                    const classKey = `${className}|||${gradeName || ''}`;
+                    return (
+                      <tr key={`alltable-row-${classIndex}`} className="hover:brightness-110 transition-all">
+                        {/* Coluna da turma */}
+                        <td className="border-2 border-gray-600 p-2 sticky left-0 z-10 bg-gray-800 font-bold">
+                          <div className="text-base text-white leading-tight">{className}</div>
+                          {gradeName && <div className="text-xs text-yellow-300 mt-0.5">{gradeName}</div>}
+                        </td>
+                        {/* Células de cada período */}
+                        {allPeriods.map(period => {
+                          const periodSlots = fullWeekGrid[selectedDay][period] || {};
+                          const slot = (periodSlots as any)[classKey];
+                          const isActivePeriod = period === activePeriod;
+
+                          if (!slot) {
+                            return (
+                              <td
+                                key={`alltable-empty-${classIndex}-${period}`}
+                                className={`border-2 p-2 text-center ${
+                                  isActivePeriod ? 'border-yellow-700 bg-yellow-950' : 'border-gray-700 bg-gray-850'
+                                }`}
+                              >
+                                <span className="text-gray-600 text-xs">—</span>
+                              </td>
+                            );
+                          }
+
+                          const status = getSlotStatus(slot);
+                          return (
+                            <td
+                              key={`alltable-slot-${classIndex}-${period}`}
+                              className={`border-2 p-2 transition-all ${
+                                isActivePeriod
+                                  ? 'border-yellow-500'
+                                  : status === 'completed'
+                                  ? 'border-gray-700 opacity-40'
+                                  : 'border-gray-600'
+                              }`}
+                              style={{
+                                backgroundColor: slot.subjectColor
+                                  ? `${slot.subjectColor}${isActivePeriod ? 'cc' : '44'}`
+                                  : isActivePeriod ? '#1e3a1e' : '#1f2937',
+                              }}
+                            >
+                              <div
+                                className={`font-bold truncate leading-tight ${
+                                  isActivePeriod ? 'text-sm text-white' : 'text-xs text-gray-200'
+                                }`}
+                                title={slot.subjectName}
+                              >
+                                {slot.subjectName}
+                              </div>
+                              <div
+                                className={`truncate mt-0.5 ${
+                                  isActivePeriod ? 'text-xs text-gray-300' : 'text-xs text-gray-500'
+                                }`}
+                                title={slot.teacherName}
+                              >
+                                {slot.teacherName?.split(' ')[0]}
+                              </div>
+                              {status === 'ongoing' && isActivePeriod && (
+                                <div className="text-xs font-bold text-green-400 animate-pulse mt-0.5">● EM ANDAMENTO</div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            );
+          })()}
+          </div>
         </>
       )}
 
