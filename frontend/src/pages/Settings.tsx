@@ -47,9 +47,6 @@ const permissionLabels: { [key: string]: string } = {
   schedules: 'Grade de Horários',
   timetableGenerator: 'Gerador Inteligente',
   calendar: 'Calendário Letivo',
-  notifications: 'Notificações e Lembretes',
-  whatsappSettings: 'WhatsApp Business',
-  liveMessaging: 'Mensagens ao Vivo',
   emergencySchedule: 'Horário Emergencial e Sábado de Reposição',
   teacherAttendance: 'Controle de Frequência',
   frequencyReports: 'Relatórios de Frequência',
@@ -109,6 +106,8 @@ export default function Settings() {
   const [printHeaderData, setPrintHeaderData] = useState<PrintHeaderData>({
     emblemBase64: '',
     emblemBase64Right: '',
+    emblemSizeLeft: 80,
+    emblemSizeRight: 80,
     line1: '',
     line2: '',
     line3: '',
@@ -157,6 +156,8 @@ export default function Settings() {
         setPrintHeaderData({
           emblemBase64: response.data.data.printHeader?.emblemBase64 || '',
           emblemBase64Right: response.data.data.printHeader?.emblemBase64Right || '',
+          emblemSizeLeft: response.data.data.printHeader?.emblemSizeLeft || 80,
+          emblemSizeRight: response.data.data.printHeader?.emblemSizeRight || 80,
           line1: response.data.data.printHeader?.line1 || '',
           line2: response.data.data.printHeader?.line2 || '',
           line3: response.data.data.printHeader?.line3 || '',
@@ -178,6 +179,8 @@ export default function Settings() {
       await api.put('/schools/print-header', {
         emblemBase64: printHeaderData.emblemBase64,
         emblemBase64Right: printHeaderData.emblemBase64Right,
+        emblemSizeLeft: printHeaderData.emblemSizeLeft,
+        emblemSizeRight: printHeaderData.emblemSizeRight,
         line1: printHeaderData.line1,
         line2: printHeaderData.line2,
         line3: printHeaderData.line3,
@@ -974,9 +977,6 @@ export default function Settings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[
                     'calendar',
-                    'notifications',
-                    'whatsappSettings',
-                    'liveMessaging',
                     'emergencySchedule',
                     'teacherAttendance',
                     'frequencyReports',
@@ -1290,7 +1290,8 @@ export default function Settings() {
                       <img
                         src={printHeaderData.emblemBase64}
                         alt="Emblema Esquerdo"
-                        className="w-20 h-20 object-contain rounded border-2 border-indigo-200"
+                        className="object-contain rounded border-2 border-indigo-200"
+                        style={{ width: `${printHeaderData.emblemSizeLeft || 80}px`, height: `${printHeaderData.emblemSizeLeft || 80}px` }}
                       />
                       <button
                         type="button"
@@ -1316,17 +1317,36 @@ export default function Settings() {
                     onChange={(e) => handleEmblemUpload(e, 'left')}
                     className="hidden"
                   />
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 space-y-2">
                     <p>PNG, JPG, SVG (máx 2MB)</p>
                     {printHeaderData.emblemBase64 && (
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-indigo-600 hover:underline mt-1"
+                        className="text-indigo-600 hover:underline block"
                       >
                         Trocar imagem
                       </button>
                     )}
+                    {/* Controles de tamanho */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-600 font-medium">Tamanho:</span>
+                      <button
+                        type="button"
+                        onClick={() => setPrintHeaderData(prev => ({ ...prev, emblemSizeLeft: Math.max(30, (prev.emblemSizeLeft || 80) - 10) }))}
+                        className="w-7 h-7 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded flex items-center justify-center text-lg leading-none"
+                        title="Diminuir emblema"
+                      >−</button>
+                      <span className="w-12 text-center text-sm font-mono font-bold text-indigo-700">
+                        {printHeaderData.emblemSizeLeft || 80}px
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPrintHeaderData(prev => ({ ...prev, emblemSizeLeft: Math.min(250, (prev.emblemSizeLeft || 80) + 10) }))}
+                        className="w-7 h-7 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded flex items-center justify-center text-lg leading-none"
+                        title="Aumentar emblema"
+                      >+</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1342,7 +1362,8 @@ export default function Settings() {
                       <img
                         src={printHeaderData.emblemBase64Right}
                         alt="Emblema Direito"
-                        className="w-20 h-20 object-contain rounded border-2 border-indigo-200"
+                        className="object-contain rounded border-2 border-indigo-200"
+                        style={{ width: `${printHeaderData.emblemSizeRight || 80}px`, height: `${printHeaderData.emblemSizeRight || 80}px` }}
                       />
                       <button
                         type="button"
@@ -1368,17 +1389,36 @@ export default function Settings() {
                     onChange={(e) => handleEmblemUpload(e, 'right')}
                     className="hidden"
                   />
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 space-y-2">
                     <p>PNG, JPG, SVG (máx 2MB)</p>
                     {printHeaderData.emblemBase64Right && (
                       <button
                         type="button"
                         onClick={() => fileInputRightRef.current?.click()}
-                        className="text-indigo-600 hover:underline mt-1"
+                        className="text-indigo-600 hover:underline block"
                       >
                         Trocar imagem
                       </button>
                     )}
+                    {/* Controles de tamanho */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-600 font-medium">Tamanho:</span>
+                      <button
+                        type="button"
+                        onClick={() => setPrintHeaderData(prev => ({ ...prev, emblemSizeRight: Math.max(30, (prev.emblemSizeRight || 80) - 10) }))}
+                        className="w-7 h-7 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded flex items-center justify-center text-lg leading-none"
+                        title="Diminuir emblema"
+                      >−</button>
+                      <span className="w-12 text-center text-sm font-mono font-bold text-indigo-700">
+                        {printHeaderData.emblemSizeRight || 80}px
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPrintHeaderData(prev => ({ ...prev, emblemSizeRight: Math.min(250, (prev.emblemSizeRight || 80) + 10) }))}
+                        className="w-7 h-7 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded flex items-center justify-center text-lg leading-none"
+                        title="Aumentar emblema"
+                      >+</button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { AlertTriangle, Calendar, Clock, User, Zap, RefreshCw, Save, Printer, List, Bell, Send, Eye, FileText, Trash2, Info, CheckCircle } from 'lucide-react';
-import { printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface Class {
   _id?: string;
@@ -967,29 +967,6 @@ export default function EmergencySchedule() {
       // Não salvar automaticamente - usuário escolhe quando salvar clicando no botão "Salvar"
       
       toast.success(`✅ Horário emergencial gerado! (${affectedClassCount} turma(s))`);
-
-      // Enviar alerta - se "all", envia para todas as turmas
-      if (selectedClass === 'all') {
-        for (const cls of classes) {
-          await api.post('/live-messages/alert-vacant', {
-            classId: cls._id,
-            className: `${cls.grade?.name} - ${cls.name}`,
-            period: 'Vários',
-            day: currentDay,
-            reason: reason || 'Professor ausente',
-          });
-        }
-        toast.success(`📱 Alerta enviado para ${classes.length} turmas`);
-      } else {
-        await api.post('/live-messages/alert-vacant', {
-          classId: selectedClass,
-          className: classes.find((c: any) => c._id === selectedClass)?.name,
-          period: 'Vários',
-          day: currentDay,
-          reason: reason || 'Professor ausente',
-        });
-        toast.success('📱 Alerta enviado aos professores');
-      }
     } catch (error: any) {
       console.error('Erro:', error);
       toast.error('Erro ao gerar horário emergencial');
@@ -2447,10 +2424,11 @@ export default function EmergencySchedule() {
               
               <div className="mt-6 flex justify-center">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const transposedView = document.querySelector('.card.bg-gradient-to-br.from-indigo-50');
                     if (transposedView) {
                       const printContent = transposedView.innerHTML;
+                      const ph = await loadPrintHeader();
                       const printWindow = window.open('', '', 'width=800,height=600');
                       if (printWindow) {
                         printWindow.document.write(`
@@ -2467,10 +2445,11 @@ export default function EmergencySchedule() {
                                 h3 { color: #312e81; margin-top: 30px; page-break-before: always; }
                                 h3:first-of-type { page-break-before: auto; }
                                 @page { margin: 1cm; }
+                                ${printHeaderCss}
                                 ${printFooterCss}
                               </style>
                             </head>
-                            <body>${printContent}${buildPrintFooterHtml()}</body>
+                            <body>${buildPrintHeaderHtml(ph)}${printContent}${buildPrintFooterHtml()}</body>
                           </html>
                         `);
                         printWindow.document.close();
@@ -2616,10 +2595,11 @@ export default function EmergencySchedule() {
                       </p>
                     </div>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const debtSection = document.querySelector('.card.bg-gradient-to-br.from-purple-50');
                         if (debtSection) {
                           const printContent = debtSection.innerHTML;
+                          const ph = await loadPrintHeader();
                           const printWindow = window.open('', '', 'width=800,height=600');
                           if (printWindow) {
                             printWindow.document.write(`
@@ -2635,10 +2615,12 @@ export default function EmergencySchedule() {
                                     tr:nth-child(even) { background-color: #ffedd5; }
                                     .no-print { display: none; }
                                     @page { margin: 1.5cm; }
+                                    ${printHeaderCss}
                                     ${printFooterCss}
                                   </style>
                                 </head>
                                 <body>
+                                  ${buildPrintHeaderHtml(ph)}
                                   <h2>📋 Débitos Pendentes de Professores</h2>
                                   <p><strong>Data:</strong> ${new Date((emergencyScheduleDate || selectedDate) + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
                                   ${printContent}

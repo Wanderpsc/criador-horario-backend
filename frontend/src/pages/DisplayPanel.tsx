@@ -49,7 +49,20 @@ export default function DisplayPanel({
   const [alarmPlayed, setAlarmPlayed] = useState<boolean>(false); // Controlar se o alarme de aviso já foi tocado
   const [overrideDateTime, setOverrideDateTime] = useState<string>(''); // Data/hora simulada para teste
   const [showSimulator, setShowSimulator] = useState(false); // Toggle do painel de simulação
+  const [manualEdits, setManualEdits] = useState<{ [key: string]: { subjectName: string; teacherName: string } }>({});
+  const [manualSaved, setManualSaved] = useState(false);
+  const [editingCell, setEditingCell] = useState<string | null>(null); // chave: `${period}|||${classKey}` (somente admin, modo AUTO)
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Detectar se é administrador (usuário logado) ou visualizador público (link compartilhado)
+  const isAdmin = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('auth-storage');
+      if (!stored) return false;
+      const { state } = JSON.parse(stored);
+      return !!(state?.token && state?.user);
+    } catch { return false; }
+  }, []);
 
   // LER PARÂMETROS DA URL (configuração vinda de DisplayPanelConfig)
   useEffect(() => {
@@ -206,16 +219,13 @@ export default function DisplayPanel({
     queryKey: ['availableTimetables', selectedTimetableId],
     queryFn: async () => {
       if (!selectedTimetableId) return [];
-      try {
-        const response = await publicApi.get(`/public/timetable/${selectedTimetableId}`);
-        return response.data.data || [];
-      } catch (error) {
-        console.error('Erro ao buscar lista de horários:', error);
-        return [];
-      }
+      const response = await publicApi.get(`/public/timetable/${selectedTimetableId}`);
+      return response.data.data || [];
     },
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
     staleTime: 0,
+    retry: 18,
+    retryDelay: () => 5000,
     enabled: !!selectedTimetableId,
   });
 
@@ -606,8 +616,8 @@ export default function DisplayPanel({
     },
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
     staleTime: 0,
-    retry: 2,
-    retryDelay: (attempt) => Math.min(5000 * 2 ** attempt, 30000), // 5s, 10s, max 30s
+    retry: 18,                         // até ~90s de cold-start (18 × 5s)
+    retryDelay: () => 5000,            // tenta a cada 5s sem back-off exponencial
     enabled: (!!selectedTimetableId && !isEmergencyMode) || (isEmergencyMode && !!selectedEmergencyId),
   });
 
@@ -749,10 +759,30 @@ export default function DisplayPanel({
 
   // Preparar dados para grade de horários (TODOS OS DIAS) - Memoizado para performance
   const { allClasses, allPeriods, fullWeekGrid, classGradeMap } = useMemo(() => {
-    // Usar a lista completa de turmas com className + gradeName
-    const classes = allClassesList.length > 0 
-      ? allClassesList // Manter o objeto completo {className, gradeName}
-      : [...new Set(timetables.map(s => s.className))].map(name => ({ className: name, gradeName: undefined }));
+    // Derivar todas as turmas de TODOS os slots (todos os dias), com fallback de allClassesList
+    const fromSlots: { className: string; gradeName?: string }[] = Array.from(
+      new Map(
+        timetables
+          .filter(s => s.className)
+          .map(s => [`${s.className}|||${s.gradeName || ''}`, { className: s.className as string, gradeName: s.gradeName }])
+      ).values()
+    ).sort((a, b) => {
+      const ga = a.gradeName || ''; const gb = b.gradeName || '';
+      return ga !== gb ? ga.localeCompare(gb) : (a.className || '').localeCompare(b.className || '');
+    });
+    // Mesclar: priorizar allClassesList (mais completo por buscar turmas sem slots), completar com slots
+    const mergedMap = new Map<string, { className: string; gradeName?: string }>();
+    (allClassesList.length > 0 ? allClassesList : fromSlots).forEach(c => {
+      if (c.className) mergedMap.set(`${c.className}|||${c.gradeName || ''}`, { className: c.className, gradeName: c.gradeName });
+    });
+    fromSlots.forEach(c => {
+      const key = `${c.className}|||${c.gradeName || ''}`;
+      if (!mergedMap.has(key)) mergedMap.set(key, { className: c.className, gradeName: c.gradeName });
+    });
+    const classes = Array.from(mergedMap.values()).sort((a, b) => {
+      const ga = a.gradeName || ''; const gb = b.gradeName || '';
+      return ga !== gb ? ga.localeCompare(gb) : a.className.localeCompare(b.className);
+    });
     
     console.log(`🎯 allClasses array:`, classes);
     console.log(`🎯 Quantidade de classes: ${classes.length}`);
@@ -817,6 +847,19 @@ export default function DisplayPanel({
     
     return { allClasses: classes, allPeriods: periods, fullWeekGrid: grid, classGradeMap: gradeMap };
   }, [timetables, allClassesList]);
+
+  // Listas únicas de disciplinas e professores para selects do modo manual
+  const uniqueSubjects = useMemo(() => {
+    const map = new Map<string, string>();
+    timetables.forEach(s => { if (s.subjectId && s.subjectName) map.set(s.subjectId, s.subjectName); });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [timetables]);
+
+  const uniqueTeachers = useMemo(() => {
+    const map = new Map<string, string>();
+    timetables.forEach(s => { if (s.teacherId && s.teacherName) map.set(s.teacherId, s.teacherName); });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [timetables]);
 
   // Auto-selecionar primeiro dia disponível se o dia atual não tem aulas
   useEffect(() => {
@@ -918,22 +961,34 @@ export default function DisplayPanel({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-2xl">Carregando painel...</div>
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-6">
+        <div className="text-center">
+          <div className="w-20 h-20 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+          <h1 className="text-white text-3xl font-bold mb-2">Carregando painel...</h1>
+          <p className="text-yellow-400 text-lg mb-1">Aguardando o servidor acordar</p>
+          <p className="text-gray-400 text-sm">Isso pode levar até 60 segundos na primeira abertura do dia</p>
+        </div>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-red-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center text-white">
-          <WifiOff size={64} className="mx-auto mb-4" />
-          <h1 className="text-3xl font-bold mb-2">Erro ao Carregar</h1>
-          <p className="text-xl mb-2">
-            {isConnected ? 'Erro no servidor' : 'Sem Conexão'}
+          <WifiOff size={64} className="mx-auto mb-4 text-red-400" />
+          <h1 className="text-3xl font-bold mb-2 text-red-300">Sem Conexão com o Servidor</h1>
+          <p className="text-gray-300 mb-6 max-w-md">
+            O servidor pode estar reiniciando. Verifique sua conexão à internet e tente novamente.
           </p>
-          <p className="text-sm text-gray-300">Tentando reconectar...</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-8 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xl rounded-xl shadow-lg transition-all hover:scale-105"
+          >
+            🔄 Tentar Novamente
+          </button>
+          <p className="text-gray-500 text-sm mt-4">A página irá recarregar automaticamente em 20 segundos</p>
+          {(() => { setTimeout(() => window.location.reload(), 20000); return null; })()}
         </div>
       </div>
     );
@@ -1055,7 +1110,8 @@ export default function DisplayPanel({
                 {isEmergencyMode ? '🚨 EMERGENCIAL' : '📅 Normal'}
               </button>
               
-              {/* Toggle Mudança Automática de Período */}
+              {/* Toggle Mudança Automática de Período — apenas para o administrador */}
+              {isAdmin && (
               <button
                 onClick={() => setAutoChangePeriod(!autoChangePeriod)}
                 className={`px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap ${
@@ -1067,6 +1123,7 @@ export default function DisplayPanel({
               >
                 {autoChangePeriod ? '⏰ AUTO' : '🔒 MANUAL'}
               </button>
+              )}
               
               {/* Botão de Teste de Som */}
               <button
@@ -1284,166 +1341,306 @@ export default function DisplayPanel({
         </>
       )}
 
-      {/* TABELA TRANSPOSTA - Todas as turmas × todos os períodos, período atual destacado */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'alltable' && (
+      {/* PAINEL PRINCIPAL - Turmas como colunas, período atual como linha */}
+      {viewMode === 'alltable' && timetables.length > 0 && (
         <>
-          {/* Abas de Dias da Semana */}
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-2">
-            {weekDays.map(day => {
-              const daySlots = fullWeekGrid[day] || {};
-              const hasSlots = Object.keys(daySlots).length > 0;
-              const isToday = day === currentDay;
-              const isSelected = day === selectedDay;
-              return (
-                <button
-                  key={day}
-                  onClick={() => setSelectedDay(day)}
-                  disabled={!hasSlots}
-                  className={`px-5 py-2 rounded-lg font-bold text-base transition-all whitespace-nowrap ${
-                    isSelected ? 'bg-yellow-500 text-gray-900 shadow-lg scale-105'
-                    : hasSlots ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  } ${isToday && !isSelected ? 'ring-2 ring-yellow-400' : ''}`}
-                >
-                  {day}{isToday && <span className="ml-2">📍</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 260px)' }}>
+          <div className="overflow-x-auto">
           {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
             <div className="text-center py-20">
               <BookOpen size={80} className="mx-auto mb-4 text-yellow-500" />
               <h2 className="text-4xl font-bold text-white mb-4">Sem Aulas em {selectedDay}</h2>
-              <p className="text-xl text-gray-400 mt-4">💡 Selecione outro dia acima para ver os horários.</p>
+              <p className="text-xl text-gray-400 mt-4">💡 Nenhuma aula cadastrada para hoje.</p>
             </div>
           ) : (() => {
-            // Detectar período ativo (em andamento ou próximo em até 30 min)
+            // Detectar período ativo (em andamento) ou próximo
             const now = currentTime;
             let activePeriod: number | null = null;
+            let isOngoing = false;
+
             for (const period of allPeriods) {
-              const periodSlots = fullWeekGrid[selectedDay][period] || {};
-              const firstSlot = Object.values(periodSlots)[0] as any;
-              if (firstSlot && firstSlot.startTime && firstSlot.endTime) {
+              const firstSlot = Object.values(fullWeekGrid[selectedDay][period] || {})[0] as any;
+              if (firstSlot?.startTime && firstSlot?.endTime) {
                 const [sh, sm] = firstSlot.startTime.split(':').map(Number);
                 const [eh, em] = firstSlot.endTime.split(':').map(Number);
                 const start = new Date(now); start.setHours(sh, sm, 0, 0);
-                const end = new Date(now); end.setHours(eh, em, 0, 0);
-                if (now >= start && now <= end) { activePeriod = period; break; }
-                const diff = Math.floor((start.getTime() - now.getTime()) / 60000);
-                if (diff > 0 && diff <= 30 && activePeriod === null) activePeriod = period;
+                const end   = new Date(now); end.setHours(eh,   em, 0, 0);
+                if (now >= start && now <= end) { activePeriod = period; isOngoing = true; break; }
+              }
+            }
+            if (activePeriod === null) {
+              for (const period of allPeriods) {
+                const firstSlot = Object.values(fullWeekGrid[selectedDay][period] || {})[0] as any;
+                if (firstSlot?.startTime) {
+                  const [sh, sm] = firstSlot.startTime.split(':').map(Number);
+                  const start = new Date(now); start.setHours(sh, sm, 0, 0);
+                  if (now < start) { activePeriod = period; break; }
+                }
               }
             }
 
+            // ── MODO MANUAL NÃO SALVO: grade completa editável ──────────────
+            if (!autoChangePeriod && !manualSaved) {
+              const COL_W_ED = 205;
+              const totalW_ED = 160 + allClasses.length * COL_W_ED;
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-4 gap-4">
+                    <h2 className="text-2xl font-bold text-yellow-400">✏️ Editar Horário Manual</h2>
+                    <button
+                      onClick={() => setManualSaved(true)}
+                      className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-black text-lg rounded-xl shadow-lg transition-all hover:scale-105"
+                    >
+                      💾 SALVAR E EXIBIR
+                    </button>
+                  </div>
+                  <table className="border-collapse" style={{ tableLayout: 'fixed', width: `${totalW_ED}px` }}>
+                    <colgroup>
+                      <col style={{ width: '160px' }} />
+                      {allClasses.map((_, i) => <col key={i} style={{ width: `${COL_W_ED}px` }} />)}
+                    </colgroup>
+                    <thead>
+                      <tr style={{ height: '76px' }}>
+                        <th className="border-2 border-gray-600 bg-gray-900 text-yellow-400 text-center font-black align-middle text-lg">
+                          PERÍODO
+                        </th>
+                        {allClasses.map((classInfo, i) => (
+                          <th key={i} className="border-2 border-gray-600 bg-blue-900 text-center align-middle px-2">
+                            <div className="font-black text-white text-base leading-tight">{classInfo.className}</div>
+                            {classInfo.gradeName && (
+                              <div className="text-yellow-300 font-semibold mt-0.5 text-xs">{classInfo.gradeName}</div>
+                            )}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allPeriods.map(period => {
+                        const firstSlot = Object.values(fullWeekGrid[selectedDay][period] || {})[0] as any;
+                        const isActive = period === activePeriod;
+                        return (
+                          <tr key={period} style={{ height: '120px' }}>
+                            <td className={`border-2 text-center align-middle font-black ${
+                              isActive ? 'border-yellow-400 bg-yellow-900 text-yellow-200' : 'border-gray-600 bg-gray-900 text-gray-200'
+                            }`}>
+                              <div className="text-2xl">{period}º</div>
+                              <div className="text-xs font-mono text-gray-400 mt-1">{firstSlot?.startTime}–{firstSlot?.endTime}</div>
+                              {isActive && <div className="text-xs text-yellow-300 animate-pulse mt-1">⏰ AGORA</div>}
+                            </td>
+                            {allClasses.map((classInfo, ci) => {
+                              const classKey = `${classInfo.className}|||${classInfo.gradeName || ''}`;
+                              const editKey = `${period}|||${classKey}`;
+                              const originalSlot = (fullWeekGrid[selectedDay][period] || {} as any)[classKey];
+                              const editedValue = manualEdits[editKey];
+                              const currentSubject = editedValue?.subjectName ?? originalSlot?.subjectName ?? '';
+                              const currentTeacher = editedValue?.teacherName ?? originalSlot?.teacherName ?? '';
+                              return (
+                                <td key={ci} className={`border-2 p-2 align-middle ${
+                                  isActive ? 'border-yellow-500 bg-yellow-950' : 'border-gray-700 bg-gray-800'
+                                }`}>
+                                  <div className="flex flex-col gap-1.5">
+                                    <select
+                                      value={currentSubject}
+                                      onChange={(e) => setManualEdits(prev => ({
+                                        ...prev,
+                                        [editKey]: { subjectName: e.target.value, teacherName: currentTeacher }
+                                      }))}
+                                      className="w-full bg-gray-700 text-white border border-gray-500 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                    >
+                                      <option value="">— Disciplina —</option>
+                                      {uniqueSubjects.map(s => (
+                                        <option key={s.id} value={s.name}>{s.name}</option>
+                                      ))}
+                                    </select>
+                                    <select
+                                      value={currentTeacher}
+                                      onChange={(e) => setManualEdits(prev => ({
+                                        ...prev,
+                                        [editKey]: { subjectName: currentSubject, teacherName: e.target.value }
+                                      }))}
+                                      className="w-full bg-gray-700 text-white border border-gray-500 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    >
+                                      <option value="">— Professor —</option>
+                                      {uniqueTeachers.map(t => (
+                                        <option key={t.id} value={t.name}>{t.name}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              );
+            }
+
+            // ── FORA DO HORÁRIO ESCOLAR ──────────────────────────────────────
+            if (activePeriod === null) {
+              return (
+                <div className="text-center py-24">
+                  <Clock size={80} className="mx-auto mb-4 text-gray-500" />
+                  <h2 className="text-4xl font-bold text-white mb-3">Fora do Horário Escolar</h2>
+                  <p className="text-xl text-gray-400">
+                    {selectedDay.toUpperCase()} — {currentTime.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                  </p>
+                </div>
+              );
+            }
+
+            // ── AUTO ou MANUAL SALVO: linha única com período atual ──────────
+            const periodSlots = fullWeekGrid[selectedDay][activePeriod] || {};
+            const firstSlotInPeriod = Object.values(periodSlots)[0] as any;
+            const COL_W = 160;
+            const totalW = 180 + allClasses.length * COL_W;
+
             return (
-              <table className="w-full border-collapse text-sm">
-                <thead className="sticky top-0 z-20">
-                  <tr>
-                    <th className="border-2 border-gray-600 p-3 text-left sticky left-0 z-30 bg-gray-900 min-w-[130px]">
-                      <div className="text-base font-black text-yellow-400">TURMA</div>
-                    </th>
-                    {allPeriods.map(period => {
-                      const periodSlots = fullWeekGrid[selectedDay][period] || {};
-                      const firstSlot = Object.values(periodSlots)[0] as any;
-                      const isActive = period === activePeriod;
-                      return (
-                        <th
-                          key={period}
-                          className={`border-2 p-2 text-center min-w-[140px] transition-colors ${
-                            isActive
-                              ? 'border-yellow-400 bg-yellow-900 text-yellow-300'
-                              : 'border-gray-600 bg-gray-900 text-gray-300'
-                          }`}
-                        >
-                          <div className={`font-black ${isActive ? 'text-2xl' : 'text-xl'}`}>{period}º</div>
-                          {firstSlot && (
-                            <div className="text-xs font-mono text-gray-400 mt-0.5">
-                              {firstSlot.startTime}–{firstSlot.endTime}
-                            </div>
-                          )}
-                          {isActive && (
-                            <div className="text-xs font-bold text-yellow-300 animate-pulse mt-1">⏰ AGORA</div>
+              <>
+                {isAdmin && !autoChangePeriod && manualSaved && (
+                  <div className="flex items-center justify-between mb-4 gap-4">
+                    <div className="text-green-400 font-bold text-lg">✅ Horário manual salvo — mudando automaticamente por período</div>
+                    <button
+                      onClick={() => setManualSaved(false)}
+                      className="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
+                    >
+                      ✏️ EDITAR
+                    </button>
+                  </div>
+                )}
+                <table className="border-collapse" style={{ tableLayout: 'fixed', width: `${totalW}px` }}>
+                  <colgroup>
+                    <col style={{ width: '180px' }} />
+                    {allClasses.map((_, i) => (
+                      <col key={i} style={{ width: `${COL_W}px` }} />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr style={{ height: '90px' }}>
+                      <th className="border-2 border-gray-600 bg-gray-900 text-yellow-400 text-center font-black align-middle" style={{ fontSize: '1.1rem' }}>
+                        TURMAS
+                      </th>
+                      {allClasses.map((classInfo, i) => (
+                        <th key={i} className="border-2 border-gray-600 bg-blue-900 text-center align-middle px-1" style={{ height: '90px' }}>
+                          <div className="font-black text-white leading-tight" style={{ fontSize: '1.2rem' }}>{classInfo.className}</div>
+                          {classInfo.gradeName && (
+                            <div className="text-yellow-300 font-semibold mt-1" style={{ fontSize: '0.82rem' }}>{classInfo.gradeName}</div>
                           )}
                         </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {allClassesList.map((classInfo, classIndex) => {
-                    const { className, gradeName } = classInfo;
-                    const classKey = `${className}|||${gradeName || ''}`;
-                    return (
-                      <tr key={`alltable-row-${classIndex}`} className="hover:brightness-110 transition-all">
-                        {/* Coluna da turma */}
-                        <td className="border-2 border-gray-600 p-2 sticky left-0 z-10 bg-gray-800 font-bold">
-                          <div className="text-base text-white leading-tight">{className}</div>
-                          {gradeName && <div className="text-xs text-yellow-300 mt-0.5">{gradeName}</div>}
-                        </td>
-                        {/* Células de cada período */}
-                        {allPeriods.map(period => {
-                          const periodSlots = fullWeekGrid[selectedDay][period] || {};
-                          const slot = (periodSlots as any)[classKey];
-                          const isActivePeriod = period === activePeriod;
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ height: '180px' }}>
+                      <td className={`border-2 text-center align-middle px-2 font-black ${
+                        isOngoing ? 'border-green-400 bg-green-900 text-green-300' : 'border-yellow-500 bg-yellow-950 text-yellow-300'
+                      }`} style={{ height: '180px' }}>
+                        <div style={{ fontSize: '2.8rem', lineHeight: 1 }}>{activePeriod}º</div>
+                        <div className="font-mono font-bold mt-1" style={{ fontSize: '1rem' }}>{firstSlotInPeriod?.startTime}</div>
+                        <div className="text-gray-400 font-mono" style={{ fontSize: '0.85rem' }}>até {firstSlotInPeriod?.endTime}</div>
+                        <div className={`mt-2 rounded px-1 py-0.5 font-bold ${
+                          isOngoing ? 'bg-green-500 text-white animate-pulse' : 'bg-yellow-500 text-black'
+                        }`} style={{ fontSize: '0.78rem' }}>
+                          {isOngoing ? '● EM ANDAMENTO' : '⏳ PRÓXIMO'}
+                        </div>
+                      </td>
+                      {allClasses.map((classInfo, i) => {
+                        const classKey = `${classInfo.className}|||${classInfo.gradeName || ''}`;
+                        const editKey = `${activePeriod}|||${classKey}`;
+                        const originalSlot = (periodSlots as any)[classKey];
+                        const editedValue = manualSaved ? manualEdits[editKey] : undefined;
+                        const subjectName = editedValue?.subjectName || originalSlot?.subjectName;
+                        const teacherName = editedValue?.teacherName || originalSlot?.teacherName;
 
-                          if (!slot) {
-                            return (
-                              <td
-                                key={`alltable-empty-${classIndex}-${period}`}
-                                className={`border-2 p-2 text-center ${
-                                  isActivePeriod ? 'border-yellow-700 bg-yellow-950' : 'border-gray-700 bg-gray-850'
-                                }`}
-                              >
-                                <span className="text-gray-600 text-xs">—</span>
-                              </td>
-                            );
-                          }
-
-                          const status = getSlotStatus(slot);
+                        if (!subjectName && !teacherName) {
                           return (
-                            <td
-                              key={`alltable-slot-${classIndex}-${period}`}
-                              className={`border-2 p-2 transition-all ${
-                                isActivePeriod
-                                  ? 'border-yellow-500'
-                                  : status === 'completed'
-                                  ? 'border-gray-700 opacity-40'
-                                  : 'border-gray-600'
-                              }`}
-                              style={{
-                                backgroundColor: slot.subjectColor
-                                  ? `${slot.subjectColor}${isActivePeriod ? 'cc' : '44'}`
-                                  : isActivePeriod ? '#1e3a1e' : '#1f2937',
-                              }}
-                            >
-                              <div
-                                className={`font-bold truncate leading-tight ${
-                                  isActivePeriod ? 'text-sm text-white' : 'text-xs text-gray-200'
-                                }`}
-                                title={slot.subjectName}
-                              >
-                                {slot.subjectName}
-                              </div>
-                              <div
-                                className={`truncate mt-0.5 ${
-                                  isActivePeriod ? 'text-xs text-gray-300' : 'text-xs text-gray-500'
-                                }`}
-                                title={slot.teacherName}
-                              >
-                                {slot.teacherName?.split(' ')[0]}
-                              </div>
-                              {status === 'ongoing' && isActivePeriod && (
-                                <div className="text-xs font-bold text-green-400 animate-pulse mt-0.5">● EM ANDAMENTO</div>
-                              )}
+                            <td key={i} className="border-2 border-gray-700 bg-gray-900 text-center align-middle" style={{ height: '180px' }}>
+                              <div className="text-gray-500 font-bold" style={{ fontSize: '1rem' }}>HORÁRIO</div>
+                              <div className="text-gray-500 font-bold" style={{ fontSize: '1rem' }}>VAGO</div>
                             </td>
                           );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        }
+
+                        const slotForStatus = originalSlot || { day: selectedDay, startTime: firstSlotInPeriod?.startTime, endTime: firstSlotInPeriod?.endTime };
+                        const status = getSlotStatus(slotForStatus);
+
+                        // ── Modo edição inline (somente admin) ──────────────────────────
+                        if (isAdmin && editingCell === editKey) {
+                          const curSubj = manualEdits[editKey]?.subjectName || subjectName || '';
+                          const curTeacher = manualEdits[editKey]?.teacherName || teacherName || '';
+                          return (
+                            <td key={i} className="border-2 border-blue-400 bg-blue-950 text-center align-middle px-1" style={{ height: '180px' }}>
+                              <div className="flex flex-col gap-1 p-1">
+                                <select
+                                  value={curSubj}
+                                  onChange={e => setManualEdits(prev => ({ ...prev, [editKey]: { subjectName: e.target.value, teacherName: prev[editKey]?.teacherName ?? curTeacher } }))}
+                                  className="bg-gray-800 text-white rounded border border-gray-600 p-1 w-full"
+                                  style={{ fontSize: '0.72rem' }}
+                                >
+                                  <option value="">— Disciplina —</option>
+                                  {uniqueSubjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                                </select>
+                                <select
+                                  value={curTeacher}
+                                  onChange={e => setManualEdits(prev => ({ ...prev, [editKey]: { subjectName: prev[editKey]?.subjectName ?? curSubj, teacherName: e.target.value } }))}
+                                  className="bg-gray-800 text-white rounded border border-gray-600 p-1 w-full"
+                                  style={{ fontSize: '0.72rem' }}
+                                >
+                                  <option value="">— Professor —</option>
+                                  {uniqueTeachers.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                                </select>
+                                <div className="flex gap-1 justify-center mt-1">
+                                  <button
+                                    onClick={() => setEditingCell(null)}
+                                    className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded font-bold"
+                                    style={{ fontSize: '0.8rem' }}
+                                  >✓ OK</button>
+                                  <button
+                                    onClick={() => {
+                                      setManualEdits(prev => { const n = { ...prev }; delete n[editKey]; return n; });
+                                      setEditingCell(null);
+                                    }}
+                                    className="px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded font-bold"
+                                    style={{ fontSize: '0.8rem' }}
+                                  >✗</button>
+                                </div>
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        return (
+                          <td key={i}
+                            onClick={isAdmin ? () => setEditingCell(editKey) : undefined}
+                            className={`border-2 text-center align-middle px-2 transition-all duration-300 ${
+                              status === 'ongoing' ? 'border-green-500' : status === 'upcoming' ? 'border-yellow-500' : 'border-gray-600'
+                            } ${isAdmin ? 'cursor-pointer hover:border-blue-400' : ''}`}
+                            style={{
+                              height: '180px',
+                              backgroundColor: originalSlot?.subjectColor
+                                ? `${originalSlot.subjectColor}${isOngoing ? 'cc' : '55'}`
+                                : isOngoing ? '#14532d' : '#1e3a5f',
+                            }}>
+                            <div className="font-black text-white leading-tight" style={{ fontSize: '1.1rem' }} title={subjectName}>
+                              {subjectName}
+                            </div>
+                            <div className="text-gray-200 mt-2" style={{ fontSize: '0.85rem' }} title={teacherName}>
+                              👨‍🏫 {teacherName}
+                            </div>
+                            {status === 'ongoing' && (
+                              <div className="mt-2 text-green-400 font-bold animate-pulse" style={{ fontSize: '0.75rem' }}>● EM ANDAMENTO</div>
+                            )}
+                            {isAdmin && (
+                              <div className="mt-1 text-blue-400 opacity-60" style={{ fontSize: '0.7rem' }}>✏️ editar</div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </>
             );
           })()}
           </div>

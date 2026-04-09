@@ -34,14 +34,27 @@ import {
   CheckCircle,
   BarChart3
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NotificationCenter from './NotificationCenter';
+import { loadPrintHeader } from '../utils/printHeader';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarSchoolName, setSidebarSchoolName] = useState<string>('');
+
+  useEffect(() => {
+    const fetchName = () => {
+      loadPrintHeader().then(h => {
+        setSidebarSchoolName(h.line2 || h.schoolName || '');
+      });
+    };
+    fetchName();
+    window.addEventListener('printHeaderUpdated', fetchName);
+    return () => window.removeEventListener('printHeaderUpdated', fetchName);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -173,34 +186,6 @@ export default function Layout() {
             description: '📅 Gerencie dias letivos, feriados e eventos',
             color: 'cyan',
             subtitle: 'Anos e Eventos'
-          },
-          { 
-            icon: Bell, 
-            label: 'Notificações e Lembretes', 
-            path: '/notifications',
-            description: '📱 Configure lembretes para professores via SMS/WhatsApp',
-            color: 'yellow',
-            badge: 'NOVO',
-            subtitle: 'Avisos Automáticos'
-          },
-          { 
-            icon: MessageSquare, 
-            label: 'WhatsApp Business', 
-            path: '/whatsapp-settings',
-            description: '⚙️ Configure as credenciais da Meta Cloud API',
-            color: 'green',
-            badge: 'CONFIG',
-            subtitle: 'Configuração do WhatsApp'
-          },
-          { 
-            icon: MessageSquare, 
-            label: 'Mensagens ao Vivo', 
-            path: '/live-messaging',
-            description: '📤 Envie mensagens instantâneas individuais ou coletivas',
-            color: 'green',
-            badge: 'NOVO',
-            highlight: true,
-            subtitle: 'Comunicação Instantânea'
           },
           { 
             icon: Zap, 
@@ -595,7 +580,9 @@ export default function Layout() {
             <div className="mb-3">
               <p className="text-xs text-gray-500">{user?.email}</p>
               <p className="text-xs text-primary-600 mt-1 font-semibold">
-                {(user?.role === 'admin' || user?.role === 'super-admin') ? 'Administrador do Sistema' : user?.schoolName}
+                {(user?.role === 'admin' || user?.role === 'super-admin')
+                  ? 'Administrador do Sistema'
+                  : (sidebarSchoolName || user?.schoolName)}
               </p>
             </div>
             <button

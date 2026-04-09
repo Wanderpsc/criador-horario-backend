@@ -4,8 +4,15 @@ import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, type PrintHeader
 export default function PrintHeader() {
   const [headerData, setHeaderData] = useState<PrintHeaderData | null>(null);
 
-  useEffect(() => {
+  const fetchHeader = () => {
     loadPrintHeader().then(setHeaderData);
+  };
+
+  useEffect(() => {
+    fetchHeader();
+    // Re-busca quando o admin salvar o cabeçalho em Configurações
+    window.addEventListener('printHeaderUpdated', fetchHeader);
+    return () => window.removeEventListener('printHeaderUpdated', fetchHeader);
   }, []);
 
   if (!headerData) return null;

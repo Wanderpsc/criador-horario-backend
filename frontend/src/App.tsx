@@ -19,11 +19,8 @@ import TeacherSubjectAssociation from './pages/TeacherSubjectAssociation';
 import TimeSlots from './pages/TimeSlots';
 import SchoolCalendar from './pages/SchoolCalendar';
 import SchoolSettings from './pages/SchoolSettings';
-import NotificationSettings from './pages/NotificationSettings';
-import WhatsAppSettings from './pages/WhatsAppSettings';
 import DisplayPanel from './pages/DisplayPanel';
 import DisplayPanelConfig from './pages/DisplayPanelConfig';
-import LiveMessaging from './pages/LiveMessaging';
 import EmergencySchedule from './pages/EmergencySchedule';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
@@ -148,9 +145,7 @@ function App() {
           <Route path="schedules/:id" element={<ClientRoute><ScheduleView /></ClientRoute>} />
           <Route path="timeslots" element={<ClientRoute><TimeSlots /></ClientRoute>} />
           <Route path="timetable-generator" element={<ClientRoute><TimetableGenerator /></ClientRoute>} />
-          <Route path="notifications" element={<NotificationSettings />} />
-          <Route path="whatsapp-settings" element={<ClientRoute><WhatsAppSettings /></ClientRoute>} />
-          <Route path="live-messaging" element={<LiveMessaging />} />
+
           <Route path="emergency-schedule" element={<ClientRoute><EmergencySchedule /></ClientRoute>} />
           <Route path="teacher-attendance" element={<ClientRoute><TeacherAttendance /></ClientRoute>} />
           <Route path="teacher-frequency-report" element={<ClientRoute><TeacherFrequencyReport /></ClientRoute>} />

@@ -3,6 +3,8 @@ import api from '../services/api';
 export interface PrintHeaderData {
   emblemBase64?: string;
   emblemBase64Right?: string;
+  emblemSizeLeft?: number;  // tamanho em px do emblema esquerdo (padrão 80)
+  emblemSizeRight?: number; // tamanho em px do emblema direito (padrão 80)
   line1?: string;
   line2?: string;
   line3?: string;
@@ -34,6 +36,8 @@ export async function loadPrintHeader(): Promise<PrintHeaderData> {
 
 export function invalidatePrintHeaderCache() {
   cachedHeader = null;
+  // Notifica o componente PrintHeader (no Layout) para rebuscar os dados
+  try { window.dispatchEvent(new CustomEvent('printHeaderUpdated')); } catch {}
 }
 
 export function buildPrintHeaderHtml(header: PrintHeaderData): string {
@@ -51,7 +55,7 @@ export function buildPrintHeaderHtml(header: PrintHeaderData): string {
 
   return `
     <div class="print-header-institutional">
-      ${hasEmblemLeft ? `<img src="${header.emblemBase64}" alt="Emblema Esquerdo" class="print-header-emblem print-header-emblem-left" />` : ''}
+      ${hasEmblemLeft ? `<img src="${header.emblemBase64}" alt="Emblema Esquerdo" class="print-header-emblem print-header-emblem-left" style="width:${header.emblemSizeLeft || 80}px;height:${header.emblemSizeLeft || 80}px;" />` : ''}
       <div class="print-header-text-block">
         ${line1 ? `<div class="print-header-line1">${line1}</div>` : ''}
         ${line2 ? `<div class="print-header-line2">${line2}</div>` : ''}
@@ -61,7 +65,7 @@ export function buildPrintHeaderHtml(header: PrintHeaderData): string {
         ${line6 ? `<div class="print-header-line3">${line6}</div>` : ''}
         ${line7 ? `<div class="print-header-line3">${line7}</div>` : ''}
       </div>
-      ${hasEmblemRight ? `<img src="${header.emblemBase64Right}" alt="Emblema Direito" class="print-header-emblem print-header-emblem-right" />` : ''}
+      ${hasEmblemRight ? `<img src="${header.emblemBase64Right}" alt="Emblema Direito" class="print-header-emblem print-header-emblem-right" style="width:${header.emblemSizeRight || 80}px;height:${header.emblemSizeRight || 80}px;" />` : ''}
     </div>
   `;
 }
@@ -78,15 +82,12 @@ export const printHeaderCss = `
     background: linear-gradient(135deg, #f8fafc 0%, #e8f0fe 100%);
   }
   .print-header-emblem {
-    height: 80px;
-    width: 80px;
     object-fit: contain;
     border-radius: 4px;
     flex-shrink: 0;
   }
   .print-header-emblem-right {
-    height: 100px;
-    width: 100px;
+    /* size controlled by inline style */
   }
   .print-header-text-block {
     text-align: center;

@@ -6,6 +6,8 @@ import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calenda
 import { useAuthStore } from '../store/authStore';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface TeacherAvailability {
   [day: string]: {
@@ -5650,11 +5652,12 @@ export default function TimetableGenerator() {
           .sort((a, b) => a.name.localeCompare(b.name, 'pt'));
 
         // ── print handler ─────────────────────────────────────────────────────
-        const handlePrintSummary = () => {
+        const handlePrintSummary = async () => {
           const el = document.getElementById('summary-panel-printable');
           if (!el) return;
           const win = window.open('', '_blank', 'width=1100,height=800');
           if (!win) return;
+          const ph = await loadPrintHeader();
           win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Resumo Geral — Professores e Disciplinas</title><style>
             body{font-family:Arial,sans-serif;padding:20px;color:#1e293b}
             h2{color:#1e40af;margin-bottom:6px}
@@ -5668,7 +5671,9 @@ export default function TimetableGenerator() {
             .ok{color:#16a34a;font-weight:bold}
             .miss{color:#d97706;font-weight:bold}
             @media print{body{padding:10px}h2{font-size:16px}}
-          </style></head><body>${el.innerHTML}</body></html>`);
+            ${printHeaderCss}
+            ${printFooterCss}
+          </style></head><body>${buildPrintHeaderHtml(ph)}${el.innerHTML}${buildPrintFooterHtml()}</body></html>`);
           win.document.close();
           win.focus();
           setTimeout(() => win.print(), 400);
