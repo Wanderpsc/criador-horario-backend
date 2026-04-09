@@ -200,7 +200,7 @@ export default function DisplayPanelConfig() {
               >
                 <option value="">Selecione o horário</option>
                 {availableTimetables.map((tt: any) => (
-                  <option key={tt._id || tt.id} value={tt._id}>
+                  <option key={tt.id || tt._id} value={tt.id || tt._id}>
                     {tt.name} ({new Date(tt.createdAt).toLocaleDateString('pt-BR')})
                   </option>
                 ))}

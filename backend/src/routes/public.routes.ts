@@ -15,8 +15,14 @@ router.get('/timetable/:id', async (req, res) => {
     const mongoose = require('mongoose');
     const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
 
+    // Remover possível sufixo de data (ex: " (29/03/2026)") gerado pelo frontend
+    const titleWithoutDateSuffix = id.replace(/\s*\(\d{2}\/\d{2}\/\d{4}\)\s*$/, '').trim();
+
     // Construir query baseado no tipo do id
     const orConditions: any[] = [{ scheduleId: id }, { title: id }];
+    if (titleWithoutDateSuffix !== id) {
+      orConditions.push({ title: titleWithoutDateSuffix });
+    }
     if (isValidObjectId) {
       orConditions.unshift({ _id: id });
     }
