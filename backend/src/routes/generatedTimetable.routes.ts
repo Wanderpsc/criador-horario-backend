@@ -4,6 +4,7 @@ import TeacherSubject from '../models/TeacherSubject';
 import Class from '../models/Class';
 import Subject from '../models/Subject';
 import Teacher from '../models/Teacher';
+import Grade from '../models/Grade';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -553,104 +554,87 @@ router.get('/all', auth, async (req: AuthRequest, res) => {
     const schoolId = req.user?.schoolId || req.user?.id;
     console.log('🔍 Buscando horários salvos da escola:', schoolId);
 
-    // Buscar apenas horários da escola do usuário
     const timetables = await GeneratedTimetable.find({ school: schoolId })
       .sort({ createdAt: -1 })
-      .limit(50); // Limitar aos 50 mais recentes
+      .limit(50)
+      .lean();
 
     console.log(`📚 Encontrados ${timetables.length} horários no total`);
 
-    // Importar models necessários
-    const Subject = require('../models/Subject').default;
-    const Teacher = require('../models/Teacher').default;
-    const Class = require('../models/Class').default;
-    const Grade = require('../models/Grade').default;
+    // --- BATCH LOAD: coletar IDs únicos ---
+    const subjectIds = new Set<string>();
+    const teacherIds  = new Set<string>();
+    const classIds    = new Set<string>();
+    for (const tt of timetables) {
+      for (const slot of tt.slots) {
+        if (slot.subjectId) subjectIds.add(slot.subjectId);
+        if (slot.teacherId) teacherIds.add(slot.teacherId);
+        if (slot.classId)   classIds.add(slot.classId);
+      }
+    }
 
-    // Agrupar por título (cada título representa um conjunto completo de horários)
+    const [subjects, teachers, classes] = await Promise.all([
+      Subject.find({ _id: { $in: Array.from(subjectIds) } }).lean(),
+      Teacher.find({ _id: { $in: Array.from(teacherIds) } }).lean(),
+      Class.find({ _id: { $in: Array.from(classIds) } }).lean(),
+    ]);
+
+    const gradeIds = new Set<string>();
+    for (const c of classes) {
+      if ((c as any).gradeId) gradeIds.add(String((c as any).gradeId));
+    }
+    const grades = await Grade.find({ _id: { $in: Array.from(gradeIds) } }).lean();
+
+    const subjectMap = new Map(subjects.map((s: any) => [String(s._id), s]));
+    const teacherMap = new Map(teachers.map((t: any) => [String(t._id), t]));
+    const gradeMap   = new Map(grades.map((g: any) => [String(g._id), g]));
+    const classMap   = new Map(classes.map((c: any) => {
+      const grade = (c as any).gradeId ? gradeMap.get(String((c as any).gradeId)) : null;
+      return [String(c._id), { ...c, gradeName: (grade as any)?.name || '' }];
+    }));
+
+    // Agrupar por título
     const groupedByTitle: any = {};
-    
     for (const tt of timetables) {
       const title = tt.title || 'Sem título';
       if (!groupedByTitle[title]) {
         groupedByTitle[title] = {
-          _id: tt._id.toString(),
-          title: title,
+          _id: String(tt._id),
+          title,
           scheduleId: tt.scheduleId,
           createdAt: tt.createdAt,
           timetable: {},
-          ids: [tt._id.toString()]
         };
-      } else {
-        groupedByTitle[title].ids.push(tt._id.toString());
       }
-      
-      // Popular os slots desta turma
-      const populatedSlots = [];
-      for (const slot of tt.slots) {
-        try {
-          const [subject, teacher, classDoc] = await Promise.all([
-            Subject.findById(slot.subjectId),
-            Teacher.findById(slot.teacherId),
-            Class.findById(slot.classId)
-          ]);
-          
-          let grade = null;
-          if (classDoc && classDoc.gradeId) {
-            grade = await Grade.findById(classDoc.gradeId);
-          }
-          
-          populatedSlots.push({
-            ...((slot as any).toObject ? (slot as any).toObject() : slot),
-            subjectName: subject?.name || 'Disciplina',
-            teacherName: teacher?.name || 'Professor',
-            className: classDoc?.name || 'Turma',
-            gradeName: grade?.name || '',
-            subjectColor: subject?.color || '#3B82F6'
-          });
-        } catch (err) {
-          console.error('Erro ao popular slot:', err);
-          populatedSlots.push({
-            ...slot,
-            subjectName: 'Erro',
-            teacherName: 'Erro',
-            className: 'Erro',
-            gradeName: '',
-            subjectColor: '#EF4444'
-          });
-        }
-      }
-      
+
+      const populatedSlots = tt.slots.map((slot: any) => {
+        const subject  = subjectMap.get(String(slot.subjectId));
+        const teacher  = teacherMap.get(String(slot.teacherId));
+        const classDoc = classMap.get(String(slot.classId));
+        return {
+          ...slot,
+          subjectName:  (subject  as any)?.name  || 'Disciplina',
+          teacherName:  (teacher  as any)?.name  || 'Professor',
+          className:    (classDoc as any)?.name  || 'Turma',
+          gradeName:    (classDoc as any)?.gradeName || '',
+          subjectColor: (subject  as any)?.color || '#3B82F6',
+        };
+      });
+
       groupedByTitle[title].timetable[tt.classId] = populatedSlots;
     }
 
     console.log('📦 Grupos criados:', Object.keys(groupedByTitle));
-    Object.keys(groupedByTitle).forEach(title => {
-      console.log(`   ${title}: _id=${groupedByTitle[title]._id}, turmas=${Object.keys(groupedByTitle[title].timetable).length}`);
-    });
 
-    // Converter para array e formatar
-    const formattedTimetables = Object.values(groupedByTitle).map((group: any) => {
-      const formatted = {
-        _id: String(group._id),
-        name: String(group.title),
-        createdAt: group.createdAt ? new Date(group.createdAt).toISOString() : new Date().toISOString(),
-        timetable: group.timetable,
-        classCount: Object.keys(group.timetable).length
-      };
-      console.log('🔧 Formatado:', { _id: formatted._id, name: formatted.name, classCount: formatted.classCount });
-      return formatted;
-    });
+    const formattedTimetables = Object.values(groupedByTitle).map((group: any) => ({
+      _id: String(group._id),
+      name: String(group.title),
+      createdAt: group.createdAt ? new Date(group.createdAt).toISOString() : new Date().toISOString(),
+      timetable: group.timetable,
+      classCount: Object.keys(group.timetable).length,
+    }));
 
     console.log('📤 Retornando:', formattedTimetables.length, 'horários agrupados');
-    if (formattedTimetables.length > 0) {
-      console.log('   Exemplo:', {
-        _id: formattedTimetables[0]._id,
-        name: formattedTimetables[0].name,
-        createdAt: formattedTimetables[0].createdAt,
-        classCount: formattedTimetables[0].classCount
-      });
-      console.log('   JSON stringified:', JSON.stringify(formattedTimetables[0]).substring(0, 300));
-    }
 
     res.json({ 
       success: true, 
