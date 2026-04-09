@@ -1,9 +1,13 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { copyFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
-export default defineConfig(({ command, mode }) => ({
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiUrl = env.VITE_API_URL || 'https://criador-horario-backend-1.onrender.com/api';
+
+  return {
   plugins: [
     react(),
     {
@@ -60,6 +64,8 @@ export default defineConfig(({ command, mode }) => ({
   ],
   // Base path dinâmico: GitHub Pages usa subdiretório, Surge.sh serve do root
   base: mode === 'github' ? '/criador-horario-backend/' : '/',
+  // Injeta explicitamente a URL do backend para evitar que variáveis de sessão do sistema sobrescrevam o .env
+  envDir: process.cwd(),
   server: {
     port: 3001,
     host: true,
@@ -70,4 +76,5 @@ export default defineConfig(({ command, mode }) => ({
       }
     }
   }
-}));
+  };
+});
