@@ -40,6 +40,7 @@ import PaymentFailure from './pages/PaymentFailure';
 import PaymentsManagement from './pages/PaymentsManagement';
 import MessagesManagement from './pages/MessagesManagement';
 import InvoiceManagement from './pages/InvoiceManagement';
+import SaleContract from './pages/SaleContract';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -154,6 +155,7 @@ function App() {
           <Route path="settings" element={<ClientRoute><Settings /></ClientRoute>} />
           <Route path="audit-logs" element={<ClientRoute><AuditLogs /></ClientRoute>} />
           <Route path="timetables" element={<ClientRoute><Timetables /></ClientRoute>} />
+          <Route path="sale-contract" element={<ClientRoute><SaleContract /></ClientRoute>} />
           
           {/* Admin Routes */}
           <Route path="admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

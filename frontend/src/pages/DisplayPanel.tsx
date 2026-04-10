@@ -348,7 +348,7 @@ export default function DisplayPanel({
   }, []);
 
   // Buscar horários gerados (com suporte a modo emergencial)
-  const { data: timetables = [], isLoading, isError } = useQuery({
+  const { data: timetables = [], isLoading, isError, isFetching } = useQuery({
     queryKey: ['displayPanel', selectedTimetableId, isEmergencyMode, selectedEmergencyId],
     queryFn: async () => {
       if (!selectedTimetableId && !isEmergencyMode) {
@@ -526,6 +526,9 @@ export default function DisplayPanel({
         
         const allSlots: TimetableSlot[] = [];
         const timetableData = selectedTimetable.data || selectedTimetable.timetable || {};
+        // periodTimes: mapa period -> {startTime, endTime} vindo do Schedule (backend)
+        const periodTimes: Record<number, { startTime: string; endTime: string }> = selectedTimetable.periodTimes || {};
+        console.log('⏰ periodTimes do Schedule:', periodTimes);
         
         console.log('📦 Dados do horário:', Object.keys(timetableData).length, 'turmas');
         console.log('📦 Chaves:', Object.keys(timetableData));
@@ -546,10 +549,13 @@ export default function DisplayPanel({
                 });
               }
               
-              // Processar todos os slots
+              // Processar todos os slots — garantir startTime/endTime via periodTimes
               slots.forEach((slot: any) => {
+                const pt = periodTimes[Number(slot.period)];
                 allSlots.push({
                   ...slot,
+                  startTime: slot.startTime || pt?.startTime || '',
+                  endTime:   slot.endTime   || pt?.endTime   || '',
                   id: `${classId}-${slot.day}-${slot.period}`,
                   classId,
                 });
@@ -959,7 +965,7 @@ export default function DisplayPanel({
     }
   }, [currentTime, autoChangePeriod, currentPeriodIndex, selectedDay, timetables, weekDays]);
 
-  if (isLoading) {
+  if (isLoading || (isError && isFetching)) {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center gap-6">
         <div className="text-center">
@@ -972,7 +978,7 @@ export default function DisplayPanel({
     );
   }
 
-  if (isError) {
+  if (isError && !isFetching) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center text-white">
@@ -988,7 +994,7 @@ export default function DisplayPanel({
             🔄 Tentar Novamente
           </button>
           <p className="text-gray-500 text-sm mt-4">A página irá recarregar automaticamente em 20 segundos</p>
-          {(() => { setTimeout(() => window.location.reload(), 20000); return null; })()}
+          {(() => { setTimeout(() => window.location.reload(), 30000); return null; })()}
         </div>
       </div>
     );
@@ -1341,7 +1347,7 @@ export default function DisplayPanel({
         </>
       )}
 
-      {/* PAINEL PRINCIPAL - Turmas como colunas, período atual como linha */}
+          {/* PAINEL PRINCIPAL - Turmas como colunas, período atual como linha */}
       {viewMode === 'alltable' && timetables.length > 0 && (
         <>
           <div className="overflow-x-auto">
@@ -1353,25 +1359,26 @@ export default function DisplayPanel({
             </div>
           ) : (() => {
             // Detectar período ativo (em andamento) ou próximo
+            // Usa timetables.find() para garantir que o slot tenha startTime/endTime
             const now = currentTime;
             let activePeriod: number | null = null;
             let isOngoing = false;
 
             for (const period of allPeriods) {
-              const firstSlot = Object.values(fullWeekGrid[selectedDay][period] || {})[0] as any;
-              if (firstSlot?.startTime && firstSlot?.endTime) {
-                const [sh, sm] = firstSlot.startTime.split(':').map(Number);
-                const [eh, em] = firstSlot.endTime.split(':').map(Number);
+              const slot = timetables.find(s => s.period === period && s.day === selectedDay && s.startTime && s.endTime);
+              if (slot) {
+                const [sh, sm] = slot.startTime.split(':').map(Number);
+                const [eh, em] = slot.endTime.split(':').map(Number);
                 const start = new Date(now); start.setHours(sh, sm, 0, 0);
-                const end   = new Date(now); end.setHours(eh,   em, 0, 0);
+                const end   = new Date(now); end.setHours(eh,   em, 59, 999);
                 if (now >= start && now <= end) { activePeriod = period; isOngoing = true; break; }
               }
             }
             if (activePeriod === null) {
               for (const period of allPeriods) {
-                const firstSlot = Object.values(fullWeekGrid[selectedDay][period] || {})[0] as any;
-                if (firstSlot?.startTime) {
-                  const [sh, sm] = firstSlot.startTime.split(':').map(Number);
+                const slot = timetables.find(s => s.period === period && s.day === selectedDay && s.startTime);
+                if (slot) {
+                  const [sh, sm] = slot.startTime.split(':').map(Number);
                   const start = new Date(now); start.setHours(sh, sm, 0, 0);
                   if (now < start) { activePeriod = period; break; }
                 }

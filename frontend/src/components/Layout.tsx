@@ -32,7 +32,8 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle,
-  BarChart3
+  BarChart3,
+  ScrollText
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import NotificationCenter from './NotificationCenter';
@@ -225,6 +226,16 @@ export default function Layout() {
             color: 'purple',
             badge: 'NOVO',
             subtitle: 'Display em Tempo Real'
+          },
+          { 
+            icon: ScrollText, 
+            label: 'Contrato de Compra e Venda', 
+            path: '/sale-contract',
+            description: '📄 Visualize, assine e baixe seu contrato com opção de fidelidade e direitos CDC',
+            color: 'indigo',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Contrato e Direitos'
           },
           { 
             icon: Settings, 

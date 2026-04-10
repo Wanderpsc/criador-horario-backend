@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CreditCard, QrCode, Clock, Check, X, Loader, ChevronDown } from 'lucide-react';
 import api from '../services/api';
+import SaleContractModal from '../components/SaleContractModal';
+import type { ContractAcceptanceData } from '../components/SaleContractModal';
 
 interface Plan {
   id: string;
@@ -53,6 +55,8 @@ export default function PaymentCheckout() {
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [error, setError] = useState('');
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [contractAccepted, setContractAccepted] = useState<ContractAcceptanceData | null>(null);
 
   const plan = PLANS.find(p => p.id === selectedPlan);
   
@@ -65,6 +69,21 @@ export default function PaymentCheckout() {
     const discount = durationData ? (subtotal * durationData.discount) / 100 : 0;
     
     return subtotal - discount;
+  };
+
+  const handleContractAccepted = (data: ContractAcceptanceData) => {
+    setContractAccepted(data);
+    setShowContractModal(false);
+    // Prosseguir com pagamento após aceite do contrato
+    handleCreatePayment();
+  };
+
+  const handlePaymentClick = () => {
+    if (!contractAccepted) {
+      setShowContractModal(true);
+      return;
+    }
+    handleCreatePayment();
   };
 
   const handleCreatePayment = async () => {
@@ -221,6 +240,7 @@ export default function PaymentCheckout() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
@@ -400,8 +420,15 @@ export default function PaymentCheckout() {
                   </div>
                 )}
 
+                {contractAccepted && (
+                  <div className="mb-3 bg-green-50 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2 text-sm text-green-700">
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                    <span>Contrato assinado em {new Date(contractAccepted.acceptedAt).toLocaleDateString('pt-BR')} · <button onClick={() => setShowContractModal(true)} className="underline">rever</button></span>
+                  </div>
+                )}
+
                 <button
-                  onClick={handleCreatePayment}
+                  onClick={handlePaymentClick}
                   disabled={loading}
                   className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-bold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
@@ -439,5 +466,19 @@ export default function PaymentCheckout() {
         </div>
       </div>
     </div>
+
+      {showContractModal && (
+        <SaleContractModal
+          schoolName={decodeURIComponent(schoolNameFromUrl) || 'Escola'}
+          representativeName={decodeURIComponent(emailFromUrl).split('@')[0] || 'Representante'}
+          email={decodeURIComponent(emailFromUrl)}
+          plan={selectedPlan}
+          price={plan?.price || 0}
+          durationMonths={duration}
+          onAccept={handleContractAccepted}
+          onCancel={() => setShowContractModal(false)}
+        />
+      )}
+    </>
   );
 }

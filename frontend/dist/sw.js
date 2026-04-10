@@ -3,7 +3,7 @@
  * © 2025 Wander Pires Silva Coelho
  */
 
-const CACHE_NAME = 'edusync-pro-v1';
+const CACHE_NAME = 'edusync-pro-v2';
 const BASE_PATH = '/criador-horario-backend';
 const urlsToCache = [
   `${BASE_PATH}/`,
@@ -46,32 +46,48 @@ self.addEventListener('activate', (event) => {
 
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
+  // Não interceptar requisições de API (cross-origin para o Render)
+  const url = new URL(event.request.url);
+  const isApiRequest = url.hostname !== self.location.hostname;
+  if (isApiRequest) {
+    // Para API: sempre rede, sem cache
+    event.respondWith(fetch(event.request).catch(() => {
+      return new Response(JSON.stringify({ error: 'offline' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
-        // Cache hit - retorna resposta do cache
-        if (response) {
-          return response;
+      .then((cachedResponse) => {
+        // Cache hit: servir do cache e atualizar em background
+        if (cachedResponse) {
+          // Atualizar cache em background (stale-while-revalidate)
+          fetch(event.request.clone()).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+            }
+          }).catch(() => {/* ignora erro de rede no background */});
+          return cachedResponse;
         }
-        
-        // Clone da requisição
-        const fetchRequest = event.request.clone();
-        
-        return fetch(fetchRequest).then((response) => {
-          // Verifica se é uma resposta válida
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
+
+        // Sem cache: buscar da rede
+        return fetch(event.request.clone()).then((networkResponse) => {
+          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+            return networkResponse;
           }
-          
-          // Clone da resposta
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          
-          return response;
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          return networkResponse;
+        }).catch(() => {
+          // Falha de rede sem cache: retorna página offline genérica para navegação
+          if (event.request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          return new Response('', { status: 503 });
         });
       })
   );
