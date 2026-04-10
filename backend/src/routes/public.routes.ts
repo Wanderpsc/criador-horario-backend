@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 import EmergencySchedule from '../models/EmergencySchedule';
+import Schedule from '../models/Schedule';
 import Class from '../models/Class';
 import Subject from '../models/Subject';
 import Teacher from '../models/Teacher';
@@ -62,12 +63,31 @@ router.get('/timetable/:id', async (req, res) => {
     const teacherIds  = new Set<string>();
     const classIds    = new Set<string>();
 
+    // Coletar scheduleIds únicos para buscar horários de períodos
+    const scheduleIdSet = new Set<string>();
     for (const tt of timetables) {
+      if (tt.scheduleId) scheduleIdSet.add(String(tt.scheduleId));
       for (const slot of tt.slots) {
         if (slot.subjectId) subjectIds.add(slot.subjectId);
         if (slot.teacherId) teacherIds.add(slot.teacherId);
         if (slot.classId)   classIds.add(slot.classId);
       }
+    }
+
+    // Buscar schedules para obter startTime/endTime por período
+    const schedules = await Schedule.find({ _id: { $in: Array.from(scheduleIdSet) } }).lean();
+    // Mapa: scheduleId -> { period -> { startTime, endTime } }
+    const schedulePeriodMap = new Map<string, Map<number, { startTime: string; endTime: string }>>();
+    for (const sched of schedules) {
+      const periodMap = new Map<number, { startTime: string; endTime: string }>();
+      if ((sched as any).periods && Array.isArray((sched as any).periods)) {
+        for (const p of (sched as any).periods) {
+          if (p.period != null && p.startTime && p.endTime) {
+            periodMap.set(Number(p.period), { startTime: p.startTime, endTime: p.endTime });
+          }
+        }
+      }
+      schedulePeriodMap.set(String((sched as any)._id), periodMap);
     }
 
     const [subjects, teachers, classes] = await Promise.all([
@@ -109,8 +129,13 @@ router.get('/timetable/:id', async (req, res) => {
         const subject = subjectMap.get(String(slot.subjectId));
         const teacher = teacherMap.get(String(slot.teacherId));
         const classDoc = classMap.get(String(slot.classId));
+        // Popular startTime/endTime do Schedule se o slot não os tiver
+        const periodMap = tt.scheduleId ? schedulePeriodMap.get(String(tt.scheduleId)) : undefined;
+        const periodTimes = periodMap?.get(Number(slot.period));
         return {
           ...slot,
+          startTime: slot.startTime || periodTimes?.startTime || '',
+          endTime:   slot.endTime   || periodTimes?.endTime   || '',
           subjectName: (subject as any)?.name || 'Disciplina',
           teacherName: (teacher as any)?.name || 'Professor',
           className:   (classDoc as any)?.name || 'Turma',
@@ -122,13 +147,21 @@ router.get('/timetable/:id', async (req, res) => {
       groupedByTitle[title].timetable[tt.classId] = populatedSlots;
     }
 
-    const formattedTimetables = Object.values(groupedByTitle).map((group: any) => ({
-      _id: String(group._id),
-      name: String(group.title),
-      createdAt: group.createdAt ? new Date(group.createdAt).toISOString() : new Date().toISOString(),
-      timetable: group.timetable,
-      classCount: Object.keys(group.timetable).length,
-    }));
+    const formattedTimetables = Object.values(groupedByTitle).map((group: any) => {
+      // Incluir periodTimes (mapa period -> {startTime, endTime}) no primeiro schedule encontrado
+      const schedId = group.scheduleId ? String(group.scheduleId) : '';
+      const pMap = schedId ? schedulePeriodMap.get(schedId) : undefined;
+      const periodTimes: Record<number, { startTime: string; endTime: string }> = {};
+      if (pMap) pMap.forEach((v, k) => { periodTimes[k] = v; });
+      return {
+        _id: String(group._id),
+        name: String(group.title),
+        createdAt: group.createdAt ? new Date(group.createdAt).toISOString() : new Date().toISOString(),
+        timetable: group.timetable,
+        classCount: Object.keys(group.timetable).length,
+        periodTimes,
+      };
+    });
 
     res.json({ success: true, data: formattedTimetables });
   } catch (error: any) {
