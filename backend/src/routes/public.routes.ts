@@ -78,6 +78,7 @@ router.get('/timetable/:id', async (req, res) => {
     const schedules = await Schedule.find({ _id: { $in: Array.from(scheduleIdSet) } }).lean();
     // Mapa: scheduleId -> { period -> { startTime, endTime } }
     const schedulePeriodMap = new Map<string, Map<number, { startTime: string; endTime: string }>>();
+    const scheduleBreaksMap = new Map<string, Array<{ label: string; startTime: string; endTime: string }>>();
     for (const sched of schedules) {
       const periodMap = new Map<number, { startTime: string; endTime: string }>();
       if ((sched as any).periods && Array.isArray((sched as any).periods)) {
@@ -88,6 +89,13 @@ router.get('/timetable/:id', async (req, res) => {
         }
       }
       schedulePeriodMap.set(String((sched as any)._id), periodMap);
+      if ((sched as any).breaks && Array.isArray((sched as any).breaks)) {
+        scheduleBreaksMap.set(String((sched as any)._id), (sched as any).breaks.map((b: any) => ({
+          label: b.label || 'Intervalo',
+          startTime: b.startTime,
+          endTime: b.endTime,
+        })));
+      }
     }
 
     const [subjects, teachers, classes] = await Promise.all([
@@ -153,6 +161,7 @@ router.get('/timetable/:id', async (req, res) => {
       const pMap = schedId ? schedulePeriodMap.get(schedId) : undefined;
       const periodTimes: Record<number, { startTime: string; endTime: string }> = {};
       if (pMap) pMap.forEach((v, k) => { periodTimes[k] = v; });
+      const breaks = schedId ? (scheduleBreaksMap.get(schedId) || []) : [];
       return {
         _id: String(group._id),
         name: String(group.title),
@@ -160,6 +169,7 @@ router.get('/timetable/:id', async (req, res) => {
         timetable: group.timetable,
         classCount: Object.keys(group.timetable).length,
         periodTimes,
+        breaks,
       };
     });
 

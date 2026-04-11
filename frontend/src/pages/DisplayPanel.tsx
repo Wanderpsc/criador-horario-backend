@@ -44,11 +44,15 @@ export default function DisplayPanel({
   const [isEmergencyMode, setIsEmergencyMode] = useState(false); // Modo emergencial
   const [selectedEmergencyId, setSelectedEmergencyId] = useState<string>(''); // ID do horário emergencial selecionado
   const [allClassesList, setAllClassesList] = useState<{ className: string; gradeName?: string }[]>([]); // Lista completa de turmas
+  const [scheduleBreaks, setScheduleBreaks] = useState<{ label: string; startTime: string; endTime: string }[]>([]); // Intervalos configurados no Schedule
   const [autoChangePeriod, setAutoChangePeriod] = useState(true); // Controle de mudança automática de período
   const [lastPeriod, setLastPeriod] = useState<number | null>(null); // Rastrear último período para detectar mudança
   const [alarmPlayed, setAlarmPlayed] = useState<boolean>(false); // Controlar se o alarme de aviso já foi tocado
   const [overrideDateTime, setOverrideDateTime] = useState<string>(''); // Data/hora simulada para teste
   const [showSimulator, setShowSimulator] = useState(false); // Toggle do painel de simulação
+  const [showSaturdayDialog, setShowSaturdayDialog] = useState(false); // Dialog configuração do sábado
+  const [saturdayIsLetivo, setSaturdayIsLetivo] = useState<boolean | null>(null); // null = não verificado
+  const [saturdayRefDay, setSaturdayRefDay] = useState<string>('Segunda'); // Dia de referência no sábado
   const [manualEdits, setManualEdits] = useState<{ [key: string]: { subjectName: string; teacherName: string } }>({});
   const [manualSaved, setManualSaved] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null); // chave: `${period}|||${classKey}` (somente admin, modo AUTO)
@@ -309,6 +313,30 @@ export default function DisplayPanel({
     const today = days[effectiveTime.getDay()];
     if (['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].includes(today)) {
       setSelectedDay(today);
+    }
+  }, [overrideDateTime]);
+
+  // Verificação de sábado letivo: pergunta ao usuário ao abrir o painel num sábado
+  useEffect(() => {
+    const effectiveDate = overrideDateTime ? new Date(overrideDateTime) : new Date();
+    if (effectiveDate.getDay() !== 6) return; // Não é sábado
+    const dateStr = effectiveDate.toISOString().substring(0, 10);
+    const storageKey = `saturday-panel-config-${dateStr}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        setSaturdayIsLetivo(config.isLetivo);
+        if (config.isLetivo && config.refDay) {
+          setSaturdayRefDay(config.refDay);
+          setSelectedDay(config.refDay);
+        }
+      } catch {
+        setShowSaturdayDialog(true);
+      }
+    } else {
+      // Primeira abertura do painel neste sábado: mostrar dialog
+      setShowSaturdayDialog(true);
     }
   }, [overrideDateTime]);
 
@@ -612,6 +640,7 @@ export default function DisplayPanel({
         console.log('📅 RETORNANDO SLOTS NORMAIS:', allSlots.length);
         console.log('═══════════════════════════════════════════════');
         setAllClassesList(allClasses);
+        setScheduleBreaks(selectedTimetable.breaks || []);
         setIsConnected(true);
         return allSlots;
       } catch (error: any) {
@@ -684,6 +713,17 @@ export default function DisplayPanel({
     if (audioRef.current) {
       audioRef.current.play().catch(err => console.log('Erro ao tocar som:', err));
     }
+  };
+
+  // Salvar configuração do sábado e aplicar ao painel
+  const handleSaturdayConfirm = (isLetivo: boolean, refDay: string) => {
+    const effectiveDate = overrideDateTime ? new Date(overrideDateTime) : new Date();
+    const dateStr = effectiveDate.toISOString().substring(0, 10);
+    localStorage.setItem(`saturday-panel-config-${dateStr}`, JSON.stringify({ isLetivo, refDay }));
+    setSaturdayIsLetivo(isLetivo);
+    setSaturdayRefDay(refDay);
+    if (isLetivo) setSelectedDay(refDay);
+    setShowSaturdayDialog(false);
   };
 
   // Obter dia da semana atual (memoizado)
@@ -1142,6 +1182,21 @@ export default function DisplayPanel({
               >
                 🔔 TESTAR SOM
               </button>
+
+              {/* Botão de reconfiguração do Sábado — visível apenas em sábados */}
+              {saturdayIsLetivo !== null && (
+                <button
+                  onClick={() => {
+                    setSaturdayIsLetivo(null);
+                    setSaturdayRefDay('Segunda');
+                    setShowSaturdayDialog(true);
+                  }}
+                  className="px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap bg-yellow-600 hover:bg-yellow-500 text-white ring-2 ring-yellow-400"
+                  title="Reconfigurar sábado letivo"
+                >
+                  📅 Sábado: {saturdayIsLetivo ? saturdayRefDay : 'Não letivo'}
+                </button>
+              )}
             </div>
 
 
@@ -1400,10 +1455,10 @@ export default function DisplayPanel({
                       💾 SALVAR E EXIBIR
                     </button>
                   </div>
-                  <table className="border-collapse" style={{ tableLayout: 'fixed', width: `${totalW_ED}px` }}>
+                  <table className="border-collapse w-full" style={{ tableLayout: 'fixed', minWidth: `${totalW_ED}px` }}>
                     <colgroup>
                       <col style={{ width: '160px' }} />
-                      {allClasses.map((_, i) => <col key={i} style={{ width: `${COL_W_ED}px` }} />)}
+                      {allClasses.map((_, i) => <col key={i} />)}
                     </colgroup>
                     <thead>
                       <tr style={{ height: '76px' }}>
@@ -1484,8 +1539,103 @@ export default function DisplayPanel({
               );
             }
 
-            // ── FORA DO HORÁRIO ESCOLAR ──────────────────────────────────────
+            // ── FORA DO HORÁRIO ESCOLAR / INTERVALO ─────────────────────────
             if (activePeriod === null) {
+              // Detectar se estamos num intervalo configurado no Schedule (breaks)
+              const nowB = currentTime;
+              const nowMin = nowB.getHours() * 60 + nowB.getMinutes();
+              const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+              let activeBreak: { label: string; startTime: string; endTime: string } | null = null;
+              if (scheduleBreaks.length > 0) {
+                activeBreak = scheduleBreaks.find(br => br.startTime && br.endTime &&
+                  nowMin >= toMin(br.startTime) && nowMin < toMin(br.endTime)) || null;
+              }
+
+              // Fallback heurístico caso não haja breaks cadastrados
+              let nextStart: Date | null = null;
+              for (const p of allPeriods) {
+                const sl = timetables.find(s => s.period === p && s.day === selectedDay && s.startTime);
+                if (sl) {
+                  const [sh, sm] = sl.startTime.split(':').map(Number);
+                  const st = new Date(nowB); st.setHours(sh, sm, 0, 0);
+                  if (st > nowB && (!nextStart || st < nextStart)) nextStart = st;
+                }
+              }
+
+              const retornoStr = activeBreak?.endTime
+                || (nextStart ? `${String(nextStart.getHours()).padStart(2,'0')}:${String(nextStart.getMinutes()).padStart(2,'0')}` : '');
+
+              // Se não há breaks cadastrados, tentar heurística de gap
+              if (!activeBreak && scheduleBreaks.length === 0) {
+                let lastEnd: Date | null = null;
+                for (const p of allPeriods) {
+                  const sl = timetables.find(s => s.period === p && s.day === selectedDay && s.endTime);
+                  if (sl) {
+                    const [eh, em] = sl.endTime.split(':').map(Number);
+                    const end = new Date(nowB); end.setHours(eh, em, 59, 999);
+                    if (end < nowB && (!lastEnd || end > lastEnd)) lastEnd = end;
+                  }
+                }
+                const isBreakHeuristic = !!(lastEnd && nextStart);
+                if (isBreakHeuristic) {
+                  const gapMin = (nextStart!.getTime() - lastEnd!.getTime()) / 60000;
+                  const hourNow = nowB.getHours();
+                  activeBreak = {
+                    label: (gapMin >= 25 && hourNow >= 10 && hourNow <= 14) ? 'Almoço' : 'Lanche',
+                    startTime: `${String(lastEnd!.getHours()).padStart(2,'0')}:${String(lastEnd!.getMinutes()).padStart(2,'0')}`,
+                    endTime: retornoStr,
+                  };
+                }
+              }
+
+              if (activeBreak) {
+                const isAlmoco = activeBreak.label === 'Almoço';
+                const emoji = activeBreak.label === 'Almoço' ? '🍽️' : activeBreak.label === 'Lanche Tarde' ? '🍎' : '☕';
+                const titulo = activeBreak.label === 'Almoço' ? 'HORÁRIO DE ALMOÇO' : activeBreak.label.toUpperCase();
+                return (
+                  <div className="flex flex-col items-center justify-center py-10 gap-8">
+                    <div className={`text-center px-8 py-10 rounded-3xl border-4 shadow-2xl w-full mx-auto ${
+                      isAlmoco ? 'bg-amber-950 border-amber-500' : 'bg-blue-950 border-blue-400'
+                    }`}>
+                      <div className="text-8xl mb-4 select-none">{emoji}</div>
+                      <h2 className={`text-5xl font-black mb-3 ${isAlmoco ? 'text-amber-400' : 'text-blue-300'}`}>
+                        {titulo}
+                      </h2>
+                      <p className="text-2xl text-gray-300 mb-2">
+                        {selectedDay.toUpperCase()} — {currentTime.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                      </p>
+                      {retornoStr && (
+                        <p className={`text-xl font-bold ${isAlmoco ? 'text-amber-300' : 'text-blue-300'}`}>
+                          ⏰ Aulas retornam às {retornoStr}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Música ambiente */}
+                    <div className="w-full mx-auto">
+                      <p className="text-center text-gray-400 text-lg mb-4 font-semibold tracking-wide">🎵 Música Ambiente</p>
+                      <div className="flex gap-6 justify-center flex-wrap">
+                        <button
+                          onClick={() => window.open('https://www.youtube.com/results?search_query=musica+gospel+instrumental+suave', '_blank')}
+                          className="flex flex-col items-center gap-2 px-10 py-6 bg-yellow-700 hover:bg-yellow-600 text-white rounded-2xl font-bold text-xl transition-all hover:scale-105 shadow-lg"
+                        >
+                          <span className="text-4xl">🙏</span>
+                          Gospel Instrumental
+                        </button>
+                        <button
+                          onClick={() => window.open('https://www.youtube.com/results?search_query=musica+instrumental+internacional+relaxante+classica', '_blank')}
+                          className="flex flex-col items-center gap-2 px-10 py-6 bg-indigo-700 hover:bg-indigo-600 text-white rounded-2xl font-bold text-xl transition-all hover:scale-105 shadow-lg"
+                        >
+                          <span className="text-4xl">🎼</span>
+                          Internacional
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div className="text-center py-24">
                   <Clock size={80} className="mx-auto mb-4 text-gray-500" />
@@ -1516,11 +1666,11 @@ export default function DisplayPanel({
                     </button>
                   </div>
                 )}
-                <table className="border-collapse" style={{ tableLayout: 'fixed', width: `${totalW}px` }}>
+                <table className="border-collapse w-full" style={{ tableLayout: 'fixed', minWidth: `${totalW}px` }}>
                   <colgroup>
                     <col style={{ width: '180px' }} />
                     {allClasses.map((_, i) => (
-                      <col key={i} style={{ width: `${COL_W}px` }} />
+                      <col key={i} />
                     ))}
                   </colgroup>
                   <thead>
@@ -2017,32 +2167,112 @@ export default function DisplayPanel({
         </>
       )}
 
-      {/* Mensagem se não houver aulas do dia atual */}
+      {/* Créditos do desenvolvedor — exibido quando não há aulas no dia */}
       {timetables.length > 0 && todaySlots.length === 0 && (
-        <div className="text-center py-20">
-          <Clock size={80} className="mx-auto mb-4 text-gray-500" />
-          <h2 className="text-4xl font-bold text-white mb-4">
-            Nenhuma aula agendada para hoje
-          </h2>
-          <p className="text-2xl text-gray-400 mb-2">
-            {currentTime.toLocaleDateString('pt-BR', { 
-              weekday: 'long', 
-              day: 'numeric', 
-              month: 'long',
-              year: 'numeric'
-            })}
-          </p>
-          <div className="mt-6 bg-blue-900 bg-opacity-50 rounded-lg p-6 max-w-2xl mx-auto">
-            <p className="text-xl text-yellow-400 font-bold mb-2">
-              📅 Dia da semana: {getCurrentDay()}
-            </p>
-            <p className="text-lg text-gray-300">
-              ℹ️ Há {timetables.length} aula(s) cadastrada(s) em outros dias da semana
-            </p>
-            <p className="text-md text-gray-400 mt-4">
-              Dica: Acesse o sistema e cadastre aulas para {getCurrentDay()}
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+          <div className="bg-gray-800 bg-opacity-60 backdrop-blur-sm border border-gray-700 rounded-xl px-6 py-3 text-center shadow-lg">
+            <p className="text-gray-400 text-xs tracking-wide">
+              Desenvolvido por{' '}
+              <span className="text-gray-300 font-semibold">Wander Pires Silva Coelho</span>
+              <span className="mx-2 text-gray-600">·</span>
+              <span className="text-blue-400">wanderpsc@gmail.com</span>
+              <span className="mx-2 text-gray-600">·</span>
+              <span className="text-gray-500">© 2025</span>
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ===== MODAL: Configuração do Sábado ===== */}
+      {showSaturdayDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-85 backdrop-blur-sm">
+          <div className="bg-gray-900 border-4 border-yellow-500 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-3">📅</div>
+              <h2 className="text-3xl font-black text-yellow-400 mb-1">É SÁBADO!</h2>
+              <p className="text-gray-300 text-lg">Este sábado é <strong className="text-white">letivo</strong>?</p>
+            </div>
+
+            {/* Botões Letivo / Não Letivo */}
+            <div className="flex gap-4 mb-6">
+              <button
+                onClick={() => setSaturdayIsLetivo(true)}
+                className={`flex-1 py-4 rounded-xl font-black text-xl transition-all ${
+                  saturdayIsLetivo === true
+                    ? 'bg-green-600 text-white ring-4 ring-green-400 scale-105 shadow-xl'
+                    : 'bg-gray-700 text-gray-300 hover:bg-green-700 hover:text-white'
+                }`}
+              >
+                ✅ SIM, É LETIVO
+              </button>
+              <button
+                onClick={() => setSaturdayIsLetivo(false)}
+                className={`flex-1 py-4 rounded-xl font-black text-xl transition-all ${
+                  saturdayIsLetivo === false
+                    ? 'bg-red-600 text-white ring-4 ring-red-400 scale-105 shadow-xl'
+                    : 'bg-gray-700 text-gray-300 hover:bg-red-700 hover:text-white'
+                }`}
+              >
+                ❌ NÃO É LETIVO
+              </button>
+            </div>
+
+            {/* Seletor de dia de referência — apenas se letivo */}
+            {saturdayIsLetivo === true && (
+              <div className="mb-6">
+                <p className="text-gray-300 text-lg mb-3 text-center font-semibold">
+                  📆 Qual dia da semana este sábado segue?
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'] as const).map(day => (
+                    <button
+                      key={day}
+                      onClick={() => setSaturdayRefDay(day)}
+                      className={`py-3 rounded-xl font-bold text-lg transition-all ${
+                        saturdayRefDay === day
+                          ? 'bg-yellow-500 text-gray-900 ring-4 ring-yellow-300 scale-105 shadow-lg'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-center text-yellow-400 text-sm mt-3">
+                  O painel exibirá o horário de <strong>{saturdayRefDay}</strong>
+                </p>
+              </div>
+            )}
+
+            {/* Botão Confirmar */}
+            {saturdayIsLetivo !== null && (
+              <button
+                onClick={() => handleSaturdayConfirm(saturdayIsLetivo!, saturdayRefDay)}
+                className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black text-2xl rounded-xl shadow-lg transition-all hover:scale-105 mt-2"
+              >
+                CONFIRMAR
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== OVERLAY: Sábado Não Letivo ===== */}
+      {saturdayIsLetivo === false && !showSaturdayDialog && (
+        <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-gray-950 bg-opacity-97">
+          <div className="text-9xl mb-6 select-none">🏖️</div>
+          <h1 className="text-6xl font-black text-white mb-4 tracking-wide">SÁBADO NÃO LETIVO</h1>
+          <p className="text-2xl text-gray-400 mb-10">Não há aulas hoje</p>
+          <button
+            onClick={() => {
+              setSaturdayIsLetivo(null);
+              setSaturdayRefDay('Segunda');
+              setShowSaturdayDialog(true);
+            }}
+            className="px-10 py-4 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black text-xl rounded-xl shadow-2xl transition-all hover:scale-105"
+          >
+            ⚙️ Reconfigurar
+          </button>
         </div>
       )}
 

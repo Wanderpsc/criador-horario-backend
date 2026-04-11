@@ -9,6 +9,11 @@ export interface ISchedule extends Document {
     startTime: string;
     endTime: string;
   }>;
+  breaks?: Array<{
+    label: string;
+    startTime: string;
+    endTime: string;
+  }>;
   slots: Array<{
     day: string;
     period: number;
@@ -35,6 +40,11 @@ const scheduleSchema = new Schema<ISchedule>(
     },
     periods: [{
       period: Number,
+      startTime: String,
+      endTime: String,
+    }],
+    breaks: [{
+      label: { type: String, default: 'Intervalo' },
       startTime: String,
       endTime: String,
     }],

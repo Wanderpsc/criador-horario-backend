@@ -10,17 +10,29 @@ interface Period {
   endTime: string;
 }
 
+interface BreakSlot {
+  label: string;
+  startTime: string;
+  endTime: string;
+}
+
 interface Schedule {
   id: string;
   _id?: string;  // Manter para compatibilidade
   name: string;
   periods: Period[];
+  breaks?: BreakSlot[];
 }
 
 export default function Schedules() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    numberOfPeriods: number;
+    periods: Period[];
+    breaks: BreakSlot[];
+  }>({
     name: '',
     numberOfPeriods: 8,
     periods: Array.from({ length: 8 }, (_, i) => ({
@@ -28,6 +40,7 @@ export default function Schedules() {
       startTime: '',
       endTime: '',
     })),
+    breaks: [],
   });
 
   const queryClient = useQueryClient();
@@ -106,6 +119,7 @@ export default function Schedules() {
               startTime: '',
               endTime: '',
             })),
+        breaks: schedule.breaks || [],
       });
       console.log('📋 FormData setado com períodos:', schedule.periods);
     } else {
@@ -123,6 +137,7 @@ export default function Schedules() {
           { period: 7, startTime: '', endTime: '' },
           { period: 8, startTime: '', endTime: '' },
         ],
+        breaks: [],
       });
     }
     setIsModalOpen(true);
@@ -168,6 +183,20 @@ export default function Schedules() {
     newPeriods[index] = { ...newPeriods[index], [field]: value };
     setFormData({ ...formData, periods: newPeriods });
     console.log('📝 formData atualizado, períodos:', newPeriods);
+  };
+
+  const addBreak = () => {
+    setFormData({ ...formData, breaks: [...formData.breaks, { label: 'Intervalo', startTime: '', endTime: '' }] });
+  };
+
+  const removeBreak = (index: number) => {
+    setFormData({ ...formData, breaks: formData.breaks.filter((_, i) => i !== index) });
+  };
+
+  const updateBreak = (index: number, field: keyof BreakSlot, value: string) => {
+    const newBreaks = [...formData.breaks];
+    newBreaks[index] = { ...newBreaks[index], [field]: value };
+    setFormData({ ...formData, breaks: newBreaks });
   };
 
   if (isLoading) {
@@ -237,6 +266,18 @@ export default function Schedules() {
                 ))
               ) : (
                 <p className="text-gray-500 text-sm">Nenhum período configurado</p>
+              )}
+              {schedule.breaks && schedule.breaks.length > 0 && (
+                <div className="pt-2 mt-2 border-t border-orange-200">
+                  {schedule.breaks.map((br, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg mt-1">
+                      <span className="font-medium text-orange-700 text-sm">
+                        {br.label === 'Almoço' ? '🍽️' : br.label === 'Lanche Manhã' ? '☕' : br.label === 'Lanche Tarde' ? '🍎' : '⏸️'} {br.label}
+                      </span>
+                      <span className="text-orange-600 text-sm">{br.startTime} - {br.endTime}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -357,6 +398,76 @@ export default function Schedules() {
                     );
                   })()}
                 </div>
+              </div>
+
+              {/* ── Intervalos de Lanche / Almoço ── */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-lg">Intervalos (Lanche / Almoço)</h3>
+                  <button
+                    type="button"
+                    onClick={addBreak}
+                    className="btn btn-secondary flex items-center gap-1 text-sm py-1.5 px-3"
+                  >
+                    <Plus size={16} /> Adicionar Intervalo
+                  </button>
+                </div>
+                {formData.breaks.length === 0 ? (
+                  <p className="text-gray-400 text-sm italic">
+                    Nenhum intervalo configurado. Clique em "Adicionar Intervalo" para incluir lanche ou almoço.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-4 gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+                      <span className="col-span-2">Descrição</span>
+                      <span>Início</span>
+                      <span>Fim</span>
+                    </div>
+                    {formData.breaks.map((br, index) => (
+                      <div key={index} className="grid grid-cols-4 gap-3 items-center bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                        <div className="col-span-2">
+                          <select
+                            value={br.label}
+                            onChange={(e) => updateBreak(index, 'label', e.target.value)}
+                            className="input text-sm py-1.5"
+                            required
+                          >
+                            <option value="Lanche Manhã">☕ Lanche Manhã</option>
+                            <option value="Almoço">🍽️ Almoço</option>
+                            <option value="Lanche Tarde">🍎 Lanche Tarde</option>
+                            <option value="Intervalo">⏸️ Intervalo</option>
+                          </select>
+                        </div>
+                        <div>
+                          <input
+                            type="time"
+                            value={br.startTime}
+                            onChange={(e) => updateBreak(index, 'startTime', e.target.value)}
+                            className="input text-sm py-1.5"
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="time"
+                            value={br.endTime}
+                            onChange={(e) => updateBreak(index, 'endTime', e.target.value)}
+                            className="input text-sm py-1.5"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeBreak(index)}
+                            className="text-red-400 hover:text-red-600 flex-shrink-0"
+                            title="Remover intervalo"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t sticky bottom-0 bg-white">
