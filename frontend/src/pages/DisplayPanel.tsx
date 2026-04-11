@@ -29,6 +29,16 @@ interface DisplayPanelProps {
 type SlotStatus = 'completed' | 'ongoing' | 'upcoming' | 'scheduled';
 type ViewMode = 'grid' | 'cards' | 'airport' | 'display' | 'alltable';
 
+// Playlist de músicas para os intervalos
+const BREAK_PLAYLIST = [
+  { id: 'jfKfPfyJRdk', title: 'Lo-Fi Relaxante', emoji: '🎵' },
+  { id: 'CLeZyIID9Bo', title: 'Gospel Instrumental', emoji: '🙏' },
+  { id: '4To2KEJ1y7c', title: 'Música Clássica', emoji: '🎼' },
+  { id: 'DWcJFNfaw9c', title: 'Piano Instrumental', emoji: '🎹' },
+  { id: 'kgx4WGK0oNU', title: 'Músicas Ambiente', emoji: '🌿' },
+  { id: 'BHACKCNDMW8', title: 'Para Estudar', emoji: '📚' },
+];
+
 export default function DisplayPanel({ 
 
   autoRefresh = true, 
@@ -56,7 +66,9 @@ export default function DisplayPanel({
   const [manualEdits, setManualEdits] = useState<{ [key: string]: { subjectName: string; teacherName: string } }>({});
   const [manualSaved, setManualSaved] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null); // chave: `${period}|||${classKey}` (somente admin, modo AUTO)
+  const [playlistIndex, setPlaylistIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastIsOngoingRef = useRef(false);
 
   // Detectar se é administrador (usuário logado) ou visualizador público (link compartilhado)
   const isAdmin = useMemo(() => {
@@ -166,7 +178,8 @@ export default function DisplayPanel({
     try {
       // Criar contexto de áudio
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
+      // Resumir o contexto (browsers podem suspendem se não houve gesto do usuário)
+      const doPlay = () => {
       // Função para criar um tom
       const createTone = (frequency: number, startTime: number, duration: number, volume: number) => {
         const oscillator = audioContext.createOscillator();
@@ -200,12 +213,14 @@ export default function DisplayPanel({
       createTone(baseFreq, now + 0.4, 0.25, 0.4);
       
       console.log('🔔 Som de sino tocado!');
-      
       // Limpar contexto após uso
-      setTimeout(() => {
-        audioContext.close();
-      }, 1000);
-      
+      setTimeout(() => { audioContext.close(); }, 1000);
+      }; // fim doPlay
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(doPlay);
+      } else {
+        doPlay();
+      }
     } catch (err) {
       console.error('❌ Erro ao tocar sino:', err);
       // Fallback: tentar alerta do navegador
@@ -924,82 +939,66 @@ export default function DisplayPanel({
     }
   }, [selectedDay, fullWeekGrid, timetables, weekDays]);
 
-  // Detectar mudança de período e tocar sino
+  // Detectar início de período e tocar sino
   useEffect(() => {
-    // Só executar se tiver horários carregados
     if (timetables.length === 0) return;
 
-    // Pegar o período atual do grid
-    const { allPeriods, fullWeekGrid } = (() => {
-      const periods = [...new Set(timetables.map(s => s.period))].sort((a, b) => a - b);
-      const grid: { [day: string]: { [period: number]: any } } = {};
-      weekDays.forEach(day => {
-        grid[day] = {};
-      });
-      timetables.forEach(slot => {
-        const day = slot.day || '';
-        const period = slot.period || 0;
-        if (!grid[day][period]) grid[day][period] = {};
-      });
-      return { allPeriods: periods, fullWeekGrid: grid };
-    })();
-
-    // Determinar período atual
+    const allPeriods = [...new Set(timetables.map(s => s.period))].sort((a, b) => a - b);
+    const now = currentTime;
+    let isOngoingNow = false;
+    let timeUntilPeriodEnd: number | null = null;
     let detectedPeriod: number | null = null;
-    let timeUntilPeriodEnd: number | null = null; // Segundos até o fim do período
 
     if (autoChangePeriod) {
-      // Modo AUTO: detectar baseado no horário
-      const now = currentTime;
+      // Verificar se estamos DENTRO de algum período
       for (const period of allPeriods) {
-        const periodSlots = fullWeekGrid[selectedDay]?.[period] || {};
-        const firstSlot = timetables.find(s => s.period === period && s.day === selectedDay);
-        
-        if (firstSlot && firstSlot.startTime && firstSlot.endTime) {
-          const [startHour, startMinute] = firstSlot.startTime.split(':').map(Number);
-          const [endHour, endMinute] = firstSlot.endTime.split(':').map(Number);
-          const startTime = new Date(now);
-          startTime.setHours(startHour, startMinute, 0, 0);
-          const endTime = new Date(now);
-          endTime.setHours(endHour, endMinute, 0, 0);
-          
-          const diffMinutes = Math.floor((startTime.getTime() - now.getTime()) / 60000);
-          if ((now >= startTime && now <= endTime) || (diffMinutes > 0 && diffMinutes <= 30)) {
+        const slot = timetables.find(s => s.period === period && s.day === selectedDay && s.startTime && s.endTime);
+        if (slot) {
+          const [sh, sm] = slot.startTime.split(':').map(Number);
+          const [eh, em] = slot.endTime.split(':').map(Number);
+          const start = new Date(now); start.setHours(sh, sm, 0, 0);
+          const end   = new Date(now); end.setHours(eh, em, 59, 999);
+          if (now >= start && now <= end) {
+            isOngoingNow = true;
             detectedPeriod = period;
-            // Calcular segundos até o fim do período
-            timeUntilPeriodEnd = Math.floor((endTime.getTime() - now.getTime()) / 1000);
+            timeUntilPeriodEnd = Math.floor((end.getTime() - now.getTime()) / 1000);
             break;
           }
         }
       }
+      // Próximo período (para rastrear qual está chegando)
+      if (!isOngoingNow) {
+        for (const period of allPeriods) {
+          const slot = timetables.find(s => s.period === period && s.day === selectedDay && s.startTime);
+          if (slot) {
+            const [sh, sm] = slot.startTime.split(':').map(Number);
+            const start = new Date(now); start.setHours(sh, sm, 0, 0);
+            if (start > now) { detectedPeriod = period; break; }
+          }
+        }
+      }
     } else {
-      // Modo MANUAL: usar o índice atual
       detectedPeriod = allPeriods[currentPeriodIndex] || null;
     }
 
-    // Tocar alarme 5 segundos antes da mudança (apenas em modo AUTO)
-    if (autoChangePeriod && timeUntilPeriodEnd !== null && timeUntilPeriodEnd > 0 && timeUntilPeriodEnd <= 5 && !alarmPlayed) {
-      console.log(`⚠️ ALARME: Faltam ${timeUntilPeriodEnd} segundos para mudança de período!`);
+    // Alarme 5 segundos antes do FIM do período
+    if (autoChangePeriod && isOngoingNow && timeUntilPeriodEnd !== null && timeUntilPeriodEnd > 0 && timeUntilPeriodEnd <= 5 && !alarmPlayed) {
+      console.log(`⚠️ ALARME: Faltam ${timeUntilPeriodEnd}s para o fim do período!`);
       playAlarmSound();
       setAlarmPlayed(true);
     }
-
-    // Resetar flag do alarme quando mudar de período ou quando estiver longe do fim
-    if (timeUntilPeriodEnd === null || timeUntilPeriodEnd > 5) {
-      if (alarmPlayed) {
-        setAlarmPlayed(false);
-      }
+    if (!isOngoingNow || timeUntilPeriodEnd === null || timeUntilPeriodEnd > 5) {
+      if (alarmPlayed) setAlarmPlayed(false);
     }
 
-    // Verificar se houve mudança de período
-    if (detectedPeriod !== null && lastPeriod !== null && detectedPeriod !== lastPeriod) {
-      console.log(`🔔 MUDANÇA DE PERÍODO: ${lastPeriod}º → ${detectedPeriod}º`);
+    // Sino ao INICIAR um período (transição não-andando → andando)
+    if (autoChangePeriod && isOngoingNow && !lastIsOngoingRef.current) {
+      console.log(`🔔 INÍCIO DE PERÍODO: ${detectedPeriod}º`);
       playBellSound();
-      // Resetar flag do alarme ao mudar de período
       setAlarmPlayed(false);
     }
+    lastIsOngoingRef.current = isOngoingNow;
 
-    // Atualizar último período
     if (detectedPeriod !== null && detectedPeriod !== lastPeriod) {
       setLastPeriod(detectedPeriod);
     }
@@ -1540,7 +1539,7 @@ export default function DisplayPanel({
             }
 
             // ── FORA DO HORÁRIO ESCOLAR / INTERVALO ─────────────────────────
-            if (activePeriod === null) {
+            if (!isOngoing) {
               // Detectar se estamos num intervalo configurado no Schedule (breaks)
               const nowB = currentTime;
               const nowMin = nowB.getHours() * 60 + nowB.getMinutes();
@@ -1590,8 +1589,8 @@ export default function DisplayPanel({
               }
 
               if (activeBreak) {
-                const isAlmoco = activeBreak.label === 'Almoço';
-                const emoji = activeBreak.label === 'Almoço' ? '🍽️' : activeBreak.label === 'Lanche Tarde' ? '🍎' : '☕';
+                const isAlmoco = activeBreak.label.includes('Almoço');
+                const emoji = activeBreak.label.includes('Almoço') ? '🍽️' : activeBreak.label.includes('Tarde') ? '🍎' : '☕';
                 const titulo = activeBreak.label === 'Almoço' ? 'HORÁRIO DE ALMOÇO' : activeBreak.label.toUpperCase();
                 return (
                   <div className="flex flex-col items-center justify-center py-10 gap-8">
@@ -1612,39 +1611,75 @@ export default function DisplayPanel({
                       )}
                     </div>
 
-                    {/* Música ambiente */}
+                    {/* Playlist automática */}
                     <div className="w-full mx-auto">
-                      <p className="text-center text-gray-400 text-lg mb-4 font-semibold tracking-wide">🎵 Música Ambiente</p>
-                      <div className="flex gap-6 justify-center flex-wrap">
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <p className="text-gray-300 text-lg font-semibold tracking-wide">🎵 Playlist do Intervalo</p>
+                        <span className="text-gray-500 text-sm">{playlistIndex + 1} / {BREAK_PLAYLIST.length}</span>
+                      </div>
+                      {/* Player YouTube embutido */}
+                      <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl" style={{ paddingTop: '38%' }}>
+                        <iframe
+                          key={playlistIndex}
+                          src={`https://www.youtube.com/embed/${BREAK_PLAYLIST[playlistIndex].id}?autoplay=1&rel=0&modestbranding=1&loop=1&playlist=${BREAK_PLAYLIST[playlistIndex].id}`}
+                          className="absolute inset-0 w-full h-full"
+                          allow="autoplay; encrypted-media"
+                          allowFullScreen
+                          title={BREAK_PLAYLIST[playlistIndex].title}
+                        />
+                      </div>
+                      {/* Controles da playlist */}
+                      <div className="flex items-center justify-center gap-4 mt-4">
                         <button
-                          onClick={() => window.open('https://www.youtube.com/results?search_query=musica+gospel+instrumental+suave', '_blank')}
-                          className="flex flex-col items-center gap-2 px-10 py-6 bg-yellow-700 hover:bg-yellow-600 text-white rounded-2xl font-bold text-xl transition-all hover:scale-105 shadow-lg"
+                          onClick={() => setPlaylistIndex(i => (i - 1 + BREAK_PLAYLIST.length) % BREAK_PLAYLIST.length)}
+                          className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-base transition-all hover:scale-105"
                         >
-                          <span className="text-4xl">🙏</span>
-                          Gospel Instrumental
+                          ⏮️ Anterior
                         </button>
+                        <div className="flex gap-2">
+                          {BREAK_PLAYLIST.map((track, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setPlaylistIndex(idx)}
+                              className={`w-11 h-11 rounded-full text-xl transition-all hover:scale-110 ${
+                                idx === playlistIndex
+                                  ? 'bg-yellow-500 shadow-lg scale-110 ring-2 ring-yellow-300'
+                                  : 'bg-gray-700 hover:bg-gray-600'
+                              }`}
+                              title={track.title}
+                            >
+                              {track.emoji}
+                            </button>
+                          ))}
+                        </div>
                         <button
-                          onClick={() => window.open('https://www.youtube.com/results?search_query=musica+instrumental+internacional+relaxante+classica', '_blank')}
-                          className="flex flex-col items-center gap-2 px-10 py-6 bg-indigo-700 hover:bg-indigo-600 text-white rounded-2xl font-bold text-xl transition-all hover:scale-105 shadow-lg"
+                          onClick={() => setPlaylistIndex(i => (i + 1) % BREAK_PLAYLIST.length)}
+                          className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-base transition-all hover:scale-105"
                         >
-                          <span className="text-4xl">🎼</span>
-                          Internacional
+                          Próxima ⏭️
                         </button>
                       </div>
+                      <p className="text-center text-gray-400 mt-2 text-base">
+                        {BREAK_PLAYLIST[playlistIndex].emoji} {BREAK_PLAYLIST[playlistIndex].title}
+                      </p>
                     </div>
                   </div>
                 );
               }
 
-              return (
-                <div className="text-center py-24">
-                  <Clock size={80} className="mx-auto mb-4 text-gray-500" />
-                  <h2 className="text-4xl font-bold text-white mb-3">Fora do Horário Escolar</h2>
-                  <p className="text-xl text-gray-400">
-                    {selectedDay.toUpperCase()} — {currentTime.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-                  </p>
-                </div>
-              );
+              // Fora do horário escolar somente quando não há próximo período
+              if (activePeriod === null) {
+                return (
+                  <div className="text-center py-24">
+                    <Clock size={80} className="mx-auto mb-4 text-gray-500" />
+                    <h2 className="text-4xl font-bold text-white mb-3">Fora do Horário Escolar</h2>
+                    <p className="text-xl text-gray-400">
+                      {selectedDay.toUpperCase()} — {currentTime.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                    </p>
+                  </div>
+                );
+              }
+              // Há próximo período: exibir tabela normalmente
             }
 
             // ── AUTO ou MANUAL SALVO: linha única com período atual ──────────

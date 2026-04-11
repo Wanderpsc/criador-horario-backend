@@ -186,17 +186,19 @@ export default function Schedules() {
   };
 
   const addBreak = () => {
-    setFormData({ ...formData, breaks: [...formData.breaks, { label: 'Intervalo', startTime: '', endTime: '' }] });
+    setFormData(prev => ({ ...prev, breaks: [...prev.breaks, { label: 'Intervalo', startTime: '', endTime: '' }] }));
   };
 
   const removeBreak = (index: number) => {
-    setFormData({ ...formData, breaks: formData.breaks.filter((_, i) => i !== index) });
+    setFormData(prev => ({ ...prev, breaks: prev.breaks.filter((_, i) => i !== index) }));
   };
 
   const updateBreak = (index: number, field: keyof BreakSlot, value: string) => {
-    const newBreaks = [...formData.breaks];
-    newBreaks[index] = { ...newBreaks[index], [field]: value };
-    setFormData({ ...formData, breaks: newBreaks });
+    setFormData(prev => {
+      const newBreaks = [...prev.breaks];
+      newBreaks[index] = { ...newBreaks[index], [field]: value };
+      return { ...prev, breaks: newBreaks };
+    });
   };
 
   if (isLoading) {
