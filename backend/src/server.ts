@@ -71,6 +71,43 @@ app.set('trust proxy', 1);
 connectDB();
 
 // ============================================
+// CORS — DEVE VIR ANTES DE TUDO (inclusive helmet)
+// Helmet pode sobrescrever headers CORS em browsers antigos
+// ============================================
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
+  'https://criador-horario-aula.surge.sh',
+  'https://horario-escolar.surge.sh',
+  'https://edusync-pro.surge.sh',
+  'https://wanderpsc.github.io',
+  'https://wanderpsc.github.io/criador-horario-backend',
+  process.env.FRONTEND_URL
+].filter((origin): origin is string => Boolean(origin));
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return callback(null, true); // mobile apps, Postman, sem origin
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 0, // sem cache de preflight — evita TV Box guardar resultado antigo com falha
+  optionsSuccessStatus: 200, // 204 quebra browsers antigos (TV Box, SmartTV)
+};
+
+// Responde OPTIONS imediatamente antes de qualquer outro middleware
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+
+console.log('🌐 Origens permitidas no CORS:', allowedOrigins);
+
+// ============================================
 // SEGURANÇA - PROTEÇÃO CONTRA VULNERABILIDADES
 // ============================================
 
@@ -109,50 +146,6 @@ const authLimiter = rateLimit({
 // ============================================
 // MIDDLEWARES
 // ============================================
-
-// CORS configuration — deve vir ANTES dos rate limiters para que respostas
-// de erro (429) também carreguem os headers Access-Control-Allow-Origin
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
-  'http://localhost:3003',
-  'https://criador-horario-aula.surge.sh',
-  'https://horario-escolar.surge.sh',
-  'https://edusync-pro.surge.sh',
-  'https://wanderpsc.github.io',
-  'https://wanderpsc.github.io/criador-horario-backend',
-  process.env.FRONTEND_URL
-].filter((origin): origin is string => Boolean(origin));
-
-console.log('🌐 Origens permitidas no CORS:', allowedOrigins);
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Permitir requisições sem origin (mobile apps, Postman, etc)
-    if (!origin) {
-      console.log('✅ CORS: Requisição sem origin (permitido)');
-      return callback(null, true);
-    }
-    
-    console.log('🔍 CORS: Verificando origem:', origin);
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log('✅ CORS: Origem permitida:', origin);
-      callback(null, true);
-    } else {
-      console.log('❌ CORS: Origem BLOQUEADA:', origin);
-      console.log('📋 Origens permitidas:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600, // 10 minutos de cache para preflight
-  optionsSuccessStatus: 200 // TV Boxes e SmartTVs antigos engasgam no 204; 200 é mais compatível
-}));
 
 // Aplicar rate limiting global (após CORS para que erros 429 tenham headers corretos)
 app.use(limiter);
