@@ -11,6 +11,9 @@ import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// Ping para acordar o servidor (cold start warm-up)
+router.get('/ping', (_req: any, res: any) => res.json({ ok: true }));
+
 // Endpoint de teste para verificar autenticação
 router.get('/me', auth, async (req: AuthRequest, res: any) => {
   try {
