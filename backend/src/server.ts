@@ -102,6 +102,7 @@ const authLimiter = rateLimit({
   max: 10, // 10 tentativas de login por IP (trust proxy garante IP real)
   message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
   skipSuccessfulRequests: true, // Não conta requisições bem-sucedidas
+  skip: (req) => req.method === 'OPTIONS' || (req.method === 'GET' && req.path === '/ping'), // CORS preflight e ping nunca consomem cota
 });
 
 // Aplicar rate limiting global
