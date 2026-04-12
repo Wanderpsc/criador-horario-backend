@@ -94,33 +94,24 @@ const limiter = rateLimit({
   message: 'Muitas requisições deste IP, tente novamente em 15 minutos.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // CORS preflight nunca consome cota global
 });
 
 // Rate Limit para rotas de autenticação (mais restritivo)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // 10 tentativas de login por IP (trust proxy garante IP real)
+  max: 30, // 30 tentativas por IP por janela
   message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
   skipSuccessfulRequests: true, // Não conta requisições bem-sucedidas
   skip: (req) => req.method === 'OPTIONS' || (req.method === 'GET' && req.path === '/ping'), // CORS preflight e ping nunca consomem cota
 });
 
-// Aplicar rate limiting global
-app.use(limiter);
-
-// Sanitização contra NoSQL Injection
-app.use(mongoSanitize({
-  replaceWith: '_', // Substitui caracteres proibidos
-}));
-
-// Proteção contra HPP (HTTP Parameter Pollution)
-app.use(hpp());
-
 // ============================================
 // MIDDLEWARES
 // ============================================
 
-// CORS configuration
+// CORS configuration — deve vir ANTES dos rate limiters para que respostas
+// de erro (429) também carreguem os headers Access-Control-Allow-Origin
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -161,6 +152,17 @@ app.use(cors({
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 600 // 10 minutos de cache para preflight
 }));
+
+// Aplicar rate limiting global (após CORS para que erros 429 tenham headers corretos)
+app.use(limiter);
+
+// Sanitização contra NoSQL Injection
+app.use(mongoSanitize({
+  replaceWith: '_', // Substitui caracteres proibidos
+}));
+
+// Proteção contra HPP (HTTP Parameter Pollution)
+app.use(hpp());
 
 app.use(morgan('dev'));
 app.use(express.json({ limit: '50mb' })); // Aumentar limite para horários grandes
