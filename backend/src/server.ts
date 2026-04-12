@@ -63,6 +63,10 @@ const PORT = process.env.PORT || 5000;
 // 🔥 DESABILITAR ETAG - Impede cache 304
 app.set('etag', false);
 
+// ✅ Trust proxy: necessário no Render/Heroku para que o rate-limit use o IP real do cliente
+// Sem isso, todos os usuários compartilham o mesmo bucket de rate-limit (IP do proxy)
+app.set('trust proxy', 1);
+
 // Conectar ao banco de dados
 connectDB();
 
@@ -95,7 +99,7 @@ const limiter = rateLimit({
 // Rate Limit para rotas de autenticação (mais restritivo)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // Apenas 5 tentativas de login
+  max: 10, // 10 tentativas de login por IP (trust proxy garante IP real)
   message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
   skipSuccessfulRequests: true, // Não conta requisições bem-sucedidas
 });
