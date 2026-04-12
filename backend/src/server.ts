@@ -150,7 +150,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 600 // 10 minutos de cache para preflight
+  maxAge: 600, // 10 minutos de cache para preflight
+  optionsSuccessStatus: 200 // TV Boxes e SmartTVs antigos engasgam no 204; 200 é mais compatível
 }));
 
 // Aplicar rate limiting global (após CORS para que erros 429 tenham headers corretos)
