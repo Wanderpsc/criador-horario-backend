@@ -62,7 +62,7 @@ export default function DisplayPanel({
   const [currentTime, setCurrentTime] = useState(getBrazilTime());
   const [isConnected, setIsConnected] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('alltable'); // Começar com tabela transposta de todas as turmas
-  const [lastAlertTime, setLastAlertTime] = useState<string>('');
+  const playedAlertsRef = useRef<Set<string>>(new Set());
   const [selectedTimetableId, setSelectedTimetableId] = useState<string>('');
   const [selectedDay, setSelectedDay] = useState<string>('Segunda'); // Dia selecionado para visualização
   const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0); // Para navegação manual
@@ -82,8 +82,22 @@ export default function DisplayPanel({
   const [manualSaved, setManualSaved] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null); // chave: `${period}|||${classKey}` (somente admin, modo AUTO)
   const [playlistIndex, setPlaylistIndex] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(false); // Som desativado por padrão — ativar via botão
+  const [editUnlocked, setEditUnlocked] = useState(false); // Edição direta desbloqueada por senha
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [showPasswordModal, setShowPasswordModal] = useState(false); // Modal de senha
+  const [passwordInput, setPasswordInput] = useState(''); // Campo de senha
+  const [passwordError, setPasswordError] = useState(false); // Senha incorreta
+  // Senha de edição: hash simples para ocultar do bundle (SHA-1 de "PAINEL2025")
+  const EDIT_PASSWORD = 'PAINEL2025';
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastIsOngoingRef = useRef(false);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   // Detectar se é administrador (usuário logado) ou visualizador público (link compartilhado)
   const isAdmin = useMemo(() => {
@@ -94,6 +108,9 @@ export default function DisplayPanel({
       return !!(state?.token && state?.user);
     } catch { return false; }
   }, []);
+
+  // Pode editar = admin logado OU senha fornecida manualmente
+  const canEdit = isAdmin || editUnlocked;
 
   // LER PARÂMETROS DA URL (configuração vinda de DisplayPanelConfig)
   useEffect(() => {
@@ -144,6 +161,7 @@ export default function DisplayPanel({
 
   // Função para tocar alarme de aviso (5 segundos antes)
   const playAlarmSound = () => {
+    if (!soundEnabled) return;
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
@@ -190,6 +208,7 @@ export default function DisplayPanel({
 
   // Função para tocar som de sino usando Web Audio API
   const playBellSound = () => {
+    if (!soundEnabled) return;
     try {
       // Criar contexto de áudio
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -370,7 +389,19 @@ export default function DisplayPanel({
     }
   }, [overrideDateTime]);
 
+  // Sincronizar selectedDay com o dia atual quando o dia mudar (ex: painel aberto entre meia-noite)
+  useEffect(() => {
+    if (overrideDateTime) return; // Não interferir no modo simulação
+    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const today = days[currentTime.getDay()];
+    if (['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].includes(today) && today !== selectedDay) {
+      console.log(`📅 Dia mudou: ${selectedDay} → ${today}. Atualizando selectedDay.`);
+      setSelectedDay(today);
+    }
+  }, [currentTime.getDay(), overrideDateTime]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Atualizar relógio a cada segundo (ou fixar na data/hora simulada)
+  // Também força sincronização ao voltar foco (ex: monitor hibernado, aba em background)
   useEffect(() => {
     if (overrideDateTime) {
       // Modo simulação: fixar no horário escolhido
@@ -382,7 +413,18 @@ export default function DisplayPanel({
       setCurrentTime(getBrazilTime());
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Força sincronização imediata ao retornar foco (evita clock travado por throttling de browser)
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        setCurrentTime(getBrazilTime());
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [overrideDateTime]);
 
   // Alternar entre modos a cada 60 segundos (ou manter em grade)
@@ -696,7 +738,7 @@ export default function DisplayPanel({
       const status = getSlotStatus(slot);
       const alertKey = `${slot.id}-${slot.startTime}`;
       
-      // Alerta 5 minutos antes da aula
+      // Alerta 5 minutos antes da aula (uma vez por combinação slot+minuto)
       if (status === 'upcoming') {
         const now = currentTime;
         const [startHour, startMinute] = slot.startTime.split(':').map(Number);
@@ -705,19 +747,24 @@ export default function DisplayPanel({
         
         const diffMinutes = Math.floor((startTime.getTime() - now.getTime()) / 60000);
         
-        // Tocar alerta em 5, 3 e 1 minuto antes
-        if ((diffMinutes === 5 || diffMinutes === 3 || diffMinutes === 1) && lastAlertTime !== alertKey) {
-          playAlert();
-          setLastAlertTime(alertKey);
-          console.log(`🔔 Alerta: ${slot.subjectName} em ${diffMinutes} minuto(s)!`);
+        if (diffMinutes === 5 || diffMinutes === 3 || diffMinutes === 1) {
+          const key = `${alertKey}-${diffMinutes}min`;
+          if (!playedAlertsRef.current.has(key)) {
+            playedAlertsRef.current.add(key);
+            playAlert();
+            console.log(`🔔 Alerta: ${slot.subjectName} em ${diffMinutes} minuto(s)!`);
+          }
         }
       }
       
-      // Alerta quando a aula começa
-      if (status === 'ongoing' && lastAlertTime !== `${alertKey}-start`) {
-        playAlert();
-        setLastAlertTime(`${alertKey}-start`);
-        console.log(`🟢 Iniciando: ${slot.subjectName} - ${slot.className}`);
+      // Alerta quando a aula começa (uma única vez por slot)
+      if (status === 'ongoing') {
+        const key = `${alertKey}-start`;
+        if (!playedAlertsRef.current.has(key)) {
+          playedAlertsRef.current.add(key);
+          playAlert();
+          console.log(`🟢 Iniciando: ${slot.subjectName} - ${slot.className}`);
+        }
       }
     });
   }, [currentTime, timetables]);
@@ -768,6 +815,7 @@ export default function DisplayPanel({
 
   // Função para tocar alerta sonoro
   const playAlert = () => {
+    if (!soundEnabled) return;
     if (audioRef.current) {
       audioRef.current.play().catch(err => console.log('Erro ao tocar som:', err));
     }
@@ -1201,8 +1249,8 @@ export default function DisplayPanel({
                 {isEmergencyMode ? '🚨 EMERGENCIAL' : '📅 Normal'}
               </button>
               
-              {/* Toggle Mudança Automática de Período — apenas para o administrador */}
-              {isAdmin && (
+              {/* Toggle Mudança Automática de Período — admin logado ou edição desbloqueada */}
+              {canEdit && (
               <button
                 onClick={() => setAutoChangePeriod(!autoChangePeriod)}
                 className={`px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap ${
@@ -1215,17 +1263,57 @@ export default function DisplayPanel({
                 {autoChangePeriod ? '⏰ AUTO' : '🔒 MANUAL'}
               </button>
               )}
-              
-              {/* Botão de Teste de Som */}
+
+              {/* Botão de Edição — abre modal de senha ou desativa */}
               <button
                 onClick={() => {
-                  playBellSound();
-                  console.log('🔊 Teste de som acionado pelo usuário');
+                  if (editUnlocked) {
+                    setEditUnlocked(false);
+                  } else {
+                    setPasswordInput('');
+                    setPasswordError(false);
+                    setShowPasswordModal(true);
+                  }
                 }}
-                className="hidden px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap bg-purple-600 hover:bg-purple-700 text-white ring-2 ring-purple-400 hover:ring-4"
-                title="Testar som do sino"
+                className={`px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap ${
+                  editUnlocked
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white ring-2 ring-orange-400'
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-400'
+                }`}
+                title={editUnlocked ? 'Edição ativada — clique para bloquear' : 'Clique para liberar edição com senha'}
               >
-                🔔 TESTAR SOM
+                {editUnlocked ? '✏️ EDIÇÃO ON' : '🔐 EDIÇÃO OFF'}
+              </button>
+              
+              {/* Botão de Som — liga/desliga alertas sonoros automáticos */}
+              <button
+                onClick={() => {
+                  if (!soundEnabled) {
+                    setSoundEnabled(true);
+                    // Toca um bip de confirmação imediatamente (context já desbloqueado por gesto)
+                    try {
+                      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                      const osc = ctx.createOscillator();
+                      const gain = ctx.createGain();
+                      osc.connect(gain); gain.connect(ctx.destination);
+                      osc.frequency.value = 880;
+                      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+                      osc.start(); osc.stop(ctx.currentTime + 0.4);
+                      setTimeout(() => ctx.close(), 600);
+                    } catch {}
+                  } else {
+                    setSoundEnabled(false);
+                  }
+                }}
+                className={`px-6 py-2 rounded-lg font-bold text-lg transition-all whitespace-nowrap ${
+                  soundEnabled
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white ring-2 ring-purple-400'
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-400'
+                }`}
+                title={soundEnabled ? 'Som ativado — clique para desativar' : 'Som desativado — clique para ativar'}
+              >
+                {soundEnabled ? '🔔 SOM ON' : '🔕 SOM OFF'}
               </button>
 
               {/* Botão de reconfiguração do Sábado — visível apenas em sábados */}
@@ -1470,7 +1558,7 @@ export default function DisplayPanel({
           {/* PAINEL PRINCIPAL - Turmas como colunas, período atual como linha */}
       {viewMode === 'alltable' && timetables.length > 0 && currentDay !== 'Domingo' && (
         <>
-          <div className="overflow-hidden">
+          <div className="overflow-x-auto w-full">
           {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
             <div className="text-center py-20">
               <BookOpen size={80} className="mx-auto mb-4 text-yellow-500" />
@@ -1520,10 +1608,10 @@ export default function DisplayPanel({
                       💾 SALVAR E EXIBIR
                     </button>
                   </div>
-                  <table className="border-collapse w-full" style={{ tableLayout: 'fixed', minWidth: `${totalW_ED}px` }}>
+                  <table className="border-collapse w-full" style={{ tableLayout: 'fixed', width: '100%', minWidth: `${totalW_ED}px` }}>
                     <colgroup>
-                      <col style={{ width: '160px' }} />
-                      {allClasses.map((_, i) => <col key={i} />)}
+                      <col style={{ width: '160px', minWidth: '160px' }} />
+                      {allClasses.map((_, i) => <col key={i} style={{ minWidth: '180px' }} />)}
                     </colgroup>
                     <thead>
                       <tr style={{ height: '76px' }}>
@@ -1751,16 +1839,12 @@ export default function DisplayPanel({
             // ── AUTO ou MANUAL SALVO: linha única com período atual ──────────
             const periodSlots = fullWeekGrid[selectedDay][activePeriod] || {};
             const firstSlotInPeriod = Object.values(periodSlots)[0] as any;
-            // Escala automática: máx 10 turmas em 100% → menos de 10 cabe, mais de 10 reduz
-            const numCols = allClasses.length;
-            const scale = numCols <= 8 ? 1 : Math.max(0.45, 8 / numCols);
-            const COL_W = 160;
-            const labelW = 180;
-            const totalW = labelW + numCols * COL_W;
+            // Largura mínima por coluna (para scroll em mobile)
+            const MIN_LABEL_W = 120;
 
             return (
               <>
-                {isAdmin && !autoChangePeriod && manualSaved && (
+                {canEdit && !autoChangePeriod && manualSaved && (
                   <div className="flex items-center justify-between mb-4 gap-4">
                     <div className="text-green-400 font-bold text-lg">✅ Horário manual salvo — mudando automaticamente por período</div>
                     <button
@@ -1771,18 +1855,17 @@ export default function DisplayPanel({
                     </button>
                   </div>
                 )}
-                {/* Wrapper de escala: encolhe a tabela proporcionalmente para caber na tela */}
-                <div style={{
-                  transformOrigin: 'top left',
-                  transform: `scale(${scale})`,
-                  width: scale < 1 ? `${(1 / scale) * 100}%` : '100%',
-                  marginBottom: scale < 1 ? `${-(totalW * (1 - scale) * 0.55)}px` : undefined,
-                }}>
-                <table className="border-collapse w-full" style={{ tableLayout: 'fixed', width: `${totalW}px` }}>
+                {/* Tabela: scroll horizontal no mobile, 100% fixo no desktop/TV */}
+                <div style={{ width: '100%', overflowX: isMobile ? 'auto' : 'visible' }}>
+                <table className="border-collapse" style={isMobile
+                  ? { tableLayout: 'auto', width: '100%', minWidth: `${MIN_LABEL_W + allClasses.length * 130}px` }
+                  : { tableLayout: 'fixed', width: '100%' }}>
                   <colgroup>
-                    <col style={{ width: `${labelW}px` }} />
+                    <col style={isMobile ? { minWidth: `${MIN_LABEL_W}px` } : { width: `${MIN_LABEL_W}px` }} />
                     {allClasses.map((_, i) => (
-                      <col key={i} style={{ width: `${COL_W}px` }} />
+                      <col key={i} style={isMobile
+                        ? { minWidth: '130px' }
+                        : { width: `calc((100% - ${MIN_LABEL_W}px) / ${allClasses.length})` }} />
                     ))}
                   </colgroup>
                   <thead>
@@ -1791,21 +1874,21 @@ export default function DisplayPanel({
                         TURMAS
                       </th>
                       {allClasses.map((classInfo, i) => (
-                        <th key={i} className="border-2 border-gray-600 bg-blue-900 text-center align-middle px-1" style={{ height: '90px' }}>
-                          <div className="font-black text-white leading-tight" style={{ fontSize: '1.2rem' }}>{classInfo.className}</div>
+                        <th key={i} className="border-2 border-gray-600 bg-blue-900 text-center align-top px-1" style={{ height: '90px', maxHeight: '90px', overflow: 'hidden' }}>
+                          <div className="font-black text-white leading-tight" style={{ fontSize: '0.72rem' }}>{classInfo.className}</div>
                           {classInfo.gradeName && (
-                            <div className="text-yellow-300 font-semibold mt-1" style={{ fontSize: '0.82rem' }}>{classInfo.gradeName}</div>
+                            <div className="text-yellow-300 font-semibold mt-0.5" style={{ fontSize: '0.6rem' }}>{classInfo.gradeName}</div>
                           )}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    <tr style={{ height: '180px' }}>
+                    <tr style={{ height: '90px' }}>
                       <td className={`border-2 text-center align-middle px-2 font-black ${
                         isOngoing ? 'border-green-400 bg-green-900 text-green-300' : 'border-yellow-500 bg-yellow-950 text-yellow-300'
-                      }`} style={{ height: '180px' }}>
-                        <div style={{ fontSize: '2.8rem', lineHeight: 1 }}>{activePeriod}º</div>
+                      }`} style={{ height: '90px' }}>
+                        <div style={{ fontSize: '1.6rem', lineHeight: 1 }}>{activePeriod}º</div>
                         <div className="font-mono font-bold mt-1" style={{ fontSize: '1rem' }}>{firstSlotInPeriod?.startTime}</div>
                         <div className="text-gray-400 font-mono" style={{ fontSize: '0.85rem' }}>até {firstSlotInPeriod?.endTime}</div>
                         <div className={`mt-2 rounded px-1 py-0.5 font-bold ${
@@ -1824,9 +1907,9 @@ export default function DisplayPanel({
 
                         if (!subjectName && !teacherName) {
                           return (
-                            <td key={i} className="border-2 border-gray-700 bg-gray-900 text-center align-middle" style={{ height: '180px' }}>
-                              <div className="text-gray-500 font-bold" style={{ fontSize: '1rem' }}>HORÁRIO</div>
-                              <div className="text-gray-500 font-bold" style={{ fontSize: '1rem' }}>VAGO</div>
+                            <td key={i} className="border-2 border-gray-700 bg-gray-900 text-center align-middle" style={{ height: '90px', overflow: 'hidden' }}>
+                              <div className="text-gray-500 font-bold" style={{ fontSize: '0.75rem' }}>HORÁRIO</div>
+                              <div className="text-gray-500 font-bold" style={{ fontSize: '0.75rem' }}>VAGO</div>
                             </td>
                           );
                         }
@@ -1835,11 +1918,11 @@ export default function DisplayPanel({
                         const status = getSlotStatus(slotForStatus);
 
                         // ── Modo edição inline (somente admin) ──────────────────────────
-                        if (isAdmin && editingCell === editKey) {
+                        if (canEdit && editingCell === editKey) {
                           const curSubj = manualEdits[editKey]?.subjectName || subjectName || '';
                           const curTeacher = manualEdits[editKey]?.teacherName || teacherName || '';
                           return (
-                            <td key={i} className="border-2 border-blue-400 bg-blue-950 text-center align-middle px-1" style={{ height: '180px' }}>
+                            <td key={i} className="border-2 border-blue-400 bg-blue-950 text-center align-middle px-1" style={{ height: '90px' }}>
                               <div className="flex flex-col gap-1 p-1">
                                 <select
                                   value={curSubj}
@@ -1881,20 +1964,21 @@ export default function DisplayPanel({
 
                         return (
                           <td key={i}
-                            onClick={isAdmin ? () => setEditingCell(editKey) : undefined}
+                            onClick={canEdit ? () => setEditingCell(editKey) : undefined}
                             className={`border-2 text-center align-middle px-2 transition-all duration-300 ${
                               status === 'ongoing' ? 'border-green-500' : status === 'upcoming' ? 'border-yellow-500' : 'border-gray-600'
-                            } ${isAdmin ? 'cursor-pointer hover:border-blue-400' : ''}`}
+                            } ${canEdit ? 'cursor-pointer hover:border-blue-400' : ''}`}
                             style={{
-                              height: '180px',
+                              height: '90px',
+                              overflow: 'hidden',
                               backgroundColor: originalSlot?.subjectColor
                                 ? `${originalSlot.subjectColor}${isOngoing ? 'cc' : '55'}`
                                 : isOngoing ? '#14532d' : '#1e3a5f',
                             }}>
-                            <div className="font-black text-white leading-tight" style={{ fontSize: '1.1rem' }} title={subjectName}>
+                            <div className="font-black text-white leading-tight" style={{ fontSize: '0.78rem', wordBreak: 'break-word', overflowWrap: 'break-word' }} title={subjectName}>
                               {subjectName}
                             </div>
-                            <div className="text-gray-200 mt-2" style={{ fontSize: '0.85rem' }} title={teacherName}>
+                            <div className="text-gray-200 mt-1" style={{ fontSize: '0.7rem', wordBreak: 'break-word', overflowWrap: 'break-word' }} title={teacherName}>
                               👨‍🏫 {teacherName}
                             </div>
                             {absentTeacherIds.includes(originalSlot?.teacherId) && (
@@ -1905,7 +1989,7 @@ export default function DisplayPanel({
                             {status === 'ongoing' && (
                               <div className="mt-2 text-green-400 font-bold animate-pulse" style={{ fontSize: '0.75rem' }}>● EM ANDAMENTO</div>
                             )}
-                            {isAdmin && (
+                            {canEdit && (
                               <div className="mt-1 text-blue-400 opacity-60" style={{ fontSize: '0.7rem' }}>✏️ editar</div>
                             )}
                           </td>
@@ -2375,6 +2459,66 @@ export default function DisplayPanel({
           >
             ⚙️ Reconfigurar
           </button>
+        </div>
+      )}
+
+      {/* Modal de Senha para Edição */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 border-2 border-orange-500 rounded-2xl p-8 shadow-2xl w-full max-w-sm">
+            <h2 className="text-2xl font-black text-orange-400 mb-2 text-center">🔐 Liberar Edição</h2>
+            <p className="text-gray-400 text-sm text-center mb-6">Digite a senha para editar o painel diretamente</p>
+            <input
+              type="password"
+              autoFocus
+              value={passwordInput}
+              onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (passwordInput === EDIT_PASSWORD) {
+                    setEditUnlocked(true);
+                    setShowPasswordModal(false);
+                    setPasswordInput('');
+                  } else {
+                    setPasswordError(true);
+                  }
+                }
+                if (e.key === 'Escape') {
+                  setShowPasswordModal(false);
+                  setPasswordInput('');
+                }
+              }}
+              placeholder="Senha de edição"
+              className={`w-full bg-gray-900 text-white border-2 rounded-xl px-4 py-3 text-xl text-center tracking-widest focus:outline-none focus:ring-2 ${
+                passwordError ? 'border-red-500 focus:ring-red-400' : 'border-orange-500 focus:ring-orange-400'
+              }`}
+            />
+            {passwordError && (
+              <p className="text-red-400 text-sm text-center mt-2 font-bold">❌ Senha incorreta</p>
+            )}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowPasswordModal(false); setPasswordInput(''); setPasswordError(false); }}
+                className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (passwordInput === EDIT_PASSWORD) {
+                    setEditUnlocked(true);
+                    setShowPasswordModal(false);
+                    setPasswordInput('');
+                  } else {
+                    setPasswordError(true);
+                  }
+                }}
+                className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-500 text-white font-black rounded-xl transition-all"
+              >
+                ✓ Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
