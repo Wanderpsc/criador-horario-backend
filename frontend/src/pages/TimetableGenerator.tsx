@@ -3948,9 +3948,18 @@ export default function TimetableGenerator() {
       currentTeacherId: slot?.teacherId || null,
       isLocked: isSlotLocked(classId, day, period)
     });
-    setSelectedSubjectForEdit(slot?.subjectId || '');
+    const currentSubjectId = slot?.subjectId || '';
+    setSelectedSubjectForEdit(currentSubjectId);
     setSelectedTeacherForEdit(slot?.teacherId || '');
-    setSubjectSearchTerm('');
+    // Pré-preencher o campo de busca com o nome da disciplina atual
+    if (currentSubjectId) {
+      const currentSubject = (subjects as Subject[]).find(
+        (s) => s.id === currentSubjectId || (s as any)._id?.toString() === currentSubjectId
+      );
+      setSubjectSearchTerm(currentSubject?.name || '');
+    } else {
+      setSubjectSearchTerm('');
+    }
   };
 
   // Função para compartilhar
@@ -6046,14 +6055,24 @@ export default function TimetableGenerator() {
                   type="text"
                   placeholder="Buscar disciplina..."
                   value={subjectSearchTerm}
-                  onChange={(e) => setSubjectSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSubjectSearchTerm(e.target.value);
+                    setSelectedSubjectForEdit('');
+                    setSelectedTeacherForEdit('');
+                  }}
                   className="input w-full mb-1"
                   disabled={editModalData.isLocked}
                 />
                 <select
                   size={6}
                   value={selectedSubjectForEdit}
-                  onChange={(e) => setSelectedSubjectForEdit(e.target.value)}
+                  onChange={(e) => {
+                    const newSubjectId = e.target.value;
+                    setSelectedSubjectForEdit(newSubjectId);
+                    setSelectedTeacherForEdit('');
+                    const sel = subjects.find((s: Subject) => s.id === newSubjectId || (s as any)._id?.toString() === newSubjectId);
+                    if (sel) setSubjectSearchTerm(sel.name);
+                  }}
                   className="input w-full"
                   disabled={editModalData.isLocked}
                 >
@@ -6061,11 +6080,14 @@ export default function TimetableGenerator() {
                     .filter((s: Subject) => s.isActive !== false)
                     .filter((s: Subject) => s.name.toLowerCase().includes(subjectSearchTerm.toLowerCase()))
                     .sort((a: Subject, b: Subject) => a.name.localeCompare(b.name, 'pt-BR'))
-                    .map((subject: Subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
+                    .map((subject: Subject) => {
+                      const sid = subject.id || (subject as any)._id?.toString();
+                      return (
+                        <option key={sid} value={sid}>
+                          {subject.name}
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
 
@@ -6083,23 +6105,28 @@ export default function TimetableGenerator() {
                   {teachers
                     .filter((t: Teacher) => {
                       if (!selectedSubjectForEdit) return false;
+                      const tid = t.id || (t as any)._id?.toString();
                       // Filtrar professores que podem lecionar a disciplina selecionada
                       const canTeach = teacherSubjects.some(
                         (ts: TeacherSubject) => 
-                          ts.teacherId === t.id && ts.subjectId === selectedSubjectForEdit
+                          ts.teacherId === tid && ts.subjectId === selectedSubjectForEdit
                       );
                       return canTeach && t.isActive !== false;
                     })
-                    .map((teacher: Teacher) => (
-                      <option key={teacher.id} value={teacher.id}>
-                        {teacher.name}
-                      </option>
-                    ))}
+                    .map((teacher: Teacher) => {
+                      const tid = teacher.id || (teacher as any)._id?.toString();
+                      return (
+                        <option key={tid} value={tid}>
+                          {teacher.name}
+                        </option>
+                      );
+                    })}
                 </select>
                 {selectedSubjectForEdit && teachers.filter((t: Teacher) => {
+                  const tid = t.id || (t as any)._id?.toString();
                   const canTeach = teacherSubjects.some(
                     (ts: TeacherSubject) => 
-                      ts.teacherId === t.id && ts.subjectId === selectedSubjectForEdit
+                      ts.teacherId === tid && ts.subjectId === selectedSubjectForEdit
                   );
                   return canTeach && t.isActive !== false;
                 }).length === 0 && (
