@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import legacy from '@vitejs/plugin-legacy';
 import { copyFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
@@ -10,6 +11,10 @@ export default defineConfig(({ command, mode }) => {
   return {
   plugins: [
     react(),
+    // Gera bundle legado (<script nomodule>) para browsers antigos (ex: TV box, Chrome < 61)
+    legacy({
+      targets: ['chrome >= 49', 'firefox >= 52', 'safari >= 10'],
+    }),
     {
       name: 'copy-404',
       closeBundle() {

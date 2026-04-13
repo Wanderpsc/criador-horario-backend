@@ -4,6 +4,21 @@ import publicApi from '../lib/publicApi';
 import { Clock, Wifi, WifiOff, Grid3x3, List, BookOpen, MapPin, User, Calendar } from 'lucide-react';
 import AnalogClock from '../components/AnalogClock';
 
+// Sempre retorna a hora atual no fuso de Brasília (America/Sao_Paulo),
+// independente do fuso configurado no sistema da TV Box.
+const getBrazilTime = (): Date => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value ?? '0');
+  const h = get('hour');
+  return new Date(get('year'), get('month') - 1, get('day'), h === 24 ? 0 : h, get('minute'), get('second'));
+};
+
 interface TimetableSlot {
   id: string;
   day: string;
@@ -44,7 +59,7 @@ export default function DisplayPanel({
   autoRefresh = true, 
   refreshInterval = 10 
 }: DisplayPanelProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(getBrazilTime());
   const [isConnected, setIsConnected] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('alltable'); // Começar com tabela transposta de todas as turmas
   const [lastAlertTime, setLastAlertTime] = useState<string>('');
@@ -324,7 +339,7 @@ export default function DisplayPanel({
   // Selecionar automaticamente o dia atual na primeira carga
   useEffect(() => {
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const effectiveTime = overrideDateTime ? new Date(overrideDateTime) : new Date();
+    const effectiveTime = overrideDateTime ? new Date(overrideDateTime) : getBrazilTime();
     const today = days[effectiveTime.getDay()];
     if (['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].includes(today)) {
       setSelectedDay(today);
@@ -333,7 +348,7 @@ export default function DisplayPanel({
 
   // Verificação de sábado letivo: pergunta ao usuário ao abrir o painel num sábado
   useEffect(() => {
-    const effectiveDate = overrideDateTime ? new Date(overrideDateTime) : new Date();
+    const effectiveDate = overrideDateTime ? new Date(overrideDateTime) : getBrazilTime();
     if (effectiveDate.getDay() !== 6) return; // Não é sábado
     const dateStr = effectiveDate.toISOString().substring(0, 10);
     const storageKey = `saturday-panel-config-${dateStr}`;
@@ -362,9 +377,9 @@ export default function DisplayPanel({
       setCurrentTime(new Date(overrideDateTime));
       return;
     }
-    // Modo real: atualizar a cada segundo
+    // Modo real: atualizar a cada segundo (sempre no fuso Brasília)
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(getBrazilTime());
     }, 1000);
 
     return () => clearInterval(timer);
@@ -707,6 +722,34 @@ export default function DisplayPanel({
     });
   }, [currentTime, timetables]);
 
+  // ── Professores ausentes (exibir no painel de TV sem autenticação) ──────────
+  const todayDateStr = useMemo(() => {
+    const bt = getBrazilTime();
+    return `${bt.getFullYear()}-${String(bt.getMonth() + 1).padStart(2, '0')}-${String(bt.getDate()).padStart(2, '0')}`;
+  }, []); // data não muda durante a sessão do painel
+
+  const panelSchoolId = useMemo(() => {
+    if (availableTimetables.length > 0) return (availableTimetables[0] as any).schoolId || '';
+    return '';
+  }, [availableTimetables]);
+
+  const { data: absentTeacherIds = [] } = useQuery<string[]>({
+    queryKey: ['public-absent-teachers', panelSchoolId, todayDateStr],
+    queryFn: async () => {
+      if (!panelSchoolId) return [];
+      const res = await publicApi.get('/public/absent-teachers', {
+        params: { schoolId: panelSchoolId, date: todayDateStr },
+      });
+      return Array.isArray(res.data) ? res.data : [];
+    },
+    enabled: !!panelSchoolId,
+    refetchInterval: 5 * 60 * 1000, // recheck a cada 5 minutos
+    staleTime: 4 * 60 * 1000,
+    retry: 0,                     // falha silenciosa — não bloqueia o painel
+    refetchOnWindowFocus: false,  // evita refetch extra ao voltar ao app no celular
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+
   // Log de debug para verificar dados carregados
   useEffect(() => {
     console.log('═══════════════════════════════════════════════');
@@ -924,6 +967,9 @@ export default function DisplayPanel({
 
   // Auto-selecionar primeiro dia disponível se o dia atual não tem aulas
   useEffect(() => {
+    // Domingo nunca tem aulas — não redirecionar para outro dia
+    if (currentDay === 'Domingo') return;
+
     // Verificar se o dia selecionado tem aulas
     const hasSlotsInSelectedDay = Object.keys(fullWeekGrid[selectedDay] || {}).length > 0;
     
@@ -937,7 +983,7 @@ export default function DisplayPanel({
         setSelectedDay(daysWithSlots[0]);
       }
     }
-  }, [selectedDay, fullWeekGrid, timetables, weekDays]);
+  }, [selectedDay, fullWeekGrid, timetables, weekDays, currentDay]);
 
   // Detectar início de período e tocar sino
   useEffect(() => {
@@ -1263,8 +1309,23 @@ export default function DisplayPanel({
         </div>
       )}
 
+      {/* DOMINGO — Sem aulas */}
+      {!isLoadingAvailable && currentDay === 'Domingo' && (
+        <div className="flex flex-col items-center justify-center py-12 gap-6">
+          <div className="text-9xl select-none">☀️</div>
+          <div className="text-center">
+            <h2 className="text-5xl font-black text-yellow-400 mb-3">DOMINGO</h2>
+            <p className="text-3xl text-white font-bold mb-2">Não há aulas hoje</p>
+            <p className="text-xl text-gray-300">A escola estará aberta novamente na Segunda-feira</p>
+          </div>
+          <div className="mt-4 px-8 py-4 bg-blue-800 bg-opacity-50 rounded-2xl border border-blue-500 text-center">
+            <p className="text-gray-400 text-lg">Bom descanso a todos! 🙏</p>
+          </div>
+        </div>
+      )}
+
       {/* VISUALIZAÇÃO EM GRADE (Principal) */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'grid' && (
+      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'grid' && currentDay !== 'Domingo' && (
         <>
           {/* Abas de Dias da Semana */}
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
@@ -1377,6 +1438,11 @@ export default function DisplayPanel({
                             <div className="text-sm opacity-90 truncate" title={slot.teacherName}>
                               👨‍🏫 {slot.teacherName}
                             </div>
+                            {absentTeacherIds.includes(slot.teacherId) && (
+                              <div className="text-xs font-black text-red-400 animate-pulse mt-1">
+                                🔴 PROFESSOR AUSENTE
+                              </div>
+                            )}
                             {status === 'ongoing' && (
                               <div className="text-xs font-bold bg-black bg-opacity-30 rounded px-2 py-1 inline-block">
                                 🔴 EM ANDAMENTO
@@ -1402,9 +1468,9 @@ export default function DisplayPanel({
       )}
 
           {/* PAINEL PRINCIPAL - Turmas como colunas, período atual como linha */}
-      {viewMode === 'alltable' && timetables.length > 0 && (
+      {viewMode === 'alltable' && timetables.length > 0 && currentDay !== 'Domingo' && (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-hidden">
           {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
             <div className="text-center py-20">
               <BookOpen size={80} className="mx-auto mb-4 text-yellow-500" />
@@ -1685,8 +1751,12 @@ export default function DisplayPanel({
             // ── AUTO ou MANUAL SALVO: linha única com período atual ──────────
             const periodSlots = fullWeekGrid[selectedDay][activePeriod] || {};
             const firstSlotInPeriod = Object.values(periodSlots)[0] as any;
+            // Escala automática: máx 10 turmas em 100% → menos de 10 cabe, mais de 10 reduz
+            const numCols = allClasses.length;
+            const scale = numCols <= 8 ? 1 : Math.max(0.45, 8 / numCols);
             const COL_W = 160;
-            const totalW = 180 + allClasses.length * COL_W;
+            const labelW = 180;
+            const totalW = labelW + numCols * COL_W;
 
             return (
               <>
@@ -1701,11 +1771,18 @@ export default function DisplayPanel({
                     </button>
                   </div>
                 )}
-                <table className="border-collapse w-full" style={{ tableLayout: 'fixed', minWidth: `${totalW}px` }}>
+                {/* Wrapper de escala: encolhe a tabela proporcionalmente para caber na tela */}
+                <div style={{
+                  transformOrigin: 'top left',
+                  transform: `scale(${scale})`,
+                  width: scale < 1 ? `${(1 / scale) * 100}%` : '100%',
+                  marginBottom: scale < 1 ? `${-(totalW * (1 - scale) * 0.55)}px` : undefined,
+                }}>
+                <table className="border-collapse w-full" style={{ tableLayout: 'fixed', width: `${totalW}px` }}>
                   <colgroup>
-                    <col style={{ width: '180px' }} />
+                    <col style={{ width: `${labelW}px` }} />
                     {allClasses.map((_, i) => (
-                      <col key={i} />
+                      <col key={i} style={{ width: `${COL_W}px` }} />
                     ))}
                   </colgroup>
                   <thead>
@@ -1820,6 +1897,11 @@ export default function DisplayPanel({
                             <div className="text-gray-200 mt-2" style={{ fontSize: '0.85rem' }} title={teacherName}>
                               👨‍🏫 {teacherName}
                             </div>
+                            {absentTeacherIds.includes(originalSlot?.teacherId) && (
+                              <div className="mt-1 text-red-400 font-black animate-pulse" style={{ fontSize: '0.78rem' }}>
+                                🔴 PROFESSOR AUSENTE
+                              </div>
+                            )}
                             {status === 'ongoing' && (
                               <div className="mt-2 text-green-400 font-bold animate-pulse" style={{ fontSize: '0.75rem' }}>● EM ANDAMENTO</div>
                             )}
@@ -1832,6 +1914,7 @@ export default function DisplayPanel({
                     </tr>
                   </tbody>
                 </table>
+                </div>{/* fim wrapper de escala */}
               </>
             );
           })()}
@@ -1840,7 +1923,7 @@ export default function DisplayPanel({
       )}
 
       {/* MODO DISPLAY/LETREIRO - Mostra apenas período atual em tela cheia */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'display' && (
+      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'display' && currentDay !== 'Domingo' && (
         <div className="space-y-4">
           {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
             <div className="text-center py-20">
@@ -2029,7 +2112,7 @@ export default function DisplayPanel({
       )}
 
       {/* VISUALIZAÇÃO ESTILO AEROPORTO - Painel de Letreiro */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'airport' && (
+      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'airport' && currentDay !== 'Domingo' && (
         <div className="space-y-2">
           {/* Título do Modo - Mais compacto */}
           <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-lg p-2 border-2 border-yellow-500">
@@ -2153,7 +2236,7 @@ export default function DisplayPanel({
       )}
 
       {/* VISUALIZAÇÃO EM CARDS (Alternativa) */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'cards' && (
+      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'cards' && currentDay !== 'Domingo' && (
         <>
           {/* Aulas em Andamento */}
           {ongoingSlots.length > 0 && (
@@ -2200,22 +2283,6 @@ export default function DisplayPanel({
             </section>
           )}
         </>
-      )}
-
-      {/* Créditos do desenvolvedor — exibido quando não há aulas no dia */}
-      {timetables.length > 0 && todaySlots.length === 0 && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-          <div className="bg-gray-800 bg-opacity-60 backdrop-blur-sm border border-gray-700 rounded-xl px-6 py-3 text-center shadow-lg">
-            <p className="text-gray-400 text-xs tracking-wide">
-              Desenvolvido por{' '}
-              <span className="text-gray-300 font-semibold">Wander Pires Silva Coelho</span>
-              <span className="mx-2 text-gray-600">·</span>
-              <span className="text-blue-400">wanderpsc@gmail.com</span>
-              <span className="mx-2 text-gray-600">·</span>
-              <span className="text-gray-500">© 2025</span>
-            </p>
-          </div>
-        </div>
       )}
 
       {/* ===== MODAL: Configuração do Sábado ===== */}
@@ -2312,11 +2379,16 @@ export default function DisplayPanel({
       )}
 
       {/* Footer */}
-      <footer className="mt-12 pt-6 border-t-2 border-gray-700 text-center text-gray-400">
-        <p className="text-sm">
-          © 2025 Sistema Criador de Horário de Aula Escolar - Wander Pires Silva Coelho
+      <footer className="mt-8 pt-4 border-t-2 border-gray-700 text-center text-gray-400">
+        <p className="text-sm tracking-wide">
+          Desenvolvido por{' '}
+          <span className="text-gray-300 font-semibold">Wander Pires Silva Coelho</span>
+          <span className="mx-2 text-gray-600">·</span>
+          <span className="text-blue-400">wanderpsc@gmail.com</span>
+          <span className="mx-2 text-gray-600">·</span>
+          <span className="text-gray-500">© 2025</span>
         </p>
-        <p className="text-xs mt-1">
+        <p className="text-xs mt-1 text-gray-600">
           Atualização automática a cada {refreshInterval} segundos
         </p>
       </footer>

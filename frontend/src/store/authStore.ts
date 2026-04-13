@@ -29,10 +29,17 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.warn('⚠️ Zustand: localStorage indisponível, marcando hydrated mesmo assim', error);
+        }
         console.log('💧 Zustand rehydration completed:', state?.token ? 'HAS TOKEN' : 'NO TOKEN');
         if (state) {
           state.isHydrated = true;
+        } else {
+          // localStorage bloqueado ou inacessível (ex: TV box, navegadores antigos)
+          // Força isHydrated para não deixar o app preso em "Carregando..."
+          useAuthStore.setState({ isHydrated: true });
         }
       },
     }

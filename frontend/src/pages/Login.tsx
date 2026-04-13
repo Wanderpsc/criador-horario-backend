@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import * as React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -549,57 +549,81 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
+  const [retryMsg, setRetryMsg] = useState('');
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
 
-  // Log inicial para confirmar que o componente foi carregado
-  console.log('🔵 Componente Login carregado');
+  // Acorda o servidor ao entrar na pagina (evita cold start no momento do login)
+  useEffect(() => {
+    api.get('/auth/ping').catch(() => {});
+    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    console.log('🟢 handleSubmit CHAMADO!');
-    e.preventDefault();
-    console.log('🟢 preventDefault executado');
+  const doLogin = useCallback(async (loginEmail: string, loginPassword: string, attempt = 1) => {
     setLoading(true);
-
-    console.log('🔐 Tentando fazer login com:', { email, password: '***' });
-
+    let scheduleRetry = false;
     try {
-      console.log('📡 Enviando requisição para:', api.defaults.baseURL + '/auth/login');
-      const response = await api.post('/auth/login', { email, password });
-      console.log('✅ Resposta do servidor:', response.data);
-      
-      // Salvar autenticação
+      // Enviar como URL-encoded para evitar CORS preflight (requisição "simples")
+      // Content-Type: application/x-www-form-urlencoded não dispara OPTIONS no browser
+      const params = new URLSearchParams();
+      params.append('email', loginEmail);
+      params.append('password', loginPassword);
+      const response = await api.post('/auth/login', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
       setAuth(response.data.token, response.data.user);
-      console.log('✅ Token salvo no store');
-      
       toast.success('Login realizado com sucesso!');
-      
-      // Aguardar um momento para o Zustand persist salvar no localStorage
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Redirecionar baseado no tipo de usuário
       if (response.data.user.role === 'admin' || response.data.user.role === 'super-admin') {
-        console.log('➡️ Redirecionando para /admin-dashboard');
         navigate('/admin-dashboard', { replace: true });
       } else {
-        console.log('➡️ Redirecionando para /dashboard');
         navigate('/dashboard', { replace: true });
       }
     } catch (error: any) {
-      console.error('❌ Erro ao fazer login:', error);
-      console.error('❌ Response:', error.response?.data);
-      
-      // Tratamento especial para rate limiting (muitas tentativas)
-      if (error.response?.status === 429) {
-        toast.error(
-          '🔒 Muitas tentativas de login. Por segurança, aguarde 15 minutos antes de tentar novamente.',
-          { duration: 8000 }
-        );
-      }
-      // Tratamento especial para contas pendentes de aprovação
-      else if (error.response?.status === 403) {
+      if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') && attempt === 1) {
+        // Apenas na 1ª tentativa: faz ping a cada 5s e conecta assim que servidor responder
+        scheduleRetry = true;
+        setRetryMsg('Servidor iniciando... Conectando automaticamente');
+        let pollCount = 0;
+        const pingPoll = () => {
+          if (pollCount >= 14) { // 14 * 5s = 70s máx
+            setLoading(false);
+            setRetryMsg('');
+            const code = error.code || 'sem_codigo';
+            const msg = error.message || 'sem_mensagem';
+            toast.error(`Erro [${code}]: ${msg}`, { duration: 15000 });
+            return;
+          }
+          pollCount++;
+          retryTimerRef.current = setTimeout(async () => {
+            try {
+              await api.get('/auth/ping', { timeout: 5000 });
+              // Servidor acordou — faz login imediatamente (attempt=2 evita re-acionar ping loop)
+              setRetryMsg('');
+              setLoading(false);
+              doLogin(loginEmail, loginPassword, 2);
+            } catch (pingErr: any) {
+              if ((pingErr as any).response) {
+                setRetryMsg('');
+                setLoading(false);
+                doLogin(loginEmail, loginPassword, 2);
+              } else {
+                pingPoll(); // ainda dormindo, tenta ping de novo
+              }
+            }
+          }, 5000);
+        };
+        pingPoll();
+      } else if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED')) {
+        // Falhou mesmo após servidor acordar: mostra código exato para diagnóstico
+        const code = error.code || 'sem_codigo';
+        const msg = error.message || 'sem_mensagem';
+        toast.error(`Erro de rede: ${msg} [${code}]`, { duration: 15000 });
+      } else if (error.response?.status === 429) {
+        toast.error('Muitas tentativas de login. Por seguranca, aguarde 15 minutos antes de tentar novamente.', { duration: 8000 });
+      } else if (error.response?.status === 403) {
         const data = error.response?.data;
-        
         if (data?.status === 'pending_approval') {
           toast.error(data.message, { duration: 6000 });
         } else if (data?.status === 'suspended') {
@@ -611,21 +635,41 @@ export default function Login() {
         }
       } else {
         const errorMessage = error.response?.data?.message || 'Erro ao fazer login';
-        // Se a mensagem contém "tentativas" ou "minutos", é rate limiting
-        if (errorMessage.toLowerCase().includes('tentativas') || errorMessage.toLowerCase().includes('minutos')) {
-          toast.error('🔒 ' + errorMessage, { duration: 8000 });
-        } else {
-          toast.error(errorMessage);
-        }
+        toast.error(errorMessage);
       }
     } finally {
-      setLoading(false);
+      if (!scheduleRetry) {
+        setLoading(false);
+        setRetryMsg('');
+      }
     }
+  }, [navigate, setAuth]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🟢 handleSubmit CHAMADO!');
+    e.preventDefault();
+    doLogin(email, password);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 p-4">
       <InstallPWA />
+
+      {retryMsg && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm px-5 py-3 rounded-xl shadow-lg">
+          <span>⏳ {retryMsg}</span>
+          <button
+            onClick={() => {
+              if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+              setRetryMsg('');
+              setLoading(false);
+            }}
+            className="ml-2 text-xs bg-yellow-200 hover:bg-yellow-300 px-2 py-1 rounded font-medium"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
       
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
@@ -697,7 +741,7 @@ export default function Login() {
             onClick={() => console.log('🔴 BOTÃO CLICADO!')}
             className="btn btn-primary w-full disabled:opacity-50"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? (retryMsg ? 'Reconectando...' : 'Entrando...') : 'Entrar'}
           </button>
         </form>
 
@@ -872,3 +916,4 @@ export default function Login() {
     </div>
   );
 }
+

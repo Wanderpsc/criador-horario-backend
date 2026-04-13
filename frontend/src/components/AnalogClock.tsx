@@ -5,12 +5,26 @@ interface AnalogClockProps {
   showNumbers?: boolean;
 }
 
+// Hora sempre no fuso de Brasília, independente do sistema da TV Box
+const getBrazilTime = (): Date => {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value ?? '0');
+  const h = get('hour');
+  return new Date(get('year'), get('month') - 1, get('day'), h === 24 ? 0 : h, get('minute'), get('second'));
+};
+
 export default function AnalogClock({ size = 200, showNumbers = true }: AnalogClockProps) {
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState(getBrazilTime());
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTime(new Date());
+      setTime(getBrazilTime());
     }, 1000);
 
     return () => clearInterval(timer);

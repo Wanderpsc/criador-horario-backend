@@ -7,6 +7,7 @@ console.log('🔧 [API CONFIG] Ambiente:', import.meta.env.MODE);
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 60000, // 60s para cobrir cold start do Render (pode levar até 50s)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -68,9 +69,17 @@ api.interceptors.response.use((response) => {
   console.error('   Error Message:', error.message);
   
   // Verificar se é erro de rede (backend offline ou CORS)
-  if (error.message === 'Network Error') {
+  if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
     console.error('🌐 ERRO DE REDE: Backend pode estar offline ou há problema de CORS');
     console.error('   Base URL configurada:', api.defaults.baseURL);
+    // Adicionar mensagem amigável para o usuário
+    error.userMessage = '⚠️ Servidor iniciando... Aguarde 30 segundos e tente novamente.';
+  }
+  
+  // Verificar se é timeout
+  if (error.code === 'ECONNABORTED') {
+    console.error('⏱️ TIMEOUT: Servidor demorou demais para responder');
+    error.userMessage = '⏱️ O servidor demorou para responder. Aguarde 30s e tente novamente.';
   }
   
   // Se receber erro 401 (não autorizado), limpar token e redirecionar para login
