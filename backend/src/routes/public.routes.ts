@@ -6,6 +6,7 @@ import Class from '../models/Class';
 import Subject from '../models/Subject';
 import Teacher from '../models/Teacher';
 import Grade from '../models/Grade';
+import TeacherAttendance from '../models/TeacherAttendance';
 
 const router = Router();
 
@@ -128,6 +129,7 @@ router.get('/timetable/:id', async (req, res) => {
           _id: String(tt._id),
           title,
           scheduleId: tt.scheduleId,
+          school: (tt as any).school || (tt as any).userId || '',
           createdAt: tt.createdAt,
           timetable: {},
         };
@@ -165,6 +167,7 @@ router.get('/timetable/:id', async (req, res) => {
       return {
         _id: String(group._id),
         name: String(group.title),
+        schoolId: group.school || '',
         createdAt: group.createdAt ? new Date(group.createdAt).toISOString() : new Date().toISOString(),
         timetable: group.timetable,
         classCount: Object.keys(group.timetable).length,
@@ -216,6 +219,28 @@ router.get('/class/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Erro na rota pública de turma:', error);
     res.status(500).json({ message: 'Erro ao buscar turma' });
+  }
+});
+
+// GET /api/public/absent-teachers?schoolId=...&date=YYYY-MM-DD
+// Rota pública (sem auth) para o DisplayPanel exibir ausências no painel de TV
+router.get('/absent-teachers', async (req, res) => {
+  try {
+    const { schoolId, date } = req.query as { schoolId?: string; date?: string };
+    if (!schoolId || !date) {
+      return res.json([]);
+    }
+    const records = await TeacherAttendance.find({ schoolId, date }).lean();
+    const absentTeacherIds: string[] = [];
+    for (const r of records) {
+      if (r.classes && (r.classes as any[]).some((c: any) => c.status === 'absent')) {
+        absentTeacherIds.push(String(r.teacherId));
+      }
+    }
+    res.json(absentTeacherIds);
+  } catch (error: any) {
+    console.error('Erro na rota pública de professores ausentes:', error);
+    res.status(500).json([]);
   }
 });
 
