@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../lib/axios';
 import toast from 'react-hot-toast';
-import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calendar, Clock, Trash2, Edit, FolderOpen, FileSpreadsheet, Lock, Unlock } from 'lucide-react';
+import { Download, Share2, Printer, RefreshCw, AlertCircle, CheckCircle, Calendar, Clock, Trash2, Edit, FolderOpen, FileSpreadsheet, Lock, Unlock, Save } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -305,16 +305,45 @@ export default function TimetableGenerator() {
     [generatedTimetables]
   );
 
+  // Ordem personalizada de exibição das turmas na grade
+  const CUSTOM_CLASS_ORDER: string[] = [
+    '9º Ano - EFR-FUND IIANOS FINAIS INT-9º ANO-I-A',
+    '9º Ano - EFR-FUND IIANOS FINAIS INT-9º ANO-I-B',
+    '1ª Série - EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-B',
+    '1ª Série - EMTPDES-SIS-1ª SERIE - INTEGRAL-I-B',
+    '1ª Série - EMTPFARM-1ª SERIE - INTEGRAL-I-B',
+    '2ª Série - EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A',
+    '2ª Série - EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A',
+    '2ª Série - EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B',
+    '3ª Série - EMRINTEGRAL-3ª SERIE-I-A',
+    '3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A',
+    '3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B',
+  ];
+
+  const sortByCustomOrder = (list: any[]): any[] => {
+    return [...list].sort((a, b) => {
+      const keyA = `${a.grade?.name || ''} - ${a.name || ''}`;
+      const keyB = `${b.grade?.name || ''} - ${b.name || ''}`;
+      const idxA = CUSTOM_CLASS_ORDER.indexOf(keyA);
+      const idxB = CUSTOM_CLASS_ORDER.indexOf(keyB);
+      // Turmas não listadas vão para o final, ordenadas alfabeticamente
+      if (idxA === -1 && idxB === -1) return keyA.localeCompare(keyB, 'pt-BR');
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    });
+  };
+
   const classesForDisplay = useMemo(() => {
     if (selectedClassFilter !== 'all') {
       return classes.filter((currentClass: any) => currentClass.id === selectedClassFilter);
     }
 
     if (generatedClassIds.size === 0) {
-      return classes;
+      return sortByCustomOrder(classes);
     }
 
-    return classes.filter((currentClass: any) => generatedClassIds.has(currentClass.id));
+    return sortByCustomOrder(classes.filter((currentClass: any) => generatedClassIds.has(currentClass.id)));
   }, [classes, selectedClassFilter, generatedClassIds]);
 
   const generationChecklist: GenerationChecklist | null = useMemo(() => {
@@ -3713,6 +3742,28 @@ export default function TimetableGenerator() {
     }
   };
 
+  // Salvar alterações na grade atual (sem diálogo)
+  const handleSaveChanges = async () => {
+    if (!currentSavedTitle || !selectedSchedule || Object.keys(generatedTimetables).length === 0) {
+      toast.error('Nenhuma grade carregada para salvar');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await api.post('/generated-timetables?strictCompliance=false', {
+        scheduleId: selectedSchedule,
+        timetables: generatedTimetables,
+        title: currentSavedTitle
+      });
+      setHasUnsavedChanges(false);
+      toast.success(`✅ Alterações salvas em "${currentSavedTitle}"!`, { duration: 3000 });
+    } catch (error: any) {
+      toast.error('Erro ao salvar: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Salvar horários no banco de dados
   const handleSave = async () => {
     console.log('💾 Tentando salvar horários...');
@@ -4973,17 +5024,29 @@ export default function TimetableGenerator() {
                 </button>
               </div>
 
+              {currentSavedTitle && hasUnsavedChanges && (
+                <button
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="btn flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  title={`Salvar alterações em "${currentSavedTitle}"`}
+                >
+                  <Save size={20} className={isSaving ? 'animate-pulse' : ''} />
+                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              )}
               <button
                 onClick={() => setShowSaveDialog(true)}
                 disabled={isSaving}
                 className="btn btn-primary flex items-center gap-2"
+                title="Salvar como novo nome"
               >
-                <Download size={20} className={isSaving ? 'animate-pulse' : ''} />
-                {isSaving ? 'Salvando...' : 'Salvar'}
+                <Download size={20} />
+                Salvar como...
               </button>
               {currentSavedTitle && (
-                <span className={`text-xs self-center ${hasUnsavedChanges ? 'text-amber-600' : 'text-green-600'}`}>
-                  {hasUnsavedChanges ? `⚠️ Alterações não salvas em "${currentSavedTitle}"` : `✅ Salvando em "${currentSavedTitle}"`}
+                <span className={`text-xs self-center ${hasUnsavedChanges ? 'text-amber-600 font-semibold' : 'text-green-600'}`}>
+                  {hasUnsavedChanges ? `⚠️ Não salvo: "${currentSavedTitle}"` : `✅ Salvo: "${currentSavedTitle}"`}
                 </span>
               )}
 
@@ -5063,7 +5126,12 @@ export default function TimetableGenerator() {
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="min-w-full border-collapse print-timetable-table">
+                      <table className="min-w-full table-fixed border-collapse print-timetable-table">
+                        <colgroup>
+                          {[null, ...weekDays].map((_, i) => (
+                            <col key={i} style={{ width: `${100 / (weekDays.length + 1)}%` }} />
+                          ))}
+                        </colgroup>
                         <thead>
                           <tr className="bg-primary-600 text-white">
                             <th className="border border-gray-300 p-3 text-left font-bold">Horário</th>
@@ -5123,7 +5191,7 @@ export default function TimetableGenerator() {
                                     {/* Botão de editar (aparece ao passar o mouse) */}
                                     <button
                                       onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
-                                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
+                                      className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
                                       title="Editar"
                                     >
                                       <Edit size={14} />
@@ -5147,12 +5215,12 @@ export default function TimetableGenerator() {
                                     )}
                                     
                                     {hasConflict && (
-                                      <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
+                                      <div className="absolute top-0 left-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-br pointer-events-none">
                                         ⚠️
                                       </div>
                                     )}
                                     {violatesAvailability && (
-                                      <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
+                                      <div className="absolute bottom-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-tr no-print pointer-events-none" title={`${teacher?.name} está fora da disponibilidade`}>
                                         📵
                                       </div>
                                     )}
@@ -5216,7 +5284,12 @@ export default function TimetableGenerator() {
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse print-timetable-table">
+                    <table className="min-w-full table-fixed border-collapse print-timetable-table">
+                      <colgroup>
+                        {[null, ...currentSchedule.periods].map((_, i) => (
+                          <col key={i} style={{ width: `${100 / (currentSchedule.periods.length + 1)}%` }} />
+                        ))}
+                      </colgroup>
                       <thead>
                         <tr className="bg-primary-600 text-white">
                           <th className="border border-gray-300 p-3 text-left font-bold">Turma</th>
@@ -5269,7 +5342,7 @@ export default function TimetableGenerator() {
                                   {/* Botão de editar */}
                                   <button
                                     onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
-                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
+                                    className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
                                     title="Editar"
                                   >
                                     <Edit size={14} />
@@ -5293,12 +5366,12 @@ export default function TimetableGenerator() {
                                   )}
                                   
                                   {hasConflict && (
-                                    <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-bl">
+                                    <div className="absolute top-0 left-0 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-br pointer-events-none">
                                       ⚠️
                                     </div>
                                   )}
                                   {violatesAvailability && (
-                                    <div className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-br no-print" title={`${teacher?.name} está fora da disponibilidade`}>
+                                    <div className="absolute bottom-0 left-0 bg-orange-500 text-white text-xs font-bold px-1 py-0.5 rounded-tr no-print pointer-events-none" title={`${teacher?.name} está fora da disponibilidade`}>
                                       📵
                                     </div>
                                   )}
@@ -5500,10 +5573,10 @@ export default function TimetableGenerator() {
                         </aside>
 
                         <div className="flex-1 overflow-x-auto">
-                          <table className="min-w-full">
+                          <table className="min-w-full table-fixed">
                             <thead>
                               <tr className="bg-gray-100">
-                                <th className="border-b border-gray-300 p-3 text-left w-32">Horário</th>
+                                <th className="border-b border-gray-300 p-3 text-left">Horário</th>
                                 <th className="border-b border-gray-300 p-3 text-left">Disciplina</th>
                                 <th className="border-b border-gray-300 p-3 text-left">Professor</th>
                               </tr>
@@ -6063,32 +6136,34 @@ export default function TimetableGenerator() {
                   className="input w-full mb-1"
                   disabled={editModalData.isLocked}
                 />
-                <select
-                  size={6}
-                  value={selectedSubjectForEdit}
-                  onChange={(e) => {
-                    const newSubjectId = e.target.value;
-                    setSelectedSubjectForEdit(newSubjectId);
-                    setSelectedTeacherForEdit('');
-                    const sel = subjects.find((s: Subject) => s.id === newSubjectId || (s as any)._id?.toString() === newSubjectId);
-                    if (sel) setSubjectSearchTerm(sel.name);
-                  }}
-                  className="input w-full"
-                  disabled={editModalData.isLocked}
-                >
+                <div className="border border-gray-300 rounded overflow-y-auto h-36 bg-white">
                   {subjects
                     .filter((s: Subject) => s.isActive !== false)
                     .filter((s: Subject) => s.name.toLowerCase().includes(subjectSearchTerm.toLowerCase()))
                     .sort((a: Subject, b: Subject) => a.name.localeCompare(b.name, 'pt-BR'))
                     .map((subject: Subject) => {
                       const sid = subject.id || (subject as any)._id?.toString();
+                      const isSelected = sid === selectedSubjectForEdit;
                       return (
-                        <option key={sid} value={sid}>
+                        <div
+                          key={sid}
+                          onClick={() => {
+                            if (editModalData.isLocked) return;
+                            setSelectedSubjectForEdit(sid);
+                            setSelectedTeacherForEdit('');
+                            setSubjectSearchTerm(subject.name);
+                          }}
+                          className={`px-2 py-1 text-sm cursor-pointer select-none ${
+                            isSelected
+                              ? 'bg-blue-600 text-white'
+                              : 'hover:bg-gray-100 text-gray-800'
+                          } ${editModalData.isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
                           {subject.name}
-                        </option>
+                        </div>
                       );
                     })}
-                </select>
+                </div>
               </div>
 
               <div>
@@ -6102,38 +6177,43 @@ export default function TimetableGenerator() {
                   disabled={editModalData.isLocked || !selectedSubjectForEdit}
                 >
                   <option value="">Selecione o professor</option>
-                  {teachers
-                    .filter((t: Teacher) => {
-                      if (!selectedSubjectForEdit) return false;
+                  {(() => {
+                    if (!selectedSubjectForEdit) return null;
+                    const eligible = teachers.filter((t: Teacher) => {
                       const tid = t.id || (t as any)._id?.toString();
-                      // Filtrar professores que podem lecionar a disciplina selecionada
                       const canTeach = teacherSubjects.some(
-                        (ts: TeacherSubject) => 
+                        (ts: TeacherSubject) =>
                           ts.teacherId === tid && ts.subjectId === selectedSubjectForEdit
                       );
                       return canTeach && t.isActive !== false;
-                    })
-                    .map((teacher: Teacher) => {
+                    });
+                    const list = eligible.length > 0
+                      ? eligible
+                      : teachers.filter((t: Teacher) => t.isActive !== false);
+                    return list.map((teacher: Teacher) => {
                       const tid = teacher.id || (teacher as any)._id?.toString();
                       return (
                         <option key={tid} value={tid}>
-                          {teacher.name}
+                          {teacher.name}{eligible.length === 0 ? '' : ''}
                         </option>
                       );
-                    })}
+                    });
+                  })()}
                 </select>
-                {selectedSubjectForEdit && teachers.filter((t: Teacher) => {
-                  const tid = t.id || (t as any)._id?.toString();
-                  const canTeach = teacherSubjects.some(
-                    (ts: TeacherSubject) => 
-                      ts.teacherId === tid && ts.subjectId === selectedSubjectForEdit
-                  );
-                  return canTeach && t.isActive !== false;
-                }).length === 0 && (
-                  <p className="text-xs text-yellow-600 mt-1">
-                    ⚠️ Nenhum professor habilitado para esta disciplina
-                  </p>
-                )}
+                {selectedSubjectForEdit && (() => {
+                  const eligible = teachers.filter((t: Teacher) => {
+                    const tid = t.id || (t as any)._id?.toString();
+                    return teacherSubjects.some(
+                      (ts: TeacherSubject) =>
+                        ts.teacherId === tid && ts.subjectId === selectedSubjectForEdit
+                    ) && t.isActive !== false;
+                  });
+                  return eligible.length === 0 ? (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      ⚠️ Nenhuma associação configurada — exibindo todos os professores ativos
+                    </p>
+                  ) : null;
+                })()}
               </div>
             </div>
 

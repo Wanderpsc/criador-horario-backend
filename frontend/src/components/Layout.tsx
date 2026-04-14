@@ -5,16 +5,11 @@ import {
   Home, 
   Users, 
   BookOpen, 
-  Clock, 
   Calendar, 
   LogOut,
-  Menu,
-  X,
   Settings,
   DollarSign,
-  Package,
   UserPlus,
-  ShoppingCart,
   GraduationCap,
   School,
   Building2,
@@ -22,7 +17,6 @@ import {
   Link as LinkIcon,
   Bell,
   Tv,
-  MessageSquare,
   Zap,
   ShieldCheck,
   Database,
@@ -30,7 +24,6 @@ import {
   Mail,
   TrendingUp,
   FileText,
-  AlertTriangle,
   CheckCircle,
   BarChart3,
   ScrollText
@@ -43,7 +36,6 @@ export default function Layout() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarSchoolName, setSidebarSchoolName] = useState<string>('');
 
   useEffect(() => {
@@ -344,18 +336,11 @@ export default function Layout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header Profissional */}
       <header className="bg-gradient-to-r from-primary-600 via-primary-700 to-blue-900 shadow-lg border-b-4 border-blue-500 no-print">
         <div className="px-4 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-6">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-white/10 text-white transition-all"
-            >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-            
             {/* Logo e Título Sofisticado */}
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -381,9 +366,11 @@ export default function Layout() {
             
             <div className="hidden md:block text-right">
               <p className="text-sm font-bold text-white">{user?.name}</p>
-              {user?.role === 'admin' || user?.role === 'super-admin' ? (
-                <p className="text-xs text-yellow-300 font-semibold">Administrador</p>
-              ) : null}
+              <p className="text-xs text-blue-200">
+                {(user?.role === 'admin' || user?.role === 'super-admin')
+                  ? <span className="text-yellow-300 font-semibold">Administrador</span>
+                  : (sidebarSchoolName || user?.schoolName)}
+              </p>
             </div>
             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center font-bold text-white text-sm shadow-lg ring-2 ring-white/50">
               {user?.name?.charAt(0).toUpperCase()}
@@ -399,247 +386,63 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* Barra de Acesso Rápido */}
-      <div className="bg-white border-b border-gray-200 shadow-sm py-2 px-4 no-print sticky top-0 z-10">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-          <span className="text-xs font-semibold text-gray-500 whitespace-nowrap mr-2">
-            🚀 ACESSO RÁPIDO:
-          </span>
-          
-          {navigation
-            .filter(item => !item.divider && item.path !== '/admin' && item.path !== '/settings')
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              
+      {/* Menu Principal (top navigation bar) */}
+      <nav className="bg-white border-b border-gray-200 shadow-sm no-print sticky top-0 z-30">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 px-4 py-2">
+          {navigation.map((item, index) => {
+            if (item.divider) {
               return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                    isActive
-                      ? 'bg-primary-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow'
-                  }`}
-                  title={item.description}
-                >
-                  <Icon size={14} />
-                  <span>{item.label}</span>
-                  {item.badge && (
-                    <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded ${
-                      item.badge === 'NOVO' ? 'bg-green-500 text-white' :
-                      item.badge === 'IA' ? 'bg-yellow-500 text-black' :
-                      'bg-blue-500 text-white'
-                    }`}>
-                      {item.badge}
-                    </span>
-                  )}
-                  {item.step && (
-                    <span className="ml-1 w-4 h-4 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full">
-                      {item.step}
-                    </span>
-                  )}
-                </Link>
+                <div key={index} className="h-6 w-px bg-gray-300 mx-1 flex-shrink-0" title={item.label} />
               );
-            })}
+            }
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                  isActive
+                    ? 'bg-primary-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-primary-50 hover:text-primary-700 hover:shadow'
+                }`}
+                title={item.description}
+              >
+                {Icon && <Icon size={14} />}
+                <span>{item.label}</span>
+                {item.badge && (
+                  <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded ${
+                    item.badge === 'NOVO' ? 'bg-green-500 text-white' :
+                    item.badge === 'IA' ? 'bg-yellow-500 text-black' :
+                    'bg-blue-500 text-white'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+                {item.step && (
+                  <span className="ml-1 w-4 h-4 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full">
+                    {item.step}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Main Content — full width */}
+      <main className="flex-1 w-full">
+        <div className="w-full px-6 py-6">
+          <PrintHeader />
+          <Outlet />
+        </div>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className={`
-          fixed lg:static inset-y-0 left-0 z-50
-          w-96 bg-white border-r border-gray-200 shadow-lg
-          transform transition-transform duration-200 ease-in-out
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          no-print flex flex-col h-screen
-        `}>
-          {/* Header Sidebar Compacto */}
-          <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-lg">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-md">
-                <GraduationCap className="text-indigo-600" size={18} />
-              </div>
-              <span className="text-sm font-bold text-white">Menu Principal</span>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navigation.map((item, index) => {
-              if (item.divider) {
-                return (
-                  <div key={index} className="mt-6 mb-3">
-                    <div className="px-3 py-2 text-sm font-bold text-indigo-700 uppercase tracking-wider border-l-4 border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-r shadow-sm">
-                      {item.label}
-                    </div>
-                    {item.description && (
-                      <p className="px-3 mt-1 text-sm text-indigo-500 italic font-medium">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                );
-              }
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              
-              // Color mapping for highlights
-              const colorClasses = {
-                blue: 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200',
-                purple: 'border-purple-500 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200',
-                green: 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200',
-                orange: 'border-orange-500 bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200',
-                red: 'border-red-500 bg-gradient-to-r from-red-50 to-red-100 hover:from-red-100 hover:to-red-200',
-                indigo: 'border-indigo-500 bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200',
-                teal: 'border-teal-500 bg-gradient-to-r from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200',
-                yellow: 'border-yellow-500 bg-gradient-to-r from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200',
-                cyan: 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200',
-                gray: 'border-gray-500 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200',
-                emerald: 'border-emerald-500 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200',
-                slate: 'border-slate-500 bg-gradient-to-r from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200'
-              };
-
-              const highlightClass = item.highlight 
-                ? `border-l-4 ${colorClasses[item.color as keyof typeof colorClasses] || 'border-primary-400 bg-primary-50 hover:bg-primary-100'} shadow-sm`
-                : '';
-
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`group flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${highlightClass} ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-100 via-purple-100 to-blue-100 text-indigo-900 font-semibold shadow-lg border-2 border-indigo-300'
-                      : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:shadow-md hover:border hover:border-gray-300'
-                  }`}
-                  title={item.description}
-                >
-                  <div className="flex-shrink-0 mt-0.5">
-                    {item.step && (
-                      <span className={`inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full shadow-md mr-1 ${
-                        item.color === 'purple' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
-                        item.color === 'green' ? 'bg-gradient-to-br from-green-500 to-green-600' :
-                        item.color === 'orange' ? 'bg-gradient-to-br from-orange-500 to-orange-600' :
-                        item.color === 'red' ? 'bg-gradient-to-br from-red-500 to-red-600' :
-                        item.color === 'pink' ? 'bg-gradient-to-br from-pink-500 to-pink-600' :
-                        item.color === 'teal' ? 'bg-gradient-to-br from-teal-500 to-teal-600' :
-                        item.color === 'indigo' ? 'bg-gradient-to-br from-indigo-500 to-indigo-600' :
-                        item.color === 'yellow' ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' :
-                        'bg-gradient-to-br from-primary-500 to-primary-600'
-                      }`}>
-                        {item.step}
-                      </span>
-                    )}
-                    {Icon && !item.step && (
-                      <div className={`p-2 rounded-lg transition-all duration-200 ${
-                        isActive ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md' : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 group-hover:from-indigo-100 group-hover:to-purple-100 group-hover:text-indigo-600'
-                      }`}>
-                        <Icon size={20} />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className={`text-base font-semibold truncate ${isActive ? 'text-primary-900' : ''}`}>
-                        {item.label}
-                      </span>
-                      {item.badge && (
-                        <span className={`flex-shrink-0 px-2 py-1 text-xs font-extrabold rounded-full shadow-sm ${
-                          item.badge === 'IA' ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white animate-pulse' :
-                          item.badge === 'ESSENCIAL' ? 'bg-gradient-to-r from-pink-500 to-red-500 text-white' :
-                          'bg-gradient-to-r from-green-400 to-emerald-500 text-white'
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </div>
-                    {item.subtitle && (
-                      <span className={`text-xs font-medium ${isActive ? 'text-primary-600' : 'text-gray-500'}`}>
-                        {item.subtitle}
-                      </span>
-                    )}
-                    {item.description && (
-                      <p className={`text-xs leading-relaxed mt-1 ${isActive ? 'text-primary-700' : 'text-gray-500'}`}>
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* User info */}
-          <div className="p-4 border-t">
-            <div className="mb-3">
-              <p className="text-xs text-gray-500">{user?.email}</p>
-              <p className="text-xs text-primary-600 mt-1 font-semibold">
-                {(user?.role === 'admin' || user?.role === 'super-admin')
-                  ? 'Administrador do Sistema'
-                  : (sidebarSchoolName || user?.schoolName)}
-              </p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </button>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 lg:pl-0">
-          {/* Mobile header */}
-          <div className="sticky top-0 z-10 flex items-center justify-between h-16 px-6 bg-white border-b lg:hidden">
-            <button onClick={() => setSidebarOpen(true)}>
-              <Menu className="w-6 h-6" />
-            </button>
-            <h1 className="text-lg font-bold text-primary-600">
-              EduSync-PRO
-            </h1>
-            <div className="w-6" />
-          </div>
-
-          {/* Page content */}
-          <div className="p-6">
-            <PrintHeader />
-            <Outlet />
-          </div>
-
-          {/* Footer */}
-          <footer className="mt-8 py-4 px-6 border-t bg-white text-center text-xs text-gray-600">
-            <p className="font-semibold">© 2025 Wander Pires Silva Coelho</p>
-            <p>wanderpsc@gmail.com - Todos os direitos reservados</p>
-          </footer>
-        </main>
-      </div>
-
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+        {/* Footer */}
+        <footer className="mt-8 py-4 px-6 border-t bg-white text-center text-xs text-gray-600">
+          <p className="font-semibold">© 2025 Wander Pires Silva Coelho</p>
+          <p>wanderpsc@gmail.com - Todos os direitos reservados</p>
+        </footer>
+      </main>
     </div>
   );
 }

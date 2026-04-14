@@ -331,10 +331,15 @@ export default function Timetables() {
           </div>
         </div>
 
-        <table className="w-full border-collapse" style={{ minWidth: '800px' }}>
+        <table className="w-full table-fixed border-collapse" style={{ minWidth: '800px' }}>
+          <colgroup>
+            {[null, ...weekDays].map((_, i) => (
+              <col key={i} style={{ width: `${100 / (weekDays.length + 1)}%` }} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
-              <th className="border-2 border-gray-400 bg-gradient-to-br from-gray-100 to-gray-200 p-4 text-left font-bold w-32">
+              <th className="border-2 border-gray-400 bg-gradient-to-br from-gray-100 to-gray-200 p-4 text-left font-bold">
                 <div className="text-sm">Período</div>
                 <div className="text-xs text-gray-600 font-normal">Horário</div>
               </th>

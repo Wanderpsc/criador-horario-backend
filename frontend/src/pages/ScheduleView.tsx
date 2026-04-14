@@ -325,10 +325,10 @@ export default function ScheduleView() {
 
         {/* Schedule Grid */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse border-2 border-gray-300">
+          <table className="w-full table-fixed border-collapse border-2 border-gray-300">
             <thead>
               <tr className="bg-primary-600 text-white">
-                <th className="border-2 border-gray-300 px-4 py-3 text-center w-24">
+                <th className="border-2 border-gray-300 px-4 py-3 text-center">
                   Aula
                 </th>
                 {days.slice(0, daysToShow).map((day, idx) => (
