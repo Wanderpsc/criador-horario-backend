@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://criador-horario-aula.surge.sh/sitemap.xml

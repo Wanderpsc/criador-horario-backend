@@ -25,7 +25,7 @@ const timetableSlotSchema = new mongoose.Schema({
   day: { type: String, required: true },
   period: { type: Number, required: true },
   subjectId: { type: String, required: true },
-  teacherId: { type: String, required: true },
+  teacherId: { type: String, required: false, default: '' },
   classId: { type: String, required: true },
   startTime: { type: String, required: false },
   endTime: { type: String, required: false }

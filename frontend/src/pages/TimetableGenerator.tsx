@@ -4052,10 +4052,12 @@ export default function TimetableGenerator() {
       return;
     }
 
-    if (!selectedSubjectForEdit || !selectedTeacherForEdit) {
-      toast.error('Selecione a disciplina e o professor');
+    if (!selectedSubjectForEdit) {
+      toast.error('Selecione a disciplina');
       return;
     }
+
+    const resolvedTeacherId = selectedTeacherForEdit === '__none__' ? '' : selectedTeacherForEdit;
 
     setGeneratedTimetables(prev => {
       const newClassTimetable = [...(prev[classId] || [])];
@@ -4067,7 +4069,7 @@ export default function TimetableGenerator() {
         newClassTimetable[existingIndex] = {
           ...newClassTimetable[existingIndex],
           subjectId: selectedSubjectForEdit,
-          teacherId: selectedTeacherForEdit
+          teacherId: resolvedTeacherId
         };
       } else {
         newClassTimetable.push({
@@ -4075,7 +4077,7 @@ export default function TimetableGenerator() {
           day,
           period,
           subjectId: selectedSubjectForEdit,
-          teacherId: selectedTeacherForEdit
+          teacherId: resolvedTeacherId
         });
       }
 
@@ -5224,13 +5226,13 @@ export default function TimetableGenerator() {
                                         📵
                                       </div>
                                     )}
-                                    {subject && teacher ? (
+                                    {subject ? (
                                       <div className={hasConflict ? 'relative' : ''}>
                                         <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
                                           {subject.name}
                                         </div>
-                                        <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
-                                          {teacher.name}
+                                        <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : teacher ? 'text-gray-600' : 'text-gray-400 italic'}`}>
+                                          {teacher ? teacher.name : 'Sem Professor'}
                                           {violatesAvailability && <span className="ml-1">⚠️</span>}
                                         </div>
                                         {hasConflict && (
@@ -5375,13 +5377,13 @@ export default function TimetableGenerator() {
                                       📵
                                     </div>
                                   )}
-                                  {subject && teacher ? (
+                                  {subject ? (
                                     <div className={hasConflict ? 'relative' : ''}>
                                       <div className={`font-semibold text-sm ${hasConflict ? 'text-red-900' : violatesAvailability ? 'text-orange-900' : 'text-gray-900'}`}>
                                         {subject.name}
                                       </div>
-                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : 'text-gray-600'}`}>
-                                        {teacher.name}
+                                      <div className={`text-xs mt-1 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : teacher ? 'text-gray-600' : 'text-gray-400 italic'}`}>
+                                        {teacher ? teacher.name : 'Sem Professor'}
                                         {violatesAvailability && <span className="ml-1">⚠️</span>}
                                       </div>
                                       {hasConflict && (
@@ -5626,8 +5628,8 @@ export default function TimetableGenerator() {
                                       </div>
                                     </td>
                                     <td className={`border-b border-gray-200 p-3 ${hasConflict ? 'text-red-700 font-bold' : violatesAvailability ? 'text-orange-700 font-semibold' : ''}`}>
-                                      <div className="text-sm">
-                                        {teacher?.name || '-'}
+                                      <div className={`text-sm ${!teacher && subject ? 'text-gray-400 italic' : ''}`}>
+                                        {teacher?.name || (subject ? 'Sem Professor' : '-')}
                                         {violatesAvailability && <span className="ml-1 no-print">⚠️</span>}
                                       </div>
                                     </td>
@@ -6168,7 +6170,7 @@ export default function TimetableGenerator() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Professor *
+                  Professor
                 </label>
                 <select
                   value={selectedTeacherForEdit}
@@ -6177,6 +6179,7 @@ export default function TimetableGenerator() {
                   disabled={editModalData.isLocked || !selectedSubjectForEdit}
                 >
                   <option value="">Selecione o professor</option>
+                  <option value="__none__">— Sem Professor —</option>
                   {(() => {
                     if (!selectedSubjectForEdit) return null;
                     const eligible = teachers.filter((t: Teacher) => {
