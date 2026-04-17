@@ -298,16 +298,24 @@ export async function generateSaturdayScheduleFromDebts(
     const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
     const classMap = new Map(classes.map(c => [c._id.toString(), c]));
 
+    // Rastrear período por turma (cada coluna tem sua própria sequência de períodos)
+    const periodByClass = new Map<string, number>();
+    const seenTeachers = new Set<string>();
+
     for (const assignment of assignments) {
-      if (currentPeriod >= maxPeriods) break;
       const teacher = fallbackTeacherMap.get(assignment.teacherId?.toString());
       if (!teacher) continue;
       const subject = subjectMap.get(assignment.subjectId?.toString());
       if (!assignment.classId) continue;
       const cls = classMap.get(assignment.classId.toString());
       if (!cls) continue;
-      const period = periods[currentPeriod];
+
       const classId = cls._id.toString();
+      const classCurrentPeriod = (periodByClass.get(classId) || 0) + 1;
+      if (classCurrentPeriod > maxPeriods) continue; // turma já cheia, pular
+      periodByClass.set(classId, classCurrentPeriod);
+
+      const period = periods[classCurrentPeriod - 1];
       if (!schedule[classId]) schedule[classId] = [];
       schedule[classId].push({
         period: period.period,
@@ -320,14 +328,20 @@ export async function generateSaturdayScheduleFromDebts(
         classId,
         className: `${(cls as any).gradeId?.name || ''} - ${cls.name}`.replace(/^- /, '').trim(),
       });
-      teacherDebts.push({ teacherId: teacher._id.toString(), teacherName: teacher.name, totalHours: 1, details: [] });
+      if (!seenTeachers.has(teacher._id.toString())) {
+        teacherDebts.push({ teacherId: teacher._id.toString(), teacherName: teacher.name, totalHours: 0, details: [] });
+        seenTeachers.add(teacher._id.toString());
+      }
       currentPeriod++;
     }
-    console.log(`✅ Fallback: ${currentPeriod} slot(s) gerado(s) a partir de TeacherSubject`);
+    console.log(`✅ Fallback: ${currentPeriod} slot(s) gerado(s) a partir de TeacherSubject para ${seenTeachers.size} professor(es)`);
     return { schedule, teacherDebts, totalScheduledHours: currentPeriod };
   }
 
-  // Distribuir débitos no horário
+  // Distribuir débitos no horário — período rastreado por turma
+  const periodByClassDebts = new Map<string, number>();
+  let totalSlots = 0;
+
   for (const [teacherId, makeupClasses] of debtsByTeacher) {
     const teacher = teacherMap.get(teacherId);
     if (!teacher) continue;
@@ -340,11 +354,12 @@ export async function generateSaturdayScheduleFromDebts(
     };
 
     for (const makeup of makeupClasses) {
-      if (currentPeriod >= maxPeriods) break; // Limite de períodos
-
-      const period = periods[currentPeriod];
       const classId = makeup.classId;
-      
+      const classCurrentPeriod = (periodByClassDebts.get(classId) || 0) + 1;
+      if (classCurrentPeriod > maxPeriods) continue; // turma já cheia
+      periodByClassDebts.set(classId, classCurrentPeriod);
+
+      const period = periods[classCurrentPeriod - 1];
       if (!schedule[classId]) {
         schedule[classId] = [];
       }
@@ -359,12 +374,12 @@ export async function generateSaturdayScheduleFromDebts(
         subjectName: makeup.subjectName,
         classId: makeup.classId,
         className: `${makeup.gradeName} - ${makeup.className}`,
-        makeupClassId: makeup._id // Referência ao makeupClass original
+        makeupClassId: makeup._id
       });
 
       teacherDebtSummary.totalHours++;
-      
-      // Adicionar detalhe
+      totalSlots++;
+
       const existingDetail = teacherDebtSummary.details.find(
         (d: any) => d.classId === classId && d.subjectId === makeup.subjectId
       );
@@ -379,8 +394,6 @@ export async function generateSaturdayScheduleFromDebts(
           hours: 1
         });
       }
-
-      currentPeriod++;
     }
 
     if (teacherDebtSummary.totalHours > 0) {
@@ -391,12 +404,12 @@ export async function generateSaturdayScheduleFromDebts(
   console.log('✅ Horário gerado com sucesso!');
   console.log(`   ${Object.keys(schedule).length} turma(s)`);
   console.log(`   ${teacherDebts.length} professor(es)`);
-  console.log(`   ${currentPeriod} período(s) preenchido(s)`);
+  console.log(`   ${totalSlots} slot(s) preenchido(s)`);
 
   return {
     schedule,
     teacherDebts,
-    totalScheduledHours: currentPeriod
+    totalScheduledHours: totalSlots
   };
   } catch (error: any) {
     console.error('❌ ERRO em generateSaturdayScheduleFromDebts:', error);
