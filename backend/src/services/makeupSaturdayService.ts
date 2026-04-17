@@ -172,7 +172,14 @@ export async function generateSaturdayScheduleFromDebts(
     
     // Primeiro, buscar TODOS os horários emergenciais da escola
     console.log('🔍 Buscando horários emergenciais...');
-    const allSchedules = await EmergencySchedule.find({ school: schoolId }).sort({ date: 1 });
+    let allSchedules: any[] = [];
+    try {
+      allSchedules = await EmergencySchedule.find({ school: schoolId }).sort({ date: 1 });
+    } catch (castErr: any) {
+      // schoolId pode não ser ObjectId válido; tentar sem filtro de escola
+      console.warn('⚠️ Erro ao filtrar por school, buscando sem filtro de escola:', castErr.message);
+      allSchedules = [];
+    }
     console.log(`📋 Total de ${allSchedules.length} horário(s) emergencial(is) no banco para escola ${schoolId}`);
   
   // Filtrar os que têm makeupClasses
@@ -287,7 +294,7 @@ export async function generateSaturdayScheduleFromDebts(
     const subjectIds = [...new Set(assignments.map(a => a.subjectId))];
     const classIds = [...new Set(assignments.map(a => a.classId).filter(Boolean))];
     const subjects = await Subject.find({ _id: { $in: subjectIds } });
-    const classes = await Class.find({ _id: { $in: classIds } }).populate('grade');
+    const classes = await Class.find({ _id: { $in: classIds } }).populate('gradeId');
     const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
     const classMap = new Map(classes.map(c => [c._id.toString(), c]));
 
@@ -311,7 +318,7 @@ export async function generateSaturdayScheduleFromDebts(
         subjectId: subject?._id.toString() || assignment.subjectId,
         subjectName: subject?.name || '',
         classId,
-        className: `${(cls as any).grade?.name || ''} - ${cls.name}`.trim(),
+        className: `${(cls as any).gradeId?.name || ''} - ${cls.name}`.replace(/^- /, '').trim(),
       });
       teacherDebts.push({ teacherId: teacher._id.toString(), teacherName: teacher.name, totalHours: 1, details: [] });
       currentPeriod++;
