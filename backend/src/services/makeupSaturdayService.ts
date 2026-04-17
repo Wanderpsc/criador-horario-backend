@@ -298,8 +298,9 @@ export async function generateSaturdayScheduleFromDebts(
     const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
     const classMap = new Map(classes.map(c => [c._id.toString(), c]));
 
-    // Rastrear período por turma (cada coluna tem sua própria sequência de períodos)
-    const periodByClass = new Map<string, number>();
+    // Rastrear períodos usados por professor e por turma para evitar conflitos
+    const teacherUsedPeriods = new Map<string, Set<number>>();
+    const classUsedPeriods = new Map<string, Set<number>>();
     const seenTeachers = new Set<string>();
 
     for (const assignment of assignments) {
@@ -310,36 +311,51 @@ export async function generateSaturdayScheduleFromDebts(
       const cls = classMap.get(assignment.classId.toString());
       if (!cls) continue;
 
+      const teacherId = teacher._id.toString();
       const classId = cls._id.toString();
-      const classCurrentPeriod = (periodByClass.get(classId) || 0) + 1;
-      if (classCurrentPeriod > maxPeriods) continue; // turma já cheia, pular
-      periodByClass.set(classId, classCurrentPeriod);
 
-      const period = periods[classCurrentPeriod - 1];
+      // Encontrar o primeiro período livre para este professor E esta turma
+      const teacherBusy = teacherUsedPeriods.get(teacherId) || new Set<number>();
+      const classBusy = classUsedPeriods.get(classId) || new Set<number>();
+      let availablePeriod: typeof periods[0] | null = null;
+      for (let p = 1; p <= maxPeriods; p++) {
+        if (!teacherBusy.has(p) && !classBusy.has(p)) {
+          availablePeriod = periods[p - 1];
+          teacherBusy.add(p);
+          classBusy.add(p);
+          break;
+        }
+      }
+      if (!availablePeriod) continue; // sem período disponível sem conflito
+
+      teacherUsedPeriods.set(teacherId, teacherBusy);
+      classUsedPeriods.set(classId, classBusy);
+
       if (!schedule[classId]) schedule[classId] = [];
       schedule[classId].push({
-        period: period.period,
-        startTime: period.startTime,
-        endTime: period.endTime,
-        teacherId: teacher._id.toString(),
+        period: availablePeriod.period,
+        startTime: availablePeriod.startTime,
+        endTime: availablePeriod.endTime,
+        teacherId,
         teacherName: teacher.name,
         subjectId: subject?._id.toString() || assignment.subjectId,
         subjectName: subject?.name || '',
         classId,
         className: `${(cls as any).gradeId?.name || ''} - ${cls.name}`.replace(/^- /, '').trim(),
       });
-      if (!seenTeachers.has(teacher._id.toString())) {
-        teacherDebts.push({ teacherId: teacher._id.toString(), teacherName: teacher.name, totalHours: 0, details: [] });
-        seenTeachers.add(teacher._id.toString());
+      if (!seenTeachers.has(teacherId)) {
+        teacherDebts.push({ teacherId, teacherName: teacher.name, totalHours: 0, details: [] });
+        seenTeachers.add(teacherId);
       }
-      currentPeriod++;
     }
-    console.log(`✅ Fallback: ${currentPeriod} slot(s) gerado(s) a partir de TeacherSubject para ${seenTeachers.size} professor(es)`);
-    return { schedule, teacherDebts, totalScheduledHours: currentPeriod };
+    const fallbackSlots = Object.values(schedule).reduce((s: number, arr: any) => s + arr.length, 0);
+    console.log(`✅ Fallback: ${fallbackSlots} slot(s) gerado(s) a partir de TeacherSubject para ${seenTeachers.size} professor(es)`);
+    return { schedule, teacherDebts, totalScheduledHours: fallbackSlots };
   }
 
-  // Distribuir débitos no horário — período rastreado por turma
-  const periodByClassDebts = new Map<string, number>();
+  // Distribuir débitos no horário — sem conflitos de professor ou turma
+  const teacherUsedPeriodsDebts = new Map<string, Set<number>>();
+  const classUsedPeriodsDebts = new Map<string, Set<number>>();
   let totalSlots = 0;
 
   for (const [teacherId, makeupClasses] of debtsByTeacher) {
@@ -355,11 +371,25 @@ export async function generateSaturdayScheduleFromDebts(
 
     for (const makeup of makeupClasses) {
       const classId = makeup.classId;
-      const classCurrentPeriod = (periodByClassDebts.get(classId) || 0) + 1;
-      if (classCurrentPeriod > maxPeriods) continue; // turma já cheia
-      periodByClassDebts.set(classId, classCurrentPeriod);
 
-      const period = periods[classCurrentPeriod - 1];
+      // Encontrar o primeiro período livre para este professor E esta turma
+      const teacherBusy = teacherUsedPeriodsDebts.get(teacherId) || new Set<number>();
+      const classBusy = classUsedPeriodsDebts.get(classId) || new Set<number>();
+      let availablePeriod: typeof periods[0] | null = null;
+      for (let p = 1; p <= maxPeriods; p++) {
+        if (!teacherBusy.has(p) && !classBusy.has(p)) {
+          availablePeriod = periods[p - 1];
+          teacherBusy.add(p);
+          classBusy.add(p);
+          break;
+        }
+      }
+      if (!availablePeriod) continue; // sem período disponível sem conflito
+
+      teacherUsedPeriodsDebts.set(teacherId, teacherBusy);
+      classUsedPeriodsDebts.set(classId, classBusy);
+
+      const period = availablePeriod;
       if (!schedule[classId]) {
         schedule[classId] = [];
       }
