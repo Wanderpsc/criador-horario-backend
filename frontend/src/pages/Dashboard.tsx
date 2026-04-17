@@ -143,6 +143,85 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Acesso Rápido — barra horizontal com rolagem */}
+      <div className="mb-8">
+        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 text-center">Acesso Rápido</p>
+        <div className="overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#a855f7 #f3e8ff' }}>
+          <div className="flex gap-3 justify-center min-w-max mx-auto">
+            <Link
+              to="/display-panel"
+              className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl px-5 py-3.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">📺</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Painel TV</span>
+            </Link>
+            <Link
+              to="/display-panel-config"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-purple-50 text-purple-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">⚙️</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Config. Painel</span>
+            </Link>
+            <Link
+              to="/teachers"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-purple-50 text-purple-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-purple-100 hover:border-purple-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">👨‍🏫</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Professores</span>
+            </Link>
+            <Link
+              to="/grades"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-orange-50 text-orange-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-orange-100 hover:border-orange-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">🎓</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Séries</span>
+            </Link>
+            <Link
+              to="/classes"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-red-50 text-red-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-red-100 hover:border-red-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">🏫</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Turmas</span>
+            </Link>
+            <Link
+              to="/subjects"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-green-50 text-green-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-green-100 hover:border-green-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">📚</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Componentes</span>
+            </Link>
+            <Link
+              to="/class-subjects"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-pink-50 text-pink-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-pink-100 hover:border-pink-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">📋</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Turmas & Comp.</span>
+            </Link>
+            <Link
+              to="/teacher-subjects"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-teal-50 text-teal-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-teal-100 hover:border-teal-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">👥</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Lotação</span>
+            </Link>
+            <Link
+              to="/schedules"
+              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-indigo-50 text-indigo-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-indigo-100 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">⏰</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Horários</span>
+            </Link>
+            <Link
+              to="/timetable-generator"
+              className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-2xl px-5 py-3.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+            >
+              <span className="text-2xl">🚀</span>
+              <span className="text-[11px] font-black whitespace-nowrap">Gerador</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards Ultra Modernos */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
         {loading ? (

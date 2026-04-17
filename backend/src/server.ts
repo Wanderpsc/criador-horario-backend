@@ -51,6 +51,8 @@ import verifyRoutes from './routes/verify.routes';
 import schoolUsersRoutes from './routes/schoolUsers';
 import auditLogsRoutes from './routes/auditLogs';
 import publicRoutes from './routes/public.routes';
+import classPaymentRoutes from './routes/classPayment.routes';
+import substituteLinkRoutes from './routes/substituteLink.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
@@ -203,6 +205,8 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/school-users', schoolUsersRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
+app.use('/api/class-payments', classPaymentRoutes);
+app.use('/api/substitute-links', substituteLinkRoutes);
 
 // Rota de health check
 const healthPayload = () => ({

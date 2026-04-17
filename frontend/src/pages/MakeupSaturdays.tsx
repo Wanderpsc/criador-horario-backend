@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, AlertTriangle, Users, BookOpen, Clock, RefreshCw, Save, Printer, CheckCircle, Eye, Trash2 } from 'lucide-react';
+import { Calendar, AlertTriangle, Users, BookOpen, Clock, RefreshCw, Save, Printer, CheckCircle, Eye, Trash2, TrendingUp, Award, CheckSquare, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
@@ -71,6 +71,10 @@ export default function MakeupSaturdays() {
   const [lessonDuration, setLessonDuration] = useState(60); // Duração em minutos
   const [startTime, setStartTime] = useState('08:00'); // Horário de início
   const [selectedTeachersForSaturday, setSelectedTeachersForSaturday] = useState<Set<string>>(new Set()); // Professores selecionados para o sábado
+  // Controle de presença por slot (chave: `${classId}-${period}`)
+  const [confirmedSlots, setConfirmedSlots] = useState<Set<string>>(new Set());
+  const [activeScheduleId, setActiveScheduleId] = useState<string>(''); // ID do sábado salvo em edição de presença
+  const [showAttendancePanel, setShowAttendancePanel] = useState(false);
 
   // Monitor de mudanças no makeupSchedule
   useEffect(() => {
@@ -301,7 +305,17 @@ export default function MakeupSaturdays() {
     return finalDebts;
   };
 
-  const teacherDebts = calculateTeacherDebts();
+  // Ordenar por prioridade (mais débitos primeiro)
+  const teacherDebts = calculateTeacherDebts().sort((a, b) => b.totalDebts - a.totalDebts);
+
+  // Helper de prioridade visual
+  const getTeacherPriorityInfo = (rank: number, totalDebts: number) => {
+    if (rank === 0) return { badge: '🥇 #1 URGENTE', bgClass: 'bg-red-100 border-red-400', textClass: 'text-red-800', badgeClass: 'bg-red-600 text-white' };
+    if (rank === 1) return { badge: '🥈 #2', bgClass: 'bg-orange-100 border-orange-400', textClass: 'text-orange-800', badgeClass: 'bg-orange-500 text-white' };
+    if (rank === 2) return { badge: '🥉 #3', bgClass: 'bg-yellow-100 border-yellow-300', textClass: 'text-yellow-800', badgeClass: 'bg-yellow-500 text-white' };
+    if (totalDebts >= 4) return { badge: `⚠️ #${rank + 1}`, bgClass: 'bg-yellow-50 border-yellow-200', textClass: 'text-yellow-700', badgeClass: 'bg-yellow-400 text-yellow-900' };
+    return { badge: `#${rank + 1}`, bgClass: 'bg-gray-50 border-gray-200', textClass: 'text-gray-700', badgeClass: 'bg-gray-400 text-white' };
+  };
 
   // Gerar horário automaticamente do backend (com professores selecionados)
   const generateFromBackend = async () => {
@@ -489,6 +503,12 @@ export default function MakeupSaturdays() {
       return await api.post('/saturday-makeup', data);
     },
     onSuccess: async (response, variables) => {
+      // Capturar o ID do sábado salvo para controle de presença
+      const savedId = response.data?._id || response.data?.id || response.data?.data?._id;
+      if (savedId) {
+        setActiveScheduleId(savedId);
+        setShowAttendancePanel(true);
+      }
       // Se o sábado foi realizado, dar baixa nos débitos
       if (wasHeld && variables.wasHeld) {
         try {
@@ -596,6 +616,23 @@ export default function MakeupSaturdays() {
     }
   });
 
+  // Mutation para confirmar aulas por slot e abater débitos
+  const confirmSlotsMutation = useMutation({
+    mutationFn: async ({ id, slots }: { id: string; slots: Array<{ classId: string; period: number }> }) => {
+      return await api.put(`/saturday-makeup/${id}/confirm-slots`, { confirmedSlots: slots });
+    },
+    onSuccess: (response) => {
+      const { confirmedCount, attendedTeachers } = response.data;
+      toast.success(
+        `✅ ${confirmedCount} aula(s) confirmada(s) — ${attendedTeachers?.length ?? 0} professor(es) presente(s)!\nDébitos abatidos automaticamente.`
+      );
+      queryClient.invalidateQueries({ queryKey: ['makeup-saturdays'] });
+      queryClient.invalidateQueries({ queryKey: ['emergency-schedules'] });
+      setShowAttendancePanel(false);
+    },
+    onError: () => toast.error('Erro ao confirmar presenças')
+  });
+
   const handleSave = () => {
     console.log('💾 handleSave chamado');
     console.log('📅 selectedDate:', selectedDate);
@@ -659,12 +696,69 @@ export default function MakeupSaturdays() {
     setMakeupSchedule(saved.schedule);
     setWasHeld(saved.wasHeld || false);
     
+    const savedId = saved._id || saved.id;
+    setActiveScheduleId(savedId || '');
+    
     toast.success('📅 Horário carregado com sucesso!');
   };
 
   // Imprimir horário
   const handlePrint = () => {
     window.print();
+  };
+
+  const toggleSlotConfirmation = (classId: string, period: number) => {
+    const key = `${classId}-${period}`;
+    setConfirmedSlots(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleConfirmAllSlots = () => {
+    const allKeys = new Set<string>();
+    Object.entries(makeupSchedule).forEach(([classId, slots]) => {
+      (slots as MakeupSlot[]).forEach(slot => allKeys.add(`${classId}-${slot.period}`));
+    });
+    setConfirmedSlots(allKeys);
+  };
+
+  const handleClearAllSlots = () => setConfirmedSlots(new Set());
+
+  // Calcular confirmações por professor no horário atual
+  const getTeacherConfirmationSummary = () => {
+    const summary = new Map<string, { teacherName: string; total: number; confirmed: number }>();
+    Object.entries(makeupSchedule).forEach(([classId, slots]) => {
+      (slots as MakeupSlot[]).forEach(slot => {
+        if (!summary.has(slot.teacherId)) {
+          summary.set(slot.teacherId, { teacherName: slot.teacherName, total: 0, confirmed: 0 });
+        }
+        const entry = summary.get(slot.teacherId)!;
+        entry.total++;
+        if (confirmedSlots.has(`${classId}-${slot.period}`)) entry.confirmed++;
+      });
+    });
+    return Array.from(summary.entries()).map(([teacherId, data]) => ({ teacherId, ...data }))
+      .sort((a, b) => b.total - a.total);
+  };
+
+  // Calcular resumo de confirmações a partir de um sábado salvo
+  const getSavedSaturdaySlotSummary = (saved: any) => {
+    const summary = new Map<string, { teacherName: string; total: number; confirmed: number }>();
+    Object.entries(saved.schedule || {}).forEach(([classId, slots]: [string, any]) => {
+      (slots as any[]).forEach((slot: any) => {
+        if (!slot?.teacherId) return;
+        if (!summary.has(slot.teacherId)) {
+          summary.set(slot.teacherId, { teacherName: slot.teacherName, total: 0, confirmed: 0 });
+        }
+        const entry = summary.get(slot.teacherId)!;
+        entry.total++;
+        if (slot.confirmed) entry.confirmed++;
+      });
+    });
+    return Array.from(summary.entries()).map(([teacherId, data]) => ({ teacherId, ...data }))
+      .sort((a, b) => b.total - a.total);
   };
 
   const getSubjectColor = (subjectId: string) => {
@@ -759,11 +853,52 @@ export default function MakeupSaturdays() {
                       <span className="font-bold text-green-600">{attendedTeachers.length}/{totalTeachers}</span>
                     </div>
                   </div>
+
+                  {/* Resumo de confirmações por professor */}
+                  {(() => {
+                    const slotSummary = getSavedSaturdaySlotSummary(saved);
+                    if (slotSummary.length === 0) return null;
+                    const totalConfirmed = slotSummary.reduce((s, t) => s + t.confirmed, 0);
+                    const totalSlots = slotSummary.reduce((s, t) => s + t.total, 0);
+                    return (
+                      <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                        <div className="text-xs font-semibold text-blue-800 mb-1 flex items-center gap-1">
+                          <CheckSquare size={12} /> Aulas Confirmadas: {totalConfirmed}/{totalSlots}
+                        </div>
+                        <div className="w-full bg-blue-100 rounded-full h-2 mb-1">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full transition-all"
+                            style={{ width: totalSlots > 0 ? `${(totalConfirmed / totalSlots) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        {slotSummary.map(t => (
+                          <div key={t.teacherId} className="text-xs text-blue-700 flex justify-between">
+                            <span className="truncate max-w-[120px]">{t.teacherName}</span>
+                            <span className={`font-bold ${t.confirmed === t.total ? 'text-green-600' : t.confirmed > 0 ? 'text-orange-600' : 'text-red-500'}`}>
+                              {t.confirmed}/{t.total}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   
                   {/* Botões de Ação */}
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => handleView(saved)}
+                      onClick={() => {
+                        handleView(saved);
+                        // Carregar slots confirmados do sábado salvo
+                        const loadedConfirmed = new Set<string>();
+                        Object.entries(saved.schedule || {}).forEach(([classId, slots]: [string, any]) => {
+                          (slots as any[]).forEach((slot: any) => {
+                            if (slot?.confirmed) loadedConfirmed.add(`${classId}-${slot.period}`);
+                          });
+                        });
+                        setConfirmedSlots(loadedConfirmed);
+                        setActiveScheduleId(scheduleId);
+                        setShowAttendancePanel(true);
+                      }}
                       className="btn btn-sm btn-primary flex items-center justify-center gap-1"
                     >
                       <Eye size={16} />
@@ -779,6 +914,24 @@ export default function MakeupSaturdays() {
                     >
                       <Printer size={16} />
                       Imprimir
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleView(saved);
+                        const loadedConfirmed = new Set<string>();
+                        Object.entries(saved.schedule || {}).forEach(([classId, slots]: [string, any]) => {
+                          (slots as any[]).forEach((slot: any) => {
+                            if (slot?.confirmed) loadedConfirmed.add(`${classId}-${slot.period}`);
+                          });
+                        });
+                        setConfirmedSlots(loadedConfirmed);
+                        setActiveScheduleId(scheduleId);
+                        setShowAttendancePanel(true);
+                      }}
+                      className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center gap-1 col-span-2"
+                    >
+                      <CheckSquare size={16} />
+                      Confirmar Presenças por Aula
                     </button>
                     {saved.status !== 'realized' && attendedTeachers.length > 0 && (
                       <button
@@ -925,41 +1078,24 @@ export default function MakeupSaturdays() {
                 </p>
               </div>
 
-              {/* Checkbox para marcar se foi realizado */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={wasHeld}
-                    onChange={(e) => setWasHeld(e.target.checked)}
-                    className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
-                  />
-                  <div>
-                    <div className="font-semibold text-green-800">
-                      ✅ Sábado de Reposição foi Realizado
-                    </div>
-                    <div className="text-sm text-green-700">
-                      Marque para dar baixa nas aulas devidas dos professores
-                    </div>
-                  </div>
-                </label>
-              </div>
-
               {/* Seletor de Professores para o Sábado */}
-              {teacherDebts.length > 0 ? (
+              {(teacherDebts.length > 0 || (teachersData && teachersData.length > 0)) ? (
                 <div className="space-y-3">
                   <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
                     <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
                       <Users size={18} />
                       1️⃣ Selecione os Professores PRESENTES no Sábado
+                      <span className="ml-auto text-xs font-normal bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">
+                        Ordenado por prioridade ↑
+                      </span>
                     </h4>
                     
                     <div className="space-y-2 max-h-64 overflow-y-auto bg-white p-3 rounded border border-blue-200">
                       <div className="mb-2 flex items-center justify-between">
                         <button
                           onClick={() => {
-                            const allIds = new Set(teacherDebts.map(d => d.teacherId));
-                            setSelectedTeachersForSaturday(allIds);
+                            const listToSelect = teacherDebts.length > 0 ? teacherDebts.map(d => d.teacherId) : (teachersData || []).map((t: any) => (t._id || t.id || '').toString());
+                            setSelectedTeachersForSaturday(new Set(listToSelect));
                           }}
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                         >
@@ -973,13 +1109,14 @@ export default function MakeupSaturdays() {
                         </button>
                       </div>
                       
-                      {teacherDebts.map(debt => {
+                      {(teacherDebts.length > 0 ? teacherDebts : (teachersData || []).map((t: any) => ({ teacherId: (t._id || t.id || '').toString(), teacherName: t.name, totalDebts: 0 }))).map((debt, rankIdx) => {
                         const isSelected = selectedTeachersForSaturday.has(debt.teacherId);
+                        const priority = getTeacherPriorityInfo(rankIdx, debt.totalDebts);
                         return (
                           <label
                             key={debt.teacherId}
-                            className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
-                              isSelected ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                            className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors border-2 ${
+                              isSelected ? `${priority.bgClass}` : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                             }`}
                           >
                             <input
@@ -996,15 +1133,28 @@ export default function MakeupSaturdays() {
                               }}
                               className="w-5 h-5 text-green-600 rounded"
                             />
-                            <div className="flex-1">
-                              <div className={`font-semibold ${isSelected ? 'text-green-800' : 'text-gray-800'}`}>
-                                {debt.teacherName}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {debt.totalDebts > 0 && (
+                                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${priority.badgeClass}`}>
+                                    {priority.badge}
+                                  </span>
+                                )}
+                                <span className={`font-semibold truncate ${isSelected ? priority.textClass : 'text-gray-800'}`}>
+                                  {debt.teacherName}
+                                </span>
                               </div>
-                              <div className="text-xs text-gray-600">
-                                {debt.totalDebts} aula{debt.totalDebts > 1 ? 's' : ''} a repor
-                              </div>
+                              {debt.totalDebts > 0 && (
+                                <div className="text-xs text-gray-600 flex items-center gap-1 mt-0.5">
+                                  <TrendingUp size={10} className="text-red-500" />
+                                  {debt.totalDebts} aula{debt.totalDebts > 1 ? 's' : ''} a repor
+                                  {(debt as any).accumulatedDebts > 0 && (
+                                    <span className="text-red-600 font-semibold">+{(debt as any).accumulatedDebts} acum.</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            {isSelected && <span className="text-green-600 text-xl">✓</span>}
+                            {isSelected && <CheckCircle size={18} className="text-green-600 flex-shrink-0" />}
                           </label>
                         );
                       })}
@@ -1026,53 +1176,65 @@ export default function MakeupSaturdays() {
               <div className="space-y-2">
                 <button
                   onClick={generateFromBackend}
-                  disabled={isGenerating || !selectedDate || selectedTeachersForSaturday.size === 0 || teacherDebts.length === 0}
+                  disabled={isGenerating || !selectedDate || selectedTeachersForSaturday.size === 0}
                   className="btn btn-primary w-full flex items-center justify-center gap-2 text-lg py-3"
                   title="Gera horário apenas com os professores selecionados"
                 >
                   <RefreshCw size={20} className={isGenerating ? 'animate-spin' : ''} />
                   {isGenerating ? 'Gerando...' : `2️⃣ Gerar Horário (${selectedTeachersForSaturday.size} professores)`}
                 </button>
-                
-                {selectedTeachersForSaturday.size === 0 && teacherDebts.length > 0 && (
+
+                {/* Checkbox para marcar se foi realizado — aparece APÓS gerar */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={wasHeld}
+                      onChange={(e) => setWasHeld(e.target.checked)}
+                      className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                    />
+                    <div>
+                      <div className="font-semibold text-green-800">
+                        ✅ Sábado de Reposição foi Realizado
+                      </div>
+                      <div className="text-sm text-green-700">
+                        Marque para dar baixa nas aulas devidas dos professores
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {selectedTeachersForSaturday.size === 0 && (
                   <p className="text-sm text-orange-600 text-center">
                     ⚠️ Selecione pelo menos 1 professor acima
-                  </p>
-                )}
-                
-                {teacherDebts.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center">
-                    ℹ️ Não há professores com débitos no período selecionado
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Débitos dos Professores */}
           {teacherDebts.length > 0 && (
             <div className="card border-2 border-yellow-300 bg-yellow-50">
               <h3 className="font-bold text-lg mb-4 text-yellow-800 flex items-center gap-2">
                 <AlertTriangle className="text-yellow-600" />
-                Professores com Aulas a Repor
+                Ranking de Professores — Prioridade de Reposição
+                <span className="ml-auto text-xs bg-yellow-200 text-yellow-900 px-2 py-0.5 rounded-full font-normal">
+                  {teacherDebts.length} prof. · {teacherDebts.reduce((a, d) => a + d.totalDebts, 0)} aulas
+                </span>
               </h3>
               
               <div className="space-y-3">
-                {teacherDebts.length === 0 ? (
-                  <div className="p-8 text-center bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border-2 border-green-300">
-                    <div className="text-6xl mb-3">🎉</div>
-                    <div className="text-2xl font-bold text-green-800 mb-2">
-                      Todos em dia!
-                    </div>
-                    <div className="text-gray-600">
-                      Não há professores com débitos de reposição no momento.
-                    </div>
-                  </div>
-                ) : (
-                  teacherDebts.map(debt => (
-                    <div key={debt.teacherId} className="bg-white p-4 rounded-lg border border-yellow-200">
+                {teacherDebts.map((debt, rankIdx) => {
+                  const priority = getTeacherPriorityInfo(rankIdx, debt.totalDebts);
+                  return (
+                    <div key={debt.teacherId} className={`p-4 rounded-lg border-2 ${priority.bgClass}`}>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-800">{debt.teacherName}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold px-2 py-1 rounded ${priority.badgeClass}`}>
+                            {priority.badge}
+                          </span>
+                          <h4 className={`font-semibold ${priority.textClass}`}>{debt.teacherName}</h4>
+                        </div>
                         <div className="flex items-center gap-2">
                           {(debt as any).realizedClasses > 0 && (
                             <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
@@ -1081,30 +1243,30 @@ export default function MakeupSaturdays() {
                           )}
                           {debt.accumulatedDebts && debt.accumulatedDebts > 0 && (
                             <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold" title="Débitos acumulados de não comparecimento em sábado">
-                              ⚠️ {debt.accumulatedDebts} acumulado(s)
+                              ⚠️ {debt.accumulatedDebts} acum.
                             </span>
                           )}
-                          <span className="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                          <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                            <TrendingUp size={12} />
                             {debt.totalDebts} aula{debt.totalDebts > 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <div className="text-sm space-y-1">
                         {debt.debts.map((d, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            {d.isAccumulated && (
-                              <span className="text-red-600 font-bold" title="Débito acumulado">⚠️</span>
-                            )}
+                          <div key={idx} className="flex items-center gap-2 text-gray-700">
+                            {d.isAccumulated && <span className="text-red-600 font-bold" title="Débito acumulado">⚠️</span>}
+                            <BookOpen size={12} className="text-gray-500" />
                             <span className="font-medium">{d.subjectName}</span>
-                            <span>em</span>
+                            <span className="text-gray-500">→</span>
                             <span className="font-medium">{d.className}</span>
-                            <span className="text-red-600">({d.missedLessons} aula{d.missedLessons > 1 ? 's' : ''})</span>
+                            <span className="ml-auto text-red-600 font-semibold text-xs">({d.missedLessons})</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                  ))
-                )}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1214,12 +1376,26 @@ export default function MakeupSaturdays() {
                                     }}
                                   >
                                     {slot ? (
-                                      <div className="text-center">
+                                      <div className="text-center relative">
+                                        {/* Checkbox de confirmação */}
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleSlotConfirmation(classId, period)}
+                                          className={`absolute top-0 right-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors no-print ${
+                                            confirmedSlots.has(`${classId}-${period}`)
+                                              ? 'bg-green-500 border-green-600 text-white'
+                                              : 'bg-white border-gray-300 hover:border-green-400'
+                                          }`}
+                                          title={confirmedSlots.has(`${classId}-${period}`) ? 'Aula confirmada — clique para desmarcar' : 'Clique para confirmar aula dada'}
+                                        >
+                                          {confirmedSlots.has(`${classId}-${period}`) && <CheckCircle size={12} />}
+                                        </button>
                                         <div 
                                           className="font-bold text-sm mb-1 px-2 py-1 rounded"
                                           style={{ 
                                             backgroundColor: getSubjectColor(slot.subjectId),
-                                            color: 'white'
+                                            color: 'white',
+                                            opacity: confirmedSlots.has(`${classId}-${period}`) ? 1 : 0.7
                                           }}
                                         >
                                           {slot.subjectName}
@@ -1227,6 +1403,9 @@ export default function MakeupSaturdays() {
                                         <div className="text-xs text-gray-700 font-medium">
                                           {slot.teacherName}
                                         </div>
+                                        {confirmedSlots.has(`${classId}-${period}`) && (
+                                          <div className="text-xs text-green-700 font-bold mt-1">✓ Dada</div>
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="text-center text-gray-400 text-xs">—</div>
@@ -1272,6 +1451,108 @@ export default function MakeupSaturdays() {
                   </div>
                 </div>
               </div>
+
+              {/* ✅ PAINEL DE CONTROLE DE PRESENÇA POR AULA */}
+              {(showAttendancePanel || Object.keys(makeupSchedule).length > 0) && (
+                <div className="card border-2 border-emerald-400 bg-emerald-50 no-print">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-xl text-emerald-800 flex items-center gap-2">
+                      <CheckSquare className="text-emerald-600" />
+                      Controle de Presença por Aula
+                    </h3>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleConfirmAllSlots}
+                        className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-1"
+                      >
+                        <CheckCircle size={14} /> Marcar Todas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClearAllSlots}
+                        className="btn btn-sm btn-outline flex items-center gap-1"
+                      >
+                        <X size={14} /> Limpar
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-emerald-700 mb-4">
+                    Clique nos checkboxes na grade acima (ou use os botões de ação abaixo) para confirmar cada aula dada. O sistema abaterá automaticamente do déficit do professor.
+                  </p>
+
+                  {/* Resumo por professor */}
+                  <div className="space-y-3 mb-5">
+                    {getTeacherConfirmationSummary().map((t, rankIdx) => {
+                      const pct = t.total > 0 ? (t.confirmed / t.total) * 100 : 0;
+                      const priority = getTeacherPriorityInfo(rankIdx, t.total);
+                      return (
+                        <div key={t.teacherId} className={`p-3 rounded-lg border-2 ${priority.bgClass}`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${priority.badgeClass}`}>
+                                {priority.badge}
+                              </span>
+                              <span className={`font-semibold text-sm ${priority.textClass}`}>{t.teacherName}</span>
+                            </div>
+                            <span className={`text-sm font-bold ${t.confirmed === t.total ? 'text-green-700' : t.confirmed > 0 ? 'text-orange-700' : 'text-gray-500'}`}>
+                              {t.confirmed}/{t.total} aula{t.total !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : pct > 0 ? 'bg-orange-400' : 'bg-gray-300'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="text-xs mt-1 text-right">
+                            {pct === 100 && <span className="text-green-700 font-bold">✅ Completo — déficit será zerado</span>}
+                            {pct > 0 && pct < 100 && <span className="text-orange-700 font-bold">⚡ Parcial — {t.confirmed} aula(s) abatida(s)</span>}
+                            {pct === 0 && t.total > 0 && <span className="text-gray-500">Nenhuma confirmada ainda</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Contadores totais */}
+                  <div className="flex items-center justify-between text-sm text-emerald-800 bg-emerald-100 rounded-lg p-3 mb-4">
+                    <span className="font-semibold">📊 Total confirmado:</span>
+                    <span className="font-bold text-lg">{confirmedSlots.size} / {Object.values(makeupSchedule).flat().length} aulas</span>
+                  </div>
+
+                  {/* Botão Salvar Presenças */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!activeScheduleId) {
+                        toast.error('Salve o horário primeiro antes de confirmar presenças');
+                        return;
+                      }
+                      const slots = Array.from(confirmedSlots).map(key => {
+                        const [classId, periodStr] = key.split('-');
+                        return { classId, period: Number(periodStr) };
+                      });
+                      confirmSlotsMutation.mutate({ id: activeScheduleId, slots });
+                    }}
+                    disabled={confirmSlotsMutation.isPending || confirmedSlots.size === 0 || !activeScheduleId}
+                    className="btn btn-success w-full flex items-center justify-center gap-2 text-lg py-3"
+                  >
+                    <CheckSquare size={20} />
+                    {confirmSlotsMutation.isPending
+                      ? 'Salvando presenças...'
+                      : activeScheduleId
+                        ? `✅ Salvar ${confirmedSlots.size} Presença(s) e Abater Déficits`
+                        : '⚠️ Salve o horário primeiro'}
+                  </button>
+                  {!activeScheduleId && Object.keys(makeupSchedule).length > 0 && (
+                    <p className="text-xs text-orange-600 text-center mt-2">
+                      Clique em "Salvar Horário" acima para habilitar a confirmação de presenças
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Resumo e ações */}
               {wasHeld && (
@@ -1384,23 +1665,23 @@ export default function MakeupSaturdays() {
             <ul className="space-y-3 text-sm text-gray-700">
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">1.</span>
-                <span>Selecione a data do sábado de reposição</span>
+                <span>Defina o período e o sábado de reposição</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">2.</span>
-                <span>O sistema busca automaticamente os professores faltosos</span>
+                <span>O sistema lista professores ordenados pelo maior déficit de aulas</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">3.</span>
-                <span>Clique em "Gerar Horário Automaticamente"</span>
+                <span>Selecione os professores e clique em "Gerar Horário"</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">4.</span>
-                <span>Revise o horário gerado por turma</span>
+                <span>Salve o horário para ativar o controle de presença</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">5.</span>
-                <span>Salve e imprima para distribuição</span>
+                <span>Marque cada aula dada (✓) e confirme — o sistema abate automaticamente o déficit de cada professor</span>
               </li>
             </ul>
           </div>
@@ -1418,7 +1699,7 @@ export default function MakeupSaturdays() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-700">Total de aulas a repor:</span>
-                <span className="font-bold text-green-800">
+                <span className="font-bold text-red-700">
                   {teacherDebts.reduce((acc, d) => acc + d.totalDebts, 0)}
                 </span>
               </div>
@@ -1428,6 +1709,21 @@ export default function MakeupSaturdays() {
                   {Object.keys(makeupSchedule).length}
                 </span>
               </div>
+              {confirmedSlots.size > 0 && (
+                <div className="flex items-center justify-between border-t pt-2">
+                  <span className="text-emerald-700 font-semibold">Aulas confirmadas:</span>
+                  <span className="font-bold text-emerald-700">{confirmedSlots.size}</span>
+                </div>
+              )}
+              {teacherDebts.length > 0 && (
+                <div className="mt-2 pt-2 border-t">
+                  <div className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
+                    <Award size={12} className="text-yellow-600" /> Maior devedor:
+                  </div>
+                  <div className="text-sm font-bold text-red-700">{teacherDebts[0]?.teacherName}</div>
+                  <div className="text-xs text-red-600">{teacherDebts[0]?.totalDebts} aula(s) pendente(s)</div>
+                </div>
+              )}
             </div>
           </div>
 

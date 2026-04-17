@@ -22,6 +22,9 @@ import SchoolSettings from './pages/SchoolSettings';
 import DisplayPanel from './pages/DisplayPanel';
 import DisplayPanelConfig from './pages/DisplayPanelConfig';
 import EmergencySchedule from './pages/EmergencySchedule';
+import MakeupSaturdays from './pages/MakeupSaturdays';
+import ClassPayments from './pages/ClassPayments';
+import SubstitutePublic from './pages/SubstitutePublic';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
 import SchoolUserLogin from './pages/SchoolUserLogin';
@@ -128,6 +131,8 @@ function App() {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
         <Route path="/payment-pending" element={<PaymentCheckout />} />
+        {/* Link público de substituto — sem auth */}
+        <Route path="/substitute/:token" element={<SubstitutePublic />} />
         
         <Route path="/" element={
           <PrivateRoute>
@@ -148,6 +153,8 @@ function App() {
           <Route path="timetable-generator" element={<ClientRoute><TimetableGenerator /></ClientRoute>} />
 
           <Route path="emergency-schedule" element={<ClientRoute><EmergencySchedule /></ClientRoute>} />
+          <Route path="makeup-saturdays" element={<ClientRoute><MakeupSaturdays /></ClientRoute>} />
+          <Route path="class-payments" element={<ClientRoute><ClassPayments /></ClientRoute>} />
           <Route path="teacher-attendance" element={<ClientRoute><TeacherAttendance /></ClientRoute>} />
           <Route path="teacher-frequency-report" element={<ClientRoute><TeacherFrequencyReport /></ClientRoute>} />
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />

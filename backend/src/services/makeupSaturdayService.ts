@@ -3,6 +3,7 @@ import TeacherDebtRecord from '../models/TeacherDebtRecord';
 import Teacher from '../models/Teacher';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
+import TeacherSubject from '../models/TeacherSubject';
 
 /**
  * Processa um sábado de reposição após sua realização
@@ -276,6 +277,48 @@ export async function generateSaturdayScheduleFromDebts(
 
   console.log('⏰ Períodos gerados:', periods);
   let currentPeriod = 0;
+
+  // --- Fallback: se nenhum débito foi encontrado para os selecionados, usar TeacherSubject ---
+  if (debtsByTeacher.size === 0 && selectedTeacherIds && selectedTeacherIds.length > 0) {
+    console.log('⚠️ Nenhum débito encontrado — usando TeacherSubject como fallback');
+    const assignments = await TeacherSubject.find({ teacherId: { $in: selectedTeacherIds } });
+    const fallbackTeachers = await Teacher.find({ _id: { $in: selectedTeacherIds } });
+    const fallbackTeacherMap = new Map(fallbackTeachers.map(t => [t._id.toString(), t]));
+    const subjectIds = [...new Set(assignments.map(a => a.subjectId))];
+    const classIds = [...new Set(assignments.map(a => a.classId).filter(Boolean))];
+    const subjects = await Subject.find({ _id: { $in: subjectIds } });
+    const classes = await Class.find({ _id: { $in: classIds } }).populate('grade');
+    const subjectMap = new Map(subjects.map(s => [s._id.toString(), s]));
+    const classMap = new Map(classes.map(c => [c._id.toString(), c]));
+
+    for (const assignment of assignments) {
+      if (currentPeriod >= maxPeriods) break;
+      const teacher = fallbackTeacherMap.get(assignment.teacherId?.toString());
+      if (!teacher) continue;
+      const subject = subjectMap.get(assignment.subjectId?.toString());
+      if (!assignment.classId) continue;
+      const cls = classMap.get(assignment.classId.toString());
+      if (!cls) continue;
+      const period = periods[currentPeriod];
+      const classId = cls._id.toString();
+      if (!schedule[classId]) schedule[classId] = [];
+      schedule[classId].push({
+        period: period.period,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        teacherId: teacher._id.toString(),
+        teacherName: teacher.name,
+        subjectId: subject?._id.toString() || assignment.subjectId,
+        subjectName: subject?.name || '',
+        classId,
+        className: `${(cls as any).grade?.name || ''} - ${cls.name}`.trim(),
+      });
+      teacherDebts.push({ teacherId: teacher._id.toString(), teacherName: teacher.name, totalHours: 1, details: [] });
+      currentPeriod++;
+    }
+    console.log(`✅ Fallback: ${currentPeriod} slot(s) gerado(s) a partir de TeacherSubject`);
+    return { schedule, teacherDebts, totalScheduledHours: currentPeriod };
+  }
 
   // Distribuir débitos no horário
   for (const [teacherId, makeupClasses] of debtsByTeacher) {

@@ -26,7 +26,8 @@ import {
   FileText,
   CheckCircle,
   BarChart3,
-  ScrollText
+  ScrollText,
+  CalendarCheck
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import NotificationCenter from './NotificationCenter';
@@ -189,6 +190,26 @@ export default function Layout() {
             badge: 'NOVO',
             highlight: true,
             subtitle: 'Emergência e Reposição'
+          },
+          { 
+            icon: CalendarCheck, 
+            label: 'Gerador de Sábado de Reposição', 
+            path: '/makeup-saturdays',
+            description: '📅 Gere horários de reposição, confirme presenças e abata déficits automaticamente',
+            color: 'emerald',
+            badge: 'DÉFICITS',
+            highlight: true,
+            subtitle: 'Reposição e Presença'
+          },
+          { 
+            icon: DollarSign, 
+            label: 'Pagamento de Aulas', 
+            path: '/class-payments',
+            description: '💵 Gerencie lacunas de ausência, registre substitutos e adiantamentos de aula',
+            color: 'indigo',
+            badge: 'SUBSTITUTOS',
+            highlight: true,
+            subtitle: 'Lacunas e Substitutos'
           },
           { 
             icon: CheckCircle, 

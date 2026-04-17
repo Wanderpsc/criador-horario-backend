@@ -41,6 +41,33 @@ interface TeacherReport {
   totalDeficit: number;
   totalSurplus: number;
   subjectClassDetails: SubjectClassDetail[];
+  // Pagamento de Aulas
+  coveredBySubstitute?: Array<{
+    date: string;
+    period: number;
+    startTime: string;
+    endTime: string;
+    className: string;
+    subjectName: string;
+    substituteTeacherName: string;
+    status: string;
+    filledViaLink: boolean;
+    paymentId: string;
+  }>;
+  givenAsSubstitute?: Array<{
+    date: string;
+    period: number;
+    startTime: string;
+    endTime: string;
+    className: string;
+    subjectName: string;
+    absentTeacherName: string;
+    status: string;
+    filledViaLink: boolean;
+    paymentId: string;
+  }>;
+  totalCoveredClasses?: number;
+  totalSubstituteClasses?: number;
 }
 
 interface ReportData {
@@ -72,6 +99,10 @@ const TeacherFrequencyReport: React.FC = () => {
   const { user } = useAuthStore();
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+  // Modo de período: mensal fixo ou intervalo customizado
+  const [periodMode, setPeriodMode] = useState<'monthly' | 'custom'>('monthly');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
   const [filterTeacher, setFilterTeacher] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
   const [filterClass, setFilterClass] = useState('');
@@ -92,7 +123,7 @@ const TeacherFrequencyReport: React.FC = () => {
 
   useEffect(() => {
     loadReport();
-  }, [month, year]);
+  }, [month, year, periodMode, customStart, customEnd]);
 
   useEffect(() => {
     loadCalendarAndTimetable();
@@ -108,9 +139,11 @@ const TeacherFrequencyReport: React.FC = () => {
   const loadReport = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/teacher-frequency-report/deficit-surplus', {
-        params: { month, year }
-      });
+      const params: Record<string, string | number> =
+        periodMode === 'custom' && customStart && customEnd
+          ? { startDate: customStart, endDate: customEnd }
+          : { month, year };
+      const response = await api.get('/teacher-frequency-report/deficit-surplus', { params });
       setReportData(response.data);
     } catch (error: any) {
       console.error('Erro ao carregar relatório:', error);
@@ -419,6 +452,11 @@ const TeacherFrequencyReport: React.FC = () => {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
+  // Rótulo legível do período selecionado
+  const periodLabel = periodMode === 'custom' && customStart && customEnd
+    ? `${new Date(customStart + 'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(customEnd + 'T12:00:00').toLocaleDateString('pt-BR')}`
+    : `${monthNames[month - 1]}/${year}`;
+
   const handleOpenPrintModal = () => {
     setShowPrintModal(true);
     setPrintMode('all');
@@ -499,7 +537,7 @@ const TeacherFrequencyReport: React.FC = () => {
       }).join('');
 
       frequencyHtml = '<h2 style="font-size:16pt;color:#1e3a5f;margin:20px 0 10px;border-bottom:2px solid #1e3a5f;padding-bottom:6px;">'
-        + 'Relatório de Frequência — ' + monthNames[month - 1] + '/' + year
+        + 'Relatório de Frequência — ' + periodLabel
         + '</h2>' + teacherBlocks;
     }
 
@@ -540,7 +578,7 @@ const TeacherFrequencyReport: React.FC = () => {
 
       workloadHtml = (printSection === 'both' ? '<div style="page-break-before:always;"></div>' : '')
         + '<h2 style="font-size:16pt;color:#1e3a5f;margin:20px 0 10px;border-bottom:2px solid #1e3a5f;padding-bottom:6px;">'
-        + 'Relação Geral de Cargas Horárias — ' + monthNames[month - 1] + '/' + year + '</h2>'
+        + 'Relação Geral de Cargas Horárias — ' + periodLabel + '</h2>'
         + '<table style="width:100%;border-collapse:collapse;font-size:9pt;"><thead>'
         + '<tr style="background:#1e3a8a;color:#fff;">'
         + '<th style="border:1px solid #3b82f6;padding:8px;text-align:left;">Professor</th>'
@@ -571,7 +609,7 @@ const TeacherFrequencyReport: React.FC = () => {
     printWindow.document.write(`<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
-<title>Relatório de Frequência — ${monthNames[month - 1]}/${year}</title>
+<title>Relatório de Frequência — ${periodLabel}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; padding: 20px; }
@@ -779,31 +817,86 @@ const TeacherFrequencyReport: React.FC = () => {
 
       {/* Filtros */}
       <div className="bg-white p-4 rounded-lg shadow mb-6">
+        {/* Toggle modo de período */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm font-semibold text-gray-700">Período:</span>
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => setPeriodMode('monthly')}
+              className={`px-4 py-1.5 text-sm font-medium transition ${
+                periodMode === 'monthly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              📅 Mês / Ano
+            </button>
+            <button
+              onClick={() => setPeriodMode('custom')}
+              className={`px-4 py-1.5 text-sm font-medium transition border-l border-gray-300 ${
+                periodMode === 'custom' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              📆 Intervalo de Datas
+            </button>
+          </div>
+          {periodMode === 'custom' && customStart && customEnd && (
+            <span className="text-sm text-blue-700 font-medium bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+              {periodLabel}
+            </span>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mês</label>
-            <select
-              value={month}
-              onChange={e => setMonth(Number(e.target.value))}
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              {monthNames.map((name, idx) => (
-                <option key={idx} value={idx + 1}>{name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
-            <select
-              value={year}
-              onChange={e => setYear(Number(e.target.value))}
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              {[2024, 2025, 2026, 2027].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
+          {/* Seletores de período */}
+          {periodMode === 'monthly' ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mês</label>
+                <select
+                  value={month}
+                  onChange={e => setMonth(Number(e.target.value))}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  {monthNames.map((name, idx) => (
+                    <option key={idx} value={idx + 1}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
+                <select
+                  value={year}
+                  onChange={e => setYear(Number(e.target.value))}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  {[2024, 2025, 2026, 2027].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Inicial</label>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={e => setCustomStart(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={e => setCustomEnd(e.target.value)}
+                  min={customStart}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Professor</label>
             <input
@@ -1010,6 +1103,87 @@ const TeacherFrequencyReport: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Seção Pagamento de Aulas */}
+                  {((report.coveredBySubstitute && report.coveredBySubstitute.length > 0) ||
+                    (report.givenAsSubstitute && report.givenAsSubstitute.length > 0)) && (
+                    <div className="mt-4 border-t pt-4">
+                      {report.coveredBySubstitute && report.coveredBySubstitute.length > 0 && (
+                        <div className="mb-3">
+                          <h5 className="text-xs font-semibold text-orange-700 uppercase mb-1 flex items-center gap-1">
+                            <span>🔄</span> Aulas Cobertas por Substituto ({report.totalCoveredClasses})
+                          </h5>
+                          <table className="w-full text-xs">
+                            <thead className="bg-orange-50">
+                              <tr>
+                                <th className="px-3 py-1 text-left text-orange-800">Data</th>
+                                <th className="px-3 py-1 text-left text-orange-800">Disciplina</th>
+                                <th className="px-3 py-1 text-left text-orange-800">Turma</th>
+                                <th className="px-3 py-1 text-left text-orange-800">Substituto</th>
+                                <th className="px-3 py-1 text-center text-orange-800">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-orange-100">
+                              {report.coveredBySubstitute.map((c, i) => (
+                                <tr key={i} className="hover:bg-orange-50">
+                                  <td className="px-3 py-1">{new Date(c.date).toLocaleDateString('pt-BR')}</td>
+                                  <td className="px-3 py-1">{c.subjectName}</td>
+                                  <td className="px-3 py-1">{c.className}</td>
+                                  <td className="px-3 py-1">{c.substituteTeacherName}</td>
+                                  <td className="px-3 py-1 text-center">
+                                    <span className={`px-2 py-0.5 rounded-full font-medium ${
+                                      c.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                      c.status === 'filled' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>
+                                      {c.status === 'paid' ? 'Pago' : c.status === 'filled' ? 'Preenchido' : 'Pendente'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      {report.givenAsSubstitute && report.givenAsSubstitute.length > 0 && (
+                        <div>
+                          <h5 className="text-xs font-semibold text-indigo-700 uppercase mb-1 flex items-center gap-1">
+                            <span>💼</span> Aulas Dadas como Substituto ({report.totalSubstituteClasses})
+                          </h5>
+                          <table className="w-full text-xs">
+                            <thead className="bg-indigo-50">
+                              <tr>
+                                <th className="px-3 py-1 text-left text-indigo-800">Data</th>
+                                <th className="px-3 py-1 text-left text-indigo-800">Disciplina</th>
+                                <th className="px-3 py-1 text-left text-indigo-800">Turma</th>
+                                <th className="px-3 py-1 text-left text-indigo-800">Prof. Ausente</th>
+                                <th className="px-3 py-1 text-center text-indigo-800">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-indigo-100">
+                              {report.givenAsSubstitute.map((g, i) => (
+                                <tr key={i} className="hover:bg-indigo-50">
+                                  <td className="px-3 py-1">{new Date(g.date).toLocaleDateString('pt-BR')}</td>
+                                  <td className="px-3 py-1">{g.subjectName}</td>
+                                  <td className="px-3 py-1">{g.className}</td>
+                                  <td className="px-3 py-1">{g.absentTeacherName}</td>
+                                  <td className="px-3 py-1 text-center">
+                                    <span className={`px-2 py-0.5 rounded-full font-medium ${
+                                      g.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                      g.status === 'filled' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>
+                                      {g.status === 'paid' ? 'Pago' : g.status === 'filled' ? 'Preenchido' : 'Pendente'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1120,7 +1294,7 @@ const TeacherFrequencyReport: React.FC = () => {
                 📚 Relação Geral de Cargas Horárias
               </h2>
               <p className="text-sm text-blue-700 mt-1">
-                Lotação de todos os professores por disciplina • {monthNames[month - 1]}/{year} • Dados da página de <strong>Lotação de Professores</strong>
+                Lotação de todos os professores por disciplina • {periodLabel} • Dados da página de <strong>Lotação de Professores</strong>
               </p>
             </div>
             <div className="text-right">
@@ -1194,7 +1368,7 @@ const TeacherFrequencyReport: React.FC = () => {
                       </th>
                     ) : workloadPeriod === 'monthly' ? (
                       <th className="border border-blue-500 p-4 text-center font-bold">
-                        🗓️ Carga Horária Mensal — {monthNames[month - 1]}/{year}
+                        🗓️ Carga Horária — {periodLabel}
                       </th>
                     ) : (
                       <th className="border border-blue-500 p-4 text-center font-bold">

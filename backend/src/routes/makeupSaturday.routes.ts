@@ -346,7 +346,68 @@ router.post('/generate-from-debts', auth, async (req: Request, res: Response) =>
   }
 });
 
+// Confirmar aulas individuais (por slot) e atualizar presenças / abater déficits
+router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
+  try {
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
+    const { id } = req.params;
+    const { confirmedSlots } = req.body; // Array<{ classId: string; period: number }>
+
+    if (!Array.isArray(confirmedSlots)) {
+      return res.status(400).json({ error: 'confirmedSlots deve ser um array' });
+    }
+
+    const query: any = { _id: id };
+    if (schoolId) query.schoolId = schoolId;
+
+    const makeupSaturday = await MakeupSaturday.findOne(query);
+    if (!makeupSaturday) {
+      return res.status(404).json({ error: 'Sábado de reposição não encontrado' });
+    }
+
+    // Montar set de chaves confirmadas para lookup O(1)
+    const confirmedSet = new Set<string>(
+      confirmedSlots.map((s: { classId: string; period: number }) => `${s.classId}-${s.period}`)
+    );
+
+    // Atualizar schedule marcando slots confirmados e coletando professores presentes
+    const updatedSchedule: Record<string, any[]> = {};
+    const confirmedTeacherIds = new Set<string>();
+    let confirmedCount = 0;
+
+    for (const [classId, slots] of Object.entries(makeupSaturday.schedule as Record<string, any[]>)) {
+      updatedSchedule[classId] = slots.map((slot: any) => {
+        const key = `${classId}-${slot.period}`;
+        const isConfirmed = confirmedSet.has(key);
+        if (isConfirmed && slot.teacherId) {
+          confirmedTeacherIds.add(slot.teacherId as string);
+          confirmedCount++;
+        }
+        return { ...slot, confirmed: isConfirmed };
+      });
+    }
+
+    makeupSaturday.schedule = updatedSchedule;
+    makeupSaturday.attendedTeachers = Array.from(confirmedTeacherIds);
+    makeupSaturday.totalRealizedHours = confirmedCount;
+
+    await makeupSaturday.save();
+
+    console.log(`✅ ${confirmedCount} slot(s) confirmado(s) em ${confirmedTeacherIds.size} professor(es)`);
+
+    res.json({
+      success: true,
+      data: makeupSaturday,
+      confirmedCount,
+      attendedTeachers: Array.from(confirmedTeacherIds)
+    });
+  } catch (error: any) {
+    console.error('Erro ao confirmar slots:', error);
+    res.status(500).json({ error: 'Erro ao confirmar aulas', details: error.message });
+  }
+});
+
 console.log('🔥 ROTAS REGISTRADAS: GET /, POST /, PUT /:id/attendance, PUT /:id, DELETE /:id');
-console.log('🔥 NOVAS ROTAS: POST /:id/process, GET /teacher-debts/:teacherId, POST /generate-from-debts');
+console.log('🔥 NOVAS ROTAS: POST /:id/process, GET /teacher-debts/:teacherId, POST /generate-from-debts, PUT /:id/confirm-slots');
 
 export default router;

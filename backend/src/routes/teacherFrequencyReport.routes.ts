@@ -14,6 +14,7 @@ import SchoolDay from '../models/SchoolDay';
 import Schedule from '../models/Schedule';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 import TeacherAttendance from '../models/TeacherAttendance';
+import ClassPayment from '../models/ClassPayment';
 
 const router = express.Router();
 
@@ -132,30 +133,46 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
 // Relatório de déficits e saldos de todos os professores
 router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
   try {
-    const { month, year } = req.query;
+    const { month, year, startDate: startDateParam, endDate: endDateParam } = req.query;
     const schoolId = req.user?.schoolId || req.user?.id;
 
     if (!schoolId) {
       return res.status(400).json({ message: 'School ID não encontrado' });
     }
 
-    if (!month || !year) {
-      return res.status(400).json({ message: 'Mês e ano são obrigatórios' });
+    // Aceitar período customizado (startDate/endDate) OU mês/ano
+    let startOfMonth: Date;
+    let endOfMonth: Date;
+    let startDateStr: string;
+    let endDateStr: string;
+    let reportMonth: number;
+    let reportYear: number;
+
+    if (startDateParam && endDateParam) {
+      // Período customizado
+      startOfMonth = new Date(String(startDateParam) + 'T00:00:00');
+      endOfMonth = new Date(String(endDateParam) + 'T23:59:59.999');
+      startDateStr = String(startDateParam);
+      endDateStr = String(endDateParam);
+      reportMonth = startOfMonth.getMonth() + 1;
+      reportYear = startOfMonth.getFullYear();
+    } else {
+      if (!month || !year) {
+        return res.status(400).json({ message: 'Mês e ano são obrigatórios (ou use startDate/endDate)' });
+      }
+      startOfMonth = new Date(Number(year), Number(month) - 1, 1);
+      endOfMonth = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
+      startDateStr = `${year}-${String(month).padStart(2, '0')}-01`;
+      const lastDay = new Date(Number(year), Number(month), 0).getDate();
+      endDateStr = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+      reportMonth = Number(month);
+      reportYear = Number(year);
     }
 
     // Buscar todos os professores ativos
     const teachers = await Teacher.find({ schoolId, isActive: true });
 
     const reports = [];
-
-    // Pré-carregar dados compartilhados (fora do loop de professores para performance)
-    // Usar Date objects para query correta (SchoolDay.date é campo Date)
-    const startOfMonth = new Date(Number(year), Number(month) - 1, 1);
-    const endOfMonth = new Date(Number(year), Number(month), 0, 23, 59, 59, 999);
-    // Strings para query de TeacherAttendance (date é campo String)
-    const startDateStr = `${year}-${String(month).padStart(2, '0')}-01`;
-    const lastDay = new Date(Number(year), Number(month), 0).getDate();
-    const endDateStr = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
 
     const schoolDays = await SchoolDay.find({
       schoolId,
@@ -402,9 +419,61 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
     // Ordenar relatórios alfabeticamente por nome do professor
     reports.sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR'));
 
+    // ──────────────────────────────────────────────────────
+    // Enriquecer relatório com dados de Pagamento de Aulas
+    // ──────────────────────────────────────────────────────
+    const allPayments = await ClassPayment.find({
+      schoolId,
+      date: { $gte: startDateStr, $lte: endDateStr },
+    }).sort({ date: 1, period: 1 });
+
+    for (const report of reports) {
+      const tid = report.teacherId.toString();
+
+      // Aulas cobertas por substituto (professor estava ausente, alguém cobriu)
+      const coveredBySubstitute = allPayments
+        .filter(p => p.absentTeacherId === tid && p.substituteTeacherName)
+        .map(p => ({
+          date: p.date,
+          period: p.period,
+          startTime: p.startTime,
+          endTime: p.endTime,
+          className: p.className,
+          subjectName: p.subjectName,
+          substituteTeacherName: p.substituteTeacherName,
+          status: p.status,
+          filledViaLink: p.filledViaLink,
+          paymentId: p._id,
+        }));
+
+      // Aulas dadas como substituto (esse professor cobriu ausência de outro)
+      const givenAsSubstitute = allPayments
+        .filter(p => p.substituteTeacherName === report.teacherName ||
+                     (p.substituteTeacherId && p.substituteTeacherId === tid))
+        .map(p => ({
+          date: p.date,
+          period: p.period,
+          startTime: p.startTime,
+          endTime: p.endTime,
+          className: p.className,
+          subjectName: p.subjectName,
+          absentTeacherName: p.absentTeacherName,
+          status: p.status,
+          filledViaLink: p.filledViaLink,
+          paymentId: p._id,
+        }));
+
+      (report as any).coveredBySubstitute = coveredBySubstitute;
+      (report as any).givenAsSubstitute = givenAsSubstitute;
+      (report as any).totalCoveredClasses = coveredBySubstitute.length;
+      (report as any).totalSubstituteClasses = givenAsSubstitute.length;
+    }
+
     res.json({
-      month,
-      year,
+      month: reportMonth,
+      year: reportYear,
+      startDate: startDateStr,
+      endDate: endDateStr,
       totalTeachers: teachers.length,
       reports
     });

@@ -136,10 +136,38 @@ export default function DisplayPanel({
       console.log('🚨 Ativando MODO EMERGENCIAL via URL');
       setIsEmergencyMode(true);
       setSelectedEmergencyId(emergencyId);
+      // Persistir no localStorage para próxima abertura sem URL
+      try {
+        localStorage.setItem('dp_mode', 'emergency');
+        localStorage.setItem('dp_emergencyId', emergencyId);
+      } catch {}
     } else if (mode === 'normal' && timetableId) {
       console.log('📅 Ativando MODO NORMAL via URL');
       setIsEmergencyMode(false);
       setSelectedTimetableId(timetableId);
+      // Persistir no localStorage para próxima abertura sem URL
+      try {
+        localStorage.setItem('dp_mode', 'normal');
+        localStorage.setItem('dp_timetableId', timetableId);
+      } catch {}
+    } else {
+      // Sem parâmetros na URL — tentar restaurar do localStorage (ex: TV sem params)
+      try {
+        const savedMode = localStorage.getItem('dp_mode');
+        const savedTimetableId = localStorage.getItem('dp_timetableId');
+        const savedEmergencyId = localStorage.getItem('dp_emergencyId');
+        if (savedMode === 'emergency' && savedEmergencyId) {
+          console.log('💾 Restaurando do localStorage: modo emergencial, ID:', savedEmergencyId);
+          setIsEmergencyMode(true);
+          setSelectedEmergencyId(savedEmergencyId);
+        } else if (savedTimetableId) {
+          console.log('💾 Restaurando do localStorage: modo normal, ID:', savedTimetableId);
+          setIsEmergencyMode(false);
+          setSelectedTimetableId(savedTimetableId);
+        } else {
+          console.log('⚠️ Nenhum parâmetro na URL e nenhuma seleção salva no localStorage.');
+        }
+      } catch {}
     }
   }, []); // Executar apenas uma vez ao montar
 
@@ -1382,7 +1410,7 @@ export default function DisplayPanel({
       )}
 
       {/* Mensagem se não houver horários gerados */}
-      {!isLoadingAvailable && availableTimetables.length === 0 && (
+      {!isLoadingAvailable && !isEmergencyMode && !!selectedTimetableId && availableTimetables.length === 0 && (
         <div className="text-center py-20">
           <BookOpen size={80} className="mx-auto mb-4 text-yellow-500" />
           <h2 className="text-4xl font-bold text-white mb-4">
