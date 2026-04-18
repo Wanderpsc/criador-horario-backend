@@ -21,6 +21,14 @@ import { useAuthStore } from '../store/authStore';
 import WorkloadCharts from '../components/WorkloadCharts';
 import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml, type PrintHeaderData } from '../utils/printHeader';
 
+interface AbsenceDate {
+  date: string;
+  period: number | null;
+  paymentStatus: 'pending' | 'filled' | 'paid' | null;
+  paymentDate: string | null;
+  substituteTeacherName: string | null;
+}
+
 interface SubjectClassDetail {
   subjectId: string;
   subjectName: string;
@@ -30,6 +38,7 @@ interface SubjectClassDetail {
   givenClasses: number;
   deficit: number;
   surplus: number;
+  absenceDates?: AbsenceDate[];
 }
 
 interface TeacherReport {
@@ -113,6 +122,8 @@ const TeacherFrequencyReport: React.FC = () => {
   const [timetableData, setTimetableData] = useState<any>(null);
   const [teacherWorkload, setTeacherWorkload] = useState<TeacherSubjectWorkload[]>([]);
   const [workloadPeriod, setWorkloadPeriod] = useState<'all' | 'daily' | 'weekly' | 'monthly' | 'annual'>('all');
+  // Controle de linhas expandidas na tabela por professor (key = teacherId_detailIdx)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Print states
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -1057,6 +1068,7 @@ const TeacherFrequencyReport: React.FC = () => {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-700 w-6"></th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">Disciplina</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-700">Turma</th>
                           <th className="px-4 py-2 text-center font-semibold text-gray-700">Previsto</th>
@@ -1065,41 +1077,117 @@ const TeacherFrequencyReport: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {report.subjectClassDetails.map((detail, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50">
-                            <td className="px-4 py-2">{detail.subjectName}</td>
-                            <td className="px-4 py-2">{detail.className}</td>
-                            <td className="px-4 py-2 text-center">{detail.predictedClasses}</td>
-                            <td className="px-4 py-2 text-center">{detail.givenClasses}</td>
-                            <td className="px-4 py-2 text-center">
-                              {detail.predictedClasses > 0 ? (
-                                <>
-                                  {detail.deficit > 0 && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-                                      ❌ -{detail.deficit} aulas ({Math.round((detail.givenClasses / detail.predictedClasses) * 100)}%)
-                                    </span>
+                        {report.subjectClassDetails.map((detail, idx) => {
+                          const rowKey = `${report.teacherId}_${idx}`;
+                          const isExpanded = expandedRows.has(rowKey);
+                          const hasAbsences = (detail.absenceDates?.length ?? 0) > 0;
+                          return (
+                            <React.Fragment key={idx}>
+                              <tr
+                                className={`hover:bg-gray-50 ${hasAbsences ? 'cursor-pointer' : ''}`}
+                                onClick={() => {
+                                  if (!hasAbsences) return;
+                                  setExpandedRows(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(rowKey)) next.delete(rowKey);
+                                    else next.add(rowKey);
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <td className="px-4 py-2 text-center text-gray-400">
+                                  {hasAbsences && (
+                                    <span className="text-xs select-none">{isExpanded ? '▲' : '▼'}</span>
                                   )}
-                                  {detail.surplus > 0 && (
+                                </td>
+                                <td className="px-4 py-2">{detail.subjectName}</td>
+                                <td className="px-4 py-2">{detail.className}</td>
+                                <td className="px-4 py-2 text-center">{detail.predictedClasses}</td>
+                                <td className="px-4 py-2 text-center">{detail.givenClasses}</td>
+                                <td className="px-4 py-2 text-center">
+                                  {detail.predictedClasses > 0 ? (
+                                    <>
+                                      {detail.deficit > 0 && (
+                                        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                                          ❌ -{detail.deficit} aulas ({Math.round((detail.givenClasses / detail.predictedClasses) * 100)}%)
+                                        </span>
+                                      )}
+                                      {detail.surplus > 0 && (
+                                        <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                          ✅ +{detail.surplus} aulas ({Math.round((detail.givenClasses / detail.predictedClasses) * 100)}%)
+                                        </span>
+                                      )}
+                                      {detail.deficit === 0 && detail.surplus === 0 && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                          ✓ 100% Em dia
+                                        </span>
+                                      )}
+                                    </>
+                                  ) : detail.givenClasses > 0 ? (
                                     <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                                      ✅ +{detail.surplus} aulas ({Math.round((detail.givenClasses / detail.predictedClasses) * 100)}%)
+                                      ✅ +{detail.givenClasses} aulas extras
                                     </span>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs">Sem aulas previstas</span>
                                   )}
-                                  {detail.deficit === 0 && detail.surplus === 0 && (
-                                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                                      ✓ 100% Em dia
-                                    </span>
-                                  )}
-                                </>
-                              ) : detail.givenClasses > 0 ? (
-                                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                                  ✅ +{detail.givenClasses} aulas extras
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 text-xs">Sem aulas previstas</span>
+                                </td>
+                              </tr>
+                              {isExpanded && hasAbsences && (
+                                <tr>
+                                  <td colSpan={6} className="px-0 py-0 bg-red-50 border-t border-red-100">
+                                    <div className="px-6 py-3">
+                                      <p className="text-xs font-semibold text-red-700 uppercase mb-2 flex items-center gap-1">
+                                        <span>📅</span> Datas de Ausência — {detail.subjectName} / {detail.className}
+                                      </p>
+                                      <table className="w-full text-xs border-collapse">
+                                        <thead>
+                                          <tr className="bg-red-100 text-red-800">
+                                            <th className="px-3 py-1.5 text-left font-semibold">Data da Ausência</th>
+                                            <th className="px-3 py-1.5 text-center font-semibold">Período</th>
+                                            <th className="px-3 py-1.5 text-left font-semibold">Substituto</th>
+                                            <th className="px-3 py-1.5 text-center font-semibold">Status Pagamento</th>
+                                            <th className="px-3 py-1.5 text-left font-semibold">Data do Pagamento</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-red-100">
+                                          {detail.absenceDates!.map((abs, aIdx) => (
+                                            <tr key={aIdx} className="bg-white hover:bg-red-50">
+                                              <td className="px-3 py-1.5 font-medium text-gray-800">
+                                                {new Date(abs.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                              </td>
+                                              <td className="px-3 py-1.5 text-center text-gray-700">
+                                                {abs.period != null ? `${abs.period}º` : '—'}
+                                              </td>
+                                              <td className="px-3 py-1.5 text-gray-700">
+                                                {abs.substituteTeacherName || <span className="text-gray-400 italic">Sem substituto</span>}
+                                              </td>
+                                              <td className="px-3 py-1.5 text-center">
+                                                {abs.paymentStatus === 'paid' ? (
+                                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full font-medium">✅ Pago</span>
+                                                ) : abs.paymentStatus === 'filled' ? (
+                                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-medium">🔵 Preenchido</span>
+                                                ) : abs.paymentStatus === 'pending' ? (
+                                                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">⏳ Pendente</span>
+                                                ) : (
+                                                  <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full italic">Sem registro</span>
+                                                )}
+                                              </td>
+                                              <td className="px-3 py-1.5 text-gray-700">
+                                                {abs.paymentDate
+                                                  ? new Date(abs.paymentDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                                  : <span className="text-gray-400 italic">—</span>}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </td>
+                                </tr>
                               )}
-                            </td>
-                          </tr>
-                        ))}
+                            </React.Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

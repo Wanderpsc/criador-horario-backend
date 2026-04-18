@@ -221,6 +221,12 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       return dayMap[dateObj.getUTCDay()] || '';
     };
 
+    // Pré-carregar todos os pagamentos do período antes do loop de professores
+    const allPaymentsPre = await ClassPayment.find({
+      schoolId,
+      date: { $gte: startDateStr, $lte: endDateStr },
+    }).sort({ date: 1, period: 1 });
+
     for (const teacher of teachers) {
       // Buscar disciplinas e turmas do professor (TeacherSubject tem String IDs, não refs)
       const teacherSubjects = await TeacherSubject.find({ 
@@ -320,6 +326,30 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         totalPredicted += predicted;
         totalGiven += given;
 
+        // Coletar datas de ausência com status de pagamento para esta disciplina/turma
+        const absenceDates: any[] = [];
+        for (const rec of attendanceRecords) {
+          if (!rec.classes || !Array.isArray(rec.classes)) continue;
+          const absentEntries = (rec.classes as any[]).filter(
+            (c: any) => c.status === 'absent' && c.subjectId === subjectId && c.classId === classId
+          );
+          for (const entry of absentEntries) {
+            const payment = allPaymentsPre.find(p =>
+              p.absentTeacherId === teacher._id.toString() &&
+              p.date === rec.date &&
+              p.classId === classId
+            );
+            absenceDates.push({
+              date: rec.date,
+              period: entry.period ?? null,
+              paymentStatus: payment ? payment.status : null,
+              paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
+              substituteTeacherName: payment?.substituteTeacherName || null,
+            });
+          }
+        }
+        absenceDates.sort((a, b) => a.date.localeCompare(b.date));
+
         subjectClassDetails.push({
           subjectId: subject._id,
           subjectName: (subject as any).name,
@@ -328,7 +358,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           predictedClasses: predicted,
           givenClasses: given,
           deficit,
-          surplus
+          surplus,
+          absenceDates,
         });
       }
 
@@ -385,6 +416,30 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           totalPredicted += predicted;
           totalGiven += given;
 
+          // Coletar datas de ausência para fallback
+          const absenceDatesFallback: any[] = [];
+          for (const rec of attendanceRecords) {
+            if (!rec.classes || !Array.isArray(rec.classes)) continue;
+            const absentEntries = (rec.classes as any[]).filter(
+              (c: any) => c.status === 'absent' && c.subjectId === cls.subjectId && c.classId === cls.classId
+            );
+            for (const entry of absentEntries) {
+              const payment = allPaymentsPre.find(p =>
+                p.absentTeacherId === teacher._id.toString() &&
+                p.date === rec.date &&
+                p.classId === cls.classId
+              );
+              absenceDatesFallback.push({
+                date: rec.date,
+                period: entry.period ?? null,
+                paymentStatus: payment ? payment.status : null,
+                paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
+                substituteTeacherName: payment?.substituteTeacherName || null,
+              });
+            }
+          }
+          absenceDatesFallback.sort((a, b) => a.date.localeCompare(b.date));
+
           subjectClassDetails.push({
             subjectId: cls.subjectId,
             subjectName: cls.subjectName || (subjectMap.get(cls.subjectId) as any)?.name || 'Disciplina',
@@ -393,7 +448,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
             predictedClasses: predicted,
             givenClasses: given,
             deficit,
-            surplus
+            surplus,
+            absenceDates: absenceDatesFallback,
           });
         }
       }
@@ -422,10 +478,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
     // ──────────────────────────────────────────────────────
     // Enriquecer relatório com dados de Pagamento de Aulas
     // ──────────────────────────────────────────────────────
-    const allPayments = await ClassPayment.find({
-      schoolId,
-      date: { $gte: startDateStr, $lte: endDateStr },
-    }).sort({ date: 1, period: 1 });
+    const allPayments = allPaymentsPre;
 
     for (const report of reports) {
       const tid = report.teacherId.toString();
