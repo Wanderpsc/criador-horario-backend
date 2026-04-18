@@ -516,16 +516,77 @@ const TeacherFrequencyReport: React.FC = () => {
         return extra;
       };
 
+const fmtDate = (dateStr: string) => {
+        const d = new Date(dateStr + 'T12:00:00');
+        return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+      };
+
+      const buildAbsenceSubTable = (d: SubjectClassDetail) => {
+        if (!d.deficit || d.deficit === 0) return '';
+        let html = '<tr><td colspan="5" style="padding:0;background:#fef9f9;border:1px solid #fecaca;">';
+        html += '<div style="padding:6px 12px;">';
+
+        // Ausências registradas
+        if (d.absenceDates && d.absenceDates.length > 0) {
+          html += '<div style="font-size:8pt;font-weight:bold;color:#b91c1c;margin-bottom:4px;">🚫 Aus&ecirc;ncias Registradas</div>';
+          html += '<table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-bottom:6px;">';
+          html += '<thead><tr style="background:#fee2e2;color:#991b1b;">';
+          html += '<th style="border:1px solid #fca5a5;padding:2px 6px;text-align:left;">Data</th>';
+          html += '<th style="border:1px solid #fca5a5;padding:2px 6px;text-align:center;">Per.</th>';
+          html += '<th style="border:1px solid #fca5a5;padding:2px 6px;text-align:left;">Substituto</th>';
+          html += '<th style="border:1px solid #fca5a5;padding:2px 6px;text-align:center;">Pagamento</th>';
+          html += '<th style="border:1px solid #fca5a5;padding:2px 6px;text-align:left;">Data Pgto.</th>';
+          html += '</tr></thead><tbody>';
+          d.absenceDates.forEach((abs, ai) => {
+            const bg2 = ai % 2 === 0 ? '#fff' : '#fff7f7';
+            const statusLabel = abs.paymentStatus === 'paid' ? '✅ Pago'
+              : abs.paymentStatus === 'filled' ? '🔵 Preenchido'
+              : abs.paymentStatus === 'pending' ? '⏳ Pendente'
+              : '—';
+            const payDate = abs.paymentDate
+              ? new Date(abs.paymentDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+              : '—';
+            html += '<tr style="background:' + bg2 + ';">';
+            html += '<td style="border:1px solid #fca5a5;padding:2px 6px;">' + fmtDate(abs.date) + '</td>';
+            html += '<td style="border:1px solid #fca5a5;padding:2px 6px;text-align:center;">' + (abs.period != null ? abs.period + 'º' : '—') + '</td>';
+            html += '<td style="border:1px solid #fca5a5;padding:2px 6px;">' + (abs.substituteTeacherName || '—') + '</td>';
+            html += '<td style="border:1px solid #fca5a5;padding:2px 6px;text-align:center;">' + statusLabel + '</td>';
+            html += '<td style="border:1px solid #fca5a5;padding:2px 6px;">' + payDate + '</td>';
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+        } else {
+          html += '<div style="font-size:7.5pt;color:#6b7280;font-style:italic;">ℹ️ Nenhuma aus&ecirc;ncia expl&iacute;cita registrada no per&iacute;odo.</div>';
+        }
+
+        // Aulas remanescentes
+        if (d.futureDates && d.futureDates.length > 0) {
+          const total = d.futureDates.reduce((s, fd) => s + fd.periodsCount, 0);
+          html += '<div style="font-size:8pt;font-weight:bold;color:#1d4ed8;margin:6px 0 4px;">📆 Aulas Remanescentes (' + total + ' aula(s))</div>';
+          html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+          d.futureDates.forEach(fd => {
+            const lbl = new Date(fd.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })
+              + (fd.periodsCount > 1 ? ' (' + fd.periodsCount + '×)' : '');
+            html += '<span style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:4px;padding:1px 6px;font-size:7.5pt;">' + lbl + '</span>';
+          });
+          html += '</div>';
+        }
+
+        html += '</div></td></tr>';
+        return html;
+      };
+
       const buildDetailRows = (details: SubjectClassDetail[]) => {
         return details.map((d, i) => {
           const bg = i % 2 === 0 ? '#fff' : '#f8fafc';
-          return '<tr style="background:' + bg + ';">'
+          return '<tr style="background:' + bg + ';">'  
             + '<td style="border:1px solid #e5e7eb;padding:4px 8px;">' + d.subjectName + '</td>'
             + '<td style="border:1px solid #e5e7eb;padding:4px 8px;">' + d.className + '</td>'
             + '<td style="border:1px solid #e5e7eb;padding:4px 8px;text-align:center;">' + d.predictedClasses + '</td>'
             + '<td style="border:1px solid #e5e7eb;padding:4px 8px;text-align:center;">' + d.givenClasses + '</td>'
             + '<td style="border:1px solid #e5e7eb;padding:4px 8px;text-align:center;">' + buildSituationCell(d) + '</td>'
-            + '</tr>';
+            + '</tr>'
+            + buildAbsenceSubTable(d);
         }).join('');
       };
 
@@ -1204,7 +1265,7 @@ const TeacherFrequencyReport: React.FC = () => {
                                       {hasFuture && (
                                         <div>
                                           <p className="text-xs font-semibold text-blue-700 uppercase mb-2 flex items-center gap-1">
-                                            <span>📆</span> Aulas Agendadas (ainda não ministradas) — {detail.futureDates!.reduce((s, d) => s + d.periodsCount, 0)} aula(s)
+                                            <span>📆</span> Aulas Remanescentes (ainda não ministradas) — {detail.futureDates!.reduce((s, d) => s + d.periodsCount, 0)} aula(s)
                                           </p>
                                           <div className="flex flex-wrap gap-2">
                                             {detail.futureDates!.map((fd, fIdx) => (
