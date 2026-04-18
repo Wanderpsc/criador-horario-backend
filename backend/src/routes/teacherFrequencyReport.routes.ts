@@ -277,6 +277,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         // CONTAR AULAS PREVISTAS e DADAS por disciplina/turma dia a dia
         let predicted = 0;
         let given = 0;
+        const absenceDates: any[] = [];
+        const absenceDateSet = new Set<string>();
         
         for (const schoolDay of schoolDays) {
           const targetDay = getDayName(schoolDay);
@@ -312,6 +314,32 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
               ).length;
               // Aulas com status 'absent' explícito não contam
               given += classesPresent;
+
+              // Coletar ausências deste dia (se houver déficit)
+              if (classesPresent < scheduledInDay) {
+                const absentEntries = (record.classes as any[]).filter((c: any) =>
+                  c.status === 'absent' && c.subjectId === subjectId && c.classId === classId
+                );
+                // Usar entradas explícitas de ausência; se não houver, criar uma entrada implícita
+                const toProcess = absentEntries.length > 0 ? absentEntries : [{ period: null }];
+                for (const entry of toProcess) {
+                  const key = `${dayStr}_${entry.period ?? ''}`;
+                  if (absenceDateSet.has(key)) continue;
+                  absenceDateSet.add(key);
+                  const payment = allPaymentsPre.find(p =>
+                    p.absentTeacherId === teacher._id.toString() &&
+                    p.date === dayStr &&
+                    p.classId === classId
+                  );
+                  absenceDates.push({
+                    date: dayStr,
+                    period: entry.period ?? null,
+                    paymentStatus: payment ? payment.status : null,
+                    paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
+                    substituteTeacherName: payment?.substituteTeacherName || null,
+                  });
+                }
+              }
             } else {
               // SEM registro de frequência para este dia passado:
               // Assumir que todas as aulas previstas foram dadas (professor presente)
@@ -320,35 +348,12 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           }
         }
 
+        absenceDates.sort((a, b) => a.date.localeCompare(b.date));
         const deficit = predicted > given ? predicted - given : 0;
         const surplus = given > predicted ? given - predicted : 0;
 
         totalPredicted += predicted;
         totalGiven += given;
-
-        // Coletar datas de ausência com status de pagamento para esta disciplina/turma
-        const absenceDates: any[] = [];
-        for (const rec of attendanceRecords) {
-          if (!rec.classes || !Array.isArray(rec.classes)) continue;
-          const absentEntries = (rec.classes as any[]).filter(
-            (c: any) => c.status === 'absent' && c.subjectId === subjectId && c.classId === classId
-          );
-          for (const entry of absentEntries) {
-            const payment = allPaymentsPre.find(p =>
-              p.absentTeacherId === teacher._id.toString() &&
-              p.date === rec.date &&
-              p.classId === classId
-            );
-            absenceDates.push({
-              date: rec.date,
-              period: entry.period ?? null,
-              paymentStatus: payment ? payment.status : null,
-              paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
-              substituteTeacherName: payment?.substituteTeacherName || null,
-            });
-          }
-        }
-        absenceDates.sort((a, b) => a.date.localeCompare(b.date));
 
         subjectClassDetails.push({
           subjectId: subject._id,
@@ -376,6 +381,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           // Contar aulas dadas/previstas dia a dia (mesma lógica)
           let given = 0;
           let predicted = 0;
+          const absenceDatesFallback: any[] = [];
+          const absenceDateSetFb = new Set<string>();
 
           for (const schoolDay of schoolDays) {
             const targetDay = getDayName(schoolDay);
@@ -400,45 +407,47 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
               const dayRecord = attendanceByDate.get(dayStr);
 
               if (dayRecord && dayRecord.classes && Array.isArray(dayRecord.classes)) {
-                given += dayRecord.classes.filter((c: any) =>
+                const presentCount = dayRecord.classes.filter((c: any) =>
                   c.status === 'present' &&
                   c.subjectId === cls.subjectId &&
                   c.classId === cls.classId
                 ).length;
+                given += presentCount;
+
+                if (presentCount < scheduledInDay) {
+                  const absentEntries = (dayRecord.classes as any[]).filter((c: any) =>
+                    c.status === 'absent' && c.subjectId === cls.subjectId && c.classId === cls.classId
+                  );
+                  const toProcess = absentEntries.length > 0 ? absentEntries : [{ period: null }];
+                  for (const entry of toProcess) {
+                    const key = `${dayStr}_${entry.period ?? ''}`;
+                    if (absenceDateSetFb.has(key)) continue;
+                    absenceDateSetFb.add(key);
+                    const payment = allPaymentsPre.find(p =>
+                      p.absentTeacherId === teacher._id.toString() &&
+                      p.date === dayStr &&
+                      p.classId === cls.classId
+                    );
+                    absenceDatesFallback.push({
+                      date: dayStr,
+                      period: entry.period ?? null,
+                      paymentStatus: payment ? payment.status : null,
+                      paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
+                      substituteTeacherName: payment?.substituteTeacherName || null,
+                    });
+                  }
+                }
               } else {
                 given += scheduledInDay;
               }
             }
           }
 
+          absenceDatesFallback.sort((a, b) => a.date.localeCompare(b.date));
           const deficit = predicted > given ? predicted - given : 0;
           const surplus = given > predicted ? given - predicted : 0;
           totalPredicted += predicted;
           totalGiven += given;
-
-          // Coletar datas de ausência para fallback
-          const absenceDatesFallback: any[] = [];
-          for (const rec of attendanceRecords) {
-            if (!rec.classes || !Array.isArray(rec.classes)) continue;
-            const absentEntries = (rec.classes as any[]).filter(
-              (c: any) => c.status === 'absent' && c.subjectId === cls.subjectId && c.classId === cls.classId
-            );
-            for (const entry of absentEntries) {
-              const payment = allPaymentsPre.find(p =>
-                p.absentTeacherId === teacher._id.toString() &&
-                p.date === rec.date &&
-                p.classId === cls.classId
-              );
-              absenceDatesFallback.push({
-                date: rec.date,
-                period: entry.period ?? null,
-                paymentStatus: payment ? payment.status : null,
-                paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
-                substituteTeacherName: payment?.substituteTeacherName || null,
-              });
-            }
-          }
-          absenceDatesFallback.sort((a, b) => a.date.localeCompare(b.date));
 
           subjectClassDetails.push({
             subjectId: cls.subjectId,
