@@ -29,6 +29,11 @@ interface AbsenceDate {
   substituteTeacherName: string | null;
 }
 
+interface FutureDate {
+  date: string;
+  periodsCount: number;
+}
+
 interface SubjectClassDetail {
   subjectId: string;
   subjectName: string;
@@ -39,6 +44,7 @@ interface SubjectClassDetail {
   deficit: number;
   surplus: number;
   absenceDates?: AbsenceDate[];
+  futureDates?: FutureDate[];
 }
 
 interface TeacherReport {
@@ -1081,12 +1087,14 @@ const TeacherFrequencyReport: React.FC = () => {
                           const rowKey = `${report.teacherId}_${idx}`;
                           const isExpanded = expandedRows.has(rowKey);
                           const hasAbsences = (detail.absenceDates?.length ?? 0) > 0;
+                          const hasFuture = (detail.futureDates?.length ?? 0) > 0;
+                          const canExpand = detail.deficit > 0;
                           return (
                             <React.Fragment key={idx}>
                               <tr
-                                className={`hover:bg-gray-50 ${hasAbsences ? 'cursor-pointer' : ''}`}
+                                className={`hover:bg-gray-50 ${canExpand ? 'cursor-pointer' : ''}`}
                                 onClick={() => {
-                                  if (!hasAbsences) return;
+                                  if (!canExpand) return;
                                   setExpandedRows(prev => {
                                     const next = new Set(prev);
                                     if (next.has(rowKey)) next.delete(rowKey);
@@ -1096,7 +1104,7 @@ const TeacherFrequencyReport: React.FC = () => {
                                 }}
                               >
                                 <td className="px-4 py-2 text-center text-gray-400">
-                                  {hasAbsences && (
+                                  {canExpand && (
                                     <span className="text-xs select-none">{isExpanded ? '▲' : '▼'}</span>
                                   )}
                                 </td>
@@ -1132,55 +1140,83 @@ const TeacherFrequencyReport: React.FC = () => {
                                   )}
                                 </td>
                               </tr>
-                              {isExpanded && hasAbsences && (
+                              {isExpanded && canExpand && (
                                 <tr>
-                                  <td colSpan={6} className="px-0 py-0 bg-red-50 border-t border-red-100">
-                                    <div className="px-6 py-3">
-                                      <p className="text-xs font-semibold text-red-700 uppercase mb-2 flex items-center gap-1">
-                                        <span>📅</span> Datas de Ausência — {detail.subjectName} / {detail.className}
-                                      </p>
-                                      <table className="w-full text-xs border-collapse">
-                                        <thead>
-                                          <tr className="bg-red-100 text-red-800">
-                                            <th className="px-3 py-1.5 text-left font-semibold">Data da Ausência</th>
-                                            <th className="px-3 py-1.5 text-center font-semibold">Período</th>
-                                            <th className="px-3 py-1.5 text-left font-semibold">Substituto</th>
-                                            <th className="px-3 py-1.5 text-center font-semibold">Status Pagamento</th>
-                                            <th className="px-3 py-1.5 text-left font-semibold">Data do Pagamento</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-red-100">
-                                          {detail.absenceDates!.map((abs, aIdx) => (
-                                            <tr key={aIdx} className="bg-white hover:bg-red-50">
-                                              <td className="px-3 py-1.5 font-medium text-gray-800">
-                                                {new Date(abs.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                              </td>
-                                              <td className="px-3 py-1.5 text-center text-gray-700">
-                                                {abs.period != null ? `${abs.period}º` : '—'}
-                                              </td>
-                                              <td className="px-3 py-1.5 text-gray-700">
-                                                {abs.substituteTeacherName || <span className="text-gray-400 italic">Sem substituto</span>}
-                                              </td>
-                                              <td className="px-3 py-1.5 text-center">
-                                                {abs.paymentStatus === 'paid' ? (
-                                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full font-medium">✅ Pago</span>
-                                                ) : abs.paymentStatus === 'filled' ? (
-                                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-medium">🔵 Preenchido</span>
-                                                ) : abs.paymentStatus === 'pending' ? (
-                                                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">⏳ Pendente</span>
-                                                ) : (
-                                                  <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full italic">Sem registro</span>
-                                                )}
-                                              </td>
-                                              <td className="px-3 py-1.5 text-gray-700">
-                                                {abs.paymentDate
-                                                  ? new Date(abs.paymentDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                                                  : <span className="text-gray-400 italic">—</span>}
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
+                                  <td colSpan={6} className="px-0 py-0 bg-gray-50 border-t border-gray-200">
+                                    <div className="px-6 py-4 space-y-4">
+
+                                      {/* Ausências passadas registradas */}
+                                      {hasAbsences ? (
+                                        <div>
+                                          <p className="text-xs font-semibold text-red-700 uppercase mb-2 flex items-center gap-1">
+                                            <span>🚫</span> Ausências Registradas — {detail.subjectName} / {detail.className}
+                                          </p>
+                                          <table className="w-full text-xs border-collapse">
+                                            <thead>
+                                              <tr className="bg-red-100 text-red-800">
+                                                <th className="px-3 py-1.5 text-left font-semibold">Data da Ausência</th>
+                                                <th className="px-3 py-1.5 text-center font-semibold">Período</th>
+                                                <th className="px-3 py-1.5 text-left font-semibold">Substituto</th>
+                                                <th className="px-3 py-1.5 text-center font-semibold">Status Pagamento</th>
+                                                <th className="px-3 py-1.5 text-left font-semibold">Data do Pagamento</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-red-100">
+                                              {detail.absenceDates!.map((abs, aIdx) => (
+                                                <tr key={aIdx} className="bg-white hover:bg-red-50">
+                                                  <td className="px-3 py-1.5 font-medium text-gray-800">
+                                                    {new Date(abs.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                                  </td>
+                                                  <td className="px-3 py-1.5 text-center text-gray-700">
+                                                    {abs.period != null ? `${abs.period}º` : '—'}
+                                                  </td>
+                                                  <td className="px-3 py-1.5 text-gray-700">
+                                                    {abs.substituteTeacherName || <span className="text-gray-400 italic">Sem substituto</span>}
+                                                  </td>
+                                                  <td className="px-3 py-1.5 text-center">
+                                                    {abs.paymentStatus === 'paid' ? (
+                                                      <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full font-medium">✅ Pago</span>
+                                                    ) : abs.paymentStatus === 'filled' ? (
+                                                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-medium">🔵 Preenchido</span>
+                                                    ) : abs.paymentStatus === 'pending' ? (
+                                                      <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">⏳ Pendente</span>
+                                                    ) : (
+                                                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full italic">Sem registro</span>
+                                                    )}
+                                                  </td>
+                                                  <td className="px-3 py-1.5 text-gray-700">
+                                                    {abs.paymentDate
+                                                      ? new Date(abs.paymentDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                                      : <span className="text-gray-400 italic">—</span>}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-gray-500 italic flex items-center gap-1">
+                                          <span>ℹ️</span> Nenhuma ausência explicitamente registrada no período analisado.
+                                        </p>
+                                      )}
+
+                                      {/* Aulas futuras (ainda não ministradas) */}
+                                      {hasFuture && (
+                                        <div>
+                                          <p className="text-xs font-semibold text-blue-700 uppercase mb-2 flex items-center gap-1">
+                                            <span>📆</span> Aulas Agendadas (ainda não ministradas) — {detail.futureDates!.reduce((s, d) => s + d.periodsCount, 0)} aula(s)
+                                          </p>
+                                          <div className="flex flex-wrap gap-2">
+                                            {detail.futureDates!.map((fd, fIdx) => (
+                                              <span key={fIdx} className="px-2 py-1 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-lg">
+                                                {new Date(fd.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                                                {fd.periodsCount > 1 ? ` (${fd.periodsCount}×)` : ''}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
                                     </div>
                                   </td>
                                 </tr>

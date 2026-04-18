@@ -279,6 +279,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         let given = 0;
         const absenceDates: any[] = [];
         const absenceDateSet = new Set<string>();
+        const futureDates: any[] = [];
         
         for (const schoolDay of schoolDays) {
           const targetDay = getDayName(schoolDay);
@@ -298,29 +299,24 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           
           predicted += scheduledInDay;
 
-          // Só contar aulas dadas para dias que já passaram (até hoje)
           const schoolDayDate = new Date(schoolDay.date);
+          const dayStr = schoolDayDate.toISOString().split('T')[0];
+
           if (schoolDayDate <= today && scheduledInDay > 0) {
-            // Formatar data como string YYYY-MM-DD para buscar no registro de frequência
-            const dayStr = schoolDayDate.toISOString().split('T')[0];
             const record = attendanceByDate.get(dayStr);
 
             if (record && record.classes && Array.isArray(record.classes)) {
-              // Tem registro de frequência: contar aulas com status 'present'
               const classesPresent = record.classes.filter((cls: any) => 
                 cls.status === 'present' &&
                 cls.subjectId === subjectId &&
                 cls.classId === classId
               ).length;
-              // Aulas com status 'absent' explícito não contam
               given += classesPresent;
 
-              // Coletar ausências deste dia (se houver déficit)
               if (classesPresent < scheduledInDay) {
                 const absentEntries = (record.classes as any[]).filter((c: any) =>
                   c.status === 'absent' && c.subjectId === subjectId && c.classId === classId
                 );
-                // Usar entradas explícitas de ausência; se não houver, criar uma entrada implícita
                 const toProcess = absentEntries.length > 0 ? absentEntries : [{ period: null }];
                 for (const entry of toProcess) {
                   const key = `${dayStr}_${entry.period ?? ''}`;
@@ -341,14 +337,17 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                 }
               }
             } else {
-              // SEM registro de frequência para este dia passado:
-              // Assumir que todas as aulas previstas foram dadas (professor presente)
+              // SEM registro de frequência para este dia passado: assumir presente
               given += scheduledInDay;
             }
+          } else if (schoolDayDate > today && scheduledInDay > 0) {
+            // Dia futuro com aulas agendadas — contribui para o déficit por não terem sido ministradas ainda
+            futureDates.push({ date: dayStr, periodsCount: scheduledInDay });
           }
         }
 
         absenceDates.sort((a, b) => a.date.localeCompare(b.date));
+        futureDates.sort((a: any, b: any) => a.date.localeCompare(b.date));
         const deficit = predicted > given ? predicted - given : 0;
         const surplus = given > predicted ? given - predicted : 0;
 
@@ -365,6 +364,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           deficit,
           surplus,
           absenceDates,
+          futureDates,
         });
       }
 
@@ -383,6 +383,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           let predicted = 0;
           const absenceDatesFallback: any[] = [];
           const absenceDateSetFb = new Set<string>();
+          const futureDatesFallback: any[] = [];
 
           for (const schoolDay of schoolDays) {
             const targetDay = getDayName(schoolDay);
@@ -402,8 +403,9 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
             predicted += scheduledInDay;
 
             const schoolDayDate = new Date(schoolDay.date);
+            const dayStr = schoolDayDate.toISOString().split('T')[0];
+
             if (schoolDayDate <= today && scheduledInDay > 0) {
-              const dayStr = schoolDayDate.toISOString().split('T')[0];
               const dayRecord = attendanceByDate.get(dayStr);
 
               if (dayRecord && dayRecord.classes && Array.isArray(dayRecord.classes)) {
@@ -440,10 +442,13 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
               } else {
                 given += scheduledInDay;
               }
+            } else if (schoolDayDate > today && scheduledInDay > 0) {
+              futureDatesFallback.push({ date: dayStr, periodsCount: scheduledInDay });
             }
           }
 
           absenceDatesFallback.sort((a, b) => a.date.localeCompare(b.date));
+          futureDatesFallback.sort((a: any, b: any) => a.date.localeCompare(b.date));
           const deficit = predicted > given ? predicted - given : 0;
           const surplus = given > predicted ? given - predicted : 0;
           totalPredicted += predicted;
@@ -459,6 +464,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
             deficit,
             surplus,
             absenceDates: absenceDatesFallback,
+            futureDates: futureDatesFallback,
           });
         }
       }
