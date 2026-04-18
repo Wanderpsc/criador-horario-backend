@@ -182,9 +182,9 @@ export async function generateSaturdayScheduleFromDebts(
     }
     console.log(`📋 Total de ${allSchedules.length} horário(s) emergencial(is) no banco para escola ${schoolId}`);
   
-  // Filtrar os que têm makeupClasses
+  // Filtrar os que têm makeupClasses pendentes (não repaid)
   const emergencySchedules = allSchedules.filter(schedule => 
-    schedule.makeupClasses && schedule.makeupClasses.length > 0
+    schedule.makeupClasses && schedule.makeupClasses.some((mc: any) => !mc.isRepaid)
   );
   
   console.log(`📚 ${emergencySchedules.length} horário(s) emergencial(is) com aulas de reposição`);
@@ -206,8 +206,10 @@ export async function generateSaturdayScheduleFromDebts(
     });
     
     if (schedule.makeupClasses && schedule.makeupClasses.length > 0) {
-      console.log(`      ✅ Adicionando ${schedule.makeupClasses.length} makeupClasses`);
-      allMakeupClasses.push(...schedule.makeupClasses);
+      // Apenas incluir makeupClasses ainda não abatidos
+      const pending = schedule.makeupClasses.filter((mc: any) => !mc.isRepaid);
+      console.log(`      ✅ Adicionando ${pending.length} makeupClasses pendentes (${schedule.makeupClasses.length - pending.length} já repaid)`);
+      allMakeupClasses.push(...pending);
     } else {
       console.log(`      ⚠️ Sem makeupClasses para adicionar`);
     }

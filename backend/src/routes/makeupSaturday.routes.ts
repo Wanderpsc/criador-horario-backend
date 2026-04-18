@@ -393,6 +393,61 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
 
     await makeupSaturday.save();
 
+    // ─── Abater os makeupClasses correspondentes no EmergencySchedule ─────────
+    if (confirmedTeacherIds.size > 0) {
+      try {
+        const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
+        const now = new Date();
+
+        // Construir lookup das aulas confirmadas: teacherId → Set<"classId|subjectId">
+        const confirmedTeacherClassSubject = new Map<string, Set<string>>();
+        for (const [classId, slots] of Object.entries(updatedSchedule)) {
+          for (const slot of slots as any[]) {
+            if (slot.confirmed && slot.teacherId && slot.classId && slot.subjectId) {
+              if (!confirmedTeacherClassSubject.has(slot.teacherId)) {
+                confirmedTeacherClassSubject.set(slot.teacherId, new Set());
+              }
+              confirmedTeacherClassSubject.get(slot.teacherId)!.add(`${slot.classId}|${slot.subjectId}`);
+            }
+          }
+        }
+
+        // Buscar todos os EmergencySchedules que têm makeupClasses pendentes dos professores confirmados
+        const allSchedules = await EmergencySchedule.find({
+          'makeupClasses.originalTeacherId': { $in: Array.from(confirmedTeacherIds) },
+          'makeupClasses.isRepaid': { $ne: true }
+        });
+
+        let totalAbated = 0;
+        for (const es of allSchedules) {
+          let changed = false;
+          for (const mc of (es.makeupClasses || []) as any[]) {
+            if (mc.isRepaid) continue;
+            const teacherKeys = confirmedTeacherClassSubject.get(mc.originalTeacherId);
+            if (!teacherKeys) continue;
+            const key = `${mc.classId}|${mc.subjectId}`;
+            if (teacherKeys.has(key)) {
+              mc.isRepaid = true;
+              mc.repaidAt = now;
+              changed = true;
+              totalAbated++;
+              // Consumir a entrada para não abater dois slots da mesma chave duas vezes
+              teacherKeys.delete(key);
+            }
+          }
+          if (changed) {
+            es.markModified('makeupClasses');
+            await es.save();
+          }
+        }
+        console.log(`✅ ${totalAbated} makeupClasse(s) marcado(s) como repaid em EmergencySchedule`);
+      } catch (err: any) {
+        // Não deixar falha de abatimento quebrar a confirmação de presença
+        console.error('⚠️ Erro ao abater makeupClasses:', err.message);
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     console.log(`✅ ${confirmedCount} slot(s) confirmado(s) em ${confirmedTeacherIds.size} professor(es)`);
 
     res.json({

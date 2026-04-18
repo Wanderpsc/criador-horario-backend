@@ -44,6 +44,8 @@ export interface IMakeupClass {
   originalDay: string;
   makeupDay: string;
   reason: string;
+  isRepaid?: boolean;    // marcado true quando o sábado de reposição é confirmado
+  repaidAt?: Date;       // data em que foi abatido
 }
 
 export interface IEmergencySchedule extends mongoose.Document {
@@ -115,7 +117,9 @@ const makeupClassSchema = new mongoose.Schema({
   period: { type: Number, required: true },
   originalDay: { type: String, required: true },
   makeupDay: { type: String, required: false }, // Opcional - será definido ao criar sábado
-  reason: { type: String, required: false } // Opcional
+  reason: { type: String, required: false }, // Opcional
+  isRepaid: { type: Boolean, default: false }, // true quando o sábado de reposição confirma a aula
+  repaidAt: { type: Date }
 }, { _id: false });
 
 const emergencyScheduleSchema = new mongoose.Schema({

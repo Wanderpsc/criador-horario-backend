@@ -653,7 +653,8 @@ export default function MakeupSaturdays() {
 
     const data = {
       date: selectedDate,
-      schedule: makeupSchedule
+      schedule: makeupSchedule,
+      wasHeld
     };
     
     console.log('📤 Salvando com data:', data);
@@ -966,7 +967,7 @@ export default function MakeupSaturdays() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Painel Principal */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className={`${Object.keys(makeupSchedule).length > 0 ? 'lg:col-span-3' : 'lg:col-span-2'} space-y-6`}>
           {/* Configuração */}
           <div className="card">
             <h3 className="font-bold text-lg mb-4">📋 Configuração do Sábado de Reposição</h3>
@@ -1655,8 +1656,8 @@ export default function MakeupSaturdays() {
           })()}
         </div>
 
-        {/* Painel Lateral */}
-        <div className="space-y-6 no-print">
+        {/* Painel Lateral - oculto quando o horário está gerado */}
+        {Object.keys(makeupSchedule).length === 0 && <div className="space-y-6 no-print">
           <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200">
             <h3 className="font-bold text-lg mb-3 text-blue-800 flex items-center gap-2">
               <AlertTriangle size={20} />
@@ -1748,7 +1749,7 @@ export default function MakeupSaturdays() {
               </li>
             </ul>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* CSS para impressão */}
