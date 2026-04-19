@@ -1,6 +1,8 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import Teacher from '../models/Teacher';
+import GeneratedTimetable from '../models/GeneratedTimetable';
+import TeacherSubject from '../models/TeacherSubject';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -144,10 +146,28 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
+    const schoolId = getOwnerUserId(req);
     const teacher = await Teacher.findOneAndDelete({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!teacher) {
       return res.status(404).json({ message: 'Professor não encontrado' });
     }
+
+    // Limpar slots deste professor nos horários gerados
+    const teacherId = String(teacher._id);
+    const timetables = await GeneratedTimetable.find({ school: schoolId });
+    for (const tt of timetables) {
+      const before = tt.slots.length;
+      const filtered = tt.slots.filter((s) => String(s.teacherId) !== teacherId);
+      if (filtered.length !== before) {
+        tt.set('slots', filtered);
+        await tt.save();
+        console.log(`🔄 Professor removido: ${before - filtered.length} slot(s) limpos de "${tt.title}" turma ${tt.classId}`);
+      }
+    }
+
+    // Remover também as lotações associadas
+    await TeacherSubject.deleteMany({ teacherId, userId: { $in: scopedUserIds } });
+
     res.json({ message: 'Professor deletado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

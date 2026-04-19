@@ -3,6 +3,8 @@ import { body, validationResult } from 'express-validator';
 import Subject from '../models/Subject';
 import Grade from '../models/Grade';
 import Class from '../models/Class';
+import GeneratedTimetable from '../models/GeneratedTimetable';
+import TeacherSubject from '../models/TeacherSubject';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -180,10 +182,28 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
+    const schoolId = String(req.user?.schoolId || req.user?.id || '');
     const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId: { $in: scopedUserIds } });
     if (!subject) {
       return res.status(404).json({ message: 'Componente curricular não encontrado' });
     }
+
+    // Limpar slots desta disciplina nos horários gerados
+    const subjectId = String(subject._id);
+    const timetables = await GeneratedTimetable.find({ school: schoolId });
+    for (const tt of timetables) {
+      const before = tt.slots.length;
+      const filtered = tt.slots.filter((s) => String(s.subjectId) !== subjectId);
+      if (filtered.length !== before) {
+        tt.set('slots', filtered);
+        await tt.save();
+        console.log(`🔄 Disciplina removida: ${before - filtered.length} slot(s) limpos de "${tt.title}" turma ${tt.classId}`);
+      }
+    }
+
+    // Remover também as lotações associadas a esta disciplina
+    await TeacherSubject.deleteMany({ subjectId, userId: { $in: scopedUserIds } });
+
     res.json({ message: 'Componente curricular deletado com sucesso' });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

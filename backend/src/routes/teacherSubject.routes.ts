@@ -1,8 +1,46 @@
 import express from 'express';
 import TeacherSubject from '../models/TeacherSubject';
+import GeneratedTimetable from '../models/GeneratedTimetable';
 import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
+
+// ─── Helper: limpa slots dos horários gerados após mudança de lotação ───────
+async function syncTimetablesOnWorkloadChange(
+  schoolId: string,
+  deletedAssocs: Array<{ teacherId: string; subjectId?: string; classId?: string }>
+): Promise<void> {
+  if (!deletedAssocs.length || !schoolId) return;
+  try {
+    for (const assoc of deletedAssocs) {
+      const query: Record<string, any> = { school: schoolId };
+      if (assoc.classId) query.classId = assoc.classId;
+
+      const timetables = await GeneratedTimetable.find(query);
+      for (const tt of timetables) {
+        const before = tt.slots.length;
+        const filtered = tt.slots.filter((slot) => {
+          const sameTeacher = String(slot.teacherId) === assoc.teacherId;
+          if (!sameTeacher) return true;
+          if (assoc.subjectId) {
+            return String(slot.subjectId) !== assoc.subjectId;
+          }
+          return false; // teacher sem filtro de subject → remove qualquer slot desse professor
+        });
+        if (filtered.length !== before) {
+          tt.set('slots', filtered);
+          await tt.save();
+          console.log(
+            `🔄 Lotação sync: ${before - filtered.length} slot(s) removidos de "${tt.title}" turma ${tt.classId}`
+          );
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error('⚠️ syncTimetablesOnWorkloadChange erro:', err.message);
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 const getScopedUserIds = (req: any): string[] => {
   const ownerUserId = req.user?.schoolId || req.user?.id;
@@ -350,12 +388,19 @@ router.post('/bulk', async (req, res) => {
 router.delete('/bulk/:userId', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
-    
-    // Deletar todas as associações do escopo do usuário autenticado
+    const schoolId = getOwnerUserId(req);
+
+    // Buscar associações antes de deletar para sincronizar os horários
+    const assocs = await TeacherSubject.find({ userId: { $in: scopedUserIds } });
+
     const result = await TeacherSubject.deleteMany({ userId: { $in: scopedUserIds } });
-    
+
     console.log(`✅ BULK DELETE: ${result.deletedCount} associações removidas para escopo`, scopedUserIds);
-    
+
+    // Limpar todos os slots correspondentes nos horários gerados
+    const deletedAssocs = assocs.map((a) => ({ teacherId: a.teacherId, subjectId: a.subjectId, classId: a.classId }));
+    await syncTimetablesOnWorkloadChange(schoolId, deletedAssocs);
+
     res.json({ 
       success: true, 
       message: `${result.deletedCount} lotações excluídas com sucesso`,
@@ -371,7 +416,19 @@ router.delete('/bulk/:userId', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
-    await TeacherSubject.findOneAndDelete({ _id: req.params.id, userId: { $in: scopedUserIds } });
+    const schoolId = getOwnerUserId(req);
+
+    // Buscar a associação antes de deletar para sincronizar os horários
+    const assoc = await TeacherSubject.findOne({ _id: req.params.id, userId: { $in: scopedUserIds } });
+    if (assoc) {
+      await assoc.deleteOne();
+      // Limpar slots dos horários gerados correspondentes a esta lotação
+      await syncTimetablesOnWorkloadChange(schoolId, [{
+        teacherId: assoc.teacherId,
+        subjectId: assoc.subjectId,
+        classId: assoc.classId
+      }]);
+    }
     res.json({ success: true, message: 'Associação removida' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -382,7 +439,17 @@ router.delete('/:id', async (req, res) => {
 router.delete('/teacher/:teacherId', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
-    await TeacherSubject.deleteMany({ teacherId: req.params.teacherId, userId: { $in: scopedUserIds } });
+    const schoolId = getOwnerUserId(req);
+    const { teacherId } = req.params;
+
+    // Buscar associações antes de deletar para sincronizar os horários
+    const assocs = await TeacherSubject.find({ teacherId, userId: { $in: scopedUserIds } });
+    await TeacherSubject.deleteMany({ teacherId, userId: { $in: scopedUserIds } });
+
+    // Limpar todos os slots deste professor nos horários gerados
+    const deletedAssocs = assocs.map((a) => ({ teacherId: a.teacherId, subjectId: a.subjectId, classId: a.classId }));
+    await syncTimetablesOnWorkloadChange(schoolId, deletedAssocs);
+
     res.json({ success: true, message: 'Associações removidas' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
