@@ -428,7 +428,73 @@ router.post('/bulk', async (req, res) => {
   }
 });
 
-// 🔥 BULK DELETE - Deletar TODAS as associações de um usuário de uma vez
+// � FORCE RESYNC — Relê todas as lotações ativas e aplica nos horários gerados
+router.post('/sync-timetables', async (req, res) => {
+  try {
+    const schoolId = getOwnerUserId(req);
+    if (!schoolId) return res.status(400).json({ success: false, message: 'schoolId não identificado' });
+
+    const scopedUserIds = getScopedUserIds(req);
+
+    // Buscar todas as lotações ativas da escola
+    const assocs = await TeacherSubject.find({ userId: { $in: scopedUserIds } }).lean();
+
+    // Construir mapa: subjectId+classId → teacherId (última associação vence)
+    // Prioridade: associação com classId específica > sem classId
+    const assignMap = new Map<string, string>(); // key: subjectId|classId → teacherId
+    const assignMapNoClass = new Map<string, string>(); // key: subjectId → teacherId
+
+    for (const a of assocs as any[]) {
+      if (!a.teacherId || !a.subjectId) continue;
+      if (a.classId) {
+        assignMap.set(`${a.subjectId}|${a.classId}`, a.teacherId);
+      } else {
+        assignMapNoClass.set(a.subjectId, a.teacherId);
+      }
+    }
+
+    // Buscar todos os horários gerados da escola
+    const timetables = await GeneratedTimetable.find({ school: schoolId });
+    let totalUpdated = 0;
+    let totalSlots = 0;
+
+    for (const tt of timetables) {
+      let changed = false;
+      for (const slot of tt.slots as any[]) {
+        if (!slot.subjectId) continue;
+        // Tentar match exato (subjectId + classId da turma do horário)
+        const specificKey = `${slot.subjectId}|${tt.classId}`;
+        const specificTeacher = assignMap.get(specificKey);
+        const fallbackTeacher = assignMapNoClass.get(slot.subjectId);
+        const newTeacherId = specificTeacher || fallbackTeacher;
+
+        if (newTeacherId && slot.teacherId !== newTeacherId) {
+          slot.teacherId = newTeacherId;
+          changed = true;
+          totalSlots++;
+        }
+      }
+      if (changed) {
+        tt.markModified('slots');
+        await tt.save();
+        totalUpdated++;
+        console.log(`🔄 Resync: "${tt.title}" turma ${tt.classId} atualizado`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Re-sync concluído: ${totalUpdated} horário(s) atualizado(s), ${totalSlots} slot(s) corrigido(s)`,
+      totalUpdated,
+      totalSlots
+    });
+  } catch (error: any) {
+    console.error('❌ Erro no resync:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// �🔥 BULK DELETE - Deletar TODAS as associações de um usuário de uma vez
 router.delete('/bulk/:userId', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);

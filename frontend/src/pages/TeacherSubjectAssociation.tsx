@@ -660,12 +660,27 @@ const TeacherSubjectAssociation: React.FC = () => {
       const id = association._id || association.id;
       await api.delete(`/teacher-subjects/${id}`);
       setMessage('✅ Lotação removida de todas as visualizações');
-      loadData(); // Recarrega dados - sincroniza ambas as seções automaticamente
-
+      loadData();
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
       console.error('Erro ao deletar:', error);
       setMessage('❌ Erro ao remover lotação');
+    }
+  };
+
+  const handleForceSyncTimetables = async () => {
+    if (!window.confirm('Isso irá atualizar TODOS os horários gerados com os professores da lotação atual.\n\nDeseja continuar?')) return;
+    try {
+      setLoading(true);
+      setMessage('🔄 Sincronizando horários...');
+      const response = await api.post('/teacher-subjects/sync-timetables');
+      setMessage(`✅ ${response.data.message}`);
+      setTimeout(() => setMessage(''), 6000);
+    } catch (error: any) {
+      setMessage(`❌ Erro ao sincronizar: ${error.response?.data?.message || error.message}`);
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1340,6 +1355,14 @@ const TeacherSubjectAssociation: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold">Componentes Curriculares e Professores Lotados</h2>
           <div className="flex gap-3">
+            <button
+              onClick={handleForceSyncTimetables}
+              disabled={loading || associations.length === 0}
+              className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Atualizar todos os horários gerados com os professores da lotação atual"
+            >
+              🔄 Sincronizar Horários
+            </button>
             <button
               onClick={handleClearAllAssociations}
               disabled={loading || associations.length === 0}
