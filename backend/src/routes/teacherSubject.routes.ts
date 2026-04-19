@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth';
 
 const router = express.Router();
 
-// ─── Helper: limpa slots dos horários gerados após mudança de lotação ───────
+// ─── Helper: vaga slots ao remover lotação (mantém o horário, limpa o professor) ─
 async function syncTimetablesOnWorkloadChange(
   schoolId: string,
   deletedAssocs: Array<{ teacherId: string; subjectId?: string; classId?: string }>
@@ -18,21 +18,19 @@ async function syncTimetablesOnWorkloadChange(
 
       const timetables = await GeneratedTimetable.find(query);
       for (const tt of timetables) {
-        const before = tt.slots.length;
-        const filtered = tt.slots.filter((slot) => {
+        let changed = false;
+        for (const slot of tt.slots as any[]) {
           const sameTeacher = String(slot.teacherId) === assoc.teacherId;
-          if (!sameTeacher) return true;
-          if (assoc.subjectId) {
-            return String(slot.subjectId) !== assoc.subjectId;
+          const sameSubject = assoc.subjectId ? String(slot.subjectId) === assoc.subjectId : true;
+          if (sameTeacher && sameSubject) {
+            slot.teacherId = ''; // Vaga o slot — mantém o horário para reatribuição
+            changed = true;
           }
-          return false; // teacher sem filtro de subject → remove qualquer slot desse professor
-        });
-        if (filtered.length !== before) {
-          tt.set('slots', filtered);
+        }
+        if (changed) {
+          tt.markModified('slots');
           await tt.save();
-          console.log(
-            `🔄 Lotação sync: ${before - filtered.length} slot(s) removidos de "${tt.title}" turma ${tt.classId}`
-          );
+          console.log(`🔄 Lotação sync (vacate): slots vagos em "${tt.title}" turma ${tt.classId}`);
         }
       }
     }
@@ -40,7 +38,37 @@ async function syncTimetablesOnWorkloadChange(
     console.error('⚠️ syncTimetablesOnWorkloadChange erro:', err.message);
   }
 }
-// ────────────────────────────────────────────────────────────────────────────
+
+// ─── Helper: atribui novo professor aos slots existentes da disciplina/turma ─
+async function syncTimetablesOnWorkloadCreate(
+  schoolId: string,
+  assoc: { teacherId: string; subjectId: string; classId?: string }
+): Promise<void> {
+  if (!schoolId || !assoc.teacherId || !assoc.subjectId) return;
+  try {
+    const query: Record<string, any> = { school: schoolId };
+    if (assoc.classId) query.classId = assoc.classId;
+
+    const timetables = await GeneratedTimetable.find(query);
+    for (const tt of timetables) {
+      let changed = false;
+      for (const slot of tt.slots as any[]) {
+        if (String(slot.subjectId) === assoc.subjectId) {
+          slot.teacherId = assoc.teacherId;
+          changed = true;
+        }
+      }
+      if (changed) {
+        tt.markModified('slots');
+        await tt.save();
+        console.log(`🔄 Lotação sync (assign): professor ${assoc.teacherId} atribuído em "${tt.title}" turma ${tt.classId}`);
+      }
+    }
+  } catch (err: any) {
+    console.error('⚠️ syncTimetablesOnWorkloadCreate erro:', err.message);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const getScopedUserIds = (req: any): string[] => {
   const ownerUserId = req.user?.schoolId || req.user?.id;
@@ -227,6 +255,10 @@ router.post('/', async (req, res) => {
       schoolId
     });
     await association.save();
+
+    // Atribuir novo professor nos slots existentes da disciplina/turma nos horários gerados
+    await syncTimetablesOnWorkloadCreate(schoolId, { teacherId, subjectId, classId });
+
     res.status(201).json({ success: true, data: association });
   } catch (error: any) {
     if (error.code === 11000) {
@@ -370,6 +402,18 @@ router.post('/bulk', async (req, res) => {
     }
 
     const result = await TeacherSubject.insertMany(associations, { ordered: false });
+
+    // Atribuir novos professores nos slots existentes para cada subjectId/classId
+    for (const subjectId of subjectIds) {
+      if (classIds?.length) {
+        for (const classId of classIds) {
+          await syncTimetablesOnWorkloadCreate(schoolId, { teacherId, subjectId, classId });
+        }
+      } else {
+        await syncTimetablesOnWorkloadCreate(schoolId, { teacherId, subjectId });
+      }
+    }
+
     res.status(201).json({ success: true, data: result });
   } catch (error: any) {
     // Ignorar erros de duplicatas

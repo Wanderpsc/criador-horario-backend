@@ -152,16 +152,21 @@ router.delete('/:id', auth, async (req: AuthRequest, res) => {
       return res.status(404).json({ message: 'Professor não encontrado' });
     }
 
-    // Limpar slots deste professor nos horários gerados
+    // Limpar slots deste professor nos horários gerados (vaga → teacherId = '')
     const teacherId = String(teacher._id);
     const timetables = await GeneratedTimetable.find({ school: schoolId });
     for (const tt of timetables) {
-      const before = tt.slots.length;
-      const filtered = tt.slots.filter((s) => String(s.teacherId) !== teacherId);
-      if (filtered.length !== before) {
-        tt.set('slots', filtered);
+      let changed = false;
+      for (const slot of tt.slots as any[]) {
+        if (String(slot.teacherId) === teacherId) {
+          slot.teacherId = '';
+          changed = true;
+        }
+      }
+      if (changed) {
+        tt.markModified('slots');
         await tt.save();
-        console.log(`🔄 Professor removido: ${before - filtered.length} slot(s) limpos de "${tt.title}" turma ${tt.classId}`);
+        console.log(`🔄 Professor removido: slots vagos em "${tt.title}" turma ${tt.classId}`);
       }
     }
 
