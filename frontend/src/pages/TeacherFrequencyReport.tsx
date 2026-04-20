@@ -90,6 +90,17 @@ interface ReportData {
   year: number;
   totalTeachers: number;
   reports: TeacherReport[];
+  unassignedDeficits?: UnassignedDeficit[];
+  totalUnassignedDeficit?: number;
+}
+
+interface UnassignedDeficit {
+  subjectId: string;
+  subjectName: string;
+  classId: string;
+  className: string;
+  predictedClasses: number;
+  deficit: number;
 }
 
 interface TeacherSubjectWorkload {
@@ -459,7 +470,8 @@ const TeacherFrequencyReport: React.FC = () => {
   }).sort((a, b) => a.teacherName.localeCompare(b.teacherName, 'pt-BR')) || [];
 
   // Calcular estatísticas gerais
-  const totalDeficit = filteredReports.reduce((sum, r) => sum + r.totalDeficit, 0);
+  const unassignedDeficit = reportData?.totalUnassignedDeficit ?? 0;
+  const totalDeficit = filteredReports.reduce((sum, r) => sum + r.totalDeficit, 0) + unassignedDeficit;
   const totalSurplus = filteredReports.reduce((sum, r) => sum + r.totalSurplus, 0);
   const totalPredicted = filteredReports.reduce((sum, r) => sum + r.totalPredictedClasses, 0);
   const totalGiven = filteredReports.reduce((sum, r) => sum + r.totalGivenClasses, 0);
@@ -1451,6 +1463,57 @@ const fmtDate = (dateStr: string) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* ── Disciplinas sem Professor Lotado ──────────────────────────── */}
+          {(reportData?.unassignedDeficits?.length ?? 0) > 0 && (
+            <div className="mt-6 bg-white rounded-lg shadow border-l-4 border-orange-500 overflow-hidden">
+              <div className="px-6 py-4 bg-orange-50 border-b border-orange-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <h3 className="text-base font-bold text-orange-800">Disciplinas sem Professor Lotado</h3>
+                    <p className="text-xs text-orange-600 mt-0.5">
+                      Cada aula agendada sem professor é computada como déficit — ausente permanente até a lotação ser feita
+                    </p>
+                  </div>
+                </div>
+                <div className="text-center px-4 py-2 bg-orange-100 rounded-lg border border-orange-300">
+                  <p className="text-xs text-orange-600 font-medium">Déficit Total</p>
+                  <p className="text-xl font-bold text-orange-700">-{reportData!.totalUnassignedDeficit}</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-orange-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-semibold text-orange-800">Disciplina</th>
+                      <th className="px-4 py-2 text-left font-semibold text-orange-800">Turma</th>
+                      <th className="px-4 py-2 text-center font-semibold text-orange-800">Aulas Previstas</th>
+                      <th className="px-4 py-2 text-center font-semibold text-orange-800">Aulas Dadas</th>
+                      <th className="px-4 py-2 text-center font-semibold text-orange-800">Déficit</th>
+                      <th className="px-4 py-2 text-center font-semibold text-orange-800">Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-orange-100">
+                    {reportData!.unassignedDeficits!.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-orange-50">
+                        <td className="px-4 py-3 font-medium text-gray-800">{item.subjectName}</td>
+                        <td className="px-4 py-3 text-gray-700">{item.className}</td>
+                        <td className="px-4 py-3 text-center text-gray-700">{item.predictedClasses}</td>
+                        <td className="px-4 py-3 text-center text-gray-400 italic">0</td>
+                        <td className="px-4 py-3 text-center font-bold text-red-600">-{item.deficit}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+                            ⚠️ Sem professor lotado
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

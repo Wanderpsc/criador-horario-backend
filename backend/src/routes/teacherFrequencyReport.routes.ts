@@ -537,13 +537,63 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       (report as any).totalSubstituteClasses = givenAsSubstitute.length;
     }
 
+    // ── Déficit de slots sem professor (teacherId = '') ─────────────────────
+    // Slots no horário sem professor lotado = aula sempre ausente até ser lotada
+    const unassignedMap = new Map<string, {
+      subjectId: string; subjectName: string; classId: string; className: string;
+      predictedClasses: number; deficit: number;
+    }>();
+    const todayUA = new Date();
+    todayUA.setHours(23, 59, 59, 999);
+
+    for (const timetable of timetables) {
+      const timetableClassId = timetable.classId?.toString();
+      if (!timetable.slots) continue;
+      for (const slot of timetable.slots as any[]) {
+        // Só processa slots SEM professor atribuído
+        if (slot.teacherId && slot.teacherId !== '') continue;
+        const subjectId = slot.subjectId?.toString();
+        if (!subjectId) continue;
+        const key = `${subjectId}_${timetableClassId}`;
+        if (!unassignedMap.has(key)) {
+          const subject = subjectMap.get(subjectId);
+          const classObj = timetableClassId ? classMap.get(timetableClassId) : null;
+          unassignedMap.set(key, {
+            subjectId,
+            subjectName: (subject as any)?.name || 'Disciplina',
+            classId: timetableClassId || '',
+            className: (classObj as any)?.name || 'Turma',
+            predictedClasses: 0,
+            deficit: 0,
+          });
+        }
+        const entry = unassignedMap.get(key)!;
+        for (const schoolDay of schoolDays) {
+          const targetDay = getDayName(schoolDay);
+          if (targetDay !== slot.day) continue;
+          const schoolDayDate = new Date(schoolDay.date);
+          if (schoolDayDate <= todayUA) {
+            entry.predictedClasses += 1;
+            entry.deficit += 1; // sem professor = sempre ausente
+          }
+        }
+      }
+    }
+
+    const unassignedDeficits = Array.from(unassignedMap.values())
+      .filter(u => u.deficit > 0)
+      .sort((a, b) => a.subjectName.localeCompare(b.subjectName, 'pt-BR'));
+    const totalUnassignedDeficit = unassignedDeficits.reduce((sum, u) => sum + u.deficit, 0);
+
     res.json({
       month: reportMonth,
       year: reportYear,
       startDate: startDateStr,
       endDate: endDateStr,
       totalTeachers: teachers.length,
-      reports
+      reports,
+      unassignedDeficits,
+      totalUnassignedDeficit,
     });
 
   } catch (error: any) {
