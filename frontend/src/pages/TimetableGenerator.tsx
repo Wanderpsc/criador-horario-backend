@@ -5186,11 +5186,11 @@ export default function TimetableGenerator() {
                                         ? '#fee2e2'
                                         : violatesAvailability
                                           ? '#fff7ed'
-                                          : subject?.color ? `${subject.color}20` : 'white',
+                                          : subject?.color ? `${subject.color}20` : slot ? '#dbeafe' : 'white',
                                     }}
                                     title={cellTitle}
                                   >
-                                    {/* Botão de editar (aparece ao passar o mouse) */}
+                                    {/* Botão de editar (aparece ao passar o mouse) */
                                     <button
                                       onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
                                       className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
@@ -5337,7 +5337,7 @@ export default function TimetableGenerator() {
                                       ? '#fee2e2'
                                       : violatesAvailability
                                         ? '#fff7ed'
-                                        : subject?.color ? `${subject.color}20` : 'white',
+                                        : subject?.color ? `${subject.color}20` : slot ? '#dbeafe' : 'white',
                                   }}
                                   title={cellTitle}
                                 >
