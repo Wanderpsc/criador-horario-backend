@@ -4130,6 +4130,8 @@ export default function TimetableGenerator() {
   // Função para detectar conflitos de horário
   const detectConflicts = (classId: string, day: string, period: number, slot: TimetableSlot | undefined): boolean => {
     if (!slot) return false;
+    // Slot sem professor não é conflito — é tratado como alerta separado
+    if (!slot.teacherId) return false;
 
     // Verificar se o mesmo professor está em outra turma no mesmo horário
     const allSlots = Object.values(generatedTimetables).flat();
@@ -5086,6 +5088,34 @@ export default function TimetableGenerator() {
         </div>
       )}
 
+      {/* Alerta: disciplinas sem professor lotado */}
+      {(() => {
+        const unassigned = Object.values(generatedTimetables).flat().filter(s => s && !s.teacherId);
+        if (unassigned.length === 0) return null;
+        const uniquePairs = Array.from(
+          new Map(unassigned.map(s => [`${s.subjectId}_${s.classId}`, s])).values()
+        );
+        return (
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded no-print">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-amber-500 flex-shrink-0" size={24} />
+              <div>
+                <h3 className="font-bold text-amber-800">Disciplinas sem Professor Lotado ({uniquePairs.length})</h3>
+                <ul className="mt-2 space-y-1 text-sm text-amber-700">
+                  {uniquePairs.map((s, i) => {
+                    const sub = subjects.find((x: any) => x.id === s.subjectId);
+                    const cls = classes.find((x: any) => x.id === s.classId);
+                    return (
+                      <li key={i}>• {sub?.name || s.subjectId} — {cls?.name || s.classId}: lote um professor na página de Lotação</li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {combinedConflicts.length === 0 && Object.keys(generatedTimetables).length > 0 && (
         <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded no-print">
           <div className="flex items-center gap-3">
@@ -5168,19 +5198,22 @@ export default function TimetableGenerator() {
                                 
                                 const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
                                 const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                                const noTeacher = !!slot && !slot.teacherId;
                                 const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
                                 const cellTitle = hasConflict
                                   ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
                                   : violatesAvailability
                                     ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
-                                    : slotLocked
-                                      ? '🔒 Aula travada neste slot'
-                                      : '';
+                                    : noTeacher
+                                      ? '⚠️ Sem professor lotado nesta disciplina'
+                                      : slotLocked
+                                        ? '🔒 Aula travada neste slot'
+                                        : '';
 
                                 return (
                                   <td
                                     key={day}
-                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
+                                    className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : noTeacher ? 'ring-2 ring-amber-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
                                     style={{
                                       backgroundColor: hasConflict
                                         ? '#fee2e2'
@@ -5192,7 +5225,7 @@ export default function TimetableGenerator() {
                                     }}
                                     title={cellTitle}
                                   >
-                                    {/* Botão de editar (aparece ao passar o mouse) */}
+                                    {/* Botão de editar (aparece ao passar o mouse) */
                                     <button
                                       onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
                                       className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
@@ -5321,19 +5354,22 @@ export default function TimetableGenerator() {
                               const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
                               const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
                               const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                              const noTeacher = !!slot && !slot.teacherId;
                               const slotLocked = isSlotLocked(currentClass.id, day, periodInfo.period);
                               const cellTitle = hasConflict
                                 ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!'
                                 : violatesAvailability
                                   ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário`
-                                  : slotLocked
-                                    ? '🔒 Aula travada neste slot'
-                                    : '';
+                                  : noTeacher
+                                    ? '⚠️ Sem professor lotado nesta disciplina'
+                                    : slotLocked
+                                      ? '🔒 Aula travada neste slot'
+                                      : '';
 
                               return (
                                 <td
                                   key={periodInfo.period}
-                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
+                                  className={`border border-gray-300 p-3 text-center relative group ${hasConflict ? 'ring-4 ring-red-500' : violatesAvailability ? 'ring-2 ring-orange-400' : noTeacher ? 'ring-2 ring-amber-400' : slotLocked ? 'ring-2 ring-slate-500' : ''}`}
                                   style={{
                                     backgroundColor: hasConflict
                                       ? '#fee2e2'
@@ -5345,7 +5381,7 @@ export default function TimetableGenerator() {
                                   }}
                                   title={cellTitle}
                                 >
-                                  {/* Botão de editar */}
+                                  {/* Botão de editar */
                                   <button
                                     onClick={() => openEditModal(currentClass.id, day, periodInfo.period)}
                                     className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-lg no-print"
@@ -5594,12 +5630,13 @@ export default function TimetableGenerator() {
                                 const teacher = slot ? teachers.find((t: Teacher) => t.id === slot.teacherId) : null;
                                 const hasConflict = detectConflicts(currentClass.id, day, periodInfo.period, slot);
                                 const violatesAvailability = !hasConflict && isAvailabilityViolated(slot, day, periodInfo.period);
+                                const noTeacher = !!slot && !slot.teacherId;
 
                                 return (
                                   <tr
                                     key={periodInfo.period}
-                                    className={`hover:bg-gray-50 ${hasConflict ? 'bg-red-50 ring-2 ring-red-500' : violatesAvailability ? 'bg-orange-50 ring-1 ring-orange-400' : ''}`}
-                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : ''}
+                                    className={`hover:bg-gray-50 ${hasConflict ? 'bg-red-50 ring-2 ring-red-500' : violatesAvailability ? 'bg-orange-50 ring-1 ring-orange-400' : noTeacher ? 'bg-amber-50 ring-1 ring-amber-400' : ''}`}
+                                    title={hasConflict ? '⚠️ CONFLITO DE HORÁRIO DETECTADO!' : violatesAvailability ? `⚠️ ${teacher?.name} está fora da disponibilidade neste horário` : noTeacher ? '⚠️ Sem professor lotado nesta disciplina' : ''}
                                   >
                                     <td className="border-b border-gray-200 p-3 bg-gray-50">
                                       <div className="text-sm font-bold">{periodInfo.period}º</div>
@@ -5608,7 +5645,7 @@ export default function TimetableGenerator() {
                                       </div>
                                     </td>
                                     <td
-                                      className={`border-b border-gray-200 p-3 ${hasConflict ? 'ring-2 ring-red-500' : violatesAvailability ? 'ring-1 ring-orange-400' : ''}`}
+                                      className={`border-b border-gray-200 p-3 ${hasConflict ? 'ring-2 ring-red-500' : violatesAvailability ? 'ring-1 ring-orange-400' : noTeacher ? 'ring-1 ring-amber-400' : ''}`}
                                       style={{
                                         backgroundColor: hasConflict
                                           ? '#fee2e2'
@@ -5629,6 +5666,11 @@ export default function TimetableGenerator() {
                                         {violatesAvailability && (
                                           <span className="ml-2 text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded no-print">
                                             📵 Fora da disp.
+                                          </span>
+                                        )}
+                                        {noTeacher && (
+                                          <span className="ml-2 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded no-print">
+                                            ⚠️ Sem professor
                                           </span>
                                         )}
                                       </div>
