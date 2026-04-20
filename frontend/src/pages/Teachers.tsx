@@ -618,16 +618,6 @@ export default function Teachers() {
                     {teacher.specialization}
                   </p>
                 )}
-                {teacher.availabilityNotes && (
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                    <p className="text-sm font-medium text-blue-900 flex items-center gap-1">
-                      🕐 Disponibilidade:
-                    </p>
-                    <p className="text-xs text-blue-700 mt-1 whitespace-pre-wrap">
-                      {teacher.availabilityNotes}
-                    </p>
-                  </div>
-                )}
               </div>
               
               <button
