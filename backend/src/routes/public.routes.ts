@@ -7,6 +7,8 @@ import Subject from '../models/Subject';
 import Teacher from '../models/Teacher';
 import Grade from '../models/Grade';
 import TeacherAttendance from '../models/TeacherAttendance';
+import SchoolDay from '../models/SchoolDay';
+import PanelTicker from '../models/PanelTicker';
 
 const router = Router();
 
@@ -219,6 +221,38 @@ router.get('/class/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Erro na rota pública de turma:', error);
     res.status(500).json({ message: 'Erro ao buscar turma' });
+  }
+});
+
+// GET /api/public/school-stats/:schoolId - Estatísticas dos dias letivos (público)
+router.get('/school-stats/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const schoolDays = await SchoolDay.find({ schoolId }).lean();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const letivos = schoolDays.filter((d: any) => d.dayType === 'regular' || d.dayType === 'saturday');
+    const totalDays = letivos.length;
+    const completedDays = letivos.filter((d: any) => d.isCompleted).length;
+    const remainingDays = letivos.filter((d: any) => {
+      const dd = new Date(d.date); dd.setHours(0, 0, 0, 0);
+      return dd >= today && !d.isCompleted;
+    }).length;
+    const completionRate = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
+    res.json({ data: { totalDays, completedDays, remainingDays, completionRate } });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+  }
+});
+
+// GET /api/public/ticker/:schoolId - Letreiro ativo da escola (público)
+router.get('/ticker/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const ticker = await PanelTicker.findOne({ schoolId }).lean();
+    res.json({ data: ticker || { schoolId, message: '', active: false } });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Erro ao buscar letreiro', error: error.message });
   }
 });
 
