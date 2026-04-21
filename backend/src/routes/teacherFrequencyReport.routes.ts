@@ -196,8 +196,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
 
     // Mapear dias da semana para comparação com slots do horário
     const getDayName = (schoolDay: any): string => {
-      // Se for sábado de reposição, usar o dia que ele segue
-      if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
+      // Se tiver followWeekday definido (qualquer tipo de dia), usar o dia que ele segue
+      if (schoolDay.followWeekday) {
         const weekdayMap: { [key: string]: string } = {
           'monday': 'Segunda',
           'tuesday': 'Terça',

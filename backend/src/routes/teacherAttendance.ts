@@ -464,8 +464,8 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
         'thursday': 'Quinta',
         'friday': 'Sexta'
       };
-      const isSat = targetDate.getDay() === 6;
-      const dayOfWeek = (isSat && followWeekday && followWeekdayMap[String(followWeekday).toLowerCase()])
+      // Usar followWeekday para qualquer tipo de dia (não só sábado)
+      const dayOfWeek = (followWeekday && followWeekdayMap[String(followWeekday).toLowerCase()])
         ? followWeekdayMap[String(followWeekday).toLowerCase()]
         : rawDayOfWeek;
       
@@ -1331,13 +1331,13 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     };
 
     if (queryFollowWeekday && followWeekdayMap[String(queryFollowWeekday).toLowerCase()]) {
-      // Sábado letivo: o frontend mandou o dia da semana a seguir via query param
+      // Frontend mandou o dia a seguir via query param (sábado letivo ou dia com troca)
       targetDay = followWeekdayMap[String(queryFollowWeekday).toLowerCase()];
-      console.log('🔄 Sábado letivo (via query) - usando horário de:', targetDay);
-    } else if (schoolDay?.dayType === 'saturday' && schoolDay.followWeekday) {
-      // Sábado de reposição: seguir horário de outro dia (do banco)
+      console.log('🔄 Troca de dia (via query) - usando horário de:', targetDay);
+    } else if (schoolDay?.followWeekday && followWeekdayMap[schoolDay.followWeekday]) {
+      // Calendário tem followWeekday definido para qualquer tipo de dia
       targetDay = followWeekdayMap[schoolDay.followWeekday];
-      console.log('🔄 Sábado de reposição (do calendário) - usando horário de:', targetDay);
+      console.log('🔄 Troca de dia (do calendário) - usando horário de:', targetDay);
     } else {
       // Dia regular: usar o dia da semana normal
       const dateObj = new Date(date + 'T12:00:00');

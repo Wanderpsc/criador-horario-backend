@@ -72,12 +72,19 @@ router.get('/school/:schoolId/statistics', auth, async (req: Request, res: Respo
 
     const schoolDays = await SchoolDay.find(query);
 
-    const totalDays = schoolDays.length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const regularDays = schoolDays.filter((d) => d.dayType === 'regular').length;
     const saturdayDays = schoolDays.filter((d) => d.dayType === 'saturday').length;
     const totalLetivos = regularDays + saturdayDays;
     const completedDays = schoolDays.filter((d) => d.isCompleted && (d.dayType === 'regular' || d.dayType === 'saturday')).length;
-    const remainingDays = totalLetivos - completedDays;
+    // Dias faltantes = dias letivos futuros (a partir de hoje) ainda não cumpridos
+    const remainingDays = schoolDays.filter((d) => {
+      const dayDate = new Date(d.date);
+      dayDate.setHours(0, 0, 0, 0);
+      return (d.dayType === 'regular' || d.dayType === 'saturday') && dayDate >= today && !d.isCompleted;
+    }).length;
     const completionRate = totalLetivos > 0 ? Math.round((completedDays / totalLetivos) * 100) : 0;
 
     const statistics = {
@@ -258,13 +265,11 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
       schoolDay.notes = (notes && notes.trim() !== '') ? notes : undefined;
     }
     if (followWeekday !== undefined) {
-      schoolDay.followWeekday = (followWeekday && followWeekday.trim() !== '') ? followWeekday : undefined;
+      // null ou string vazia = limpar a troca de dia
+      schoolDay.followWeekday = (followWeekday && typeof followWeekday === 'string' && followWeekday.trim() !== '') ? followWeekday : undefined;
     }
 
-    // Se mudou para tipo diferente de saturday, remover followWeekday
-    if (dayType && dayType !== 'saturday') {
-      schoolDay.followWeekday = undefined;
-    }
+    // Não limpar followWeekday automaticamente ao trocar tipo — o usuário pode querer manter a troca em dias regulares
 
     await schoolDay.save();
 
