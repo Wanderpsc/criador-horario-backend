@@ -69,7 +69,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'School ID não encontrado' });
     }
 
-    const { date, schedule, teacherDebts } = req.body;
+    const { date, schedule, teacherDebts, title } = req.body;
 
     if (!date || !schedule) {
       console.error('❌ Data ou schedule não fornecidos:', { date, schedule });
@@ -95,6 +95,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
       existingMakeup.schedule = schedule;
       existingMakeup.teacherDebts = teacherDebts;
       existingMakeup.totalScheduledHours = totalScheduledHours;
+      if (title !== undefined) existingMakeup.title = title;
       await existingMakeup.save();
       console.log('✅ Sábado atualizado com sucesso');
       return res.json(existingMakeup);
@@ -105,6 +106,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
     const makeupSaturday = new MakeupSaturday({
       schoolId,
       date: new Date(date),
+      title: title || '',
       schedule,
       teacherDebts,
       totalScheduledHours,

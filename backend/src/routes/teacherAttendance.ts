@@ -521,11 +521,19 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
         return matchTeacher && matchDay;
       });
       
-      console.log(`👨‍🏫 [class-status] Encontradas ${teacherSlots.length} aulas do professor no ${dayOfWeek}`);
-      console.log(`🔍 [class-status] Exemplo de slot (se existir):`, teacherSlots[0]);
+      // Deduplicar slots por período+turma para evitar duplicatas quando há múltiplos horários
+      const seenSlotKeys = new Map<string, any>();
+      teacherSlots.forEach((slot: any) => {
+        const key = `${slot.period}-${slot.classId}`;
+        if (!seenSlotKeys.has(key)) seenSlotKeys.set(key, slot);
+      });
+      const uniqueTeacherSlots = Array.from(seenSlotKeys.values());
+
+      console.log(`👨‍🏫 [class-status] Encontradas ${uniqueTeacherSlots.length} aulas únicas do professor no ${dayOfWeek} (${teacherSlots.length} antes de dedup)`);
+      console.log(`🔍 [class-status] Exemplo de slot (se existir):`, uniqueTeacherSlots[0]);
       
       // Se não encontrou aulas, retornar erro informativo
-      if (teacherSlots.length === 0) {
+      if (uniqueTeacherSlots.length === 0) {
         console.error(`❌ [class-status] Nenhuma aula encontrada para teacherId ${teacherId} no ${dayOfWeek}`);
         return res.status(404).json({ 
           message: 'Nenhuma aula encontrada',
@@ -562,7 +570,7 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       }
       
       const classesData = await Promise.all(
-        teacherSlots.map(async (slot: any) => {
+        uniqueTeacherSlots.map(async (slot: any) => {
           try {
             const subject = await Subject.findById(slot.subjectId);
             const classInfo = await Class.findById(slot.classId);

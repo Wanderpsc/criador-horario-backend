@@ -79,7 +79,17 @@ router.get('/gaps', auth, async (req: AuthRequest, res) => {
     }
 
     gaps.sort((a, b) => a.period - b.period);
-    res.json({ date, gaps });
+
+    // Deduplicar por (professor, período, turma) — evita duplicatas de registros repetidos no banco
+    const seen = new Set<string>();
+    const uniqueGaps = gaps.filter(gap => {
+      const key = `${gap.absentTeacherId}-${gap.period}-${gap.classId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    res.json({ date, gaps: uniqueGaps });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

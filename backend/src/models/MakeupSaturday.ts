@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMakeupSaturday extends Document {
+  title?: string;
   date: Date;
   schoolId: string;
   schedule: {
@@ -48,6 +49,10 @@ const MakeupSaturdaySchema = new Schema<IMakeupSaturday>(
       type: String,
       required: true,
       index: true
+    },
+    title: {
+      type: String,
+      default: ''
     },
     schedule: {
       type: Schema.Types.Mixed,
