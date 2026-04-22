@@ -90,6 +90,7 @@ export default function ClassPayments() {
       const res = await api.get('/substitute-links');
       return res.data as SubstituteLink[];
     },
+    refetchInterval: 30_000, // atualiza automaticamente a cada 30s
   });
 
   // ── Gerar link ──────────────────────────────────────────────────────────────

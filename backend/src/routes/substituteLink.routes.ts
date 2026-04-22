@@ -29,9 +29,14 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     const records = await TeacherAttendance.find({ schoolId, date });
 
     const slots: any[] = [];
+    const seenSlots = new Set<string>();
     for (const rec of records) {
       for (const cls of rec.classes) {
         if (cls.status === 'absent') {
+          // Chave única para evitar duplicatas (mesmo período + professor ausente + turma)
+          const key = `${cls.period}|${rec.teacherId}|${cls.classId}`;
+          if (seenSlots.has(key)) continue;
+          seenSlots.add(key);
           slots.push({
             period: cls.period,
             startTime: cls.startTime,

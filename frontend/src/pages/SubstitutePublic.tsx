@@ -90,7 +90,7 @@ export default function SubstitutePublic() {
   const [successMsg, setSuccessMsg] = useState('');
 
   // ── Carregar link ────────────────────────────────────────────────────────────
-  useEffect(() => {
+  const fetchLink = () => {
     if (!token) return;
     axios.get(`${API_URL}/substitute-links/public/${token}`)
       .then(res => {
@@ -106,7 +106,16 @@ export default function SubstitutePublic() {
         else setStatus('error');
         setErrorMsg(msg);
       });
-  }, [token]);
+  };
+
+  useEffect(() => {
+    fetchLink();
+    // Polling a cada 30s para refletir slots preenchidos por outros professores
+    const interval = setInterval(() => {
+      if (step !== 'success') fetchLink();
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Carregar débitos do professor ────────────────────────────────────────────
   useEffect(() => {
@@ -228,7 +237,8 @@ export default function SubstitutePublic() {
           </div>
         ) : (
           <>
-            {/* Resumo das lacunas */}
+            {/* Resumo das lacunas — oculto no passo 2 para evitar duplicidade visual */}
+            {step !== 'select-slot' && (
             <div className="bg-white rounded-xl shadow p-4">
               <h2 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-amber-500" />
@@ -250,6 +260,7 @@ export default function SubstitutePublic() {
                 ))}
               </div>
             </div>
+            )} {/* fim step !== 'select-slot' */}
 
             {/* ── PASSO 1: Identificação ── */}
             {step === 'identify' && (
