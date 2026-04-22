@@ -117,6 +117,17 @@ export default function ClassPayments() {
     },
   });
 
+  // ── Atualizar slots do link com ausências atuais ────────────────────────────
+  const refreshLinkMutation = useMutation({
+    mutationFn: async (id: string) => api.put(`/substitute-links/${id}/refresh`),
+    onSuccess: () => {
+      toast.success('✅ Link atualizado com as ausências atuais!');
+      queryClient.invalidateQueries({ queryKey: ['substitute-links'] });
+      queryClient.invalidateQueries({ queryKey: ['class-payment-gaps', selectedDate] });
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao atualizar link'),
+  });
+
   // ── Marcar pagamento como pago ──────────────────────────────────────────────
   const markPaidMutation = useMutation({
     mutationFn: async (id: string) =>
@@ -314,10 +325,19 @@ export default function ClassPayments() {
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
+                  <button
+                    onClick={() => refreshLinkMutation.mutate(link._id)}
+                    disabled={refreshLinkMutation.isPending}
+                    className="p-1.5 text-indigo-600 hover:bg-indigo-100 rounded disabled:opacity-50"
+                    title="Atualizar ausências do link"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
               <p className="text-xs text-indigo-600 mt-2">
                 ✉️ Envie este link pelo WhatsApp/e-mail para os professores disponíveis preencherem a lacuna.
+                {' '}Use <RefreshCw className="w-3 h-3 inline" /> para incluir novas ausências registradas.
               </p>
             </div>
           )}
@@ -466,15 +486,25 @@ export default function ClassPayments() {
                     </div>
                   </div>
                   {link.isActive && (
-                    <button
-                      onClick={() => {
-                        if (confirm('Desativar este link?')) deactivateMutation.mutate(link._id);
-                      }}
-                      className="text-red-400 hover:text-red-600 p-1"
-                      title="Desativar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => refreshLinkMutation.mutate(link._id)}
+                        disabled={refreshLinkMutation.isPending}
+                        className="text-indigo-400 hover:text-indigo-600 p-1 disabled:opacity-50"
+                        title="Atualizar ausências"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Desativar este link?')) deactivateMutation.mutate(link._id);
+                        }}
+                        className="text-red-400 hover:text-red-600 p-1"
+                        title="Desativar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

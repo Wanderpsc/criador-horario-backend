@@ -259,6 +259,66 @@ router.post('/public/:token/fill', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// PUT /:id/refresh  — re-sincronizar slots com ausências atuais (auth)
+// ─────────────────────────────────────────────
+router.put('/:id/refresh', auth, async (req: AuthRequest, res) => {
+  try {
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const link = await SubstituteLink.findOne({ _id: req.params.id, schoolId });
+    if (!link) return res.status(404).json({ message: 'Link não encontrado' });
+    if (!link.isActive) return res.status(400).json({ message: 'Link inativo não pode ser atualizado' });
+
+    // Re-buscar ausências do dia
+    const records = await TeacherAttendance.find({ schoolId, date: link.date });
+
+    const seenSlots = new Set<string>();
+    const freshSlots: any[] = [];
+
+    for (const rec of records) {
+      for (const cls of rec.classes) {
+        if (cls.status === 'absent') {
+          const key = `${cls.period}|${rec.teacherId}|${cls.classId}`;
+          if (seenSlots.has(key)) continue;
+          seenSlots.add(key);
+
+          // Verificar se já existe um slot preenchido para esta entrada
+          const existing = (link.slots as any[]).find(
+            (s: any) =>
+              s.period === cls.period &&
+              s.absentTeacherId?.toString() === rec.teacherId?.toString() &&
+              s.classId?.toString() === cls.classId?.toString()
+          );
+
+          freshSlots.push({
+            period: cls.period,
+            startTime: cls.startTime,
+            endTime: cls.endTime,
+            absentTeacherId: rec.teacherId,
+            absentTeacherName: rec.teacherName,
+            classId: cls.classId,
+            className: cls.className,
+            subjectId: cls.subjectId,
+            subjectName: cls.subjectName,
+            isFilled: existing?.isFilled || false,
+            filledBy: existing?.filledBy || '',
+            filledTeacherId: existing?.filledTeacherId || '',
+            filledAt: existing?.filledAt,
+          });
+        }
+      }
+    }
+
+    freshSlots.sort((a, b) => a.period - b.period);
+    link.slots = freshSlots;
+    await link.save();
+
+    res.json({ message: 'Link atualizado com as ausências atuais.', link });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // DELETE /:id  — desativar link (auth)
 // ─────────────────────────────────────────────
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
