@@ -110,6 +110,56 @@ router.get('/public/:token', async (req, res) => {
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
     if (link.expiresAt < new Date()) return res.status(410).json({ message: 'Este link expirou.' });
 
+    // Auto-refresh: re-sincronizar slots com ausências atuais antes de retornar
+    // Garante que professores marcados ausentes DEPOIS da geração do link apareçam
+    try {
+      const records = await TeacherAttendance.find({ schoolId: link.schoolId, date: link.date });
+      if (records.length > 0) {
+        const seenSlots = new Set<string>();
+        const freshSlots: any[] = [];
+
+        for (const rec of records) {
+          for (const cls of rec.classes) {
+            if (cls.status === 'absent') {
+              const key = `${cls.period}|${rec.teacherId}|${cls.classId}`;
+              if (seenSlots.has(key)) continue;
+              seenSlots.add(key);
+
+              // Preservar estado de preenchimento se já existia
+              const existing = (link.slots as any[]).find(
+                (s: any) =>
+                  s.period === cls.period &&
+                  s.absentTeacherId?.toString() === rec.teacherId?.toString() &&
+                  s.classId?.toString() === cls.classId?.toString()
+              );
+
+              freshSlots.push({
+                period: cls.period,
+                startTime: cls.startTime,
+                endTime: cls.endTime,
+                absentTeacherId: rec.teacherId,
+                absentTeacherName: rec.teacherName,
+                classId: cls.classId,
+                className: cls.className,
+                subjectId: cls.subjectId,
+                subjectName: cls.subjectName,
+                isFilled: existing?.isFilled || false,
+                filledBy: existing?.filledBy || '',
+                filledTeacherId: existing?.filledTeacherId || '',
+                filledAt: existing?.filledAt,
+              });
+            }
+          }
+        }
+
+        freshSlots.sort((a, b) => a.period - b.period);
+        link.slots = freshSlots;
+        await link.save();
+      }
+    } catch (_) {
+      // Se o auto-refresh falhar, retorna os slots existentes sem interromper
+    }
+
     // Enriquecer com lista de professores da escola para o formulário
     const teachers = await Teacher.find({ schoolId: link.schoolId, isActive: true })
       .select('_id name').lean();
