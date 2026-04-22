@@ -1,0 +1,114 @@
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface IEmployee extends Document {
+  schoolId: string;
+  // Dados Pessoais
+  name: string;
+  matricula?: string;
+  cpf?: string;
+  rg?: string;
+  rgOrgao?: string;
+  rgDataEmissao?: string;
+  dataNascimento?: string;
+  naturalidade?: string;
+  nacionalidade?: string;
+  sexo?: 'M' | 'F' | 'Outro';
+  estadoCivil?: 'Solteiro(a)' | 'Casado(a)' | 'Divorciado(a)' | 'Viúvo(a)' | 'União Estável' | 'Outro';
+  nomeMae?: string;
+  nomePai?: string;
+  tipoSanguineo?: string;
+  // Contato
+  email?: string;
+  celular?: string;
+  telefoneFixo?: string;
+  // Endereço
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  // Dados Funcionais
+  cargo?: string;
+  setor?: string;
+  tipoContrato?: 'CLT' | 'Estatutário' | 'Temporário' | 'Terceirizado' | 'Contrato' | 'Outro';
+  dataAdmissao?: string;
+  dataDemissao?: string;
+  jornadaTrabalho?: string;
+  cargaHorariaSemanal?: number;
+  salario?: number;
+  // Documentos
+  ctpsNumero?: string;
+  ctpsSerie?: string;
+  pisPasep?: string;
+  tituloEleitor?: string;
+  zonaEleitoral?: string;
+  secaoEleitoral?: string;
+  certificadoMilitar?: string;
+  cnhNumero?: string;
+  cnhCategoria?: string;
+  cnhValidade?: string;
+  reservista?: string;
+  // Outros
+  observacoes?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const employeeSchema = new Schema<IEmployee>(
+  {
+    schoolId: { type: String, required: true, index: true },
+    name: { type: String, required: true },
+    matricula: { type: String },
+    cpf: { type: String },
+    rg: { type: String },
+    rgOrgao: { type: String },
+    rgDataEmissao: { type: String },
+    dataNascimento: { type: String },
+    naturalidade: { type: String },
+    nacionalidade: { type: String, default: 'Brasileira' },
+    sexo: { type: String, enum: ['M', 'F', 'Outro'] },
+    estadoCivil: { type: String, enum: ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União Estável', 'Outro'] },
+    nomeMae: { type: String },
+    nomePai: { type: String },
+    tipoSanguineo: { type: String },
+    email: { type: String },
+    celular: { type: String },
+    telefoneFixo: { type: String },
+    cep: { type: String },
+    logradouro: { type: String },
+    numero: { type: String },
+    complemento: { type: String },
+    bairro: { type: String },
+    cidade: { type: String },
+    estado: { type: String },
+    cargo: { type: String },
+    setor: { type: String },
+    tipoContrato: { type: String, enum: ['CLT', 'Estatutário', 'Temporário', 'Terceirizado', 'Contrato', 'Outro'] },
+    dataAdmissao: { type: String },
+    dataDemissao: { type: String },
+    jornadaTrabalho: { type: String },
+    cargaHorariaSemanal: { type: Number },
+    salario: { type: Number },
+    ctpsNumero: { type: String },
+    ctpsSerie: { type: String },
+    pisPasep: { type: String },
+    tituloEleitor: { type: String },
+    zonaEleitoral: { type: String },
+    secaoEleitoral: { type: String },
+    certificadoMilitar: { type: String },
+    cnhNumero: { type: String },
+    cnhCategoria: { type: String },
+    cnhValidade: { type: String },
+    reservista: { type: String },
+    observacoes: { type: String },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+employeeSchema.index({ schoolId: 1, name: 1 });
+
+export default mongoose.model<IEmployee>('Employee', employeeSchema);

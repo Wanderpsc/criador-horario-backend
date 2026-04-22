@@ -27,7 +27,8 @@ import {
   CheckCircle,
   BarChart3,
   ScrollText,
-  CalendarCheck
+  CalendarCheck,
+  Briefcase,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import NotificationCenter from './NotificationCenter';
@@ -257,6 +258,16 @@ export default function Layout() {
             description: '⚙️ Ajustes da escola e preferências do sistema',
             color: 'gray',
             subtitle: 'Personalização'
+          },
+          { 
+            icon: Briefcase, 
+            label: 'Funcionários', 
+            path: '/employees',
+            description: '🗂️ Cadastro de servidores e colaboradores com dados pessoais, documentos e relatório',
+            color: 'violet',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Gestão de Pessoal'
           }
         ]
       : []),

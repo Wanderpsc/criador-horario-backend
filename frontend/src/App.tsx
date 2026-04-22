@@ -24,6 +24,7 @@ import DisplayPanelConfig from './pages/DisplayPanelConfig';
 import EmergencySchedule from './pages/EmergencySchedule';
 import MakeupSaturdays from './pages/MakeupSaturdays';
 import ClassPayments from './pages/ClassPayments';
+import Employees from './pages/Employees';
 import SubstitutePublic from './pages/SubstitutePublic';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
@@ -159,6 +160,7 @@ function App() {
           <Route path="teacher-frequency-report" element={<ClientRoute><TeacherFrequencyReport /></ClientRoute>} />
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
+          <Route path="employees" element={<ClientRoute><Employees /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><Settings /></ClientRoute>} />
           <Route path="audit-logs" element={<ClientRoute><AuditLogs /></ClientRoute>} />
           <Route path="timetables" element={<ClientRoute><Timetables /></ClientRoute>} />
