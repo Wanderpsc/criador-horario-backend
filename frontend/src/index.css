@@ -98,6 +98,33 @@
     margin: 0;
     padding: 0;
   }
+
+  /* Relatório de aulas pagas: imprime só a tabela */
+  #report-print-area {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  #report-print-area table {
+    font-size: 11px !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  #report-print-area th,
+  #report-print-area td {
+    border: 1px solid #ccc !important;
+    padding: 4px 6px !important;
+  }
+  #report-print-area thead tr {
+    background: #4338ca !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #report-print-area tfoot tr {
+    background: #e0e7ff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   
   .print-page-break {
     page-break-after: always;

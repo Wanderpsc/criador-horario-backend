@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import {
   DollarSign, Calendar, Clock, User, Link2, Copy, RefreshCw,
   CheckCircle, XCircle, AlertCircle, Eye, Trash2, Plus, BookOpen,
-  GraduationCap, Share2, ExternalLink,
+  GraduationCap, Share2, ExternalLink, Printer,
 } from 'lucide-react';
 
 interface Gap {
@@ -61,7 +61,33 @@ export default function ClassPayments() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [activeTab, setActiveTab] = useState<'gaps' | 'payments' | 'links'>('gaps');
+  const [activeTab, setActiveTab] = useState<'gaps' | 'payments' | 'links' | 'report'>('gaps');
+
+  // ── Filtros do relatório ────────────────────────────────────────────────────
+  const today = new Date().toISOString().split('T')[0];
+  const firstOfMonth = today.slice(0, 8) + '01';
+  const [reportFrom, setReportFrom] = useState(firstOfMonth);
+  const [reportTo, setReportTo] = useState(today);
+  const [reportStatus, setReportStatus] = useState<'all' | 'paid' | 'filled'>('all');
+
+  const { data: reportPayments = [], isLoading: loadingReport, refetch: refetchReport } = useQuery({
+    queryKey: ['class-payments-report', reportFrom, reportTo, reportStatus],
+    queryFn: async () => {
+      const res = await api.get('/class-payments', {
+        params: { startDate: reportFrom, endDate: reportTo },
+      });
+      const all = res.data as ClassPayment[];
+      if (reportStatus === 'all') return all;
+      return all.filter(p => p.status === reportStatus);
+    },
+    enabled: false, // só busca quando clicar em Gerar
+  });
+
+  const handleGenerateReport = () => refetchReport();
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   // ── Lacunas do dia ──────────────────────────────────────────────────────────
   const { data: gapsData, isLoading: loadingGaps, refetch: refetchGaps } = useQuery({
@@ -205,12 +231,12 @@ export default function ClassPayments() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        {(['gaps', 'payments', 'links'] as const).map(tab => (
+      <div className="flex gap-2 border-b border-gray-200 overflow-x-auto">
+        {(['gaps', 'payments', 'links', 'report'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${
               activeTab === tab
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -219,6 +245,7 @@ export default function ClassPayments() {
             {tab === 'gaps' && `🕳️ Lacunas do Dia (${openGaps.length})`}
             {tab === 'payments' && `💳 Pagamentos`}
             {tab === 'links' && `🔗 Links Gerados`}
+            {tab === 'report' && `🖨️ Relatório`}
           </button>
         ))}
       </div>
@@ -510,6 +537,171 @@ export default function ClassPayments() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── TAB: Relatório ── */}
+      {activeTab === 'report' && (
+        <div className="space-y-5">
+          {/* Filtros */}
+          <div className="bg-white rounded-xl shadow p-5 no-print">
+            <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Printer className="w-5 h-5 text-indigo-500" />
+              Relatório de Aulas Pagas / Adiantadas
+            </h2>
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">De</label>
+                <input
+                  type="date"
+                  value={reportFrom}
+                  onChange={e => setReportFrom(e.target.value)}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Até</label>
+                <input
+                  type="date"
+                  value={reportTo}
+                  onChange={e => setReportTo(e.target.value)}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                <select
+                  value={reportStatus}
+                  onChange={e => setReportStatus(e.target.value as any)}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="all">Todos</option>
+                  <option value="paid">Pago</option>
+                  <option value="filled">Preenchido</option>
+                </select>
+              </div>
+              <button
+                onClick={handleGenerateReport}
+                disabled={loadingReport}
+                className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {loadingReport ? 'Buscando...' : 'Gerar Relatório'}
+              </button>
+              {reportPayments.length > 0 && (
+                <button
+                  onClick={handlePrint}
+                  className="px-5 py-2 bg-gray-700 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Imprimir
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Área imprimível */}
+          {reportPayments.length > 0 && (
+            <div id="report-print-area" className="bg-white rounded-xl shadow overflow-hidden">
+              {/* Cabeçalho do relatório */}
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800">
+                  Relatório de Aulas Pagas / Adiantadas
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Período: {new Date(reportFrom + 'T12:00:00').toLocaleDateString('pt-BR')} a{' '}
+                  {new Date(reportTo + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  {reportStatus !== 'all' && ` · Status: ${statusLabel(reportStatus as ClassPayment['status'])}`}
+                  {' '}· Total: {reportPayments.length} aula(s)
+                </p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-indigo-600 text-white text-left">
+                      <th className="px-4 py-3">Data</th>
+                      <th className="px-4 py-3">Horário</th>
+                      <th className="px-4 py-3">Período</th>
+                      <th className="px-4 py-3">Professor Substituto</th>
+                      <th className="px-4 py-3">Prof. Ausente</th>
+                      <th className="px-4 py-3">Turma</th>
+                      <th className="px-4 py-3">Disciplina</th>
+                      <th className="px-4 py-3 text-center">Tipo</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportPayments.map((p, i) => (
+                      <tr
+                        key={p._id}
+                        className={`border-b border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                      >
+                        <td className="px-4 py-2.5 whitespace-nowrap font-medium text-gray-800">
+                          {new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR', {
+                            weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+                          })}
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-gray-600">
+                          {p.startTime}{p.endTime ? `–${p.endTime}` : ''}
+                        </td>
+                        <td className="px-4 py-2.5 text-center font-medium text-gray-700">
+                          {p.period}º
+                        </td>
+                        <td className="px-4 py-2.5 font-semibold text-indigo-700">
+                          {p.substituteTeacherName || '—'}
+                        </td>
+                        <td className="px-4 py-2.5 text-gray-600">
+                          {p.absentTeacherName || '—'}
+                        </td>
+                        <td className="px-4 py-2.5 text-gray-700">{p.className}</td>
+                        <td className="px-4 py-2.5 text-gray-700">{p.subjectName}</td>
+                        <td className="px-4 py-2.5 text-center">
+                          {p.filledViaLink ? (
+                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                              Via Link
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              Manual
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-center">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor(p.status)}`}>
+                            {statusLabel(p.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-indigo-50 font-semibold text-indigo-800">
+                      <td colSpan={9} className="px-4 py-3 text-right">
+                        Total: {reportPayments.length} aula(s)
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Espaço para assinatura na impressão */}
+              <div className="hidden print:flex p-6 pt-12 gap-16 justify-end">
+                <div className="text-center">
+                  <div className="border-t border-gray-400 w-48 mb-1" />
+                  <p className="text-xs text-gray-600">Responsável</p>
+                </div>
+                <div className="text-center">
+                  <div className="border-t border-gray-400 w-48 mb-1" />
+                  <p className="text-xs text-gray-600">Direção</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!loadingReport && reportPayments.length === 0 && (
+            <div className="text-center py-12 text-gray-400 no-print">
+              Selecione o período e clique em <strong>Gerar Relatório</strong>.
+            </div>
+          )}
         </div>
       )}
     </div>

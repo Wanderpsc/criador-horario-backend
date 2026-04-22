@@ -126,8 +126,18 @@ export default function SubstitutePublic() {
       .catch(() => { setDebts([]); setLoadingDebts(false); });
   }, [teacherId, fillType, token]);
 
-  const openSlots = linkData?.slots.filter(s => !s.isFilled) || [];
-  const filledSlots = linkData?.slots.filter(s => s.isFilled) || [];
+  // Deduplica slots por período + professor ausente + turma (links gerados antes da correção do backend)
+  const dedupeSlots = (slots: SlotData[]) => {
+    const seen = new Set<string>();
+    return slots.filter(s => {
+      const key = `${s.period}|${s.absentTeacherId}|${s.classId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+  const openSlots = dedupeSlots(linkData?.slots.filter(s => !s.isFilled) || []);
+  const filledSlots = dedupeSlots(linkData?.slots.filter(s => s.isFilled) || []);
 
   const handleTeacherSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
