@@ -55,6 +55,7 @@ import classPaymentRoutes from './routes/classPayment.routes';
 import substituteLinkRoutes from './routes/substituteLink.routes';
 import panelTickerRoutes from './routes/panelTicker.routes';
 import employeeRoutes from './routes/employee.routes';
+import employeeInviteLinkRoutes from './routes/employeeInviteLink.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
@@ -211,6 +212,7 @@ app.use('/api/class-payments', classPaymentRoutes);
 app.use('/api/substitute-links', substituteLinkRoutes);
 app.use('/api/panel-ticker', panelTickerRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/employee-invite-links', employeeInviteLinkRoutes);
 
 // Rota de health check
 const healthPayload = () => ({
