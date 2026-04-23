@@ -153,7 +153,7 @@ router.get('/public/:token', async (req, res) => {
         }
 
         freshSlots.sort((a, b) => a.period - b.period);
-        link.slots = freshSlots;
+        (link.slots as any) = freshSlots;
         await link.save();
       }
     } catch (_) {
@@ -359,7 +359,7 @@ router.put('/:id/refresh', auth, async (req: AuthRequest, res) => {
     }
 
     freshSlots.sort((a, b) => a.period - b.period);
-    link.slots = freshSlots;
+    (link.slots as any) = freshSlots;
     await link.save();
 
     res.json({ message: 'Link atualizado com as ausências atuais.', link });

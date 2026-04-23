@@ -4,7 +4,7 @@
  */
 
 import express, { Request, Response } from 'express';
-import SchoolDay from '../models/SchoolDay';
+import SchoolDay, { ISchoolDay } from '../models/SchoolDay';
 import Schedule from '../models/Schedule';
 import { auth } from '../middleware/auth';
 
@@ -266,7 +266,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     }
     if (followWeekday !== undefined) {
       // null ou string vazia = limpar a troca de dia
-      schoolDay.followWeekday = (followWeekday && typeof followWeekday === 'string' && followWeekday.trim() !== '') ? followWeekday : undefined;
+      schoolDay.followWeekday = (followWeekday && typeof followWeekday === 'string' && followWeekday.trim() !== '') ? followWeekday as ISchoolDay['followWeekday'] : undefined;
     }
 
     // Não limpar followWeekday automaticamente ao trocar tipo — o usuário pode querer manter a troca em dias regulares
