@@ -244,6 +244,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       const subjectClassDetails = [];
       let totalPredicted = 0;
       let totalGiven = 0;
+      let totalFuturePredicted = 0; // aulas de dias futuros — excluídas do déficit real
 
       // Rastrear pares subjectId+classId já processados via TeacherSubject
       const processedPairs = new Set<string>();
@@ -348,11 +349,15 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
 
         absenceDates.sort((a, b) => a.date.localeCompare(b.date));
         futureDates.sort((a: any, b: any) => a.date.localeCompare(b.date));
-        const deficit = predicted > given ? predicted - given : 0;
-        const surplus = given > predicted ? given - predicted : 0;
+        // Déficit real = apenas dias passados (dias futuros ainda não ocorreram)
+        const futurePred = futureDates.reduce((sum: number, fd: any) => sum + fd.periodsCount, 0);
+        const pastPredicted = predicted - futurePred;
+        const deficit = pastPredicted > given ? pastPredicted - given : 0;
+        const surplus = given > pastPredicted ? given - pastPredicted : 0;
 
         totalPredicted += predicted;
         totalGiven += given;
+        totalFuturePredicted += futurePred;
 
         subjectClassDetails.push({
           subjectId: subject._id,
@@ -449,10 +454,13 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
 
           absenceDatesFallback.sort((a, b) => a.date.localeCompare(b.date));
           futureDatesFallback.sort((a: any, b: any) => a.date.localeCompare(b.date));
-          const deficit = predicted > given ? predicted - given : 0;
-          const surplus = given > predicted ? given - predicted : 0;
+          const futurePredFb = futureDatesFallback.reduce((sum: number, fd: any) => sum + fd.periodsCount, 0);
+          const pastPredictedFb = predicted - futurePredFb;
+          const deficit = pastPredictedFb > given ? pastPredictedFb - given : 0;
+          const surplus = given > pastPredictedFb ? given - pastPredictedFb : 0;
           totalPredicted += predicted;
           totalGiven += given;
+          totalFuturePredicted += futurePredFb;
 
           subjectClassDetails.push({
             subjectId: cls.subjectId,
@@ -469,8 +477,9 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         }
       }
 
-      const totalDeficit = totalPredicted > totalGiven ? totalPredicted - totalGiven : 0;
-      const totalSurplus = totalGiven > totalPredicted ? totalGiven - totalPredicted : 0;
+      const totalPastPredicted = totalPredicted - totalFuturePredicted;
+      const totalDeficit = totalPastPredicted > totalGiven ? totalPastPredicted - totalGiven : 0;
+      const totalSurplus = totalGiven > totalPastPredicted ? totalGiven - totalPastPredicted : 0;
 
       // Incluir professor no relatório se tiver dados (TeacherSubject OU frequência)
       if (subjectClassDetails.length > 0 || attendanceRecords.length > 0) {

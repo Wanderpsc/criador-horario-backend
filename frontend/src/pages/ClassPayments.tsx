@@ -172,6 +172,17 @@ export default function ClassPayments() {
     navigator.clipboard.writeText(text).then(() => toast.success('Link copiado!'));
   };
 
+  // Deduplica slots por (período + professor ausente + turma) — evita exibir duplicatas do banco
+  const dedupeSlots = (slots: any[]): any[] => {
+    const seen = new Set<string>();
+    return slots.filter(s => {
+      const key = `${s.period}|${s.absentTeacherId}|${s.classId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   const gaps = gapsData?.gaps || [];
   const openGaps = gaps.filter(g => !g.alreadyPaid);
   const filledGaps = gaps.filter(g => g.alreadyPaid);
@@ -451,7 +462,8 @@ export default function ClassPayments() {
           )}
           {links.map(link => {
             const url = buildLinkUrl(link.token);
-            const filled = link.slots.filter((s: any) => s.isFilled).length;
+            const uniqueSlots = dedupeSlots(link.slots);
+            const filled = uniqueSlots.filter((s: any) => s.isFilled).length;
             return (
               <div
                 key={link._id}
@@ -471,7 +483,7 @@ export default function ClassPayments() {
                         {link.isActive ? 'Ativo' : 'Inativo'}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {filled}/{link.slots.length} lacunas preenchidas
+                        {filled}/{uniqueSlots.length} lacunas preenchidas
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -495,11 +507,11 @@ export default function ClassPayments() {
                         <ExternalLink className="w-4 h-4" />
                       </a>
                     </div>
-                    {/* Slots */}
+                    {/* Slots — exibidos sem duplicatas */}
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {link.slots.map((s: any) => (
+                      {uniqueSlots.map((s: any, idx: number) => (
                         <span
-                          key={s._id}
+                          key={s._id || idx}
                           className={`text-xs px-2 py-0.5 rounded-full ${
                             s.isFilled
                               ? 'bg-green-100 text-green-800'
