@@ -217,10 +217,22 @@ export default function ClassPayments() {
           />
         </div>
         <button
-          onClick={() => refetchGaps()}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200"
+          onClick={async () => {
+            await refetchGaps();
+            await refetchLinks();
+            // Se há link ativo para esta data, sincroniza slots com ausências atuais
+            const activeLink = linksForDate.find(l => l.isActive);
+            if (activeLink) {
+              refreshLinkMutation.mutate(activeLink._id);
+            } else {
+              toast.success('Dados atualizados!');
+            }
+          }}
+          disabled={loadingGaps || refreshLinkMutation.isPending}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
         >
-          <RefreshCw className="w-4 h-4" /> Atualizar
+          <RefreshCw className={`w-4 h-4 ${loadingGaps || refreshLinkMutation.isPending ? 'animate-spin' : ''}`} />
+          Atualizar
         </button>
         {openGaps.length > 0 && (
           <button
