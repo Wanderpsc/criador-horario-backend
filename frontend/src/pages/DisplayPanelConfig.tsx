@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/axios';
-import { Tv, ExternalLink, Calendar, AlertTriangle, Settings, Copy, Share2, QrCode } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { Tv, ExternalLink, Calendar, AlertTriangle, Settings, Copy, Share2, QrCode, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function DisplayPanelConfig() {
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const schoolId = user?.schoolId || (user?.role === 'school' ? user?.id : '') || '';
+
   const [selectedNormalId, setSelectedNormalId] = useState<string>('');
   const [selectedEmergencyId, setSelectedEmergencyId] = useState<string>('');
   const [isEmergencyMode, setIsEmergencyMode] = useState(false);
+  const [tickerMessage, setTickerMessage] = useState<string>('');
+  const [tickerActive, setTickerActive] = useState<boolean>(true);
 
   // Log quando isEmergencyMode mudar
   useEffect(() => {
@@ -60,6 +67,36 @@ export default function DisplayPanelConfig() {
       setSelectedEmergencyId(firstId);
     }
   }, [emergencySchedules, selectedEmergencyId]);
+
+  // Buscar letreiro atual
+  const { data: tickerData } = useQuery({
+    queryKey: ['panel-ticker', schoolId],
+    queryFn: async () => {
+      if (!schoolId) return null;
+      const res = await api.get(`/panel-ticker/${schoolId}`);
+      return res.data?.data || null;
+    },
+    enabled: !!schoolId,
+  });
+
+  useEffect(() => {
+    if (tickerData) {
+      setTickerMessage(tickerData.message || '');
+      setTickerActive(tickerData.active !== false);
+    }
+  }, [tickerData]);
+
+  // Salvar letreiro
+  const saveTickerMutation = useMutation({
+    mutationFn: async () => {
+      await api.put(`/panel-ticker/${schoolId}`, { message: tickerMessage, active: tickerActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['panel-ticker', schoolId] });
+      toast.success('Letreiro salvo com sucesso!');
+    },
+    onError: () => toast.error('Erro ao salvar letreiro'),
+  });
 
   // Função para abrir o painel em nova janela
   const openDisplayPanel = () => {
@@ -364,6 +401,64 @@ export default function DisplayPanelConfig() {
           </div>
         </div>
       </div>
+
+      {/* Card: Letreiro do Painel */}
+      {schoolId && (
+        <div className="card border-2 border-yellow-400 bg-yellow-50">
+          <div className="flex items-center gap-3 mb-4">
+            <MessageSquare className="text-yellow-600" size={28} />
+            <h2 className="text-xl font-bold text-yellow-800">📢 Letreiro do Painel</h2>
+          </div>
+          <p className="text-sm text-yellow-700 mb-4">
+            Este texto rola como letreiro na faixa inferior do painel de TV. Deixe em branco para ocultar.
+          </p>
+          <textarea
+            value={tickerMessage}
+            onChange={(e) => setTickerMessage(e.target.value)}
+            placeholder="Ex: Reunião de pais às 19h no auditório — Amanhã não haverá aulas no turno vespertino..."
+            maxLength={500}
+            rows={3}
+            className="w-full rounded-lg border-2 border-yellow-300 bg-white px-4 py-3 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+          />
+          <div className="flex items-center justify-between mt-3 flex-wrap gap-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={tickerActive}
+                onChange={(e) => setTickerActive(e.target.checked)}
+                className="w-4 h-4 accent-yellow-600"
+              />
+              <span className="text-sm font-medium text-yellow-800">Letreiro ativo</span>
+            </label>
+            <button
+              onClick={() => saveTickerMutation.mutate()}
+              disabled={saveTickerMutation.isPending || !schoolId}
+              className="btn bg-yellow-500 hover:bg-yellow-400 text-white font-bold px-6 py-2 disabled:opacity-50"
+            >
+              {saveTickerMutation.isPending ? 'Salvando…' : '💾 Salvar Letreiro'}
+            </button>
+          </div>
+          {tickerMessage.trim() && tickerActive && (
+            <div className="mt-4 overflow-hidden rounded-lg" style={{ background: '#1e293b', height: '34px', display: 'flex', alignItems: 'center' }}>
+              <style>{`
+                @keyframes ticker-preview {
+                  0%   { transform: translateX(100%); }
+                  100% { transform: translateX(-100%); }
+                }
+                .ticker-preview-text {
+                  display: inline-block;
+                  white-space: nowrap;
+                  animation: ticker-preview 18s linear infinite;
+                  font-size: 0.82rem;
+                  font-weight: 600;
+                  color: #fde68a;
+                }
+              `}</style>
+              <span className="ticker-preview-text">📢 &nbsp; {tickerMessage} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

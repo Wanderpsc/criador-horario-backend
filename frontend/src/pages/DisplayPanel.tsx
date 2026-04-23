@@ -808,6 +808,37 @@ export default function DisplayPanel({
     return '';
   }, [availableTimetables]);
 
+  // ── Estatísticas dos dias letivos (faixa inferior) ───────────────────────────
+  const { data: schoolStats } = useQuery<{ totalDays: number; completedDays: number; remainingDays: number; completionRate: number } | null>({
+    queryKey: ['public-school-stats', panelSchoolId],
+    queryFn: async () => {
+      if (!panelSchoolId) return null;
+      const res = await publicApi.get(`/public/school-stats/${panelSchoolId}`);
+      return res.data?.data || null;
+    },
+    enabled: !!panelSchoolId,
+    refetchInterval: 10 * 60 * 1000,
+    staleTime: 9 * 60 * 1000,
+    retry: 0,
+    refetchOnWindowFocus: false,
+  });
+
+  // ── Letreiro do administrador (ticker) ───────────────────────────────────────
+  const { data: panelTicker } = useQuery<{ message: string; active: boolean } | null>({
+    queryKey: ['public-ticker', panelSchoolId],
+    queryFn: async () => {
+      if (!panelSchoolId) return null;
+      const res = await publicApi.get(`/public/ticker/${panelSchoolId}`);
+      return res.data?.data || null;
+    },
+    enabled: !!panelSchoolId,
+    refetchInterval: 30 * 1000,
+    staleTime: 25 * 1000,
+    retry: 0,
+    refetchOnWindowFocus: false,
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+
   const { data: absentTeacherIds = [] } = useQuery<string[]>({
     queryKey: ['public-absent-teachers', panelSchoolId, todayDateStr],
     queryFn: async () => {
@@ -2547,6 +2578,68 @@ export default function DisplayPanel({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===== FAIXA: Andamento dos Dias Letivos ===== */}
+      {schoolStats && schoolStats.totalDays > 0 && (
+        <div className="w-full bg-gray-800 border-t border-gray-700 px-4 py-2 flex flex-wrap items-center justify-center gap-4 text-sm">
+          {/* Barra de progresso */}
+          <div className="flex items-center gap-2 min-w-[180px] flex-1 max-w-xs">
+            <span className="text-gray-400 whitespace-nowrap text-xs">Dias letivos</span>
+            <div className="flex-1 bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div
+                className="h-3 rounded-full transition-all duration-700"
+                style={{
+                  width: `${schoolStats.completionRate}%`,
+                  background: schoolStats.completionRate >= 75
+                    ? '#22c55e'
+                    : schoolStats.completionRate >= 40
+                      ? '#eab308'
+                      : '#3b82f6',
+                }}
+              />
+            </div>
+            <span className="text-white font-bold text-xs whitespace-nowrap">{schoolStats.completionRate}%</span>
+          </div>
+          {/* Estatísticas individuais */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-gray-400">Total:</span>
+            <span className="text-white font-semibold">{schoolStats.totalDays}</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-green-400">✓ Cumpridos:</span>
+            <span className="text-green-300 font-semibold">{schoolStats.completedDays}</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-yellow-400">⏳ Restantes:</span>
+            <span className="text-yellow-300 font-semibold">{schoolStats.remainingDays}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ===== FAIXA: Letreiro do Administrador ===== */}
+      {panelTicker?.active && panelTicker.message?.trim() && (
+        <div
+          className="w-full overflow-hidden"
+          style={{ background: '#1e293b', borderTop: '2px solid #334155', height: '34px', display: 'flex', alignItems: 'center' }}
+        >
+          <style>{`
+            @keyframes ticker-scroll {
+              0%   { transform: translateX(100vw); }
+              100% { transform: translateX(-100%); }
+            }
+            .ticker-text {
+              display: inline-block;
+              white-space: nowrap;
+              animation: ticker-scroll 28s linear infinite;
+              font-size: 0.85rem;
+              font-weight: 600;
+              color: #fde68a;
+              letter-spacing: 0.03em;
+            }
+          `}</style>
+          <span className="ticker-text">📢 &nbsp; {panelTicker.message} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
         </div>
       )}
 

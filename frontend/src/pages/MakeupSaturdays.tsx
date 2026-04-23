@@ -75,6 +75,8 @@ export default function MakeupSaturdays() {
   const [confirmedSlots, setConfirmedSlots] = useState<Set<string>>(new Set());
   const [activeScheduleId, setActiveScheduleId] = useState<string>(''); // ID do sábado salvo em edição de presença
   const [showAttendancePanel, setShowAttendancePanel] = useState(false);
+  const [showSaveTitleDialog, setShowSaveTitleDialog] = useState(false);
+  const [saveTitle, setSaveTitle] = useState('');
 
   // Monitor de mudanças no makeupSchedule
   useEffect(() => {
@@ -634,31 +636,29 @@ export default function MakeupSaturdays() {
   });
 
   const handleSave = () => {
-    console.log('💾 handleSave chamado');
-    console.log('📅 selectedDate:', selectedDate);
-    console.log('📋 makeupSchedule:', makeupSchedule);
-    console.log('📋 Keys do makeupSchedule:', Object.keys(makeupSchedule));
-    console.log('📋 Quantidade de turmas:', Object.keys(makeupSchedule).length);
-    
     if (!selectedDate) {
       toast.error('Selecione uma data para o sábado de reposição');
       return;
     }
-
     if (Object.keys(makeupSchedule).length === 0) {
-      console.error('❌ makeupSchedule está vazio!');
       toast.error('Gere um horário de reposição primeiro!');
       return;
     }
+    // Pré-preencher título sugerido e abrir diálogo
+    const suggestedTitle = `Sábado ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR')}`;
+    setSaveTitle(suggestedTitle);
+    setShowSaveTitleDialog(true);
+  };
 
+  const handleConfirmSave = () => {
     const data = {
       date: selectedDate,
       schedule: makeupSchedule,
-      wasHeld
+      wasHeld,
+      title: saveTitle.trim()
     };
-    
-    console.log('📤 Salvando com data:', data);
     saveMutation.mutate(data);
+    setShowSaveTitleDialog(false);
   };
 
   const handleDelete = (id: string) => {
@@ -703,9 +703,93 @@ export default function MakeupSaturdays() {
     toast.success('📅 Horário carregado com sucesso!');
   };
 
-  // Imprimir horário
+  // Imprimir horário em popup limpo (cabe em uma página A4 landscape)
+  const openPrintWindow = (scheduleData: { [classId: string]: MakeupSlot[] }, dateStr: string) => {
+    const classIds = Object.keys(scheduleData);
+    if (classIds.length === 0) {
+      toast.error('Horário vazio, nada para imprimir.');
+      return;
+    }
+    const maxPer = Math.max(...Object.values(scheduleData).map(s => s.length), 1);
+    // Ajusta font-size conforme número de colunas para caber em uma página
+    const colCount = classIds.length + 1;
+    const fs = Math.max(6, Math.min(11, Math.floor(120 / colCount)));
+    const fsSm = Math.max(5, fs - 1);
+
+    const headerCells = classIds.map(classId => {
+      const ci = classes.find((c: Class) => c._id === classId || c.id === classId);
+      const grade = ci?.grade?.name || '';
+      const name = ci?.name || 'Turma';
+      return `<th>${grade ? grade + '<br>' + name : name}</th>`;
+    }).join('');
+
+    const bodyRows = Array.from({ length: maxPer }, (_, i) => i + 1).map(period => {
+      let startTime = '—', endTime = '—';
+      for (const slots of Object.values(scheduleData)) {
+        const slot = slots.find(s => s.period === period);
+        if (slot) { startTime = slot.startTime; endTime = slot.endTime; break; }
+      }
+      const cells = classIds.map(classId => {
+        const slot = (scheduleData[classId] || []).find(s => s.period === period);
+        if (slot) {
+          return `<td><div class="subj">${slot.subjectName}</div><div class="teach">${slot.teacherName}</div></td>`;
+        }
+        return '<td style="color:#bbb">—</td>';
+      }).join('');
+      return `<tr>
+        <td class="period-col"><strong>${period}º</strong><br><span style="font-size:${fsSm}px">${startTime}–${endTime}</span></td>
+        ${cells}
+      </tr>`;
+    }).join('');
+
+    const printDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('pt-BR', {
+      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+    });
+
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    if (!printWindow) { toast.error('Popup bloqueado. Permita popups para imprimir.'); return; }
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+  <meta charset="utf-8">
+  <title>Horário de Reposição – ${printDate}</title>
+  <style>
+    @page { size: A4 landscape; margin: 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: ${fs}px; }
+    h2 { text-align: center; font-size: ${fs + 2}px; margin-bottom: 6px; }
+    p.sub { text-align: center; font-size: ${fsSm}px; color: #555; margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { background-color: #16a34a; color: white; border: 1px solid #222;
+         padding: 3px 2px; font-size: ${fs}px; text-align: center;
+         word-break: break-word; line-height: 1.2; }
+    td { border: 1px solid #444; padding: 3px 2px; text-align: center;
+         vertical-align: middle; word-break: break-word; line-height: 1.2; }
+    .period-col { background: #f3f4f6; font-size: ${fs}px; width: 56px; min-width: 56px; }
+    .subj { font-weight: bold; font-size: ${fs}px; }
+    .teach { font-size: ${fsSm}px; color: #374151; margin-top: 2px; }
+  </style>
+</head><body>
+  <h2>📊 Grade de Horários – Sábado de Reposição</h2>
+  <p class="sub">${printDate}</p>
+  <table>
+    <thead><tr>
+      <th style="width:56px">Horário</th>
+      ${headerCells}
+    </tr></thead>
+    <tbody>${bodyRows}</tbody>
+  </table>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
+
   const handlePrint = () => {
-    window.print();
+    if (Object.keys(makeupSchedule).length === 0) {
+      toast.error('Gere um horário de reposição primeiro!');
+      return;
+    }
+    openPrintWindow(makeupSchedule, selectedDate);
   };
 
   const toggleSlotConfirmation = (classId: string, period: number) => {
@@ -769,6 +853,46 @@ export default function MakeupSaturdays() {
 
   return (
     <div className="space-y-6">
+      {/* ── Modal: título ao salvar ── */}
+      {showSaveTitleDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <Save size={20} className="text-green-600" />
+              Nome do Horário
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Digite um título para identificar este horário de reposição:
+            </p>
+            <input
+              type="text"
+              value={saveTitle}
+              onChange={e => setSaveTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleConfirmSave(); if (e.key === 'Escape') setShowSaveTitleDialog(false); }}
+              placeholder="Ex: Reposição Semana 1 – Abril 2026"
+              className="input w-full mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowSaveTitleDialog(false)}
+                className="btn btn-outline btn-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                disabled={saveMutation.isPending}
+                className="btn btn-success btn-sm flex items-center gap-2"
+              >
+                <Save size={16} />
+                {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-blue-800">
@@ -818,6 +942,9 @@ export default function MakeupSaturdays() {
                   {/* Cabeçalho do Card */}
                   <div className="flex items-center justify-between mb-3 pb-3 border-b-2 border-purple-100">
                     <div>
+                      {saved.title && (
+                        <div className="text-sm font-semibold text-purple-900 mb-0.5">{saved.title}</div>
+                      )}
                       <div className="text-xl font-bold text-purple-800">
                         📅 {new Date(saved.date).toLocaleDateString('pt-BR', {
                           weekday: 'short',
@@ -907,9 +1034,8 @@ export default function MakeupSaturdays() {
                     </button>
                     <button
                       onClick={() => {
-                        setMakeupSchedule(saved.schedule);
-                        setSelectedDate(new Date(saved.date).toISOString().split('T')[0]);
-                        setTimeout(() => window.print(), 100);
+                        const dateStr = new Date(saved.date).toISOString().split('T')[0];
+                        openPrintWindow(saved.schedule, dateStr);
                       }}
                       className="btn btn-sm btn-outline flex items-center justify-center gap-1"
                     >

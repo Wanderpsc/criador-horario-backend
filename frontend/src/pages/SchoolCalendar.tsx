@@ -130,6 +130,7 @@ const SchoolCalendar: React.FC = () => {
   const [searchNote, setSearchNote] = useState('');
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [showDaySwapFor, setShowDaySwapFor] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     date: '',
     dayType: 'regular' as const,
@@ -286,6 +287,27 @@ const SchoolCalendar: React.FC = () => {
       loadData();
     } catch (error) {
       toast.error('Erro ao atualizar dia letivo');
+    }
+  };
+
+  const handleSetDaySwap = async (id: string, followWeekday: string) => {
+    try {
+      await schoolDayAPI.update(id, { followWeekday });
+      toast.success('Troca de dia configurada!');
+      setShowDaySwapFor(null);
+      loadData();
+    } catch (error) {
+      toast.error('Erro ao salvar troca de dia');
+    }
+  };
+
+  const handleClearDaySwap = async (id: string) => {
+    try {
+      await schoolDayAPI.update(id, { followWeekday: null });
+      toast.success('Horário normal restaurado');
+      loadData();
+    } catch (error) {
+      toast.error('Erro ao restaurar horário normal');
     }
   };
 
@@ -665,6 +687,8 @@ const SchoolCalendar: React.FC = () => {
           content += `<div class="day-type">${getDayTypeLabel(schoolDay.dayType)}</div>`;
           if (schoolDay.dayType === 'saturday' && schoolDay.followWeekday) {
             content += `<div class="follow-weekday">📅 Segue: ${weekdayLabels[schoolDay.followWeekday] || schoolDay.followWeekday}</div>`;
+          } else if (schoolDay.followWeekday) {
+            content += `<div class="follow-weekday">📅 Troca: ${weekdayLabels[schoolDay.followWeekday] || schoolDay.followWeekday}</div>`;
           }
           if (schoolDay.notes) {
             content += `<div class="notes">📝 ${schoolDay.notes.replace(/\n/g, ', ')}</div>`;
@@ -685,22 +709,26 @@ const SchoolCalendar: React.FC = () => {
   // Helper: build saturday reference table HTML
   const buildSaturdayRefHtml = (daysData: SchoolDay[], weekdayLabels: Record<string, string>) => {
     const saturdayDays = daysData.filter(d => d.dayType === 'saturday' && d.followWeekday);
-    if (saturdayDays.length === 0) return '';
+    const daySwapDays = daysData.filter(d => d.dayType === 'regular' && d.followWeekday);
+    if (saturdayDays.length === 0 && daySwapDays.length === 0) return '';
+    const buildRows = (days: SchoolDay[], label: string) => days.map(d => {
+      const dateObj = new Date(d.date + 'T12:00:00');
+      return `<tr>
+        <td>${dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
+        <td>${label}</td>
+        <td><strong>${weekdayLabels[d.followWeekday!] || d.followWeekday}</strong></td>
+        <td>${d.notes ? d.notes.replace(/\n/g, ', ') : '—'}</td>
+        <td>${d.isCompleted ? '✓ Cumprido' : '○ Pendente'}</td>
+      </tr>`;
+    }).join('');
     return `
       <div class="saturday-ref">
-        <h3>📅 Sábados Letivos — Correspondência de Dias</h3>
+        <h3>📅 Dias com Troca de Horário</h3>
         <table class="ref-table">
-          <thead><tr><th>Data</th><th>Segue horário de</th><th>Observações</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Data</th><th>Tipo</th><th>Segue horário de</th><th>Observações</th><th>Situação</th></tr></thead>
           <tbody>
-            ${saturdayDays.map(d => {
-              const dateObj = new Date(d.date + 'T12:00:00');
-              return `<tr>
-                <td>${dateObj.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</td>
-                <td><strong>${weekdayLabels[d.followWeekday!] || d.followWeekday}</strong></td>
-                <td>${d.notes ? d.notes.replace(/\n/g, ', ') : '—'}</td>
-                <td>${d.isCompleted ? '✓ Cumprido' : '○ Pendente'}</td>
-              </tr>`;
-            }).join('')}
+            ${buildRows(saturdayDays, 'Sábado Letivo')}
+            ${buildRows(daySwapDays, 'Troca de Dia')}
           </tbody>
         </table>
       </div>`;
@@ -1125,16 +1153,14 @@ const SchoolCalendar: React.FC = () => {
                           </div>
                         )}
                         
-                        {schoolDay.dayType === 'saturday' && schoolDay.followWeekday && (
-                          <div className="text-purple-800 font-medium">
-                            📅 Segue: {getWeekdayLabel(schoolDay.followWeekday)}
-                          </div>
+                        {schoolDay.dayType === 'saturday' && !schoolDay.followWeekday && (
+                          <div className="text-purple-700 font-medium text-xs">🗓️ Sábado Letivo</div>
                         )}
                         {schoolDay.schedule && (
                           <div className="text-gray-700 font-medium truncate">⏰ {schoolDay.schedule.name}</div>
                         )}
                         
-                        {/* Informação sobre horário emergencial ou normal */}
+                        {/* Informação sobre horário emergencial, troca de dia ou normal */}
                         {(() => {
                           const emergency = getEmergencyScheduleForDate(date);
                           if (emergency) {
@@ -1173,12 +1199,65 @@ const SchoolCalendar: React.FC = () => {
                                 </div>
                               </div>
                             );
+                          } else if (schoolDay.followWeekday) {
+                            // Dia com troca de horário configurada
+                            return (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 text-blue-800 font-medium">
+                                    <span className="text-xs">📅 Segue: {getWeekdayLabel(schoolDay.followWeekday)}</span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleClearDaySwap(schoolDay.id); }}
+                                    className="text-blue-400 hover:text-red-600 transition-colors"
+                                    title="Restaurar horário normal"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          } else if (showDaySwapFor === schoolDay.id) {
+                            // Seletor de troca de dia aberto
+                            return (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-300 rounded">
+                                <div className="text-xs text-blue-800 font-medium mb-1">📅 Seguir horário de:</div>
+                                <select
+                                  className="w-full text-xs border border-blue-300 rounded px-1 py-1 bg-white"
+                                  defaultValue=""
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => { e.stopPropagation(); if (e.target.value) handleSetDaySwap(schoolDay.id, e.target.value); }}
+                                >
+                                  <option value="">Selecione...</option>
+                                  <option value="monday">Segunda-feira</option>
+                                  <option value="tuesday">Terça-feira</option>
+                                  <option value="wednesday">Quarta-feira</option>
+                                  <option value="thursday">Quinta-feira</option>
+                                  <option value="friday">Sexta-feira</option>
+                                </select>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setShowDaySwapFor(null); }}
+                                  className="text-xs text-gray-500 mt-1 hover:text-gray-700"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            );
                           } else {
                             return (
                               <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                                <div className="flex items-center gap-1 text-green-700 font-medium">
-                                  <Check className="w-3 h-3" />
-                                  <span className="text-xs">Horário Normal</span>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 text-green-700 font-medium">
+                                    <Check className="w-3 h-3" />
+                                    <span className="text-xs">Horário Normal</span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setShowDaySwapFor(schoolDay.id); }}
+                                    className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
+                                    title="Trocar dia do horário"
+                                  >
+                                    🔄 Trocar
+                                  </button>
                                 </div>
                               </div>
                             );
@@ -1485,11 +1564,11 @@ const SchoolCalendar: React.FC = () => {
                 </select>
               </div>
 
-              {/* Seleção de dia da semana para sábados letivos */}
-              {formData.dayType === 'saturday' && (
+              {/* Seleção de dia da semana para sábados letivos e dias com troca */}
+              {(formData.dayType === 'saturday' || formData.dayType === 'regular') && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <label className="block text-sm font-medium text-blue-900 mb-2">
-                    📅 Seguir horário de qual dia da semana?
+                    📅 Seguir horário de outro dia? (opcional)
                   </label>
                   <select
                     value={formData.followWeekday}
@@ -1498,7 +1577,7 @@ const SchoolCalendar: React.FC = () => {
                     }
                     className="w-full border border-blue-300 rounded-lg px-3 py-2 bg-white"
                   >
-                    <option value="">Selecione o dia da semana</option>
+                    <option value="">— Horário Normal do dia —</option>
                     <option value="monday">Segunda-feira</option>
                     <option value="tuesday">Terça-feira</option>
                     <option value="wednesday">Quarta-feira</option>
@@ -1506,7 +1585,9 @@ const SchoolCalendar: React.FC = () => {
                     <option value="friday">Sexta-feira</option>
                   </select>
                   <p className="text-xs text-blue-700 mt-2">
-                    O sábado seguirá o mesmo horário do dia selecionado
+                    {formData.dayType === 'saturday'
+                      ? 'O sábado seguirá o mesmo horário do dia selecionado'
+                      : 'Quando selecionado, este dia usará o horário do dia indicado (troca de dia)'}
                   </p>
                 </div>
               )}

@@ -207,13 +207,8 @@ export default function TeacherAttendance() {
     enabled: !!user?.schoolId
   });
 
-  // Auto-popular saturdayWeekday do calendário, ou resetar se não for sábado
+  // Auto-popular saturdayWeekday do calendário para qualquer tipo de dia com troca configurada
   useEffect(() => {
-    if (!isSaturday) {
-      setSaturdayWeekday('');
-      return;
-    }
-    // Buscar followWeekday do SchoolDay no calendário
     if (calendarData && Array.isArray(calendarData)) {
       const schoolDay = calendarData.find((d: any) => {
         const dDate = new Date(d.date).toISOString().split('T')[0];
@@ -221,7 +216,11 @@ export default function TeacherAttendance() {
       });
       if (schoolDay?.followWeekday) {
         setSaturdayWeekday(schoolDay.followWeekday);
+      } else {
+        setSaturdayWeekday('');
       }
+    } else if (!isSaturday) {
+      setSaturdayWeekday('');
     }
   }, [selectedDate, isSaturday, calendarData]);
 
@@ -267,7 +266,7 @@ export default function TeacherAttendance() {
       try {
         const queryParams: string[] = [];
         if (selectedTimetableId !== 'auto') queryParams.push(`scheduleId=${selectedTimetableId}`);
-        if (isSaturday && saturdayWeekday) queryParams.push(`followWeekday=${saturdayWeekday}`);
+        if (saturdayWeekday) queryParams.push(`followWeekday=${saturdayWeekday}`);
         const qs = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
         const response = await api.get(`/teacher-attendance/scheduled-classes/${selectedDate}${qs}`);
         console.log('👨‍🏫 BACKEND RETORNOU:', response.data.teachers?.length || 0, 'professores para', selectedDate);
@@ -278,7 +277,7 @@ export default function TeacherAttendance() {
         return { teachers: [], dayOfWeek: '', date: selectedDate };
       }
     },
-    enabled: !!selectedDate && (!isSaturday || !!saturdayWeekday)
+    enabled: !!selectedDate
   });
 
   // Buscar registros de frequência já salvos
