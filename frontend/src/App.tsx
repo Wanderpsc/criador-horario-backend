@@ -26,6 +26,7 @@ import MakeupSaturdays from './pages/MakeupSaturdays';
 import ClassPayments from './pages/ClassPayments';
 import Employees from './pages/Employees';
 import SubstitutePublic from './pages/SubstitutePublic';
+import EmployeePublicForm from './pages/EmployeePublicForm';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
 import SchoolUserLogin from './pages/SchoolUserLogin';
@@ -134,6 +135,8 @@ function App() {
         <Route path="/payment-pending" element={<PaymentCheckout />} />
         {/* Link público de substituto — sem auth */}
         <Route path="/substitute/:token" element={<SubstitutePublic />} />
+        {/* Link público de cadastro/atualização de funcionário — sem auth */}
+        <Route path="/employee-form/:token" element={<EmployeePublicForm />} />
         
         <Route path="/" element={
           <PrivateRoute>

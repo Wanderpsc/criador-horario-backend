@@ -4,7 +4,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
   Users, Plus, Search, Pencil, Trash2, Printer, X, ChevronDown, ChevronUp,
-  User, Phone, MapPin, Briefcase, FileText, BookOpen, Eye,
+  User, Phone, MapPin, Briefcase, FileText, BookOpen, Eye, Link2, Copy, CheckCheck,
 } from 'lucide-react';
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -87,6 +87,12 @@ export default function Employees() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'lista' | 'relatorio'>('lista');
 
+  // ─── Link de convite ──────────────────────────────────────────────────────
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteEmployeeName, setInviteEmployeeName] = useState('');
+
   // ─── Queries ──────────────────────────────────────────────────────────────
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees', showInactive],
@@ -111,6 +117,27 @@ export default function Employees() {
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao salvar.'),
   });
+
+  const inviteMutation = useMutation({
+    mutationFn: (employeeId?: string) =>
+      api.post('/employee-invite-links', employeeId ? { employeeId } : {}),
+    onSuccess: (res, employeeId) => {
+      const token = res.data.token;
+      const base = window.location.origin + window.location.pathname;
+      const url = `${base}#/employee-form/${token}`;
+      setInviteLink(url);
+      setInviteCopied(false);
+      setInviteModalOpen(true);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao gerar link.'),
+  });
+
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2500);
+    });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/employees/${id}`),
@@ -186,6 +213,18 @@ export default function Employees() {
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium"
         >
           <Plus className="w-4 h-4" /> Novo Funcionário
+        </button>
+        <button
+          onClick={() => {
+            setInviteEmployeeName('novo funcionário');
+            inviteMutation.mutate(undefined);
+          }}
+          disabled={inviteMutation.isPending}
+          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium disabled:opacity-60"
+          title="Gerar link para novo funcionário preencher seu próprio cadastro"
+        >
+          <Link2 className="w-4 h-4" />
+          {inviteMutation.isPending ? 'Gerando...' : 'Gerar Link de Cadastro'}
         </button>
       </div>
 
@@ -274,6 +313,18 @@ export default function Employees() {
                         title="Ver ficha completa"
                       >
                         <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setInviteEmployeeName(emp.name);
+                          inviteMutation.mutate(emp._id);
+                        }}
+                        disabled={inviteMutation.isPending}
+                        className="p-1.5 text-gray-400 hover:text-emerald-500 disabled:opacity-50"
+                        title="Gerar link para o funcionário atualizar seus dados"
+                      >
+                        <Link2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); openEdit(emp); }}
@@ -382,6 +433,63 @@ export default function Employees() {
               </div>
               <div className="text-center">
                 <div className="border-t border-gray-400 pt-2 text-sm">Setor de Pessoal / RH</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL LINK DE CONVITE ──────────────────────────────────────────── */}
+      {inviteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-emerald-600" />
+                <h2 className="text-base font-bold text-gray-800">Link de Cadastro Gerado</h2>
+              </div>
+              <button onClick={() => setInviteModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                Envie o link abaixo para <strong>{inviteEmployeeName}</strong> preencher seus dados.
+                O link é válido por <strong>30 dias</strong>.
+              </p>
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <span className="text-xs text-gray-700 break-all flex-1 font-mono">{inviteLink}</span>
+                <button
+                  onClick={copyInviteLink}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 font-medium"
+                >
+                  {inviteCopied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {inviteCopied ? 'Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700 space-y-1">
+                <p>📋 <strong>Como usar:</strong></p>
+                <p>1. Copie o link acima e envie ao funcionário (WhatsApp, e-mail etc.)</p>
+                <p>2. O funcionário abrirá o link e preencherá seus próprios dados</p>
+                <p>3. Ao enviar, o sistema será preenchido automaticamente</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    const text = `Olá! Por favor, preencha seu cadastro escolar pelo link abaixo:\n${inviteLink}`;
+                    const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                    window.open(wa, '_blank');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 font-medium"
+                >
+                  📱 Enviar via WhatsApp
+                </button>
+                <button
+                  onClick={() => setInviteModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           </div>
