@@ -34,6 +34,7 @@ export interface IEmployee extends Document {
   setor?: string;
   tipoContrato?: 'CLT' | 'Estatutário' | 'Temporário' | 'Terceirizado' | 'Contrato' | 'Outro';
   dataAdmissao?: string;
+  dataInicioInstituicao?: string;
   dataDemissao?: string;
   jornadaTrabalho?: string;
   cargaHorariaSemanal?: number;
@@ -88,6 +89,7 @@ const employeeSchema = new Schema<IEmployee>(
     setor: { type: String },
     tipoContrato: { type: String, enum: ['CLT', 'Estatutário', 'Temporário', 'Terceirizado', 'Contrato', 'Outro'] },
     dataAdmissao: { type: String },
+    dataInicioInstituicao: { type: String },
     dataDemissao: { type: String },
     jornadaTrabalho: { type: String },
     cargaHorariaSemanal: { type: Number },
