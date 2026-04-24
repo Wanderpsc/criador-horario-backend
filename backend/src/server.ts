@@ -56,6 +56,8 @@ import substituteLinkRoutes from './routes/substituteLink.routes';
 import panelTickerRoutes from './routes/panelTicker.routes';
 import employeeRoutes from './routes/employee.routes';
 import employeeInviteLinkRoutes from './routes/employeeInviteLink.routes';
+import employeeAttendanceRoutes from './routes/employeeAttendance.routes';
+import epiControlRoutes from './routes/epiControl.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
@@ -213,6 +215,8 @@ app.use('/api/substitute-links', substituteLinkRoutes);
 app.use('/api/panel-ticker', panelTickerRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/employee-invite-links', employeeInviteLinkRoutes);
+app.use('/api/employee-attendance', employeeAttendanceRoutes);
+app.use('/api/epi-control', epiControlRoutes);
 
 // Rota de health check
 const healthPayload = () => ({
