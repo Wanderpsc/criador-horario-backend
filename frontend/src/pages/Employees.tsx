@@ -105,6 +105,8 @@ export default function Employees() {
   const [viewId, setViewId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'lista' | 'relatorio'>('lista');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingReactivateId, setPendingReactivateId] = useState<string | null>(null);
 
   // ─── Link de convite ──────────────────────────────────────────────────────
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
