@@ -13,7 +13,8 @@
     "backup": "pwsh -File scripts/backup-database.ps1",
     "restore": "pwsh -File scripts/restore-database.ps1",
     "test:whatsapp": "npx ts-node test-whatsapp.ts",
-    "audit:teacher-allocation": "npx ts-node src/scripts/auditTeacherAllocation.ts"
+    "audit:teacher-allocation": "npx ts-node src/scripts/auditTeacherAllocation.ts",
+    "backup:escolas": "npx ts-node src/scripts/backupAllSchools.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
