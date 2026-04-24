@@ -38,6 +38,7 @@ interface Employee {
   setor?: string;
   tipoContrato?: string;
   dataAdmissao?: string;
+  dataInicioInstituicao?: string;
   dataDemissao?: string;
   jornadaTrabalho?: string;
   cargaHorariaSemanal?: number;
@@ -63,11 +64,29 @@ const EMPTY: Omit<Employee, '_id' | 'isActive'> = {
   estadoCivil: '', nomeMae: '', nomePai: '', tipoSanguineo: '',
   email: '', celular: '', telefoneFixo: '',
   cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
-  cargo: '', setor: '', tipoContrato: '', dataAdmissao: '', dataDemissao: '',
+  cargo: '', setor: '', tipoContrato: '', dataAdmissao: '', dataInicioInstituicao: '', dataDemissao: '',
   jornadaTrabalho: '', cargaHorariaSemanal: undefined, salario: undefined,
   ctpsNumero: '', ctpsSerie: '', pisPasep: '', tituloEleitor: '', zonaEleitoral: '',
   secaoEleitoral: '', certificadoMilitar: '', cnhNumero: '', cnhCategoria: '',
   cnhValidade: '', reservista: '', observacoes: '',
+};
+
+// ─── Máscaras de entrada ────────────────────────────────────────────────────
+const maskCPF = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+  return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+};
+
+const maskPhone = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  if (d.length === 0) return '';
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
 };
 
 type FormTab = 'pessoal' | 'contato' | 'endereco' | 'funcional' | 'documentos';
@@ -145,7 +164,16 @@ export default function Employees() {
       toast.success('Funcionário desativado.');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
-    onError: () => toast.error('Erro ao desativar funcionário.'),
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao desativar funcionário.'),
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (id: string) => api.put(`/employees/${id}`, { isActive: true }),
+    onSuccess: () => {
+      toast.success('Funcionário reativado!');
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao reativar funcionário.'),
   });
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -172,6 +200,15 @@ export default function Employees() {
 
   const setField = (key: keyof typeof form, val: string | number | undefined) =>
     setForm(f => ({ ...f, [key]: val }));
+
+  const setFieldUpper = (key: keyof typeof form, val: string) =>
+    setForm(f => ({ ...f, [key]: val.toUpperCase() }));
+
+  const setFieldCPF = (val: string) =>
+    setForm(f => ({ ...f, cpf: maskCPF(val) }));
+
+  const setFieldPhone = (key: 'celular' | 'telefoneFixo', val: string) =>
+    setForm(f => ({ ...f, [key]: maskPhone(val) }));
 
   const filtered = employees.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -333,13 +370,25 @@ export default function Employees() {
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={e => { e.stopPropagation(); if (confirm(`Desativar ${emp.name}?`)) deleteMutation.mutate(emp._id); }}
-                        className="p-1.5 text-gray-400 hover:text-red-500"
-                        title="Desativar"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {emp.isActive ? (
+                        <button
+                          onClick={e => { e.stopPropagation(); if (emp._id && confirm(`Desativar ${emp.name}?`)) deleteMutation.mutate(emp._id); }}
+                          disabled={deleteMutation.isPending}
+                          className="p-1.5 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                          title="Desativar funcionário"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={e => { e.stopPropagation(); if (emp._id && confirm(`Reativar ${emp.name}?`)) reactivateMutation.mutate(emp._id); }}
+                          disabled={reactivateMutation.isPending}
+                          className="p-1.5 text-gray-400 hover:text-green-600 disabled:opacity-50"
+                          title="Reativar funcionário"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                        </button>
+                      )}
                       {expandedId === emp._id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                     </div>
                   </div>
@@ -541,31 +590,31 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Nome Completo *</label>
-                    <input value={form.name} onChange={e => setField('name', e.target.value)}
+                    <input value={form.name} onChange={e => setFieldUpper('name', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Nome completo do funcionário" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Matrícula</label>
-                    <input value={form.matricula} onChange={e => setField('matricula', e.target.value)}
+                    <input value={form.matricula} onChange={e => setFieldUpper('matricula', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Ex: 20260001" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">CPF</label>
-                    <input value={form.cpf} onChange={e => setField('cpf', e.target.value)}
+                    <input value={form.cpf} onChange={e => setFieldCPF(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="000.000.000-00" />
+                      placeholder="000.000.000-00" maxLength={14} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">RG</label>
-                    <input value={form.rg} onChange={e => setField('rg', e.target.value)}
+                    <input value={form.rg} onChange={e => setFieldUpper('rg', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="0000000" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Órgão Emissor RG</label>
-                    <input value={form.rgOrgao} onChange={e => setField('rgOrgao', e.target.value)}
+                    <input value={form.rgOrgao} onChange={e => setFieldUpper('rgOrgao', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="SSP/MA" />
                   </div>
@@ -581,15 +630,15 @@ export default function Employees() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Naturalidade</label>
-                    <input value={form.naturalidade} onChange={e => setField('naturalidade', e.target.value)}
+                    <input value={form.naturalidade} onChange={e => setFieldUpper('naturalidade', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Cidade/UF de nascimento" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Nacionalidade</label>
-                    <input value={form.nacionalidade} onChange={e => setField('nacionalidade', e.target.value)}
+                    <input value={form.nacionalidade} onChange={e => setFieldUpper('nacionalidade', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Brasileira" />
+                      placeholder="BRASILEIRA" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Sexo</label>
@@ -623,13 +672,13 @@ export default function Employees() {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Nome da Mãe</label>
-                    <input value={form.nomeMae} onChange={e => setField('nomeMae', e.target.value)}
+                    <input value={form.nomeMae} onChange={e => setFieldUpper('nomeMae', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Nome completo da mãe" />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Nome do Pai</label>
-                    <input value={form.nomePai} onChange={e => setField('nomePai', e.target.value)}
+                    <input value={form.nomePai} onChange={e => setFieldUpper('nomePai', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Nome completo do pai" />
                   </div>
@@ -647,15 +696,15 @@ export default function Employees() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Celular</label>
-                    <input value={form.celular} onChange={e => setField('celular', e.target.value)}
+                    <input value={form.celular} onChange={e => setFieldPhone('celular', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="(99) 99999-9999" />
+                      placeholder="(99) 99999-9999" maxLength={16} />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Telefone Fixo</label>
-                    <input value={form.telefoneFixo} onChange={e => setField('telefoneFixo', e.target.value)}
+                    <input value={form.telefoneFixo} onChange={e => setFieldPhone('telefoneFixo', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="(99) 3333-4444" />
+                      placeholder="(99) 3333-4444" maxLength={15} />
                   </div>
                 </div>
               )}
@@ -671,39 +720,39 @@ export default function Employees() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Estado (UF)</label>
-                    <input value={form.estado} onChange={e => setField('estado', e.target.value)}
+                    <input value={form.estado} onChange={e => setFieldUpper('estado', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="MA" maxLength={2} />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Logradouro</label>
-                    <input value={form.logradouro} onChange={e => setField('logradouro', e.target.value)}
+                    <input value={form.logradouro} onChange={e => setFieldUpper('logradouro', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Rua / Av. / Travessa..." />
+                      placeholder="RUA / AV. / TRAVESSA..." />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Número</label>
-                    <input value={form.numero} onChange={e => setField('numero', e.target.value)}
+                    <input value={form.numero} onChange={e => setFieldUpper('numero', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="123" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Complemento</label>
-                    <input value={form.complemento} onChange={e => setField('complemento', e.target.value)}
+                    <input value={form.complemento} onChange={e => setFieldUpper('complemento', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Apto, Bloco..." />
+                      placeholder="APTO, BLOCO..." />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Bairro</label>
-                    <input value={form.bairro} onChange={e => setField('bairro', e.target.value)}
+                    <input value={form.bairro} onChange={e => setFieldUpper('bairro', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Bairro" />
+                      placeholder="BAIRRO" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Cidade</label>
-                    <input value={form.cidade} onChange={e => setField('cidade', e.target.value)}
+                    <input value={form.cidade} onChange={e => setFieldUpper('cidade', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Cidade" />
+                      placeholder="CIDADE" />
                   </div>
                 </div>
               )}
@@ -713,15 +762,15 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Cargo / Função</label>
-                    <input value={form.cargo} onChange={e => setField('cargo', e.target.value)}
+                    <input value={form.cargo} onChange={e => setFieldUpper('cargo', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Ex: Coordenador, Secretário, Auxiliar..." />
+                      placeholder="Ex: COORDENADOR, SECRETÁRIO, AUXILIAR..." />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Setor / Departamento</label>
-                    <input value={form.setor} onChange={e => setField('setor', e.target.value)}
+                    <input value={form.setor} onChange={e => setFieldUpper('setor', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Ex: Secretaria, Administração..." />
+                      placeholder="Ex: SECRETARIA, ADMINISTRAÇÃO..." />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Contrato</label>
@@ -735,9 +784,14 @@ export default function Employees() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Jornada de Trabalho</label>
-                    <input value={form.jornadaTrabalho} onChange={e => setField('jornadaTrabalho', e.target.value)}
+                    <input value={form.jornadaTrabalho} onChange={e => setFieldUpper('jornadaTrabalho', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Ex: 08h às 17h" />
+                      placeholder="Ex: 08H ÀS 17H" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Data de Início na Instituição</label>
+                    <input type="date" value={form.dataInicioInstituicao} onChange={e => setField('dataInicioInstituicao', e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Data de Admissão</label>
@@ -776,49 +830,49 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">CTPS — Número</label>
-                    <input value={form.ctpsNumero} onChange={e => setField('ctpsNumero', e.target.value)}
+                    <input value={form.ctpsNumero} onChange={e => setFieldUpper('ctpsNumero', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Número da carteira" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">CTPS — Série</label>
-                    <input value={form.ctpsSerie} onChange={e => setField('ctpsSerie', e.target.value)}
+                    <input value={form.ctpsSerie} onChange={e => setFieldUpper('ctpsSerie', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Série" />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-1">PIS / PASEP</label>
-                    <input value={form.pisPasep} onChange={e => setField('pisPasep', e.target.value)}
+                    <input value={form.pisPasep} onChange={e => setFieldUpper('pisPasep', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="000.00000.00-0" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Título de Eleitor</label>
-                    <input value={form.tituloEleitor} onChange={e => setField('tituloEleitor', e.target.value)}
+                    <input value={form.tituloEleitor} onChange={e => setFieldUpper('tituloEleitor', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Número do título" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Zona Eleitoral</label>
-                    <input value={form.zonaEleitoral} onChange={e => setField('zonaEleitoral', e.target.value)}
+                    <input value={form.zonaEleitoral} onChange={e => setFieldUpper('zonaEleitoral', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Zona" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Seção Eleitoral</label>
-                    <input value={form.secaoEleitoral} onChange={e => setField('secaoEleitoral', e.target.value)}
+                    <input value={form.secaoEleitoral} onChange={e => setFieldUpper('secaoEleitoral', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Seção" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Cert. Militar / Reservista</label>
-                    <input value={form.reservista} onChange={e => setField('reservista', e.target.value)}
+                    <input value={form.reservista} onChange={e => setFieldUpper('reservista', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Número do certificado" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">CNH — Número</label>
-                    <input value={form.cnhNumero} onChange={e => setField('cnhNumero', e.target.value)}
+                    <input value={form.cnhNumero} onChange={e => setFieldUpper('cnhNumero', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Número da CNH" />
                   </div>
@@ -919,6 +973,7 @@ export default function Employees() {
                   rows: [
                     ['Cargo', viewEmployee.cargo], ['Setor', viewEmployee.setor],
                     ['Tipo de Contrato', viewEmployee.tipoContrato],
+                    ['Início na Instituição', viewEmployee.dataInicioInstituicao ? fmtDate(viewEmployee.dataInicioInstituicao) : undefined],
                     ['Admissão', viewEmployee.dataAdmissao ? fmtDate(viewEmployee.dataAdmissao) : undefined],
                     ['Demissão', viewEmployee.dataDemissao ? fmtDate(viewEmployee.dataDemissao) : undefined],
                     ['Jornada', viewEmployee.jornadaTrabalho],

@@ -1,8 +1,11 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Employee from '../models/Employee';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
+
+const isValidId = (id: string) => mongoose.isValidObjectId(id);
 
 // GET / — listar funcionários da escola
 router.get('/', auth, async (req: AuthRequest, res) => {
@@ -32,6 +35,7 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 // GET /:id — buscar um funcionário
 router.get('/:id', auth, async (req: AuthRequest, res) => {
   try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
     const schoolId = req.user!.schoolId || req.user!.id;
     const employee = await Employee.findOne({ _id: req.params.id, schoolId });
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
@@ -56,6 +60,7 @@ router.post('/', auth, async (req: AuthRequest, res) => {
 // PUT /:id — atualizar funcionário
 router.put('/:id', auth, async (req: AuthRequest, res) => {
   try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
     const schoolId = req.user!.schoolId || req.user!.id;
     const employee = await Employee.findOneAndUpdate(
       { _id: req.params.id, schoolId },
@@ -72,6 +77,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 // DELETE /:id — remover funcionário (soft delete via isActive)
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
     const schoolId = req.user!.schoolId || req.user!.id;
     const employee = await Employee.findOneAndUpdate(
       { _id: req.params.id, schoolId },

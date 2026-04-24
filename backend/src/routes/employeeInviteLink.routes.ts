@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import crypto from 'crypto';
 import EmployeeInviteLink from '../models/EmployeeInviteLink';
 import Employee from '../models/Employee';
@@ -22,6 +23,9 @@ router.post('/', auth, async (req: AuthRequest, res) => {
 
     let employeeName = '';
     if (employeeId) {
+      if (!mongoose.isValidObjectId(employeeId)) {
+        return res.status(400).json({ message: 'ID de funcionário inválido.' });
+      }
       const emp = await Employee.findOne({ _id: employeeId, schoolId });
       if (!emp) return res.status(404).json({ message: 'Funcionário não encontrado.' });
       employeeName = emp.name;
