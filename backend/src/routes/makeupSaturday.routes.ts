@@ -303,13 +303,16 @@ router.get('/teacher-debts/:teacherId', auth, async (req: Request, res: Response
 router.post('/generate-from-debts', auth, async (req: Request, res: Response) => {
   try {
     const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
-    const { date, maxPeriods, lessonDuration, startTime, selectedTeacherIds } = req.body;
+    const { date, maxPeriods, lessonDuration, startTime, selectedTeacherIds, selectedClassIds } = req.body;
 
     console.log('🎯 Gerando horário automático para:', { schoolId, date, maxPeriods, lessonDuration, startTime });
     console.log('📦 Body completo:', JSON.stringify(req.body, null, 2));
     
     if (selectedTeacherIds && selectedTeacherIds.length > 0) {
       console.log(`👥 Filtrando ${selectedTeacherIds.length} professores selecionados:`, selectedTeacherIds);
+    }
+    if (selectedClassIds && selectedClassIds.length > 0) {
+      console.log(`🏫 Filtrando ${selectedClassIds.length} turmas selecionadas:`, selectedClassIds);
     }
 
     if (!schoolId || !date) {
@@ -327,7 +330,8 @@ router.post('/generate-from-debts', auth, async (req: Request, res: Response) =>
       maxPeriods || 4,
       lessonDuration || 60,
       startTime || '08:00',
-      selectedTeacherIds // Passa os professores selecionados
+      selectedTeacherIds,
+      selectedClassIds
     );
 
     console.log('✅ Horário gerado com sucesso!');

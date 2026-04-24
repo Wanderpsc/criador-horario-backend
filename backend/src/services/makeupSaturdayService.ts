@@ -154,7 +154,8 @@ export async function generateSaturdayScheduleFromDebts(
   maxPeriods: number = 4,
   lessonDuration: number = 60,
   startTime: string = '08:00',
-  selectedTeacherIds?: string[] // Novo parâmetro: IDs dos professores selecionados
+  selectedTeacherIds?: string[], // IDs dos professores selecionados
+  selectedClassIds?: string[]    // IDs das turmas selecionadas
 ) {
   try {
     console.log('🎯 Gerando horário de sábado automaticamente...');
@@ -163,6 +164,9 @@ export async function generateSaturdayScheduleFromDebts(
     console.log(`⏰ Configuração: ${maxPeriods} aulas de ${lessonDuration} minutos iniciando às ${startTime}`);
     if (selectedTeacherIds && selectedTeacherIds.length > 0) {
       console.log(`👥 Filtrando ${selectedTeacherIds.length} professores selecionados`);
+    }
+    if (selectedClassIds && selectedClassIds.length > 0) {
+      console.log(`🏫 Filtrando ${selectedClassIds.length} turmas selecionadas`);
     }
 
     // Buscar horários emergenciais com makeupClasses da escola
@@ -244,6 +248,14 @@ export async function generateSaturdayScheduleFromDebts(
         continue; // Pula professores não selecionados
       }
     }
+
+    // 🎯 FILTRAR: Se selectedClassIds foi fornecido, incluir apenas as turmas selecionadas
+    if (selectedClassIds && selectedClassIds.length > 0) {
+      const classId = makeup.classId?.toString();
+      if (!classId || !selectedClassIds.includes(classId)) {
+        continue; // Pula turmas não selecionadas
+      }
+    }
     
     if (!debtsByTeacher.has(teacherId)) {
       debtsByTeacher.set(teacherId, []);
@@ -315,6 +327,11 @@ export async function generateSaturdayScheduleFromDebts(
 
       const teacherId = teacher._id.toString();
       const classId = cls._id.toString();
+
+      // 🎯 FILTRAR por turmas selecionadas no fallback
+      if (selectedClassIds && selectedClassIds.length > 0 && !selectedClassIds.includes(classId)) {
+        continue;
+      }
 
       // Encontrar o primeiro período livre para este professor E esta turma
       const teacherBusy = teacherUsedPeriods.get(teacherId) || new Set<number>();
