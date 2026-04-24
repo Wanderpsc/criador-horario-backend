@@ -9,6 +9,7 @@ import Grade from '../models/Grade';
 import TeacherAttendance from '../models/TeacherAttendance';
 import SchoolDay from '../models/SchoolDay';
 import PanelTicker from '../models/PanelTicker';
+import MakeupSaturday from '../models/MakeupSaturday';
 
 const router = Router();
 
@@ -275,6 +276,21 @@ router.get('/absent-teachers', async (req, res) => {
   } catch (error: any) {
     console.error('Erro na rota pública de professores ausentes:', error);
     res.status(500).json([]);
+  }
+});
+
+// GET /api/public/makeup-saturday/:id — Buscar sábado de reposição por ID (público, sem auth)
+router.get('/makeup-saturday/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const makeup = await MakeupSaturday.findById(id).lean();
+    if (!makeup) {
+      return res.status(404).json({ data: null, error: 'Sábado de reposição não encontrado' });
+    }
+    res.json({ data: makeup });
+  } catch (error: any) {
+    console.error('Erro na rota pública de sábado de reposição:', error);
+    res.status(500).json({ data: null, error: error.message });
   }
 });
 
