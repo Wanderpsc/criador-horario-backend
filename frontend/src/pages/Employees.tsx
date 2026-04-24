@@ -161,10 +161,7 @@ export default function Employees() {
   };
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => {
-      setPendingDeleteId(id);
-      return api.delete(`/employees/${id}`);
-    },
+    mutationFn: (id: string) => api.delete(`/employees/${id}`),
     onSuccess: () => {
       toast.success('Funcionário desativado.');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -174,10 +171,7 @@ export default function Employees() {
   });
 
   const reactivateMutation = useMutation({
-    mutationFn: (id: string) => {
-      setPendingReactivateId(id);
-      return api.put(`/employees/${id}`, { isActive: true });
-    },
+    mutationFn: (id: string) => api.put(`/employees/${id}`, { isActive: true }),
     onSuccess: () => {
       toast.success('Funcionário reativado!');
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -382,7 +376,7 @@ export default function Employees() {
                       </button>
                       {emp.isActive ? (
                         <button
-                          onClick={e => { e.stopPropagation(); if (emp._id && confirm(`Desativar ${emp.name}?`)) deleteMutation.mutate(emp._id); }}
+                          onClick={e => { e.stopPropagation(); if (emp._id && confirm(`Desativar ${emp.name}?`)) { setPendingDeleteId(emp._id); deleteMutation.mutate(emp._id); } }}
                           disabled={pendingDeleteId === emp._id}
                           className="p-1.5 text-gray-400 hover:text-red-500 disabled:opacity-50"
                           title="Desativar funcionário"
@@ -391,7 +385,7 @@ export default function Employees() {
                         </button>
                       ) : (
                         <button
-                          onClick={e => { e.stopPropagation(); if (emp._id && confirm(`Reativar ${emp.name}?`)) reactivateMutation.mutate(emp._id); }}
+                          onClick={e => { e.stopPropagation(); if (emp._id && confirm(`Reativar ${emp.name}?`)) { setPendingReactivateId(emp._id); reactivateMutation.mutate(emp._id); } }}
                           disabled={pendingReactivateId === emp._id}
                           className="p-1.5 text-gray-400 hover:text-green-600 disabled:opacity-50"
                           title="Reativar funcionário"
