@@ -57,6 +57,7 @@ import panelTickerRoutes from './routes/panelTicker.routes';
 import employeeRoutes from './routes/employee.routes';
 import employeeInviteLinkRoutes from './routes/employeeInviteLink.routes';
 import employeeAttendanceRoutes from './routes/employeeAttendance.routes';
+import employeeDocumentRoutes from './routes/employeeDocument.routes';
 import epiControlRoutes from './routes/epiControl.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
@@ -216,6 +217,7 @@ app.use('/api/panel-ticker', panelTickerRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/employee-invite-links', employeeInviteLinkRoutes);
 app.use('/api/employee-attendance', employeeAttendanceRoutes);
+app.use('/api/employee-documents', employeeDocumentRoutes);
 app.use('/api/epi-control', epiControlRoutes);
 
 // Rota de health check
