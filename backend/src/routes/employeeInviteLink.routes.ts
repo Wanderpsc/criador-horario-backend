@@ -36,6 +36,7 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       token,
       schoolId,
       schoolName,
+      originalEmployeeId: employeeId || '',  // imutável: definido na criação
       employeeId: employeeId || '',
       employeeName,
       isActive: true,
@@ -93,12 +94,13 @@ router.get('/public/:token', async (req, res) => {
     if (!invite.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
     if (invite.expiresAt < new Date()) return res.status(410).json({ message: 'Este link expirou.' });
 
-    // Pré-preencher dados se for atualização de funcionário existente
+    // Pré-preencher dados SOMENTE se for link pessoal (originalEmployeeId definido na criação)
+    // Link genérico NUNCA deve expor dados de outro funcionário
     let existingData: Record<string, unknown> | null = null;
-    if (invite.employeeId) {
-      const emp = await Employee.findById(invite.employeeId).lean();
+    const isPersonalLink = !!(invite.originalEmployeeId && invite.originalEmployeeId.trim());
+    if (isPersonalLink) {
+      const emp = await Employee.findById(invite.originalEmployeeId).lean();
       if (emp) {
-        // Excluir campos internos que o funcionário não deve editar
         const { schoolId, isActive, createdAt, updatedAt, __v, _id, ...safeData } = emp as any;
         existingData = safeData;
       }
@@ -107,9 +109,9 @@ router.get('/public/:token', async (req, res) => {
     res.json({
       token: invite.token,
       schoolName: invite.schoolName,
-      employeeId: invite.employeeId || null,
-      employeeName: invite.employeeName || null,
-      isUpdate: !!invite.employeeId,
+      employeeId: isPersonalLink ? (invite.originalEmployeeId || null) : null,
+      employeeName: isPersonalLink ? (invite.employeeName || null) : null,
+      isUpdate: isPersonalLink,
       existingData,
       expiresAt: invite.expiresAt,
     });
@@ -155,10 +157,10 @@ router.post('/public/:token/submit', async (req, res) => {
     }
 
     let employee;
-    if (invite.employeeId) {
-      // Link específico para um funcionário existente → atualizar
+    if (invite.originalEmployeeId && invite.originalEmployeeId.trim()) {
+      // Link pessoal → atualizar o funcionário específico
       employee = await Employee.findOneAndUpdate(
-        { _id: invite.employeeId, schoolId: invite.schoolId },
+        { _id: invite.originalEmployeeId, schoolId: invite.schoolId },
         { $set: submittedData },
         { new: true, runValidators: true }
       );
@@ -166,8 +168,7 @@ router.post('/public/:token/submit', async (req, res) => {
         return res.status(404).json({ message: 'Funcionário não encontrado no sistema.' });
       }
     } else {
-      // Link genérico → sempre criar um novo funcionário
-      // (NÃO travar invite.employeeId para permitir múltiplos cadastros pelo mesmo link)
+      // Link genérico → sempre criar novo funcionário
       employee = new Employee({
         ...submittedData,
         schoolId: invite.schoolId,

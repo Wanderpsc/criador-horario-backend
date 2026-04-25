@@ -5,8 +5,11 @@ export interface IEmployeeInviteLink extends Document {
   token: string;
   schoolId: string;
   schoolName: string;
-  // Se preenchido, o link atualiza um funcionário existente;
-  // se vazio, cria um novo funcionário.
+  // originalEmployeeId: ID definido no momento da CRIAçãO do link.
+  // Se vazio → link genérico (vários funcionários).
+  // Se preenchido → link pessoal para atualizar um funcionário específico.
+  originalEmployeeId?: string;
+  // employeeId pode ser alterado internamente; não usar para decidir segurança.
   employeeId?: string;
   employeeName?: string;
   isActive: boolean;
@@ -28,6 +31,8 @@ const employeeInviteLinkSchema = new Schema<IEmployeeInviteLink>(
     },
     schoolId: { type: String, required: true, index: true },
     schoolName: { type: String, default: '' },
+    // Imutável: ID do funcionário definido na criação do link (vazio = link genérico)
+    originalEmployeeId: { type: String, default: '' },
     employeeId: { type: String, default: '' },
     employeeName: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
