@@ -156,7 +156,7 @@ router.post('/public/:token/submit', async (req, res) => {
 
     let employee;
     if (invite.employeeId) {
-      // Atualizar funcionário existente
+      // Link específico para um funcionário existente → atualizar
       employee = await Employee.findOneAndUpdate(
         { _id: invite.employeeId, schoolId: invite.schoolId },
         { $set: submittedData },
@@ -166,19 +166,17 @@ router.post('/public/:token/submit', async (req, res) => {
         return res.status(404).json({ message: 'Funcionário não encontrado no sistema.' });
       }
     } else {
-      // Criar novo funcionário
+      // Link genérico → sempre criar um novo funcionário
+      // (NÃO travar invite.employeeId para permitir múltiplos cadastros pelo mesmo link)
       employee = new Employee({
         ...submittedData,
         schoolId: invite.schoolId,
         isActive: true,
       });
       await employee.save();
-
-      // Vincular o invite ao funcionário criado para evitar duplicatas
-      invite.employeeId = (employee._id as any).toString();
     }
 
-    // Registrar envio
+    // Registrar último envio (não bloqueia reutilização do link)
     invite.submittedAt = new Date();
     invite.submittedData = submittedData;
     await invite.save();
