@@ -396,14 +396,25 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
     makeupSaturday.schedule = updatedSchedule;
     makeupSaturday.attendedTeachers = Array.from(confirmedTeacherIds);
     makeupSaturday.totalRealizedHours = confirmedCount;
+    // Marcar como realizado assim que há aulas confirmadas
+    if (confirmedCount > 0) {
+      makeupSaturday.status = 'realized';
+    }
 
     await makeupSaturday.save();
 
-    // ─── Abater os makeupClasses correspondentes no EmergencySchedule ─────────
+    // ─── Abater os makeupClasses e criar ClassPayment para o relatório ────────
     if (confirmedTeacherIds.size > 0) {
       try {
         const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
+        const ClassPayment = (await import('../models/ClassPayment')).default;
         const now = new Date();
+
+        // Data do sábado no formato YYYY-MM-DD para usar no ClassPayment
+        const saturdayDateStr = makeupSaturday.date instanceof Date
+          ? makeupSaturday.date.toISOString().split('T')[0]
+          : String(makeupSaturday.date).split('T')[0];
+        const saturdayDateLabel = new Date(saturdayDateStr + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
         // Construir lookup das aulas confirmadas: teacherId → Set<"classId|subjectId">
         const confirmedTeacherClassSubject = new Map<string, Set<string>>();
@@ -424,6 +435,18 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
           'makeupClasses.isRepaid': { $ne: true }
         });
 
+        // Registros de makeupClasses abatidos nesta operação (para criar ClassPayment)
+        const abatedEntries: Array<{
+          teacherId: string;
+          teacherName: string;
+          absenceDate: string; // data original da ausência (YYYY-MM-DD)
+          classId: string;
+          className: string;
+          subjectId: string;
+          subjectName: string;
+          period: number;
+        }> = [];
+
         let totalAbated = 0;
         for (const es of allSchedules) {
           let changed = false;
@@ -437,6 +460,17 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
               mc.repaidAt = now;
               changed = true;
               totalAbated++;
+              // Coletar para criar ClassPayment depois
+              abatedEntries.push({
+                teacherId: mc.originalTeacherId,
+                teacherName: mc.originalTeacherName,
+                absenceDate: es.date, // data original da falta (YYYY-MM-DD)
+                classId: mc.classId || '',
+                className: mc.className,
+                subjectId: mc.subjectId || '',
+                subjectName: mc.subjectName,
+                period: mc.period,
+              });
               // Consumir a entrada para não abater dois slots da mesma chave duas vezes
               teacherKeys.delete(key);
             }
@@ -447,6 +481,39 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
           }
         }
         console.log(`✅ ${totalAbated} makeupClasse(s) marcado(s) como repaid em EmergencySchedule`);
+
+        // ── Criar ClassPayment para cada ausência abatida (visível no relatório) ──
+        let paymentsCreated = 0;
+        for (const entry of abatedEntries) {
+          // Não duplicar se já existir registro para a mesma falta/turma/período
+          const existing = await ClassPayment.findOne({
+            schoolId,
+            absentTeacherId: entry.teacherId,
+            date: entry.absenceDate,
+            classId: entry.classId,
+            period: entry.period,
+          });
+          if (!existing) {
+            await ClassPayment.create({
+              schoolId,
+              absentTeacherId: entry.teacherId,
+              absentTeacherName: entry.teacherName,
+              substituteTeacherId: entry.teacherId, // próprio professor fez a reposição
+              substituteTeacherName: `Reposição (sáb. ${saturdayDateLabel})`,
+              date: entry.absenceDate,
+              period: entry.period,
+              classId: entry.classId,
+              className: entry.className,
+              subjectId: entry.subjectId,
+              subjectName: entry.subjectName,
+              status: 'paid',
+              filledAt: now,
+              notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
+            });
+            paymentsCreated++;
+          }
+        }
+        console.log(`💰 ${paymentsCreated} ClassPayment(s) criado(s) para o sábado ${saturdayDateStr}`);
       } catch (err: any) {
         // Não deixar falha de abatimento quebrar a confirmação de presença
         console.error('⚠️ Erro ao abater makeupClasses:', err.message);
