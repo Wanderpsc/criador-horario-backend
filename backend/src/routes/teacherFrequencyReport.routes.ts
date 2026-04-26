@@ -323,17 +323,32 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                   const key = `${dayStr}_${entry.period ?? ''}`;
                   if (absenceDateSet.has(key)) continue;
                   absenceDateSet.add(key);
+                  // Buscar pagamento para esta ausência (por período se disponível)
                   const payment = allPaymentsPre.find(p =>
+                    p.absentTeacherId === teacher._id.toString() &&
+                    p.date === dayStr &&
+                    p.classId === classId &&
+                    p.subjectId === subjectId &&
+                    (entry.period == null || p.period === entry.period)
+                  ) || allPaymentsPre.find(p =>
                     p.absentTeacherId === teacher._id.toString() &&
                     p.date === dayStr &&
                     p.classId === classId
                   );
+                  // Ausência paga/preenchida conta como aula dada (abate o déficit)
+                  if (payment && (payment.status === 'paid' || payment.status === 'filled')) {
+                    given += 1;
+                  }
+                  const isSelfRepaid = payment?.substituteTeacherId === teacher._id.toString() ||
+                    payment?.substituteTeacherId === String(teacher._id);
                   absenceDates.push({
                     date: dayStr,
                     period: entry.period ?? null,
                     paymentStatus: payment ? payment.status : null,
                     paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
-                    substituteTeacherName: payment?.substituteTeacherName || null,
+                    substituteTeacherName: payment
+                      ? (isSelfRepaid ? `Prof. próprio — ${payment.substituteTeacherName || 'Reposição'}` : payment.substituteTeacherName)
+                      : null,
                   });
                 }
               }
@@ -433,14 +448,28 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                     const payment = allPaymentsPre.find(p =>
                       p.absentTeacherId === teacher._id.toString() &&
                       p.date === dayStr &&
+                      p.classId === cls.classId &&
+                      p.subjectId === cls.subjectId &&
+                      (entry.period == null || p.period === entry.period)
+                    ) || allPaymentsPre.find(p =>
+                      p.absentTeacherId === teacher._id.toString() &&
+                      p.date === dayStr &&
                       p.classId === cls.classId
                     );
+                    // Ausência paga/preenchida conta como aula dada (abate o déficit)
+                    if (payment && (payment.status === 'paid' || payment.status === 'filled')) {
+                      given += 1;
+                    }
+                    const isSelfRepaid = payment?.substituteTeacherId === teacher._id.toString() ||
+                      payment?.substituteTeacherId === String(teacher._id);
                     absenceDatesFallback.push({
                       date: dayStr,
                       period: entry.period ?? null,
                       paymentStatus: payment ? payment.status : null,
                       paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
-                      substituteTeacherName: payment?.substituteTeacherName || null,
+                      substituteTeacherName: payment
+                        ? (isSelfRepaid ? `Prof. próprio — ${payment.substituteTeacherName || 'Reposição'}` : payment.substituteTeacherName)
+                        : null,
                     });
                   }
                 }
