@@ -2,8 +2,42 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
-import { Tv, ExternalLink, Calendar, AlertTriangle, Settings, Copy, Share2, QrCode, MessageSquare } from 'lucide-react';
+import { Tv, ExternalLink, Calendar, AlertTriangle, Settings, Copy, Share2, QrCode, MessageSquare, Music, Image, Plus, Trash2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// ── helpers playlist ──────────────────────────────────────────────────────────
+const DEFAULT_PLAYLIST = [
+  { id: 'jfKfPfyJRdk', title: 'Lo-Fi Relaxante', emoji: '🎵' },
+  { id: 'CLeZyIID9Bo', title: 'Gospel Instrumental', emoji: '🙏' },
+  { id: '4To2KEJ1y7c', title: 'Música Clássica', emoji: '🎼' },
+  { id: 'DWcJFNfaw9c', title: 'Piano Instrumental', emoji: '🎹' },
+  { id: 'kgx4WGK0oNU', title: 'Músicas Ambiente', emoji: '🌿' },
+  { id: 'BHACKCNDMW8', title: 'Para Estudar', emoji: '📚' },
+];
+
+function ytIdFromUrl(input: string): string {
+  input = input.trim();
+  // já é ID curto (11 chars, sem /)
+  if (/^[A-Za-z0-9_-]{11}$/.test(input)) return input;
+  // URL longa: v=XXXXXXXXXXX
+  const m1 = input.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  if (m1) return m1[1];
+  // URL curta youtu.be/XXXXXXXXXXX
+  const m2 = input.match(/youtu\.be\/([A-Za-z0-9_-]{11})/);
+  if (m2) return m2[1];
+  // embed URL
+  const m3 = input.match(/embed\/([A-Za-z0-9_-]{11})/);
+  if (m3) return m3[1];
+  return input; // devolve como está (pode ser inválido)
+}
+
+function loadPlaylist() {
+  try {
+    const s = localStorage.getItem('dp_playlist');
+    if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length > 0) return p; }
+  } catch {}
+  return DEFAULT_PLAYLIST;
+}
 
 export default function DisplayPanelConfig() {
   const { user } = useAuthStore();
@@ -15,6 +49,41 @@ export default function DisplayPanelConfig() {
   const [isEmergencyMode, setIsEmergencyMode] = useState(false);
   const [tickerMessage, setTickerMessage] = useState<string>('');
   const [tickerActive, setTickerActive] = useState<boolean>(true);
+
+  // ── Playlist e imagens de refeição ───────────────────────────────────────
+  type PlaylistTrack = { id: string; title: string; emoji: string };
+  const [playlist, setPlaylist] = useState<PlaylistTrack[]>(loadPlaylist);
+  const [mealLancheImg, setMealLancheImg] = useState(() => localStorage.getItem('dp_meal_lanche_img') || '');
+  const [mealAlmocoImg, setMealAlmocoImg] = useState(() => localStorage.getItem('dp_meal_almoco_img') || '');
+  const [newTrackUrl, setNewTrackUrl] = useState('');
+  const [newTrackTitle, setNewTrackTitle] = useState('');
+  const [newTrackEmoji, setNewTrackEmoji] = useState('🎵');
+
+  const saveMediaSettings = () => {
+    try {
+      localStorage.setItem('dp_playlist', JSON.stringify(playlist));
+      localStorage.setItem('dp_meal_lanche_img', mealLancheImg.trim());
+      localStorage.setItem('dp_meal_almoco_img', mealAlmocoImg.trim());
+      // Disparar evento storage para o DisplayPanel (mesma aba) recarregar
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'dp_playlist', newValue: JSON.stringify(playlist),
+      }));
+      toast.success('✅ Configurações de mídia salvas!');
+    } catch {
+      toast.error('Erro ao salvar configurações.');
+    }
+  };
+
+  const addTrack = () => {
+    const id = ytIdFromUrl(newTrackUrl);
+    if (!id) { toast.error('Informe um ID ou URL do YouTube.'); return; }
+    const title = newTrackTitle.trim() || 'Sem título';
+    setPlaylist(p => [...p, { id, title, emoji: newTrackEmoji || '🎵' }]);
+    setNewTrackUrl(''); setNewTrackTitle(''); setNewTrackEmoji('🎵');
+  };
+
+  const removeTrack = (idx: number) => setPlaylist(p => p.filter((_, i) => i !== idx));
+  const resetPlaylist = () => { setPlaylist(DEFAULT_PLAYLIST); toast('Playlist restaurada ao padrão.'); };
 
   // Log quando isEmergencyMode mudar
   useEffect(() => {
@@ -459,6 +528,140 @@ export default function DisplayPanelConfig() {
           )}
         </div>
       )}
+
+      {/* ── Card: Música e Imagens do Intervalo ─────────────────────────────── */}
+      <div className="card border-2 border-purple-400 bg-purple-50 space-y-6">
+        <div className="flex items-center gap-3">
+          <Music className="text-purple-600" size={28} />
+          <h2 className="text-xl font-bold text-purple-800">🎵 Música e Imagens do Intervalo</h2>
+        </div>
+        <p className="text-sm text-purple-700">
+          Configure a playlist de vídeos do YouTube exibida durante os intervalos (lanche/almoço), e as imagens mostradas no card de refeição.
+        </p>
+
+        {/* Imagens de refeição */}
+        <div className="bg-white rounded-xl border border-purple-200 p-4 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Image size={18} className="text-purple-500" />
+            <h3 className="font-semibold text-purple-800">Imagens das Refeições</h3>
+          </div>
+          <p className="text-xs text-gray-500">Cole a URL de uma imagem (JPG, PNG, GIF) para substituir o emoji padrão no card de lanche ou almoço.</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold mb-1 text-blue-700">☕ Lanche — URL da imagem</label>
+              <input
+                type="url"
+                value={mealLancheImg}
+                onChange={e => setMealLancheImg(e.target.value)}
+                placeholder="https://exemplo.com/lanche.jpg"
+                className="input w-full text-sm"
+              />
+              {mealLancheImg && (
+                <img src={mealLancheImg} alt="Preview lanche" className="mt-2 rounded-lg h-24 object-cover w-full border border-blue-200"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1 text-amber-700">🍽️ Almoço — URL da imagem</label>
+              <input
+                type="url"
+                value={mealAlmocoImg}
+                onChange={e => setMealAlmocoImg(e.target.value)}
+                placeholder="https://exemplo.com/almoco.jpg"
+                className="input w-full text-sm"
+              />
+              {mealAlmocoImg && (
+                <img src={mealAlmocoImg} alt="Preview almoço" className="mt-2 rounded-lg h-24 object-cover w-full border border-amber-200"
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-gray-400">💡 Dica: use Google Drive (link público), Imgur ou qualquer URL de imagem direta.</p>
+        </div>
+
+        {/* Playlist */}
+        <div className="bg-white rounded-xl border border-purple-200 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Music size={18} className="text-purple-500" />
+              <h3 className="font-semibold text-purple-800">Playlist de Vídeos (YouTube)</h3>
+            </div>
+            <button onClick={resetPlaylist} className="text-xs text-gray-400 hover:text-red-500 underline">Restaurar padrão</button>
+          </div>
+          <p className="text-xs text-gray-500">Informe o ID ou URL completa do vídeo do YouTube. Ex: <code className="bg-gray-100 px-1 rounded">jfKfPfyJRdk</code> ou <code className="bg-gray-100 px-1 rounded">https://youtu.be/jfKfPfyJRdk</code></p>
+
+          {/* Lista atual */}
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {playlist.map((track, idx) => (
+              <div key={idx} className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+                <span className="text-lg shrink-0">{track.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate text-gray-800">{track.title}</div>
+                  <div className="text-xs text-gray-400 font-mono truncate">{track.id}</div>
+                </div>
+                <a
+                  href={`https://youtu.be/${track.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-500 hover:underline shrink-0"
+                >▶</a>
+                <button onClick={() => removeTrack(idx)} className="text-gray-300 hover:text-red-500 shrink-0">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {playlist.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-4">Nenhum vídeo na playlist. Adicione abaixo.</p>
+            )}
+          </div>
+
+          {/* Adicionar novo */}
+          <div className="border-t border-purple-100 pt-3 space-y-2">
+            <p className="text-xs font-semibold text-purple-700">Adicionar novo vídeo:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input
+                type="text"
+                value={newTrackUrl}
+                onChange={e => setNewTrackUrl(e.target.value)}
+                placeholder="ID ou URL do YouTube"
+                className="input text-sm sm:col-span-2"
+              />
+              <input
+                type="text"
+                value={newTrackTitle}
+                onChange={e => setNewTrackTitle(e.target.value)}
+                placeholder="Título (opcional)"
+                className="input text-sm"
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={newTrackEmoji}
+                onChange={e => setNewTrackEmoji(e.target.value)}
+                placeholder="Emoji"
+                maxLength={4}
+                className="input text-sm w-20 text-center"
+              />
+              <button onClick={addTrack} disabled={!newTrackUrl.trim()} className="btn btn-primary flex items-center gap-1 text-sm">
+                <Plus size={14} /> Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Botão Salvar */}
+        <button
+          onClick={saveMediaSettings}
+          className="btn bg-purple-600 hover:bg-purple-700 text-white font-bold px-8 py-3 flex items-center gap-2 w-full justify-center text-base"
+        >
+          <Save size={18} /> Salvar Música e Imagens
+        </button>
+        <p className="text-xs text-purple-600 text-center">
+          As configurações são salvas localmente neste dispositivo. O Painel de TV neste mesmo navegador usará as novas configurações imediatamente.
+        </p>
+      </div>
     </div>
   );
 }

@@ -1189,20 +1189,18 @@ export default function MakeupSaturdays() {
                       <CheckSquare size={16} />
                       Confirmar Presenças por Aula
                     </button>
-                    {saved.status !== 'realized' && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`Corrigir sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')} retroativamente?\n\nIsto irá:\n• Marcar como "Realizado"\n• Criar registros de pagamento para aulas já confirmadas`)) {
-                            fixRetroactiveMutation.mutate(scheduleId);
-                          }
-                        }}
-                        className="btn btn-sm bg-orange-500 text-white hover:bg-orange-600 flex items-center justify-center gap-1 col-span-2"
-                        disabled={fixRetroactiveMutation.isPending}
-                      >
-                        <CheckCircle size={16} />
-                        {fixRetroactiveMutation.isPending ? 'Corrigindo...' : 'Corrigir Retroativamente'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        if (confirm(`Gerar/corrigir pagamentos do sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')}?\n\nIsto irá criar registros de pagamento para todas as aulas já confirmadas (sem duplicar).`)) {
+                          fixRetroactiveMutation.mutate(scheduleId);
+                        }
+                      }}
+                      className="btn btn-sm bg-orange-500 text-white hover:bg-orange-600 flex items-center justify-center gap-1 col-span-2"
+                      disabled={fixRetroactiveMutation.isPending}
+                    >
+                      <CheckCircle size={16} />
+                      {fixRetroactiveMutation.isPending ? 'Gerando...' : 'Gerar Pagamentos'}
+                    </button>
                     <button
                       onClick={() => handleDelete(scheduleId)}
                       className="btn btn-sm btn-error flex items-center justify-center gap-1"

@@ -268,6 +268,26 @@ export default function Layout() {
             badge: 'NOVO',
             highlight: true,
             subtitle: 'Gestão de Pessoal'
+          },
+          {
+            icon: Briefcase,
+            label: 'Ponto de Funcionários',
+            path: '/employee-attendance',
+            description: '⏱️ Controle de presença, faltas, plantões, horas extras e relatórios CLT',
+            color: 'blue',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Frequência'
+          },
+          {
+            icon: Briefcase,
+            label: 'Controle de EPIs',
+            path: '/epi-control',
+            description: '🦺 Registro de entrega e fiscalização de EPIs por funcionário — NR-6 / CLT',
+            color: 'amber',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Segurança do Trabalho'
           }
         ]
       : []),

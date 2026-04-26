@@ -1362,10 +1362,10 @@ export default function EmergencySchedule() {
       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded no-print">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-red-800">
           <AlertTriangle className="text-red-600" />
-          Horário Emergencial e de Sábado de Reposição
+          Horário Emergencial
         </h1>
         <p className="text-red-700 mt-2">
-          Crie horários provisórios para ausências e gerencie sábados de reposição
+          Crie horários provisórios para ausências de professores
         </p>
       </div>
 

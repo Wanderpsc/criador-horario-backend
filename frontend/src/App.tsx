@@ -25,6 +25,8 @@ import EmergencySchedule from './pages/EmergencySchedule';
 import MakeupSaturdays from './pages/MakeupSaturdays';
 import ClassPayments from './pages/ClassPayments';
 import Employees from './pages/Employees';
+import EmployeeAttendance from './pages/EmployeeAttendance';
+import EPIControl from './pages/EPIControl';
 import SubstitutePublic from './pages/SubstitutePublic';
 import EmployeePublicForm from './pages/EmployeePublicForm';
 import TeacherAttendance from './pages/TeacherAttendance';
@@ -164,6 +166,8 @@ function App() {
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
           <Route path="employees" element={<ClientRoute><Employees /></ClientRoute>} />
+          <Route path="employee-attendance" element={<ClientRoute><EmployeeAttendance /></ClientRoute>} />
+          <Route path="epi-control" element={<ClientRoute><EPIControl /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><Settings /></ClientRoute>} />
           <Route path="audit-logs" element={<ClientRoute><AuditLogs /></ClientRoute>} />
           <Route path="timetables" element={<ClientRoute><Timetables /></ClientRoute>} />

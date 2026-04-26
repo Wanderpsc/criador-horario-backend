@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {
   Users, Plus, Search, Pencil, Trash2, Printer, X, ChevronDown, ChevronUp,
   User, Phone, MapPin, Briefcase, FileText, BookOpen, Eye, Link2, Copy, CheckCheck,
+  Upload, FolderOpen, Download, AlertTriangle,
 } from 'lucide-react';
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -91,6 +92,33 @@ const maskPhone = (v: string) => {
 
 type FormTab = 'pessoal' | 'contato' | 'endereco' | 'funcional' | 'documentos';
 
+// ─── Tipos de documentos ──────────────────────────────────────────────────────
+interface EmployeeDoc {
+  _id: string;
+  type: string;
+  description?: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+const DOC_TYPES = [
+  'RG', 'CPF', 'CTPS', 'CNH', 'Título de Eleitor', 'PIS/PASEP',
+  'Certificado Reservista', 'Diploma/Certificado', 'Foto 3x4', 'Comprovante de Endereço',
+  'Comprovante de Conta Bancária', 'Certidão de Nascimento', 'Certidão de Casamento',
+  'Atestado Médico', 'Contrato de Trabalho', 'Exame Admissional', 'Outro',
+];
+
+const ICON_FOR_MIME: Record<string, string> = {
+  'application/pdf': '📄',
+  'image/jpeg': '🖼️', 'image/jpg': '🖼️', 'image/png': '🖼️',
+  'image/gif': '🖼️', 'image/webp': '🖼️', 'image/bmp': '🖼️',
+};
+
+const fmtBytes = (b: number) =>
+  b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
+
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function Employees() {
   const queryClient = useQueryClient();
@@ -98,6 +126,8 @@ export default function Employees() {
 
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'cargo' | 'setor' | 'matricula'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Employee, '_id' | 'isActive'>>(EMPTY);
@@ -107,6 +137,18 @@ export default function Employees() {
   const [activeTab, setActiveTab] = useState<'lista' | 'relatorio'>('lista');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingReactivateId, setPendingReactivateId] = useState<string | null>(null);
+
+  // ─── Documentos do funcionário ────────────────────────────────────────────
+  const [docsModalEmp, setDocsModalEmp] = useState<Employee | null>(null);
+  const [docUploadFile, setDocUploadFile] = useState<File | null>(null);
+  const [docUploadType, setDocUploadType] = useState(DOC_TYPES[0]);
+  const [docUploadDesc, setDocUploadDesc] = useState('');
+  const [docUploading, setDocUploading] = useState(false);
+  const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null);
+  const [docPreviewMime, setDocPreviewMime] = useState<string>('');
+  const [docPreviewName, setDocPreviewName] = useState<string>('');
+  const [pendingDeleteDocId, setPendingDeleteDocId] = useState<string | null>(null);
+  const docFileRef = useRef<HTMLInputElement>(null);
 
   // ─── Link de convite ──────────────────────────────────────────────────────
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -121,8 +163,32 @@ export default function Employees() {
       const res = await api.get('/employees', {
         params: { isActive: showInactive ? undefined : true },
       });
-      return res.data as Employee[];
+      // api.ts interceptor converts _id → id; normalize so emp._id works everywhere
+      const data = (res.data as any[]);
+      return data.map((e: any) => ({ ...e, _id: e._id || e.id || '' })) as Employee[];
     },
+  });
+
+  // Query de documentos (ativada quando modal aberto)
+  const { data: empDocs = [], isLoading: docsLoading, refetch: refetchDocs } = useQuery({
+    queryKey: ['employee-docs', docsModalEmp?._id],
+    queryFn: async () => {
+      if (!docsModalEmp?._id) return [];
+      const res = await api.get(`/employee-documents/${docsModalEmp._id}`);
+      return res.data as EmployeeDoc[];
+    },
+    enabled: !!docsModalEmp,
+  });
+
+  const deleteDocMutation = useMutation({
+    mutationFn: ({ empId, docId }: { empId: string; docId: string }) =>
+      api.delete(`/employee-documents/${empId}/${docId}`),
+    onSuccess: () => {
+      toast.success('Documento excluído.');
+      queryClient.invalidateQueries({ queryKey: ['employee-docs', docsModalEmp?._id] });
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao excluir.'),
+    onSettled: () => setPendingDeleteDocId(null),
   });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
@@ -214,15 +280,64 @@ export default function Employees() {
   const setFieldPhone = (key: 'celular' | 'telefoneFixo', val: string) =>
     setForm(f => ({ ...f, [key]: maskPhone(val) }));
 
-  const filtered = employees.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase()) ||
-    (e.matricula || '').toLowerCase().includes(search.toLowerCase()) ||
-    (e.cargo || '').toLowerCase().includes(search.toLowerCase()) ||
-    (e.setor || '').toLowerCase().includes(search.toLowerCase()) ||
-    (e.cpf || '').includes(search)
-  );
+  const uploadDoc = async () => {
+    if (!docUploadFile || !docsModalEmp) return;
+    if (!docUploadType.trim()) { toast.error('Selecione o tipo de documento.'); return; }
+    setDocUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', docUploadFile);
+      fd.append('type', docUploadType);
+      fd.append('description', docUploadDesc);
+      await api.post(`/employee-documents/${docsModalEmp._id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success('Documento enviado!');
+      setDocUploadFile(null);
+      setDocUploadDesc('');
+      if (docFileRef.current) docFileRef.current.value = '';
+      queryClient.invalidateQueries({ queryKey: ['employee-docs', docsModalEmp._id] });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao enviar documento.');
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const openDocPreview = async (emp: Employee, doc: EmployeeDoc) => {
+    try {
+      const res = await api.get(`/employee-documents/${emp._id}/${doc._id}/download`, {
+        responseType: 'blob',
+      });
+      const url = URL.createObjectURL(res.data as Blob);
+      setDocPreviewUrl(url);
+      setDocPreviewMime(doc.mimeType);
+      setDocPreviewName(doc.filename);
+    } catch {
+      toast.error('Erro ao abrir documento.');
+    }
+  };
+
+  const filtered = employees
+    .filter(e =>
+      e.name.toLowerCase().includes(search.toLowerCase()) ||
+      (e.matricula || '').toLowerCase().includes(search.toLowerCase()) ||
+      (e.cargo || '').toLowerCase().includes(search.toLowerCase()) ||
+      (e.setor || '').toLowerCase().includes(search.toLowerCase()) ||
+      (e.cpf || '').includes(search)
+    )
+    .sort((a, b) => {
+      const av = (sortBy === 'name' ? a.name : sortBy === 'cargo' ? (a.cargo || '') : sortBy === 'setor' ? (a.setor || '') : (a.matricula || '')).toLowerCase();
+      const bv = (sortBy === 'name' ? b.name : sortBy === 'cargo' ? (b.cargo || '') : sortBy === 'setor' ? (b.setor || '') : (b.matricula || '')).toLowerCase();
+      return sortDir === 'asc' ? av.localeCompare(bv, 'pt-BR') : bv.localeCompare(av, 'pt-BR');
+    });
 
   const viewEmployee = employees.find(e => e._id === viewId) || null;
+
+  const toggleSort = (col: typeof sortBy) => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir('asc'); }
+  };
 
   const handlePrint = () => window.print();
 
@@ -300,7 +415,25 @@ export default function Employees() {
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            {/* Ordenar por */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <span className="text-xs text-gray-500 mr-1">Ordenar:</span>
+              {(['name', 'cargo', 'setor', 'matricula'] as const).map(col => (
+                <button
+                  key={col}
+                  onClick={() => toggleSort(col)}
+                  className={`px-2.5 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                    sortBy === col
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {col === 'name' ? 'Nome' : col === 'cargo' ? 'Cargo' : col === 'setor' ? 'Setor' : 'Matrícula'}
+                  {sortBy === col && (sortDir === 'asc' ? ' ↑' : ' ↓')}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer flex-shrink-0">
               <input
                 type="checkbox"
                 checked={showInactive}
@@ -310,6 +443,14 @@ export default function Employees() {
               Mostrar inativos
             </label>
           </div>
+
+          {/* Contador */}
+          {filtered.length > 0 && (
+            <p className="text-xs text-gray-500 no-print">
+              {filtered.length} funcionário{filtered.length !== 1 ? 's' : ''} — ordenado{sortDir === 'asc' ? ' A→Z' : ' Z→A'} por{' '}
+              <strong>{sortBy === 'name' ? 'nome' : sortBy === 'cargo' ? 'cargo' : sortBy === 'setor' ? 'setor' : 'matrícula'}</strong>
+            </p>
+          )}
 
           {/* Lista */}
           {isLoading ? (
@@ -354,6 +495,13 @@ export default function Employees() {
                         title="Ver ficha completa"
                       >
                         <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDocsModalEmp(emp); }}
+                        className="p-1.5 text-gray-400 hover:text-teal-600"
+                        title="Documentos do funcionário"
+                      >
+                        <FolderOpen className="w-4 h-4" />
                       </button>
                       <button
                         onClick={e => {
@@ -420,7 +568,24 @@ export default function Employees() {
       {/* ── ABA: RELATÓRIO ────────────────────────────────────────────────── */}
       {activeTab === 'relatorio' && (
         <div className="space-y-4">
-          <div className="flex justify-end no-print">
+          <div className="flex flex-wrap items-center justify-between gap-3 no-print">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-500 mr-1">Ordenar:</span>
+              {(['name', 'cargo', 'setor', 'matricula'] as const).map(col => (
+                <button
+                  key={col}
+                  onClick={() => toggleSort(col)}
+                  className={`px-2.5 py-1.5 text-xs rounded-lg border font-medium transition-colors ${
+                    sortBy === col
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {col === 'name' ? 'Nome' : col === 'cargo' ? 'Cargo' : col === 'setor' ? 'Setor' : 'Matrícula'}
+                  {sortBy === col && (sortDir === 'asc' ? ' ↑' : ' ↓')}
+                </button>
+              ))}
+            </div>
             <button
               onClick={handlePrint}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm"
@@ -432,7 +597,9 @@ export default function Employees() {
           <div id="employee-report-print" ref={printRef}>
             <div className="text-center mb-6 print-only hidden">
               <h2 className="text-lg font-bold">RELAÇÃO DE FUNCIONÁRIOS</h2>
-              <p className="text-sm text-gray-500">Emitido em {new Date().toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm text-gray-500">
+                Ordenado por: {sortBy === 'name' ? 'Nome' : sortBy === 'cargo' ? 'Cargo' : sortBy === 'setor' ? 'Setor' : 'Matrícula'} ({sortDir === 'asc' ? 'A→Z' : 'Z→A'}) — Emitido em {new Date().toLocaleDateString('pt-BR')}
+              </p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -488,6 +655,191 @@ export default function Employees() {
                 <div className="border-t border-gray-400 pt-2 text-sm">Setor de Pessoal / RH</div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL DOCUMENTOS ──────────────────────────────────────────────── */}
+      {docsModalEmp && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-4">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-teal-600" />
+                <div>
+                  <h2 className="text-base font-bold text-gray-800">Documentos</h2>
+                  <p className="text-xs text-gray-500">{docsModalEmp.name}</p>
+                </div>
+              </div>
+              <button onClick={() => { setDocsModalEmp(null); setDocUploadFile(null); setDocPreviewUrl(null); }} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {/* Upload */}
+              <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-teal-800 flex items-center gap-2">
+                  <Upload className="w-4 h-4" /> Adicionar Documento
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo do documento *</label>
+                    <select
+                      value={docUploadType}
+                      onChange={e => setDocUploadType(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                    >
+                      {DOC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Descrição (opcional)</label>
+                    <input
+                      value={docUploadDesc}
+                      onChange={e => setDocUploadDesc(e.target.value)}
+                      placeholder="Ex: Frente, verso, 2024..."
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Arquivo (foto, scan ou PDF — máx. 10 MB)</label>
+                  <input
+                    ref={docFileRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    capture="environment"
+                    onChange={e => setDocUploadFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200 cursor-pointer"
+                  />
+                  {docUploadFile && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {ICON_FOR_MIME[docUploadFile.type] || '📎'} {docUploadFile.name} — {fmtBytes(docUploadFile.size)}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={uploadDoc}
+                  disabled={!docUploadFile || docUploading}
+                  className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  {docUploading ? 'Enviando...' : <><Upload className="w-4 h-4" /> Enviar Documento</>}
+                </button>
+              </div>
+
+              {/* Lista de documentos */}
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-400" />
+                  Documentos Cadastrados
+                  {!docsLoading && <span className="ml-1 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">{empDocs.length}</span>}
+                </p>
+
+                {docsLoading ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Carregando...</p>
+                ) : empDocs.length === 0 ? (
+                  <div className="text-center py-6 text-gray-400">
+                    <FolderOpen className="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                    <p className="text-sm">Nenhum documento cadastrado ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {empDocs.map(doc => (
+                      <div key={doc._id} className="flex items-center gap-3 border border-gray-200 rounded-xl px-3 py-2.5 bg-white hover:bg-gray-50">
+                        <span className="text-2xl flex-shrink-0">{ICON_FOR_MIME[doc.mimeType] || '📎'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{doc.type}{doc.description ? ` — ${doc.description}` : ''}</p>
+                          <p className="text-xs text-gray-400 truncate">{doc.filename} · {fmtBytes(doc.size)}</p>
+                          <p className="text-xs text-gray-400">{new Date(doc.createdAt).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => openDocPreview(docsModalEmp, doc)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600"
+                            title="Visualizar"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <a
+                            href={`${(api.defaults.baseURL || '')}employee-documents/${docsModalEmp._id}/${doc._id}/download`}
+                            download={doc.filename}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              try {
+                                const res = await api.get(`/employee-documents/${docsModalEmp._id}/${doc._id}/download`, { responseType: 'blob' });
+                                const url = URL.createObjectURL(res.data as Blob);
+                                const a = document.createElement('a');
+                                a.href = url; a.download = doc.filename; a.click();
+                                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                              } catch { toast.error('Erro ao baixar.'); }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-teal-600"
+                            title="Baixar"
+                          >
+                            <Download className="w-4 h-4" />
+                          </a>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Excluir "${doc.type}"?`)) {
+                                setPendingDeleteDocId(doc._id);
+                                deleteDocMutation.mutate({ empId: docsModalEmp._id, docId: doc._id });
+                              }
+                            }}
+                            disabled={pendingDeleteDocId === doc._id}
+                            className="p-1.5 text-gray-400 hover:text-red-500 disabled:opacity-40"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Nota */}
+              <p className="text-xs text-gray-400 flex items-start gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                Arquivos são armazenados com segurança no servidor. Máx. 10 MB por arquivo. Formatos aceitos: imagens (JPG, PNG, GIF, WEBP) e PDF.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PREVIEW DE DOCUMENTO ──────────────────────────────────────────── */}
+      {docPreviewUrl && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => { URL.revokeObjectURL(docPreviewUrl); setDocPreviewUrl(null); }}
+        >
+          <div className="relative max-w-4xl w-full max-h-full flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between w-full mb-2 px-1">
+              <p className="text-white text-sm font-medium truncate">{docPreviewName}</p>
+              <button
+                onClick={() => { URL.revokeObjectURL(docPreviewUrl); setDocPreviewUrl(null); }}
+                className="text-white/70 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            {docPreviewMime === 'application/pdf' ? (
+              <iframe
+                src={docPreviewUrl}
+                className="w-full rounded-lg bg-white"
+                style={{ height: '80vh' }}
+                title={docPreviewName}
+              />
+            ) : (
+              <img
+                src={docPreviewUrl}
+                alt={docPreviewName}
+                className="max-h-[80vh] max-w-full rounded-lg object-contain bg-white"
+              />
+            )}
           </div>
         </div>
       )}

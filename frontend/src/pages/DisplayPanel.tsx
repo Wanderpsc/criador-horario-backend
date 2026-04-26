@@ -44,8 +44,8 @@ interface DisplayPanelProps {
 type SlotStatus = 'completed' | 'ongoing' | 'upcoming' | 'scheduled';
 type ViewMode = 'grid' | 'cards' | 'airport' | 'display' | 'alltable';
 
-// Playlist de músicas para os intervalos
-const BREAK_PLAYLIST = [
+// Playlist padrão de músicas para os intervalos
+const DEFAULT_PLAYLIST = [
   { id: 'jfKfPfyJRdk', title: 'Lo-Fi Relaxante', emoji: '🎵' },
   { id: 'CLeZyIID9Bo', title: 'Gospel Instrumental', emoji: '🙏' },
   { id: '4To2KEJ1y7c', title: 'Música Clássica', emoji: '🎼' },
@@ -53,6 +53,14 @@ const BREAK_PLAYLIST = [
   { id: 'kgx4WGK0oNU', title: 'Músicas Ambiente', emoji: '🌿' },
   { id: 'BHACKCNDMW8', title: 'Para Estudar', emoji: '📚' },
 ];
+
+function loadPlaylistFromStorage() {
+  try {
+    const s = localStorage.getItem('dp_playlist');
+    if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length > 0) return p; }
+  } catch {}
+  return DEFAULT_PLAYLIST;
+}
 
 export default function DisplayPanel({ 
 
@@ -78,12 +86,28 @@ export default function DisplayPanel({
   const [showSaturdayDialog, setShowSaturdayDialog] = useState(false); // Dialog configuração do sábado
   const [saturdayIsLetivo, setSaturdayIsLetivo] = useState<boolean | null>(null); // null = não verificado
   const [saturdayRefDay, setSaturdayRefDay] = useState<string>('Segunda'); // Dia de referência no sábado
+  const [isMakeupMode, setIsMakeupMode] = useState(false); // Modo sábado de reposição
+  const [selectedMakeupId, setSelectedMakeupId] = useState<string>(''); // ID do sábado de reposição
   const [manualEdits, setManualEdits] = useState<{ [key: string]: { subjectName: string; teacherName: string } }>({});
   const [manualSaved, setManualSaved] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null); // chave: `${period}|||${classKey}` (somente admin, modo AUTO)
+  const [breakPlaylist, setBreakPlaylist] = useState<{ id: string; title: string; emoji: string }[]>(loadPlaylistFromStorage);
+  const [mealLancheImg, setMealLancheImg] = useState(() => localStorage.getItem('dp_meal_lanche_img') || '');
+  const [mealAlmocoImg, setMealAlmocoImg] = useState(() => localStorage.getItem('dp_meal_almoco_img') || '');
   const [playlistIndex, setPlaylistIndex] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(false); // Som desativado por padrão — ativar via botão
   const [editUnlocked, setEditUnlocked] = useState(false); // Edição direta desbloqueada por senha
+  // Recarregar playlist/imagens quando o localStorage mudar (p.ex. após salvar no Config)
+  useEffect(() => {
+    const handler = () => {
+      setBreakPlaylist(loadPlaylistFromStorage());
+      setMealLancheImg(localStorage.getItem('dp_meal_lanche_img') || '');
+      setMealAlmocoImg(localStorage.getItem('dp_meal_almoco_img') || '');
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, []);
+
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [showPasswordModal, setShowPasswordModal] = useState(false); // Modal de senha
   const [passwordInput, setPasswordInput] = useState(''); // Campo de senha
@@ -141,6 +165,15 @@ export default function DisplayPanel({
         localStorage.setItem('dp_mode', 'emergency');
         localStorage.setItem('dp_emergencyId', emergencyId);
       } catch {}
+    } else if (mode === 'makeup') {
+      const makeupId = params.get('makeupId') || '';
+      console.log('📆 Ativando MODO SÁBADO DE REPOSIÇÃO via URL, ID:', makeupId);
+      setIsMakeupMode(true);
+      setSelectedMakeupId(makeupId);
+      try {
+        localStorage.setItem('dp_mode', 'makeup');
+        localStorage.setItem('dp_makeupId', makeupId);
+      } catch {}
     } else if (mode === 'normal' && timetableId) {
       console.log('📅 Ativando MODO NORMAL via URL');
       setIsEmergencyMode(false);
@@ -156,7 +189,12 @@ export default function DisplayPanel({
         const savedMode = localStorage.getItem('dp_mode');
         const savedTimetableId = localStorage.getItem('dp_timetableId');
         const savedEmergencyId = localStorage.getItem('dp_emergencyId');
-        if (savedMode === 'emergency' && savedEmergencyId) {
+        const savedMakeupId = localStorage.getItem('dp_makeupId');
+        if (savedMode === 'makeup' && savedMakeupId) {
+          console.log('💾 Restaurando do localStorage: modo sábado de reposição, ID:', savedMakeupId);
+          setIsMakeupMode(true);
+          setSelectedMakeupId(savedMakeupId);
+        } else if (savedMode === 'emergency' && savedEmergencyId) {
           console.log('💾 Restaurando do localStorage: modo emergencial, ID:', savedEmergencyId);
           setIsEmergencyMode(true);
           setSelectedEmergencyId(savedEmergencyId);
@@ -325,6 +363,23 @@ export default function DisplayPanel({
     },
     refetchInterval: autoRefresh ? refreshInterval * 1000 : false,
     enabled: !!selectedEmergencyId,
+  });
+
+  // Buscar sábado de reposição (via rota pública por ID)
+  const { data: makeupData } = useQuery<any | null>({
+    queryKey: ['displayPanel-makeup', selectedMakeupId],
+    queryFn: async () => {
+      if (!selectedMakeupId) return null;
+      try {
+        const res = await publicApi.get(`/public/makeup-saturday/${selectedMakeupId}`);
+        return res.data?.data || null;
+      } catch (error) {
+        console.error('Erro ao buscar sábado de reposição:', error);
+        return null;
+      }
+    },
+    refetchInterval: autoRefresh ? refreshInterval * 1000 * 30 : false,
+    enabled: isMakeupMode && !!selectedMakeupId,
   });
   
   // LOG DE MONITORAMENTO DO ESTADO EMERGENCIAL
@@ -753,7 +808,7 @@ export default function DisplayPanel({
     staleTime: 0,
     retry: 18,                         // até ~90s de cold-start (18 × 5s)
     retryDelay: () => 5000,            // tenta a cada 5s sem back-off exponencial
-    enabled: (!!selectedTimetableId && !isEmergencyMode) || (isEmergencyMode && !!selectedEmergencyId),
+    enabled: !isMakeupMode && ((!!selectedTimetableId && !isEmergencyMode) || (isEmergencyMode && !!selectedEmergencyId)),
   });
 
   // Verificar alertas e tocar som
@@ -1198,8 +1253,8 @@ export default function DisplayPanel({
       <header className="mb-6 border-b-4 border-yellow-500 pb-4">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
-            <h1 className={`text-4xl font-bold mb-2 ${isEmergencyMode ? 'text-red-500 animate-pulse' : ''}`}>
-              {isEmergencyMode ? '🚨 Emergencial - GRADE DE HORÁRIOS' : '📚 Normal - GRADE DE HORÁRIOS'}
+            <h1 className={`text-4xl font-bold mb-2 ${isEmergencyMode ? 'text-red-500 animate-pulse' : isMakeupMode ? 'text-purple-400' : ''}`}>
+              {isMakeupMode ? '📆 Sábado de Reposição - GRADE DE HORÁRIOS' : isEmergencyMode ? '🚨 Emergencial - GRADE DE HORÁRIOS' : '📚 Normal - GRADE DE HORÁRIOS'}
             </h1>
             <div className="flex items-center gap-4">
               <p className="text-xl text-yellow-400">
@@ -1441,7 +1496,7 @@ export default function DisplayPanel({
       )}
 
       {/* Mensagem se não houver horários gerados */}
-      {!isLoadingAvailable && !isEmergencyMode && !!selectedTimetableId && availableTimetables.length === 0 && (
+      {!isLoadingAvailable && !isEmergencyMode && !isMakeupMode && !!selectedTimetableId && availableTimetables.length === 0 && (
         <div className="text-center py-20">
           <BookOpen size={80} className="mx-auto mb-4 text-yellow-500" />
           <h2 className="text-4xl font-bold text-white mb-4">
@@ -1456,8 +1511,118 @@ export default function DisplayPanel({
         </div>
       )}
 
+      {/* ===== MODO SÁBADO DE REPOSIÇÃO ===== */}
+      {isMakeupMode && (
+        <div>
+          {!makeupData ? (
+            <div className="text-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-purple-500 mx-auto mb-4"></div>
+              <p className="text-2xl text-gray-300">Carregando sábado de reposição...</p>
+            </div>
+          ) : (
+            <div>
+              {/* Cabeçalho do sábado */}
+              <div className="mb-4 px-2 py-3 rounded-xl bg-purple-900 bg-opacity-50 border border-purple-500 flex items-center gap-4">
+                <span className="text-5xl">📆</span>
+                <div>
+                  <div className="text-2xl font-black text-purple-200">{makeupData.title || 'Sábado de Reposição'}</div>
+                  <div className="text-lg text-purple-300">
+                    {makeupData.date ? new Date(makeupData.date).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' }) : ''}
+                  </div>
+                </div>
+              </div>
+
+              {/* Grade: períodos × turmas */}
+              {(() => {
+                const schedule: { [classId: string]: any[] } = makeupData.schedule || {};
+                const classIds = Object.keys(schedule);
+                if (classIds.length === 0) {
+                  return <div className="text-center text-gray-400 text-xl py-20">Nenhum horário registrado neste sábado.</div>;
+                }
+
+                const maxPeriods = Math.max(...classIds.map(cid => (schedule[cid] || []).length), 0);
+
+                // Deduzir nome das turmas a partir do primeiro slot de cada turma
+                const classNames: { [classId: string]: string } = {};
+                classIds.forEach(cid => {
+                  const firstSlot = (schedule[cid] || [])[0];
+                  if (firstSlot) {
+                    classNames[cid] = firstSlot.className || cid.substring(0, 8);
+                  } else {
+                    classNames[cid] = cid.substring(0, 8);
+                  }
+                });
+
+                // Calcular largura das colunas
+                const N = classIds.length;
+                const MIN_LABEL_W = 130;
+
+                return (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed', minWidth: '600px' }}>
+                      <thead>
+                        <tr style={{ background: '#581c87' }}>
+                          <th style={{ border: '2px solid #7e22ce', padding: '10px 8px', textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#e9d5ff', width: `${MIN_LABEL_W}px`, minWidth: `${MIN_LABEL_W}px` }}>
+                            HORÁRIO
+                          </th>
+                          {classIds.map(cid => (
+                            <th key={cid} style={{ border: '2px solid #7e22ce', padding: '10px 6px', textAlign: 'center', fontWeight: 'bold', fontSize: '0.82rem', color: '#e9d5ff', width: `calc((100% - ${MIN_LABEL_W}px) / ${N})`, overflow: 'hidden', wordBreak: 'break-word' }}>
+                              {classNames[cid]}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.from({ length: maxPeriods }, (_, i) => {
+                          const period = i + 1;
+                          // Obter horário do período
+                          let startTime = '—', endTime = '—';
+                          for (const cid of classIds) {
+                            const slot = (schedule[cid] || []).find((s: any) => s.period === period);
+                            if (slot) { startTime = slot.startTime || '—'; endTime = slot.endTime || '—'; break; }
+                          }
+
+                          return (
+                            <tr key={period} style={{ background: period % 2 === 0 ? 'rgba(88,28,135,0.2)' : 'rgba(88,28,135,0.1)', height: '90px' }}>
+                              <td style={{ border: '2px solid #7e22ce', padding: '8px', textAlign: 'center', verticalAlign: 'middle', background: 'rgba(88,28,135,0.35)' }}>
+                                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#e9d5ff' }}>{period}º</div>
+                                <div style={{ fontSize: '0.9rem', color: '#c4b5fd' }}>{startTime}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#a78bfa' }}>até {endTime}</div>
+                              </td>
+                              {classIds.map(cid => {
+                                const slot = (schedule[cid] || []).find((s: any) => s.period === period);
+                                return (
+                                  <td key={cid} style={{ border: '2px solid #7e22ce', padding: '6px', textAlign: 'center', verticalAlign: 'middle', overflow: 'hidden' }}>
+                                    {slot ? (
+                                      <div>
+                                        <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#fde68a', wordBreak: 'break-word', overflowWrap: 'break-word', marginBottom: '4px' }}>
+                                          {slot.subjectName || '—'}
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: '#d8b4fe', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                                          {slot.teacherName || '—'}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>—</div>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* DOMINGO — Sem aulas */}
-      {!isLoadingAvailable && currentDay === 'Domingo' && (
+      {!isMakeupMode && !isLoadingAvailable && currentDay === 'Domingo' && (
         <div className="flex flex-col items-center justify-center py-12 gap-6">
           <div className="text-9xl select-none">☀️</div>
           <div className="text-center">
@@ -1472,7 +1637,7 @@ export default function DisplayPanel({
       )}
 
       {/* VISUALIZAÇÃO EM GRADE (Principal) */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'grid' && currentDay !== 'Domingo' && (
+      {!isMakeupMode && !isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'grid' && currentDay !== 'Domingo' && (
         <>
           {/* Abas de Dias da Semana */}
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
@@ -1615,7 +1780,7 @@ export default function DisplayPanel({
       )}
 
           {/* PAINEL PRINCIPAL - Turmas como colunas, período atual como linha */}
-      {viewMode === 'alltable' && timetables.length > 0 && currentDay !== 'Domingo' && (
+      {!isMakeupMode && viewMode === 'alltable' && timetables.length > 0 && currentDay !== 'Domingo' && (
         <>
           <div className="overflow-x-auto w-full">
           {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
@@ -1805,12 +1970,25 @@ export default function DisplayPanel({
                 const isAlmoco = activeBreak.label.includes('Almoço');
                 const emoji = activeBreak.label.includes('Almoço') ? '🍽️' : activeBreak.label.includes('Tarde') ? '🍎' : '☕';
                 const titulo = activeBreak.label === 'Almoço' ? 'HORÁRIO DE ALMOÇO' : activeBreak.label.toUpperCase();
+                const mealImg = isAlmoco ? mealAlmocoImg : mealLancheImg;
+                const safeIndex = breakPlaylist.length > 0 ? playlistIndex % breakPlaylist.length : 0;
+                const currentTrack = breakPlaylist[safeIndex];
                 return (
                   <div className="flex flex-col items-center justify-center py-10 gap-8">
                     <div className={`text-center px-8 py-10 rounded-3xl border-4 shadow-2xl w-full mx-auto ${
                       isAlmoco ? 'bg-amber-950 border-amber-500' : 'bg-blue-950 border-blue-400'
                     }`}>
-                      <div className="text-8xl mb-4 select-none">{emoji}</div>
+                      {mealImg ? (
+                        <img
+                          src={mealImg}
+                          alt={titulo}
+                          className="mx-auto mb-4 rounded-2xl shadow-lg object-cover"
+                          style={{ maxHeight: '220px', maxWidth: '100%' }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="text-8xl mb-4 select-none">{emoji}</div>
+                      )}
                       <h2 className={`text-5xl font-black mb-3 ${isAlmoco ? 'text-amber-400' : 'text-blue-300'}`}>
                         {titulo}
                       </h2>
@@ -1825,57 +2003,59 @@ export default function DisplayPanel({
                     </div>
 
                     {/* Playlist automática */}
+                    {breakPlaylist.length > 0 && currentTrack && (
                     <div className="w-full mx-auto">
                       <div className="flex items-center justify-between mb-3 px-1">
                         <p className="text-gray-300 text-lg font-semibold tracking-wide">🎵 Playlist do Intervalo</p>
-                        <span className="text-gray-500 text-sm">{playlistIndex + 1} / {BREAK_PLAYLIST.length}</span>
+                        <span className="text-gray-500 text-sm">{safeIndex + 1} / {breakPlaylist.length}</span>
                       </div>
                       {/* Player YouTube embutido */}
                       <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl" style={{ paddingTop: '38%' }}>
                         <iframe
-                          key={playlistIndex}
-                          src={`https://www.youtube.com/embed/${BREAK_PLAYLIST[playlistIndex].id}?autoplay=1&rel=0&modestbranding=1&loop=1&playlist=${BREAK_PLAYLIST[playlistIndex].id}`}
+                          key={safeIndex}
+                          src={`https://www.youtube.com/embed/${currentTrack.id}?autoplay=1&rel=0&modestbranding=1&loop=1&playlist=${currentTrack.id}`}
                           className="absolute inset-0 w-full h-full"
                           allow="autoplay; encrypted-media"
                           allowFullScreen
-                          title={BREAK_PLAYLIST[playlistIndex].title}
+                          title={currentTrack.title}
                         />
                       </div>
                       {/* Controles da playlist */}
                       <div className="flex items-center justify-center gap-4 mt-4">
                         <button
-                          onClick={() => setPlaylistIndex(i => (i - 1 + BREAK_PLAYLIST.length) % BREAK_PLAYLIST.length)}
+                          onClick={() => setPlaylistIndex(i => (i - 1 + breakPlaylist.length) % breakPlaylist.length)}
                           className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-base transition-all hover:scale-105"
                         >
                           ⏮️ Anterior
                         </button>
-                        <div className="flex gap-2">
-                          {BREAK_PLAYLIST.map((track, idx) => (
+                        <div className="flex gap-2 flex-wrap justify-center">
+                          {breakPlaylist.map((track, idx) => (
                             <button
                               key={idx}
                               onClick={() => setPlaylistIndex(idx)}
                               className={`w-11 h-11 rounded-full text-xl transition-all hover:scale-110 ${
-                                idx === playlistIndex
+                                idx === safeIndex
                                   ? 'bg-yellow-500 shadow-lg scale-110 ring-2 ring-yellow-300'
                                   : 'bg-gray-700 hover:bg-gray-600'
                               }`}
                               title={track.title}
                             >
-                              {track.emoji}
+                              {track.emoji || '🎵'}
                             </button>
                           ))}
                         </div>
                         <button
-                          onClick={() => setPlaylistIndex(i => (i + 1) % BREAK_PLAYLIST.length)}
+                          onClick={() => setPlaylistIndex(i => (i + 1) % breakPlaylist.length)}
                           className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-base transition-all hover:scale-105"
                         >
                           Próxima ⏭️
                         </button>
                       </div>
                       <p className="text-center text-gray-400 mt-2 text-base">
-                        {BREAK_PLAYLIST[playlistIndex].emoji} {BREAK_PLAYLIST[playlistIndex].title}
+                        {currentTrack.emoji || '🎵'} {currentTrack.title}
                       </p>
                     </div>
+                    )}
                   </div>
                 );
               }
@@ -2066,7 +2246,7 @@ export default function DisplayPanel({
       )}
 
       {/* MODO DISPLAY/LETREIRO - Mostra apenas período atual em tela cheia */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'display' && currentDay !== 'Domingo' && (
+      {!isMakeupMode && !isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'display' && currentDay !== 'Domingo' && (
         <div className="space-y-4">
           {Object.keys(fullWeekGrid[selectedDay] || {}).length === 0 ? (
             <div className="text-center py-20">
@@ -2255,7 +2435,7 @@ export default function DisplayPanel({
       )}
 
       {/* VISUALIZAÇÃO ESTILO AEROPORTO - Painel de Letreiro */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'airport' && currentDay !== 'Domingo' && (
+      {!isMakeupMode && !isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'airport' && currentDay !== 'Domingo' && (
         <div className="space-y-2">
           {/* Título do Modo - Mais compacto */}
           <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-lg p-2 border-2 border-yellow-500">
@@ -2379,7 +2559,7 @@ export default function DisplayPanel({
       )}
 
       {/* VISUALIZAÇÃO EM CARDS (Alternativa) */}
-      {!isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'cards' && currentDay !== 'Domingo' && (
+      {!isMakeupMode && !isLoadingAvailable && availableTimetables.length > 0 && viewMode === 'cards' && currentDay !== 'Domingo' && (
         <>
           {/* Aulas em Andamento */}
           {ongoingSlots.length > 0 && (

@@ -3,7 +3,7 @@
  * Acessível via link: /#/employee-form/:token
  * Sem necessidade de autenticação.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -58,6 +58,11 @@ export default function EmployeePublicForm() {
   const [activeTab, setActiveTab] = useState<FormTab>('pessoal');
   const [submitting, setSubmitting] = useState(false);
   const [expandedMobile, setExpandedMobile] = useState<FormTab | null>('pessoal');
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [hasDraftRestored, setHasDraftRestored] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const DRAFT_KEY = token ? `epf_draft_${token}` : null;
 
   // Buscar dados do convite
   useEffect(() => {
@@ -65,14 +70,26 @@ export default function EmployeePublicForm() {
     axios.get(`${API_URL}/employee-invite-links/public/${token}`)
       .then(res => {
         setInviteInfo(res.data);
+        // Base: dados existentes do servidor (se for link de atualização)
+        let base: Record<string, string> = { ...EMPTY_FORM };
         if (res.data.existingData) {
-          // Pré-preencher com dados existentes
-          const existing: Record<string, string> = {};
           for (const [k, v] of Object.entries(res.data.existingData)) {
-            existing[k] = v !== null && v !== undefined ? String(v) : '';
+            base[k] = v !== null && v !== undefined ? String(v) : '';
           }
-          setForm({ ...EMPTY_FORM, ...existing });
         }
+        // Sobrepor com rascunho do localStorage (mais recente)
+        if (DRAFT_KEY) {
+          try {
+            const raw = localStorage.getItem(DRAFT_KEY);
+            if (raw) {
+              const draft = JSON.parse(raw) as { form: Record<string, string>; savedAt: string };
+              base = { ...base, ...draft.form };
+              setDraftSavedAt(draft.savedAt);
+              setHasDraftRestored(true);
+            }
+          } catch (_) {}
+        }
+        setForm(base);
         setStatus('ok');
       })
       .catch(err => {
@@ -83,15 +100,34 @@ export default function EmployeePublicForm() {
   }, [token]);
 
   function handleChange(field: string, value: string) {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => {
+      const next = { ...prev, [field]: value };
+      // Auto-save com debounce de 800ms
+      if (DRAFT_KEY) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+          const savedAt = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({ form: next, savedAt }));
+          } catch (_) {}
+          setDraftSavedAt(savedAt);
+        }, 800);
+      }
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) { alert('Por favor, informe seu nome completo.'); return; }
+    if (!form.email.trim()) { alert('Por favor, informe seu e-mail. Ele é necessário para identificá-lo.'); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) { alert('Por favor, informe um e-mail válido.'); return; }
     setSubmitting(true);
     try {
       await axios.post(`${API_URL}/employee-invite-links/public/${token}/submit`, form);
+      // Limpar rascunho ao enviar com sucesso
+      if (DRAFT_KEY) { try { localStorage.removeItem(DRAFT_KEY); } catch (_) {} }
       setStatus('success');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erro ao enviar dados. Tente novamente.');
@@ -180,6 +216,7 @@ export default function EmployeePublicForm() {
       case 'pessoal': return (
         <div className="epf-grid">
           {inp('name', 'Nome Completo *')}
+          {inp('email', 'E-mail *', 'email', { placeholder: 'Obrigatório para identificação' })}
           {inp('matricula', 'Matrícula')}
           {inp('dataNascimento', 'Data de Nascimento', 'date')}
           {inp('naturalidade', 'Naturalidade')}
@@ -193,7 +230,6 @@ export default function EmployeePublicForm() {
       );
       case 'contato': return (
         <div className="epf-grid">
-          {inp('email', 'E-mail', 'email')}
           {inp('celular', 'Celular', 'tel')}
           {inp('telefoneFixo', 'Telefone Fixo', 'tel')}
         </div>
@@ -409,6 +445,17 @@ export default function EmployeePublicForm() {
               Por favor, preencha seus dados pessoais, de contato e profissionais.
             </p>
           )}
+          {/* Indicador de rascunho */}
+          {hasDraftRestored && (
+            <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 12px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ✅ Rascunho restaurado — continue de onde parou!
+            </div>
+          )}
+          {!hasDraftRestored && draftSavedAt && (
+            <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 12px', fontSize: '0.82rem' }}>
+              💾 Rascunho salvo às {draftSavedAt}
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -453,6 +500,11 @@ export default function EmployeePublicForm() {
           </div>
 
           <div className="epf-footer">
+            {draftSavedAt && !hasDraftRestored && (
+              <span style={{ fontSize: '0.78rem', color: '#6b7280', marginRight: 'auto', alignSelf: 'center' }}>
+                💾 Salvo às {draftSavedAt}
+              </span>
+            )}
             <button type="submit" className="epf-btn" disabled={submitting}>
               <Send size={16} />
               {submitting ? 'Enviando...' : 'Enviar Dados'}
