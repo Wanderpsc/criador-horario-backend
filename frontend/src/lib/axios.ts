@@ -21,6 +21,12 @@ api.interceptors.request.use((config) => {
       if (state?.token) {
         config.headers.Authorization = `Bearer ${state.token}`;
       }
+      // Inject schoolYear automatically into GET requests so all pages
+      // are scoped to the active year without each page needing to handle it.
+      // Explicitly passed schoolYear in config.params takes precedence.
+      if (config.method === 'get' && state?.schoolYear) {
+        config.params = { schoolYear: state.schoolYear, ...config.params };
+      }
     } catch (error) {
       console.error('❌ Erro ao parsear auth-storage:', error);
     }

@@ -510,13 +510,16 @@ router.delete('/bulk/:userId', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
     const schoolId = getOwnerUserId(req);
+    // Escopo obrigatório por ano letivo para não apagar dados históricos
+    const schoolYear = req.query.schoolYear ? Number(req.query.schoolYear) : new Date().getFullYear();
+    const yearFilter = { schoolYear };
 
     // Buscar associações antes de deletar para sincronizar os horários
-    const assocs = await TeacherSubject.find({ userId: { $in: scopedUserIds } });
+    const assocs = await TeacherSubject.find({ userId: { $in: scopedUserIds }, ...yearFilter });
 
-    const result = await TeacherSubject.deleteMany({ userId: { $in: scopedUserIds } });
+    const result = await TeacherSubject.deleteMany({ userId: { $in: scopedUserIds }, ...yearFilter });
 
-    console.log(`✅ BULK DELETE: ${result.deletedCount} associações removidas para escopo`, scopedUserIds);
+    console.log(`✅ BULK DELETE (ano ${schoolYear}): ${result.deletedCount} associações removidas para escopo`, scopedUserIds);
 
     // Limpar todos os slots correspondentes nos horários gerados
     const deletedAssocs = assocs.map((a) => ({ teacherId: a.teacherId, subjectId: a.subjectId, classId: a.classId }));

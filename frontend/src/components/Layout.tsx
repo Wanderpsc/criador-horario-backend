@@ -32,12 +32,16 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import NotificationCenter from './NotificationCenter';
 import { loadPrintHeader } from '../utils/printHeader';
+import { toast } from 'react-hot-toast';
 
 export default function Layout() {
   const { user, logout, schoolYear, setSchoolYear } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const prevSchoolYear = useRef<number | null>(null);
   const location = useLocation();
   const [sidebarSchoolName, setSidebarSchoolName] = useState<string>('');
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
@@ -64,6 +68,16 @@ export default function Layout() {
     window.addEventListener('printHeaderUpdated', fetchName);
     return () => window.removeEventListener('printHeaderUpdated', fetchName);
   }, []);
+
+  // Invalidar todo o cache do React Query ao mudar de ano letivo
+  // para forçar refetch com o novo schoolYear no interceptor do axios
+  useEffect(() => {
+    if (prevSchoolYear.current !== null && prevSchoolYear.current !== schoolYear) {
+      queryClient.invalidateQueries();
+      toast.success(`Ano letivo ${schoolYear} ativo`, { icon: '🗓️', id: 'school-year-switch' });
+    }
+    prevSchoolYear.current = schoolYear;
+  }, [schoolYear, queryClient]);
 
   const handleLogout = () => {
     logout();
