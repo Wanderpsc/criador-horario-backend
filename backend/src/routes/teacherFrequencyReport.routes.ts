@@ -245,6 +245,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       let totalPredicted = 0;
       let totalGiven = 0;
       let totalFuturePredicted = 0; // aulas de dias futuros — excluídas do déficit real
+      let totalPaidAbsences = 0; // ausências abatidas por pagamento/reposição
 
       // Rastrear pares subjectId+classId já processados via TeacherSubject
       const processedPairs = new Set<string>();
@@ -278,6 +279,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         // CONTAR AULAS PREVISTAS e DADAS por disciplina/turma dia a dia
         let predicted = 0;
         let given = 0;
+        let paidAbsencesCount = 0; // contador de ausências abatidas por pagamento
         const absenceDates: any[] = [];
         const absenceDateSet = new Set<string>();
         const futureDates: any[] = [];
@@ -338,6 +340,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                   // Ausência paga/preenchida conta como aula dada (abate o déficit)
                   if (payment && (payment.status === 'paid' || payment.status === 'filled')) {
                     given += 1;
+                    paidAbsencesCount++;
                   }
                   const isSelfRepaid = payment?.substituteTeacherId === teacher._id.toString() ||
                     payment?.substituteTeacherId === String(teacher._id);
@@ -380,6 +383,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
         totalPredicted += predicted;
         totalGiven += given;
         totalFuturePredicted += futurePred;
+        totalPaidAbsences += paidAbsencesCount;
 
         subjectClassDetails.push({
           subjectId: subject._id,
@@ -388,6 +392,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           className: (classObj as any).name,
           predictedClasses: predicted,
           givenClasses: given,
+          paidAbsencesCount,
           deficit,
           surplus,
           absenceDates,
@@ -408,6 +413,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           // Contar aulas dadas/previstas dia a dia (mesma lógica)
           let given = 0;
           let predicted = 0;
+          let paidAbsencesCountFb = 0;
           const absenceDatesFallback: any[] = [];
           const absenceDateSetFb = new Set<string>();
           const futureDatesFallback: any[] = [];
@@ -466,6 +472,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                     // Ausência paga/preenchida conta como aula dada (abate o déficit)
                     if (payment && (payment.status === 'paid' || payment.status === 'filled')) {
                       given += 1;
+                      paidAbsencesCountFb++;
                     }
                     const isSelfRepaid = payment?.substituteTeacherId === teacher._id.toString() ||
                       payment?.substituteTeacherId === String(teacher._id);
@@ -504,6 +511,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           totalPredicted += predicted;
           totalGiven += given;
           totalFuturePredicted += futurePredFb;
+          totalPaidAbsences += paidAbsencesCountFb;
 
           subjectClassDetails.push({
             subjectId: cls.subjectId,
@@ -512,6 +520,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
             className: cls.className || (classMap.get(cls.classId) as any)?.name || 'Turma',
             predictedClasses: predicted,
             givenClasses: given,
+            paidAbsencesCount: paidAbsencesCountFb,
             deficit,
             surplus,
             absenceDates: absenceDatesFallback,
@@ -534,6 +543,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           totalGivenClasses: totalGiven,
           totalDeficit,
           totalSurplus,
+          totalPaidAbsences,
           subjectClassDetails
         });
       }

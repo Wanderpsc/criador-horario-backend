@@ -41,6 +41,7 @@ interface SubjectClassDetail {
   className: string;
   predictedClasses: number;
   givenClasses: number;
+  paidAbsencesCount?: number;
   deficit: number;
   surplus: number;
   absenceDates?: AbsenceDate[];
@@ -55,6 +56,7 @@ interface TeacherReport {
   totalGivenClasses: number;
   totalDeficit: number;
   totalSurplus: number;
+  totalPaidAbsences?: number;
   subjectClassDetails: SubjectClassDetail[];
   // Pagamento de Aulas
   coveredBySubstitute?: Array<{
@@ -564,7 +566,7 @@ const fmtDate = (dateStr: string) => {
           html += '<th style="border:1px solid #fca5a5;padding:2px 6px;text-align:left;">Data Pgto.</th>';
           html += '</tr></thead><tbody>';
           d.absenceDates.forEach((abs, ai) => {
-            const bg2 = ai % 2 === 0 ? '#fff' : '#fff7f7';
+            const bg2 = abs.paymentStatus === 'paid' ? '#f0fdf4' : abs.paymentStatus === 'filled' ? '#eff6ff' : (ai % 2 === 0 ? '#fff' : '#fff7f7');
             const statusLabel = abs.paymentStatus === 'paid' ? '✅ Pago'
               : abs.paymentStatus === 'filled' ? '🔵 Preenchido'
               : abs.paymentStatus === 'pending' ? '⏳ Pendente'
@@ -1141,6 +1143,12 @@ const fmtDate = (dateStr: string) => {
                         <p className="text-sm text-gray-600">Dado</p>
                         <p className="text-xl font-bold text-green-600">{report.totalGivenClasses}</p>
                       </div>
+                      {(report.totalPaidAbsences ?? 0) > 0 && (
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Abatido</p>
+                          <p className="text-xl font-bold text-emerald-600">↓{report.totalPaidAbsences}</p>
+                        </div>
+                      )}
                       {report.totalDeficit > 0 && (
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Déficit</p>
@@ -1175,7 +1183,7 @@ const fmtDate = (dateStr: string) => {
                           const isExpanded = expandedRows.has(rowKey);
                           const hasAbsences = (detail.absenceDates?.length ?? 0) > 0;
                           const hasFuture = (detail.futureDates?.length ?? 0) > 0;
-                          const canExpand = detail.deficit > 0;
+                          const canExpand = detail.deficit > 0 || (detail.paidAbsencesCount ?? 0) > 0;
                           return (
                             <React.Fragment key={idx}>
                               <tr
@@ -1198,7 +1206,12 @@ const fmtDate = (dateStr: string) => {
                                 <td className="px-4 py-2">{detail.subjectName}</td>
                                 <td className="px-4 py-2">{detail.className}</td>
                                 <td className="px-4 py-2 text-center">{detail.predictedClasses}</td>
-                                <td className="px-4 py-2 text-center">{detail.givenClasses}</td>
+                                <td className="px-4 py-2 text-center">
+                                  <div>{detail.givenClasses}</div>
+                                  {(detail.paidAbsencesCount ?? 0) > 0 && (
+                                    <div className="text-xs text-emerald-600 font-medium">↓{detail.paidAbsencesCount} abatido</div>
+                                  )}
+                                </td>
                                 <td className="px-4 py-2 text-center">
                                   {detail.predictedClasses > 0 ? (
                                     <>
@@ -1250,7 +1263,7 @@ const fmtDate = (dateStr: string) => {
                                             </thead>
                                             <tbody className="divide-y divide-red-100">
                                               {detail.absenceDates!.map((abs, aIdx) => (
-                                                <tr key={aIdx} className="bg-white hover:bg-red-50">
+                                                <tr key={aIdx} className={abs.paymentStatus === 'paid' ? 'bg-green-50 hover:bg-green-100' : abs.paymentStatus === 'filled' ? 'bg-blue-50 hover:bg-blue-100' : 'bg-white hover:bg-red-50'}>
                                                   <td className="px-3 py-1.5 font-medium text-gray-800">
                                                     {new Date(abs.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                   </td>

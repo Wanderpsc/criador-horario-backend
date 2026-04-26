@@ -1218,18 +1218,34 @@ export default function MakeupSaturdays() {
                       <CheckSquare size={16} />
                       Confirmar Presenças por Aula
                     </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Gerar/corrigir pagamentos do sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')}?\n\nIsto irá criar registros de pagamento para todas as aulas já confirmadas (sem duplicar).`)) {
-                          fixRetroactiveMutation.mutate(scheduleId);
-                        }
-                      }}
-                      className="btn btn-sm bg-orange-500 text-white hover:bg-orange-600 flex items-center justify-center gap-1 col-span-2"
-                      disabled={fixRetroactiveMutation.isPending}
-                    >
-                      <CheckCircle size={16} />
-                      {fixRetroactiveMutation.isPending ? 'Gerando...' : 'Gerar Pagamentos'}
-                    </button>
+                    {saved.status === 'realized' ? (
+                      <button
+                        onClick={() => {
+                          if (confirm(`⚠️ Este sábado já está marcado como REALIZADO.\n\nOs pagamentos provavelmente já foram gerados anteriormente.\n\nO sistema não cria duplicatas, mas deseja verificar se há ausências ainda não abatidas?`)) {
+                            fixRetroactiveMutation.mutate(scheduleId);
+                          }
+                        }}
+                        className="btn btn-sm bg-amber-400 text-amber-900 hover:bg-amber-500 flex items-center justify-center gap-1 col-span-2"
+                        disabled={fixRetroactiveMutation.isPending}
+                        title="Pagamentos já foram gerados — clique apenas para verificar ausências restantes"
+                      >
+                        <CheckCircle size={16} />
+                        {fixRetroactiveMutation.isPending ? 'Verificando...' : '⚠️ Pagamentos já Gerados'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Gerar/corrigir pagamentos do sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')}?\n\nIsto irá criar registros de pagamento para todas as aulas já confirmadas (sem duplicar).`)) {
+                            fixRetroactiveMutation.mutate(scheduleId);
+                          }
+                        }}
+                        className="btn btn-sm bg-orange-500 text-white hover:bg-orange-600 flex items-center justify-center gap-1 col-span-2"
+                        disabled={fixRetroactiveMutation.isPending}
+                      >
+                        <CheckCircle size={16} />
+                        {fixRetroactiveMutation.isPending ? 'Gerando...' : 'Gerar Pagamentos'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete(scheduleId)}
                       className="btn btn-sm btn-error flex items-center justify-center gap-1"
