@@ -70,8 +70,10 @@ export default function ClassPayments() {
   const [reportTo, setReportTo] = useState(today);
   const [reportStatus, setReportStatus] = useState<'all' | 'paid' | 'filled'>('all');
 
-  const { data: reportPayments = [], isLoading: loadingReport, refetch: refetchReport } = useQuery({
-    queryKey: ['class-payments-report', reportFrom, reportTo, reportStatus],
+  const [reportTrigger, setReportTrigger] = useState(0);
+
+  const { data: reportPayments = [], isLoading: loadingReport } = useQuery({
+    queryKey: ['class-payments-report', reportFrom, reportTo, reportStatus, reportTrigger],
     queryFn: async () => {
       const res = await api.get('/class-payments', {
         params: { startDate: reportFrom, endDate: reportTo },
@@ -80,10 +82,10 @@ export default function ClassPayments() {
       if (reportStatus === 'all') return all;
       return all.filter(p => p.status === reportStatus);
     },
-    enabled: false, // só busca quando clicar em Gerar
+    enabled: reportTrigger > 0,
   });
 
-  const handleGenerateReport = () => refetchReport();
+  const handleGenerateReport = () => setReportTrigger(t => t + 1);
 
   const handlePrint = () => {
     window.print();

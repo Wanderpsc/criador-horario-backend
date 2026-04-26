@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Calendar, AlertTriangle, Users, BookOpen, Clock, RefreshCw, Save, Printer, CheckCircle, Eye, Trash2, TrendingUp, Award, CheckSquare, X } from 'lucide-react';
+import { Calendar, AlertTriangle, Users, BookOpen, Clock, RefreshCw, Save, Printer, CheckCircle, Eye, Trash2, TrendingUp, Award, CheckSquare, X, Tv, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 interface Teacher {
   _id: string;
@@ -61,6 +62,7 @@ interface MakeupSlot {
 
 export default function MakeupSaturdays() {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [selectedDate, setSelectedDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -71,12 +73,14 @@ export default function MakeupSaturdays() {
   const [lessonDuration, setLessonDuration] = useState(60); // Duração em minutos
   const [startTime, setStartTime] = useState('08:00'); // Horário de início
   const [selectedTeachersForSaturday, setSelectedTeachersForSaturday] = useState<Set<string>>(new Set()); // Professores selecionados para o sábado
+  const [selectedClassesForSaturday, setSelectedClassesForSaturday] = useState<Set<string>>(new Set()); // Turmas selecionadas para o sábado
   // Controle de presença por slot (chave: `${classId}-${period}`)
   const [confirmedSlots, setConfirmedSlots] = useState<Set<string>>(new Set());
   const [activeScheduleId, setActiveScheduleId] = useState<string>(''); // ID do sábado salvo em edição de presença
   const [showAttendancePanel, setShowAttendancePanel] = useState(false);
   const [showSaveTitleDialog, setShowSaveTitleDialog] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
+  const [editingCell, setEditingCell] = useState<{ classId: string; period: number; field: 'subject' | 'teacher' } | null>(null);
 
   // Monitor de mudanças no makeupSchedule
   useEffect(() => {
@@ -118,6 +122,14 @@ export default function MakeupSaturdays() {
     }
   });
   const classes = Array.isArray(classesData) ? classesData : [];
+
+  // Auto-selecionar todas as turmas quando carregadas (deve vir APÓS a declaração de `classes`)
+  useEffect(() => {
+    if (classes.length > 0 && selectedClassesForSaturday.size === 0) {
+      setSelectedClassesForSaturday(new Set(classes.map((c: Class) => c._id || c.id || '')));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classes.length]);
 
   // Buscar horários emergenciais salvos
   const { data: emergencySchedules = [] } = useQuery({
@@ -319,7 +331,7 @@ export default function MakeupSaturdays() {
     return { badge: `#${rank + 1}`, bgClass: 'bg-gray-50 border-gray-200', textClass: 'text-gray-700', badgeClass: 'bg-gray-400 text-white' };
   };
 
-  // Gerar horário automaticamente do backend (com professores selecionados)
+  // Gerar horário automaticamente do backend (com professores e turmas selecionados)
   const generateFromBackend = async () => {
     if (!selectedDate) {
       toast.error('Selecione uma data primeiro');
@@ -331,18 +343,25 @@ export default function MakeupSaturdays() {
       return;
     }
 
+    if (selectedClassesForSaturday.size === 0) {
+      toast.error('Selecione pelo menos uma turma');
+      return;
+    }
+
     setIsGenerating(true);
     try {
       console.log('🎯 Gerando horário automaticamente do backend...');
       console.log(`⏰ Configuração: ${maxPeriods} aulas de ${lessonDuration} minutos iniciando às ${startTime}`);
       console.log(`👥 Professores selecionados: ${Array.from(selectedTeachersForSaturday).length}`);
+      console.log(`🏫 Turmas selecionadas: ${Array.from(selectedClassesForSaturday).length}`);
       
       const response = await api.post('/saturday-makeup/generate-from-debts', {
         date: selectedDate,
         maxPeriods,
         lessonDuration,
         startTime,
-        selectedTeacherIds: Array.from(selectedTeachersForSaturday) // Envia apenas os selecionados
+        selectedTeacherIds: Array.from(selectedTeachersForSaturday),
+        selectedClassIds: Array.from(selectedClassesForSaturday)
       });
 
       console.log('📥 Resposta completa do backend:', response);
@@ -502,6 +521,7 @@ export default function MakeupSaturdays() {
   // Salvar horário de reposição
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Sempre cria um novo registro — nunca sobrescreve o existente
       return await api.post('/saturday-makeup', data);
     },
     onSuccess: async (response, variables) => {
@@ -635,6 +655,18 @@ export default function MakeupSaturdays() {
     onError: () => toast.error('Erro ao confirmar presenças')
   });
 
+  const fixRetroactiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await api.post(`/saturday-makeup/${id}/fix-retroactive`);
+    },
+    onSuccess: (response) => {
+      toast.success(`🔧 ${response.data.message}`);
+      queryClient.invalidateQueries({ queryKey: ['makeup-saturdays'] });
+      queryClient.invalidateQueries({ queryKey: ['emergency-schedules'] });
+    },
+    onError: () => toast.error('Erro ao aplicar correção retroativa'),
+  });
+
   const handleSave = () => {
     if (!selectedDate) {
       toast.error('Selecione uma data para o sábado de reposição');
@@ -644,8 +676,10 @@ export default function MakeupSaturdays() {
       toast.error('Gere um horário de reposição primeiro!');
       return;
     }
-    // Pré-preencher título sugerido e abrir diálogo
-    const suggestedTitle = `Sábado ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR')}`;
+    // Sempre sugere um título novo com hora atual para evitar confusão com arquivos anteriores
+    const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR');
+    const timeLabel = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const suggestedTitle = `Sábado ${dateLabel} – ${timeLabel}`;
     setSaveTitle(suggestedTitle);
     setShowSaveTitleDialog(true);
   };
@@ -703,7 +737,7 @@ export default function MakeupSaturdays() {
     toast.success('📅 Horário carregado com sucesso!');
   };
 
-  // Imprimir horário em popup limpo (cabe em uma página A4 landscape)
+  // Imprimir horário em popup limpo (capa + cabeçalho + rodapé, cabe em A4 landscape)
   const openPrintWindow = (scheduleData: { [classId: string]: MakeupSlot[] }, dateStr: string) => {
     const classIds = Object.keys(scheduleData);
     if (classIds.length === 0) {
@@ -711,33 +745,34 @@ export default function MakeupSaturdays() {
       return;
     }
     const maxPer = Math.max(...Object.values(scheduleData).map(s => s.length), 1);
-    // Ajusta font-size conforme número de colunas para caber em uma página
     const colCount = classIds.length + 1;
     const fs = Math.max(6, Math.min(11, Math.floor(120 / colCount)));
     const fsSm = Math.max(5, fs - 1);
+    const schoolName = user?.schoolName || user?.name || 'Escola';
 
     const headerCells = classIds.map(classId => {
       const ci = classes.find((c: Class) => c._id === classId || c.id === classId);
       const grade = ci?.grade?.name || '';
       const name = ci?.name || 'Turma';
-      return `<th>${grade ? grade + '<br>' + name : name}</th>`;
+      return `<th>${grade ? grade + '<br><span style="font-weight:normal">' + name + '</span>' : name}</th>`;
     }).join('');
 
     const bodyRows = Array.from({ length: maxPer }, (_, i) => i + 1).map(period => {
-      let startTime = '—', endTime = '—';
+      let slotStart = '—', slotEnd = '—';
       for (const slots of Object.values(scheduleData)) {
         const slot = slots.find(s => s.period === period);
-        if (slot) { startTime = slot.startTime; endTime = slot.endTime; break; }
+        if (slot) { slotStart = slot.startTime; slotEnd = slot.endTime; break; }
       }
       const cells = classIds.map(classId => {
         const slot = (scheduleData[classId] || []).find(s => s.period === period);
         if (slot) {
           return `<td><div class="subj">${slot.subjectName}</div><div class="teach">${slot.teacherName}</div></td>`;
         }
-        return '<td style="color:#bbb">—</td>';
+        return '<td style="color:#bbb;font-size:10px">—</td>';
       }).join('');
-      return `<tr>
-        <td class="period-col"><strong>${period}º</strong><br><span style="font-size:${fsSm}px">${startTime}–${endTime}</span></td>
+      const rowBg = period % 2 === 0 ? '#f9fafb' : '#ffffff';
+      return `<tr style="background:${rowBg}">
+        <td class="period-col"><strong>${period}º</strong><br><span style="font-size:${fsSm}px">${slotStart}–${slotEnd}</span></td>
         ${cells}
       </tr>`;
     }).join('');
@@ -745,43 +780,125 @@ export default function MakeupSaturdays() {
     const printDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('pt-BR', {
       weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
     });
+    const printDateCap = printDate.charAt(0).toUpperCase() + printDate.slice(1);
+    const now = new Date().toLocaleString('pt-BR');
+    const totalSlots = Object.values(scheduleData).flat().length;
 
-    const printWindow = window.open('', '_blank', 'width=1200,height=800');
-    if (!printWindow) { toast.error('Popup bloqueado. Permita popups para imprimir.'); return; }
-    printWindow.document.write(`<!DOCTYPE html>
-<html><head>
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
   <meta charset="utf-8">
-  <title>Horário de Reposição – ${printDate}</title>
+  <title>Horário de Reposição – ${printDateCap}</title>
   <style>
-    @page { size: A4 landscape; margin: 8mm; }
+    @page { size: A4 landscape; margin: 12mm 10mm 16mm; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: ${fs}px; }
-    h2 { text-align: center; font-size: ${fs + 2}px; margin-bottom: 6px; }
-    p.sub { text-align: center; font-size: ${fsSm}px; color: #555; margin-bottom: 8px; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    th { background-color: #16a34a; color: white; border: 1px solid #222;
-         padding: 3px 2px; font-size: ${fs}px; text-align: center;
-         word-break: break-word; line-height: 1.2; }
-    td { border: 1px solid #444; padding: 3px 2px; text-align: center;
-         vertical-align: middle; word-break: break-word; line-height: 1.2; }
-    .period-col { background: #f3f4f6; font-size: ${fs}px; width: 56px; min-width: 56px; }
+    html, body { width: 100%; height: auto; overflow: visible; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: ${fs}px; color: #111; }
+
+    /* ─── CABEÇALHO ─────────────────────────────── */
+    .page-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      border-bottom: 3px solid #16a34a; margin-bottom: 6px; padding-bottom: 5px;
+    }
+    .page-header-left .title { font-size: ${fs + 3}px; font-weight: 900; color: #15803d; }
+    .page-header-left .school { font-size: ${fsSm}px; color: #6b7280; margin-top: 2px; }
+    .page-header-right { text-align: right; }
+    .page-header-right .date { font-size: ${fsSm + 1}px; color: #374151; font-weight: bold; }
+    .page-header-right .info { font-size: ${fsSm}px; color: #9ca3af; margin-top: 2px; }
+
+    /* ─── TABELA ─────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 4px; }
+    th {
+      background-color: #16a34a; color: white; border: 1px solid #0a6428;
+      padding: 4px 2px; font-size: ${fs}px; text-align: center;
+      word-break: break-word; line-height: 1.3;
+      print-color-adjust: exact; -webkit-print-color-adjust: exact;
+    }
+    td {
+      border: 1px solid #9ca3af; padding: 4px 2px; text-align: center;
+      vertical-align: middle; word-break: break-word; line-height: 1.3;
+    }
+    .period-col {
+      background: #f3f4f6 !important; font-size: ${fs}px; width: 62px; min-width: 62px;
+      print-color-adjust: exact; -webkit-print-color-adjust: exact;
+    }
     .subj { font-weight: bold; font-size: ${fs}px; }
     .teach { font-size: ${fsSm}px; color: #374151; margin-top: 2px; }
+
+    /* ─── RODAPÉ ─────────────────────────────── */
+    .page-footer {
+      margin-top: 8px; border-top: 1px solid #d1d5db;
+      padding-top: 4px; display: flex; align-items: center; justify-content: space-between;
+      font-size: ${fsSm - 1}px; color: #9ca3af;
+    }
+    .page-footer strong { color: #374151; }
+
+    @media print {
+      html, body { height: auto !important; overflow: visible !important; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
-</head><body>
-  <h2>📊 Grade de Horários – Sábado de Reposição</h2>
-  <p class="sub">${printDate}</p>
+</head>
+<body>
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="title">Grade de Horários &ndash; S&aacute;bado de Reposi&ccedil;&atilde;o</div>
+      <div class="school">${schoolName}</div>
+    </div>
+    <div class="page-header-right">
+      <div class="date">${printDateCap}</div>
+      <div class="info">${classIds.length} turma(s) &middot; ${maxPer} per&iacute;odo(s) &middot; ${totalSlots} aula(s)</div>
+    </div>
+  </div>
+
   <table>
-    <thead><tr>
-      <th style="width:56px">Horário</th>
-      ${headerCells}
-    </tr></thead>
+    <thead>
+      <tr>
+        <th style="width:62px">Hor&aacute;rio</th>
+        ${headerCells}
+      </tr>
+    </thead>
     <tbody>${bodyRows}</tbody>
   </table>
-</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); }, 300);
+
+  <div class="page-footer">
+    <div>
+      <strong>&copy; 2025 Wander Pires Silva Coelho</strong> &nbsp;&middot;&nbsp;
+      wanderpsc@gmail.com &nbsp;&middot;&nbsp; Sistema Criador de Hor&aacute;rio de Aula Escolar
+    </div>
+    <div>Gerado em ${now}</div>
+  </div>
+
+</body>
+</html>`;
+
+    // Injeta iframe com dimensões reais para o conteúdo renderizar corretamente
+    // (sem popup — contorna bloqueadores de popup 100%)
+    const iframe = document.createElement('iframe');
+    // Inicia fora da tela (evita piscar) mas com tamanho real para renderização
+    iframe.style.cssText = 'position:fixed;top:0;left:-9999px;width:100vw;height:100vh;border:0;visibility:hidden;';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      toast.error('Erro ao abrir impressão. Tente novamente.');
+      try { document.body.removeChild(iframe); } catch (_) {}
+      return;
+    }
+    doc.open();
+    doc.write(html);
+    doc.close();
+    // Aguarda renderização completa (fontes, tabelas) antes de imprimir
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (_) {
+        toast.error('Erro ao imprimir. Tente novamente.');
+      }
+      // Remove após o diálogo de impressão ser fechado
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch (_) {} }, 4000);
+    }, 900);
   };
 
   const handlePrint = () => {
@@ -799,6 +916,15 @@ export default function MakeupSaturdays() {
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
+  };
+
+  const updateSlot = (classId: string, period: number, updates: Partial<MakeupSlot>) => {
+    setMakeupSchedule(prev => ({
+      ...prev,
+      [classId]: (prev[classId] || []).map(s =>
+        s.period === period ? { ...s, ...updates } : s
+      )
+    }));
   };
 
   const handleConfirmAllSlots = () => {
@@ -857,11 +983,14 @@ export default function MakeupSaturdays() {
       {showSaveTitleDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
               <Save size={20} className="text-green-600" />
-              Nome do Horário
+              Salvar como Novo Arquivo
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mb-3">
+              ✅ Será criado um <strong>novo arquivo</strong>. O horário anterior (se houver) não será alterado.
+            </p>
+            <p className="text-sm text-gray-600 mb-3">
               Digite um título para identificar este horário de reposição:
             </p>
             <input
@@ -1060,20 +1189,18 @@ export default function MakeupSaturdays() {
                       <CheckSquare size={16} />
                       Confirmar Presenças por Aula
                     </button>
-                    {saved.status !== 'realized' && attendedTeachers.length > 0 && (
+                    {saved.status !== 'realized' && (
                       <button
                         onClick={() => {
-                          if (confirm(`Processar sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')}?\n\n` +
-                            `✓ Dar baixa em débitos dos ${attendedTeachers.length} presentes\n` +
-                            `✗ Acumular débitos dos ${totalTeachers - attendedTeachers.length} ausentes`)) {
-                            processSaturdayMutation.mutate(scheduleId);
+                          if (confirm(`Corrigir sábado de ${new Date(saved.date).toLocaleDateString('pt-BR')} retroativamente?\n\nIsto irá:\n• Marcar como "Realizado"\n• Criar registros de pagamento para aulas já confirmadas`)) {
+                            fixRetroactiveMutation.mutate(scheduleId);
                           }
                         }}
-                        className="btn btn-sm btn-success flex items-center justify-center gap-1"
-                        disabled={processSaturdayMutation.isPending}
+                        className="btn btn-sm bg-orange-500 text-white hover:bg-orange-600 flex items-center justify-center gap-1 col-span-2"
+                        disabled={fixRetroactiveMutation.isPending}
                       >
                         <CheckCircle size={16} />
-                        Processar
+                        {fixRetroactiveMutation.isPending ? 'Corrigindo...' : 'Corrigir Retroativamente'}
                       </button>
                     )}
                     <button
@@ -1300,15 +1427,85 @@ export default function MakeupSaturdays() {
                 </div>
               )}
 
+              {/* ── Seletor de Turmas ── */}
+              {classes.length > 0 && (
+                <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-4">
+                  <h4 className="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+                    <Users size={18} />
+                    2️⃣ Selecione as Turmas para o Sábado
+                    <span className="ml-auto text-xs font-normal bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full">
+                      {selectedClassesForSaturday.size}/{classes.length}
+                    </span>
+                  </h4>
+
+                  <div className="space-y-1 max-h-52 overflow-y-auto bg-white p-3 rounded border border-emerald-200">
+                    <div className="mb-2 flex items-center justify-between">
+                      <button
+                        onClick={() => setSelectedClassesForSaturday(new Set(classes.map((c: Class) => c._id || c.id || '')))}
+                        className="text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+                      >
+                        ✓ Selecionar Todas
+                      </button>
+                      <button
+                        onClick={() => setSelectedClassesForSaturday(new Set())}
+                        className="text-xs text-red-600 hover:text-red-800 font-medium"
+                      >
+                        ✗ Limpar Seleção
+                      </button>
+                    </div>
+
+                    {classes.map((cls: Class) => {
+                      const clsId = cls._id || cls.id || '';
+                      const isSelected = selectedClassesForSaturday.has(clsId);
+                      const gradeName = cls.grade?.name || '';
+                      const displayName = gradeName ? `${gradeName} – ${cls.name}` : cls.name;
+                      const shiftLabel = cls.shift === 'morning' ? 'Manhã' : cls.shift === 'afternoon' ? 'Tarde' : 'Noite';
+                      return (
+                        <label
+                          key={clsId}
+                          className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors border-2 ${
+                            isSelected
+                              ? 'bg-emerald-100 border-emerald-400'
+                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const newSet = new Set(selectedClassesForSaturday);
+                              if (e.target.checked) { newSet.add(clsId); } else { newSet.delete(clsId); }
+                              setSelectedClassesForSaturday(newSet);
+                            }}
+                            className="w-5 h-5 text-emerald-600 rounded"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className={`font-semibold truncate ${isSelected ? 'text-emerald-800' : 'text-gray-800'}`}>
+                              {displayName}
+                            </span>
+                            <span className="ml-2 text-xs text-gray-400">[{shiftLabel}]</span>
+                          </div>
+                          {isSelected && <CheckCircle size={16} className="text-emerald-600 flex-shrink-0" />}
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 text-sm text-emerald-800 font-medium text-center">
+                    {selectedClassesForSaturday.size} de {classes.length} turmas selecionadas
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <button
                   onClick={generateFromBackend}
-                  disabled={isGenerating || !selectedDate || selectedTeachersForSaturday.size === 0}
+                  disabled={isGenerating || !selectedDate || selectedTeachersForSaturday.size === 0 || selectedClassesForSaturday.size === 0}
                   className="btn btn-primary w-full flex items-center justify-center gap-2 text-lg py-3"
-                  title="Gera horário apenas com os professores selecionados"
+                  title="Gera horário apenas com os professores e turmas selecionados"
                 >
                   <RefreshCw size={20} className={isGenerating ? 'animate-spin' : ''} />
-                  {isGenerating ? 'Gerando...' : `2️⃣ Gerar Horário (${selectedTeachersForSaturday.size} professores)`}
+                  {isGenerating ? 'Gerando...' : `3️⃣ Gerar Horário (${selectedTeachersForSaturday.size} prof. · ${selectedClassesForSaturday.size} turmas)`}
                 </button>
 
                 {/* Checkbox para marcar se foi realizado — aparece APÓS gerar */}
@@ -1333,7 +1530,12 @@ export default function MakeupSaturdays() {
 
                 {selectedTeachersForSaturday.size === 0 && (
                   <p className="text-sm text-orange-600 text-center">
-                    ⚠️ Selecione pelo menos 1 professor acima
+                    ⚠️ Selecione pelo menos 1 professor acima (passo 1️⃣)
+                  </p>
+                )}
+                {selectedTeachersForSaturday.size > 0 && selectedClassesForSaturday.size === 0 && (
+                  <p className="text-sm text-orange-600 text-center">
+                    ⚠️ Selecione pelo menos 1 turma acima (passo 2️⃣)
                   </p>
                 )}
               </div>
@@ -1412,7 +1614,7 @@ export default function MakeupSaturdays() {
               {/* Botões de Ação */}
               <div className="flex gap-3 justify-end no-print">
                 <button
-                  onClick={() => window.print()}
+                  onClick={handlePrint}
                   className="btn btn-primary flex items-center gap-2"
                 >
                   <Printer size={18} />
@@ -1426,13 +1628,31 @@ export default function MakeupSaturdays() {
                   <Save size={18} />
                   💾 Salvar Horário
                 </button>
+                {activeScheduleId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('dp_mode', 'makeup');
+                        localStorage.setItem('dp_makeupId', activeScheduleId);
+                      } catch {}
+                      const base = window.location.href.split('#')[0];
+                      window.open(`${base}#/display-panel?mode=makeup&makeupId=${activeScheduleId}`, '_blank');
+                    }}
+                    className="btn flex items-center gap-2 bg-purple-600 text-white hover:bg-purple-700"
+                    title="Abrir grade do sábado no painel TV"
+                  >
+                    <Tv size={18} />
+                    📺 Painel TV
+                  </button>
+                )}
               </div>
               
               {/* Grade Visual (Planilha) */}
               <div className="card border-2 border-green-400 print-container">
                 <h3 className="font-bold text-xl mb-4 flex items-center gap-2 text-green-800">
                   <Calendar className="text-green-600" />
-                  📊 Grade de Horários - Sábado {new Date(selectedDate).toLocaleDateString('pt-BR')}
+                  📊 Grade de Horários - Sábado {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR')}
                 </h3>
 
                 <div className="overflow-x-auto">
@@ -1517,19 +1737,65 @@ export default function MakeupSaturdays() {
                                         >
                                           {confirmedSlots.has(`${classId}-${period}`) && <CheckCircle size={12} />}
                                         </button>
-                                        <div 
-                                          className="font-bold text-sm mb-1 px-2 py-1 rounded"
-                                          style={{ 
-                                            backgroundColor: getSubjectColor(slot.subjectId),
-                                            color: 'white',
-                                            opacity: confirmedSlots.has(`${classId}-${period}`) ? 1 : 0.7
-                                          }}
-                                        >
-                                          {slot.subjectName}
-                                        </div>
-                                        <div className="text-xs text-gray-700 font-medium">
-                                          {slot.teacherName}
-                                        </div>
+                                        {/* Disciplina — clique para editar */}
+                                        {editingCell?.classId === classId && editingCell?.period === period && editingCell?.field === 'subject' ? (
+                                          <select
+                                            autoFocus
+                                            className="w-full text-xs border-2 border-blue-400 rounded p-0.5 mb-1 bg-white text-gray-800 no-print"
+                                            value={slot.subjectId}
+                                            onChange={e => {
+                                              const subj = subjects.find(s => (s._id || s.id) === e.target.value);
+                                              if (subj) updateSlot(classId, period, { subjectId: subj._id || subj.id || '', subjectName: subj.name });
+                                              setEditingCell(null);
+                                            }}
+                                            onBlur={() => setEditingCell(null)}
+                                          >
+                                            {subjects.map(s => (
+                                              <option key={s._id || s.id} value={s._id || s.id}>{s.name}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <div
+                                            className="font-bold text-sm mb-1 px-2 py-1 rounded cursor-pointer no-print hover:ring-2 hover:ring-blue-300"
+                                            style={{
+                                              backgroundColor: getSubjectColor(slot.subjectId),
+                                              color: 'white',
+                                              opacity: confirmedSlots.has(`${classId}-${period}`) ? 1 : 0.7
+                                            }}
+                                            onClick={() => setEditingCell({ classId, period, field: 'subject' })}
+                                            title="Clique para editar disciplina"
+                                          >
+                                            <Edit2 size={10} className="inline mr-1 opacity-70" />
+                                            {slot.subjectName}
+                                          </div>
+                                        )}
+                                        {/* Professor — clique para editar */}
+                                        {editingCell?.classId === classId && editingCell?.period === period && editingCell?.field === 'teacher' ? (
+                                          <select
+                                            autoFocus
+                                            className="w-full text-xs border-2 border-blue-400 rounded p-0.5 bg-white text-gray-800 no-print"
+                                            value={slot.teacherId}
+                                            onChange={e => {
+                                              const teacher = teachers.find(t => (t._id || t.id) === e.target.value);
+                                              if (teacher) updateSlot(classId, period, { teacherId: teacher._id || teacher.id || '', teacherName: teacher.name });
+                                              setEditingCell(null);
+                                            }}
+                                            onBlur={() => setEditingCell(null)}
+                                          >
+                                            {teachers.map(t => (
+                                              <option key={t._id || t.id} value={t._id || t.id}>{t.name}</option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <div
+                                            className="text-xs text-gray-700 font-medium cursor-pointer no-print hover:text-blue-700"
+                                            onClick={() => setEditingCell({ classId, period, field: 'teacher' })}
+                                            title="Clique para editar professor"
+                                          >
+                                            <Edit2 size={9} className="inline mr-0.5 opacity-60" />
+                                            {slot.teacherName}
+                                          </div>
+                                        )}
                                         {confirmedSlots.has(`${classId}-${period}`) && (
                                           <div className="text-xs text-green-700 font-bold mt-1">✓ Dada</div>
                                         )}
@@ -1578,6 +1844,103 @@ export default function MakeupSaturdays() {
                   </div>
                 </div>
               </div>
+
+              {/* Resumo e ações */}
+              {wasHeld && (
+                <div className="card bg-green-50 border-2 border-green-400 no-print">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="text-green-600 mt-1" size={24} />
+                    <div>
+                      <h4 className="font-bold text-green-800 mb-2">
+                        ✅ Sábado Marcado como Realizado
+                      </h4>
+                      <p className="text-sm text-green-700 mb-2">
+                        Ao salvar, as seguintes ações serão executadas:
+                      </p>
+                      <ul className="text-sm text-green-700 space-y-1 list-disc list-inside">
+                        <li>Salvar horário de reposição do dia {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR')}</li>
+                        <li>Dar baixa em {Object.values(makeupSchedule).flat().length} aula(s) dos professores</li>
+                        <li>Atualizar débitos pendentes automaticamente</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3 no-print">
+                <button
+                  onClick={handleSave}
+                  disabled={saveMutation.isPending}
+                  className={`btn ${wasHeld ? 'btn-success' : 'btn-primary'} flex-1 flex items-center justify-center gap-2`}
+                >
+                  <Save size={20} />
+                  {saveMutation.isPending 
+                    ? 'Salvando...' 
+                    : wasHeld 
+                      ? '💾 Salvar e Dar Baixa nos Débitos'
+                      : '💾 Salvar Horário'}
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="btn btn-outline flex items-center justify-center gap-2"
+                >
+                  <Printer size={20} />
+                  Imprimir
+                </button>
+              </div>
+
+              {Object.entries(makeupSchedule).map(([classId, slots]) => {
+                const classInfo = classes.find((c: Class) => c._id === classId || c.id === classId);
+                const gradeName = classInfo?.grade?.name || '';
+                const className = classInfo?.name || 'Turma';
+                const displayName = gradeName ? `${gradeName} - ${className}` : className;
+                
+                return (
+                  <div key={classId} className="card border-2 border-green-400 print-container">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                      <CheckCircle className="text-green-600" />
+                      Turma: {displayName}
+                    </h3>
+
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full border-collapse">
+                        <thead className="bg-green-100">
+                          <tr>
+                            <th className="border border-gray-300 p-3 text-left">Horário</th>
+                            <th className="border border-gray-300 p-3 text-left">Início</th>
+                            <th className="border border-gray-300 p-3 text-left">Fim</th>
+                            <th className="border border-gray-300 p-3 text-left">Componente Curricular</th>
+                            <th className="border border-gray-300 p-3 text-left">Professor</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {slots.map((slot, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 p-3">
+                                <span className="font-bold">{slot.period}º Horário</span>
+                              </td>
+                              <td className="border border-gray-300 p-3">{slot.startTime}</td>
+                              <td className="border border-gray-300 p-3">{slot.endTime}</td>
+                              <td className="border border-gray-300 p-3">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-4 h-4 rounded"
+                                    style={{ backgroundColor: getSubjectColor(slot.subjectId) }}
+                                  />
+                                  <span className="font-medium">{slot.subjectName}</span>
+                                </div>
+                              </td>
+                              <td className="border border-gray-300 p-3">
+                                <span className="font-medium">{slot.teacherName}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* ✅ PAINEL DE CONTROLE DE PRESENÇA POR AULA */}
               {(showAttendancePanel || Object.keys(makeupSchedule).length > 0) && (
@@ -1680,103 +2043,6 @@ export default function MakeupSaturdays() {
                   )}
                 </div>
               )}
-
-              {/* Resumo e ações */}
-              {wasHeld && (
-                <div className="card bg-green-50 border-2 border-green-400 no-print">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="text-green-600 mt-1" size={24} />
-                    <div>
-                      <h4 className="font-bold text-green-800 mb-2">
-                        ✅ Sábado Marcado como Realizado
-                      </h4>
-                      <p className="text-sm text-green-700 mb-2">
-                        Ao salvar, as seguintes ações serão executadas:
-                      </p>
-                      <ul className="text-sm text-green-700 space-y-1 list-disc list-inside">
-                        <li>Salvar horário de reposição do dia {new Date(selectedDate).toLocaleDateString('pt-BR')}</li>
-                        <li>Dar baixa em {Object.values(makeupSchedule).flat().length} aula(s) dos professores</li>
-                        <li>Atualizar débitos pendentes automaticamente</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex gap-3 no-print">
-                <button
-                  onClick={handleSave}
-                  disabled={saveMutation.isPending}
-                  className={`btn ${wasHeld ? 'btn-success' : 'btn-primary'} flex-1 flex items-center justify-center gap-2`}
-                >
-                  <Save size={20} />
-                  {saveMutation.isPending 
-                    ? 'Salvando...' 
-                    : wasHeld 
-                      ? '💾 Salvar e Dar Baixa nos Débitos'
-                      : '💾 Salvar Horário'}
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="btn btn-outline flex items-center justify-center gap-2"
-                >
-                  <Printer size={20} />
-                  Imprimir
-                </button>
-              </div>
-
-              {Object.entries(makeupSchedule).map(([classId, slots]) => {
-                const classInfo = classes.find((c: Class) => c._id === classId || c.id === classId);
-                const gradeName = classInfo?.grade?.name || '';
-                const className = classInfo?.name || 'Turma';
-                const displayName = gradeName ? `${gradeName} - ${className}` : className;
-                
-                return (
-                  <div key={classId} className="card border-2 border-green-400 print-container">
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                      <CheckCircle className="text-green-600" />
-                      Turma: {displayName}
-                    </h3>
-
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border-collapse">
-                        <thead className="bg-green-100">
-                          <tr>
-                            <th className="border border-gray-300 p-3 text-left">Horário</th>
-                            <th className="border border-gray-300 p-3 text-left">Início</th>
-                            <th className="border border-gray-300 p-3 text-left">Fim</th>
-                            <th className="border border-gray-300 p-3 text-left">Componente Curricular</th>
-                            <th className="border border-gray-300 p-3 text-left">Professor</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {slots.map((slot, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 p-3">
-                                <span className="font-bold">{slot.period}º Horário</span>
-                              </td>
-                              <td className="border border-gray-300 p-3">{slot.startTime}</td>
-                              <td className="border border-gray-300 p-3">{slot.endTime}</td>
-                              <td className="border border-gray-300 p-3">
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-4 h-4 rounded"
-                                    style={{ backgroundColor: getSubjectColor(slot.subjectId) }}
-                                  />
-                                  <span className="font-medium">{slot.subjectName}</span>
-                                </div>
-                              </td>
-                              <td className="border border-gray-300 p-3">
-                                <span className="font-medium">{slot.teacherName}</span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
             );
           })()}

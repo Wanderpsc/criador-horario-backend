@@ -535,7 +535,157 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /:id/fix-retroactive — corrige sábados já confirmados antes do fix de status
+//   • Lê os slots com confirmed:true já salvos no schedule
+//   • Cria ClassPayment para cada ausência abatida (sem duplicar)
+//   • Atualiza status para 'realized' se houver slots confirmados
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/:id/fix-retroactive', auth, async (req: Request, res: Response) => {
+  try {
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
+    const { id } = req.params;
+
+    const query: any = { _id: id };
+    if (schoolId) query.schoolId = schoolId;
+
+    const makeupSaturday = await MakeupSaturday.findOne(query);
+    if (!makeupSaturday) {
+      return res.status(404).json({ error: 'Sábado de reposição não encontrado' });
+    }
+
+    const schedule = makeupSaturday.schedule as Record<string, any[]>;
+
+    // Coletar slots já confirmados no schedule salvo
+    const confirmedTeacherIds = new Set<string>();
+    const confirmedTeacherClassSubject = new Map<string, Set<string>>();
+    let confirmedCount = 0;
+
+    for (const [classId, slots] of Object.entries(schedule)) {
+      for (const slot of slots as any[]) {
+        if (slot.confirmed && slot.teacherId) {
+          confirmedTeacherIds.add(slot.teacherId as string);
+          confirmedCount++;
+          if (slot.classId && slot.subjectId) {
+            if (!confirmedTeacherClassSubject.has(slot.teacherId)) {
+              confirmedTeacherClassSubject.set(slot.teacherId, new Set());
+            }
+            confirmedTeacherClassSubject.get(slot.teacherId)!.add(`${slot.classId}|${slot.subjectId}`);
+          }
+        }
+      }
+    }
+
+    if (confirmedCount === 0) {
+      return res.json({ success: true, message: 'Nenhum slot confirmado encontrado no schedule.', paymentsCreated: 0 });
+    }
+
+    // Atualizar status para 'realized'
+    if (makeupSaturday.status !== 'realized') {
+      makeupSaturday.status = 'realized';
+      await makeupSaturday.save();
+    }
+
+    const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
+    const ClassPayment = (await import('../models/ClassPayment')).default;
+    const now = new Date();
+
+    const saturdayDateStr = makeupSaturday.date instanceof Date
+      ? makeupSaturday.date.toISOString().split('T')[0]
+      : String(makeupSaturday.date).split('T')[0];
+    const saturdayDateLabel = new Date(saturdayDateStr + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    // Buscar EmergencySchedules com makeupClasses pendentes
+    const allSchedules = await EmergencySchedule.find({
+      'makeupClasses.originalTeacherId': { $in: Array.from(confirmedTeacherIds) },
+    });
+
+    const abatedEntries: Array<{
+      teacherId: string;
+      teacherName: string;
+      absenceDate: string;
+      classId: string;
+      className: string;
+      subjectId: string;
+      subjectName: string;
+      period: number;
+    }> = [];
+
+    // Coletar makeupClasses correspondentes (já repaid ou não, para criar ClassPayment)
+    for (const es of allSchedules) {
+      for (const mc of (es.makeupClasses || []) as any[]) {
+        const teacherKeys = confirmedTeacherClassSubject.get(mc.originalTeacherId);
+        if (!teacherKeys) continue;
+        const key = `${mc.classId}|${mc.subjectId}`;
+        if (teacherKeys.has(key)) {
+          abatedEntries.push({
+            teacherId: mc.originalTeacherId,
+            teacherName: mc.originalTeacherName,
+            absenceDate: es.date,
+            classId: mc.classId || '',
+            className: mc.className,
+            subjectId: mc.subjectId || '',
+            subjectName: mc.subjectName,
+            period: mc.period,
+          });
+          // Marcar isRepaid se ainda não estava
+          if (!mc.isRepaid) {
+            mc.isRepaid = true;
+            mc.repaidAt = now;
+            es.markModified('makeupClasses');
+          }
+          teacherKeys.delete(key); // evitar duplicatas por chave
+        }
+      }
+      await es.save();
+    }
+
+    // Criar ClassPayments sem duplicar
+    let paymentsCreated = 0;
+    for (const entry of abatedEntries) {
+      const existing = await ClassPayment.findOne({
+        schoolId,
+        absentTeacherId: entry.teacherId,
+        date: entry.absenceDate,
+        classId: entry.classId,
+        period: entry.period,
+      });
+      if (!existing) {
+        await ClassPayment.create({
+          schoolId,
+          absentTeacherId: entry.teacherId,
+          absentTeacherName: entry.teacherName,
+          substituteTeacherId: entry.teacherId,
+          substituteTeacherName: `Reposição (sáb. ${saturdayDateLabel})`,
+          date: entry.absenceDate,
+          period: entry.period,
+          classId: entry.classId,
+          className: entry.className,
+          subjectId: entry.subjectId,
+          subjectName: entry.subjectName,
+          status: 'paid',
+          filledAt: now,
+          notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
+        });
+        paymentsCreated++;
+      }
+    }
+
+    console.log(`🔧 Retroactive fix: status=realized, ${paymentsCreated} ClassPayment(s) criado(s) para sábado ${saturdayDateStr}`);
+
+    res.json({
+      success: true,
+      message: `Correção aplicada: ${paymentsCreated} pagamento(s) criado(s), status → realizado.`,
+      paymentsCreated,
+      confirmedCount,
+    });
+  } catch (error: any) {
+    console.error('Erro no fix retroativo:', error);
+    res.status(500).json({ error: 'Erro ao aplicar correção retroativa', details: error.message });
+  }
+});
+
 console.log('🔥 ROTAS REGISTRADAS: GET /, POST /, PUT /:id/attendance, PUT /:id, DELETE /:id');
-console.log('🔥 NOVAS ROTAS: POST /:id/process, GET /teacher-debts/:teacherId, POST /generate-from-debts, PUT /:id/confirm-slots');
+console.log('🔥 NOVAS ROTAS: POST /:id/process, GET /teacher-debts/:teacherId, POST /generate-from-debts, PUT /:id/confirm-slots, POST /:id/fix-retroactive');
 
 export default router;

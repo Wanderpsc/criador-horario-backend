@@ -142,6 +142,20 @@ const TeacherFrequencyReport: React.FC = () => {
   // Controle de linhas expandidas na tabela por professor (key = teacherId_detailIdx)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  // Auto-expandir todas as linhas com déficit quando o relatório carrega
+  useEffect(() => {
+    if (!reportData?.reports) return;
+    const allDeficitKeys = new Set<string>();
+    reportData.reports.forEach(report => {
+      report.subjectClassDetails.forEach((detail, idx) => {
+        if (detail.deficit > 0) {
+          allDeficitKeys.add(`${report.teacherId}_${idx}`);
+        }
+      });
+    });
+    setExpandedRows(allDeficitKeys);
+  }, [reportData]);
+
   // Print states
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printMode, setPrintMode] = useState<'all' | 'select'>('all');
