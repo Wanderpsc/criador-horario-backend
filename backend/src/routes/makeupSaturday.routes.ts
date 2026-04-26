@@ -403,24 +403,33 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
 
     await makeupSaturday.save();
 
-    // ─── Abater os makeupClasses e criar ClassPayment para o relatório ────────
+    // ─── Abater makeupClasses no EmergencySchedule + criar ClassPayments ────────
     if (confirmedTeacherIds.size > 0) {
       try {
-        const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
-        const ClassPayment = (await import('../models/ClassPayment')).default;
         const now = new Date();
-
-        // Data do sábado no formato YYYY-MM-DD para usar no ClassPayment
         const saturdayDateStr = makeupSaturday.date instanceof Date
           ? makeupSaturday.date.toISOString().split('T')[0]
           : String(makeupSaturday.date).split('T')[0];
         const saturdayDateLabel = new Date(saturdayDateStr + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-        // Construir lookup das aulas confirmadas: teacherId → Set<"classId|subjectId">
+        // Coletar todos os slots confirmados com detalhes para o helper
+        const confirmedSlotsList: Array<{
+          teacherId: string; teacherName: string;
+          classId: string; className: string;
+          subjectId: string; subjectName: string;
+        }> = [];
         const confirmedTeacherClassSubject = new Map<string, Set<string>>();
-        for (const [classId, slots] of Object.entries(updatedSchedule)) {
+        for (const [, slots] of Object.entries(updatedSchedule)) {
           for (const slot of slots as any[]) {
             if (slot.confirmed && slot.teacherId && slot.classId && slot.subjectId) {
+              confirmedSlotsList.push({
+                teacherId: slot.teacherId,
+                teacherName: slot.teacherName || '',
+                classId: slot.classId,
+                className: slot.className || '',
+                subjectId: slot.subjectId,
+                subjectName: slot.subjectName || '',
+              });
               if (!confirmedTeacherClassSubject.has(slot.teacherId)) {
                 confirmedTeacherClassSubject.set(slot.teacherId, new Set());
               }
@@ -429,94 +438,40 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
           }
         }
 
-        // Buscar todos os EmergencySchedules que têm makeupClasses pendentes dos professores confirmados
-        const allSchedules = await EmergencySchedule.find({
-          'makeupClasses.originalTeacherId': { $in: Array.from(confirmedTeacherIds) },
-          'makeupClasses.isRepaid': { $ne: true }
-        });
-
-        // Registros de makeupClasses abatidos nesta operação (para criar ClassPayment)
-        const abatedEntries: Array<{
-          teacherId: string;
-          teacherName: string;
-          absenceDate: string; // data original da ausência (YYYY-MM-DD)
-          classId: string;
-          className: string;
-          subjectId: string;
-          subjectName: string;
-          period: number;
-        }> = [];
-
-        let totalAbated = 0;
-        for (const es of allSchedules) {
-          let changed = false;
-          for (const mc of (es.makeupClasses || []) as any[]) {
-            if (mc.isRepaid) continue;
-            const teacherKeys = confirmedTeacherClassSubject.get(mc.originalTeacherId);
-            if (!teacherKeys) continue;
-            const key = `${mc.classId}|${mc.subjectId}`;
-            if (teacherKeys.has(key)) {
-              mc.isRepaid = true;
-              mc.repaidAt = now;
-              changed = true;
-              totalAbated++;
-              // Coletar para criar ClassPayment depois
-              abatedEntries.push({
-                teacherId: mc.originalTeacherId,
-                teacherName: mc.originalTeacherName,
-                absenceDate: es.date, // data original da falta (YYYY-MM-DD)
-                classId: mc.classId || '',
-                className: mc.className,
-                subjectId: mc.subjectId || '',
-                subjectName: mc.subjectName,
-                period: mc.period,
-              });
-              // Consumir a entrada para não abater dois slots da mesma chave duas vezes
-              teacherKeys.delete(key);
-            }
-          }
-          if (changed) {
-            es.markModified('makeupClasses');
-            await es.save();
-          }
-        }
-        console.log(`✅ ${totalAbated} makeupClasse(s) marcado(s) como repaid em EmergencySchedule`);
-
-        // ── Criar ClassPayment para cada ausência abatida (visível no relatório) ──
-        let paymentsCreated = 0;
-        for (const entry of abatedEntries) {
-          // Não duplicar se já existir registro para a mesma falta/turma/período
-          const existing = await ClassPayment.findOne({
-            schoolId,
-            absentTeacherId: entry.teacherId,
-            date: entry.absenceDate,
-            classId: entry.classId,
-            period: entry.period,
+        // Marcar makeupClasses como isRepaid no EmergencySchedule (mantém consistência)
+        try {
+          const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
+          const allSchedules = await EmergencySchedule.find({
+            'makeupClasses.originalTeacherId': { $in: Array.from(confirmedTeacherIds) },
+            'makeupClasses.isRepaid': { $ne: true }
           });
-          if (!existing) {
-            await ClassPayment.create({
-              schoolId,
-              absentTeacherId: entry.teacherId,
-              absentTeacherName: entry.teacherName,
-              substituteTeacherId: entry.teacherId, // próprio professor fez a reposição
-              substituteTeacherName: `Reposição (sáb. ${saturdayDateLabel})`,
-              date: entry.absenceDate,
-              period: entry.period,
-              classId: entry.classId,
-              className: entry.className,
-              subjectId: entry.subjectId,
-              subjectName: entry.subjectName,
-              status: 'paid',
-              filledAt: now,
-              notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
-            });
-            paymentsCreated++;
+          let totalAbated = 0;
+          for (const es of allSchedules) {
+            let changed = false;
+            for (const mc of (es.makeupClasses || []) as any[]) {
+              if (mc.isRepaid) continue;
+              const keys = confirmedTeacherClassSubject.get(mc.originalTeacherId);
+              if (keys?.has(`${mc.classId}|${mc.subjectId}`)) {
+                mc.isRepaid = true;
+                mc.repaidAt = now;
+                changed = true;
+                totalAbated++;
+              }
+            }
+            if (changed) { es.markModified('makeupClasses'); await es.save(); }
           }
+          console.log(`✅ ${totalAbated} makeupClasse(s) marcado(s) como repaid em EmergencySchedule`);
+        } catch (esErr: any) {
+          console.error('⚠️ Erro ao marcar EmergencySchedule:', esErr.message);
         }
+
+        // Criar ClassPayments via TeacherAttendance (fonte de verdade das ausências)
+        const paymentsCreated = await createPaymentsFromAttendance(
+          schoolId, confirmedSlotsList, saturdayDateStr, saturdayDateLabel, now
+        );
         console.log(`💰 ${paymentsCreated} ClassPayment(s) criado(s) para o sábado ${saturdayDateStr}`);
       } catch (err: any) {
-        // Não deixar falha de abatimento quebrar a confirmação de presença
-        console.error('⚠️ Erro ao abater makeupClasses:', err.message);
+        console.error('⚠️ Erro ao criar ClassPayments:', err.message);
       }
     }
     // ──────────────────────────────────────────────────────────────────────────
@@ -535,10 +490,99 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
   }
 });
 
+// ─── Helper: criar ClassPayments lendo ausências do TeacherAttendance ────────
+// Para cada slot confirmado (teacherId+classId+subjectId), conta quantos
+// foram confirmados, busca ausências reais no TeacherAttendance (data ≤ sábado)
+// e cria um ClassPayment por ausência não paga, em ordem cronológica.
+async function createPaymentsFromAttendance(
+  schoolId: string,
+  confirmedSlots: Array<{
+    teacherId: string; teacherName: string;
+    classId: string; className: string;
+    subjectId: string; subjectName: string;
+  }>,
+  saturdayDateStr: string,
+  saturdayDateLabel: string,
+  now: Date
+): Promise<number> {
+  const TeacherAttendance = (await import('../models/TeacherAttendance')).default;
+  const ClassPayment = (await import('../models/ClassPayment')).default;
+
+  // Agrupar slots por (teacherId, classId, subjectId) e contar
+  const slotMap = new Map<string, {
+    count: number;
+    teacherId: string; teacherName: string;
+    classId: string; className: string;
+    subjectId: string; subjectName: string;
+  }>();
+  for (const slot of confirmedSlots) {
+    const key = `${slot.teacherId}|${slot.classId}|${slot.subjectId}`;
+    if (!slotMap.has(key)) {
+      slotMap.set(key, { count: 0, ...slot });
+    }
+    slotMap.get(key)!.count++;
+  }
+
+  let paymentsCreated = 0;
+
+  for (const [, info] of slotMap) {
+    const { count, teacherId, teacherName, classId, className, subjectId, subjectName } = info;
+
+    // Pagamentos já existentes para este professor+turma+disciplina
+    const existingPayments = await ClassPayment.find({ schoolId, absentTeacherId: teacherId, classId, subjectId });
+    const paidSet = new Set<string>(existingPayments.map((p: any) => `${p.date}|${p.period}`));
+
+    // Buscar todas as ausências do professor nesta turma+disciplina até a data do sábado
+    const attendanceRecords = await TeacherAttendance.find({
+      schoolId,
+      teacherId,
+      date: { $lte: saturdayDateStr },
+    }).sort({ date: 1 });
+
+    let remaining = count;
+
+    for (const record of attendanceRecords) {
+      if (remaining <= 0) break;
+      const absentClasses = ((record.classes as any[]) || []).filter((cls: any) =>
+        cls.status === 'absent' &&
+        cls.subjectId === subjectId &&
+        cls.classId === classId
+      );
+      for (const cls of absentClasses) {
+        if (remaining <= 0) break;
+        const payKey = `${record.date}|${cls.period}`;
+        if (paidSet.has(payKey)) continue;
+
+        await ClassPayment.create({
+          schoolId,
+          absentTeacherId: teacherId,
+          absentTeacherName: teacherName,
+          substituteTeacherId: teacherId,
+          substituteTeacherName: `Reposição (sáb. ${saturdayDateLabel})`,
+          date: record.date as string, // YYYY-MM-DD string do TeacherAttendance
+          period: cls.period,
+          classId: cls.classId || classId,
+          className: cls.className || className,
+          subjectId: cls.subjectId || subjectId,
+          subjectName: cls.subjectName || subjectName,
+          status: 'paid',
+          filledAt: now,
+          notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
+        });
+        paymentsCreated++;
+        remaining--;
+        paidSet.add(payKey);
+      }
+    }
+  }
+
+  return paymentsCreated;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /:id/fix-retroactive — corrige sábados já confirmados antes do fix de status
 //   • Lê os slots com confirmed:true já salvos no schedule
-//   • Cria ClassPayment para cada ausência abatida (sem duplicar)
+//   • Cria ClassPayment para cada ausência encontrada no TeacherAttendance
 //   • Atualiza status para 'realized' se houver slots confirmados
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/:id/fix-retroactive', auth, async (req: Request, res: Response) => {
@@ -556,22 +600,26 @@ router.post('/:id/fix-retroactive', auth, async (req: Request, res: Response) =>
 
     const schedule = makeupSaturday.schedule as Record<string, any[]>;
 
-    // Coletar slots já confirmados no schedule salvo
-    const confirmedTeacherIds = new Set<string>();
-    const confirmedTeacherClassSubject = new Map<string, Set<string>>();
+    // Coletar todos os slots confirmados
+    const confirmedSlots: Array<{
+      teacherId: string; teacherName: string;
+      classId: string; className: string;
+      subjectId: string; subjectName: string;
+    }> = [];
     let confirmedCount = 0;
 
-    for (const [classId, slots] of Object.entries(schedule)) {
+    for (const [, slots] of Object.entries(schedule)) {
       for (const slot of slots as any[]) {
-        if (slot.confirmed && slot.teacherId) {
-          confirmedTeacherIds.add(slot.teacherId as string);
+        if (slot.confirmed && slot.teacherId && slot.classId && slot.subjectId) {
+          confirmedSlots.push({
+            teacherId: slot.teacherId,
+            teacherName: slot.teacherName || '',
+            classId: slot.classId,
+            className: slot.className || '',
+            subjectId: slot.subjectId,
+            subjectName: slot.subjectName || '',
+          });
           confirmedCount++;
-          if (slot.classId && slot.subjectId) {
-            if (!confirmedTeacherClassSubject.has(slot.teacherId)) {
-              confirmedTeacherClassSubject.set(slot.teacherId, new Set());
-            }
-            confirmedTeacherClassSubject.get(slot.teacherId)!.add(`${slot.classId}|${slot.subjectId}`);
-          }
         }
       }
     }
@@ -586,90 +634,46 @@ router.post('/:id/fix-retroactive', auth, async (req: Request, res: Response) =>
       await makeupSaturday.save();
     }
 
-    const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
-    const ClassPayment = (await import('../models/ClassPayment')).default;
     const now = new Date();
-
     const saturdayDateStr = makeupSaturday.date instanceof Date
       ? makeupSaturday.date.toISOString().split('T')[0]
       : String(makeupSaturday.date).split('T')[0];
     const saturdayDateLabel = new Date(saturdayDateStr + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    // Buscar EmergencySchedules com makeupClasses pendentes
-    const allSchedules = await EmergencySchedule.find({
-      'makeupClasses.originalTeacherId': { $in: Array.from(confirmedTeacherIds) },
-    });
-
-    const abatedEntries: Array<{
-      teacherId: string;
-      teacherName: string;
-      absenceDate: string;
-      classId: string;
-      className: string;
-      subjectId: string;
-      subjectName: string;
-      period: number;
-    }> = [];
-
-    // Coletar makeupClasses correspondentes (já repaid ou não, para criar ClassPayment)
-    for (const es of allSchedules) {
-      for (const mc of (es.makeupClasses || []) as any[]) {
-        const teacherKeys = confirmedTeacherClassSubject.get(mc.originalTeacherId);
-        if (!teacherKeys) continue;
-        const key = `${mc.classId}|${mc.subjectId}`;
-        if (teacherKeys.has(key)) {
-          abatedEntries.push({
-            teacherId: mc.originalTeacherId,
-            teacherName: mc.originalTeacherName,
-            absenceDate: es.date,
-            classId: mc.classId || '',
-            className: mc.className,
-            subjectId: mc.subjectId || '',
-            subjectName: mc.subjectName,
-            period: mc.period,
-          });
-          // Marcar isRepaid se ainda não estava
-          if (!mc.isRepaid) {
+    // Também marcar makeupClasses como isRepaid no EmergencySchedule (se existir)
+    try {
+      const EmergencySchedule = (await import('../models/EmergencySchedule')).default;
+      const confirmedTeacherIds = [...new Set(confirmedSlots.map(s => s.teacherId))];
+      const allSchedules = await EmergencySchedule.find({
+        'makeupClasses.originalTeacherId': { $in: confirmedTeacherIds },
+      });
+      const classSubjectByTeacher = new Map<string, Set<string>>();
+      for (const slot of confirmedSlots) {
+        if (!classSubjectByTeacher.has(slot.teacherId)) classSubjectByTeacher.set(slot.teacherId, new Set());
+        classSubjectByTeacher.get(slot.teacherId)!.add(`${slot.classId}|${slot.subjectId}`);
+      }
+      for (const es of allSchedules) {
+        let changed = false;
+        for (const mc of (es.makeupClasses || []) as any[]) {
+          if (mc.isRepaid) continue;
+          const keys = classSubjectByTeacher.get(mc.originalTeacherId);
+          if (keys?.has(`${mc.classId}|${mc.subjectId}`)) {
             mc.isRepaid = true;
             mc.repaidAt = now;
-            es.markModified('makeupClasses');
+            changed = true;
           }
-          teacherKeys.delete(key); // evitar duplicatas por chave
+        }
+        if (changed) {
+          es.markModified('makeupClasses');
+          await es.save();
         }
       }
-      await es.save();
-    }
+    } catch (_) { /* silently ignore EmergencySchedule errors */ }
 
-    // Criar ClassPayments sem duplicar
-    let paymentsCreated = 0;
-    for (const entry of abatedEntries) {
-      const existing = await ClassPayment.findOne({
-        schoolId,
-        absentTeacherId: entry.teacherId,
-        date: entry.absenceDate,
-        classId: entry.classId,
-        period: entry.period,
-      });
-      if (!existing) {
-        await ClassPayment.create({
-          schoolId,
-          absentTeacherId: entry.teacherId,
-          absentTeacherName: entry.teacherName,
-          substituteTeacherId: entry.teacherId,
-          substituteTeacherName: `Reposição (sáb. ${saturdayDateLabel})`,
-          date: entry.absenceDate,
-          period: entry.period,
-          classId: entry.classId,
-          className: entry.className,
-          subjectId: entry.subjectId,
-          subjectName: entry.subjectName,
-          status: 'paid',
-          filledAt: now,
-          notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
-        });
-        paymentsCreated++;
-      }
-    }
+    // Criar ClassPayments via TeacherAttendance
+    const paymentsCreated = await createPaymentsFromAttendance(
+      schoolId, confirmedSlots, saturdayDateStr, saturdayDateLabel, now
+    );
 
     console.log(`🔧 Retroactive fix: status=realized, ${paymentsCreated} ClassPayment(s) criado(s) para sábado ${saturdayDateStr}`);
 
