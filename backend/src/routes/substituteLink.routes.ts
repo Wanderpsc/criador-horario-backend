@@ -292,7 +292,8 @@ router.post('/public/:token/fill', async (req, res) => {
       notes: fillType === 'adiantamento'
         ? `Adiantamento de aula — Prof. ${teacherName.trim()}`
         : `Reposição — ${debtRecord ? `Abatido débito de ${debtRecord.absenceDate?.toISOString?.().split?.('T')?.[0] || ''}` : ''}`,
-      filledAt: new Date(),
+      // filledAt = data real da aula (data do link), não a data de preenchimento do form
+      filledAt: new Date(link.date + 'T12:00:00'),
     });
     await payment.save();
 

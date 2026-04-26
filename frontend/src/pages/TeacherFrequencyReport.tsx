@@ -1337,7 +1337,7 @@ const fmtDate = (dateStr: string) => {
                             <tbody className="divide-y divide-orange-100">
                               {report.coveredBySubstitute.map((c, i) => (
                                 <tr key={i} className="hover:bg-orange-50">
-                                  <td className="px-3 py-1">{new Date(c.date).toLocaleDateString('pt-BR')}</td>
+                                  <td className="px-3 py-1">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
                                   <td className="px-3 py-1">{c.subjectName}</td>
                                   <td className="px-3 py-1">{c.className}</td>
                                   <td className="px-3 py-1">{c.substituteTeacherName}</td>
@@ -1374,7 +1374,7 @@ const fmtDate = (dateStr: string) => {
                             <tbody className="divide-y divide-indigo-100">
                               {report.givenAsSubstitute.map((g, i) => (
                                 <tr key={i} className="hover:bg-indigo-50">
-                                  <td className="px-3 py-1">{new Date(g.date).toLocaleDateString('pt-BR')}</td>
+                                  <td className="px-3 py-1">{new Date(g.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
                                   <td className="px-3 py-1">{g.subjectName}</td>
                                   <td className="px-3 py-1">{g.className}</td>
                                   <td className="px-3 py-1">{g.absentTeacherName}</td>

@@ -566,7 +566,7 @@ async function createPaymentsFromAttendance(
           subjectId: cls.subjectId || subjectId,
           subjectName: cls.subjectName || subjectName,
           status: 'paid',
-          filledAt: now,
+          filledAt: new Date(saturdayDateStr + 'T12:00:00'), // Data real do sábado, não a data de registro
           notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
         });
         paymentsCreated++;
@@ -689,7 +689,53 @@ router.post('/:id/fix-retroactive', auth, async (req: Request, res: Response) =>
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /fix-payment-dates  — corrigir filledAt de ClassPayments de auto-reposição
+// Lê registros em que absentTeacherId === substituteTeacherId (próprio professor),
+// extrai a data real do campo notes ("Reposto no sábado de reposição YYYY-MM-DD")
+// e atualiza filledAt para essa data. Operação idempotente.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/fix-payment-dates', auth, async (req: Request, res: Response) => {
+  try {
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
+    const ClassPayment = (await import('../models/ClassPayment')).default;
+
+    // Buscar todas as auto-reposições (absentTeacherId === substituteTeacherId)
+    const selfRepaidPayments = await ClassPayment.find({
+      schoolId,
+      $expr: { $eq: ['$absentTeacherId', '$substituteTeacherId'] },
+      notes: /sábado de reposição \d{4}-\d{2}-\d{2}/,
+    });
+
+    let updated = 0;
+    const saturdayRegex = /sábado de reposição (\d{4}-\d{2}-\d{2})/;
+
+    for (const p of selfRepaidPayments) {
+      const match = String((p as any).notes || '').match(saturdayRegex);
+      if (!match) continue;
+      const saturdayDate = new Date(match[1] + 'T12:00:00');
+      // Só atualizar se filledAt estiver claramente errado (diferente do sábado)
+      const existingFilled = (p as any).filledAt ? new Date((p as any).filledAt) : null;
+      const existingDateStr = existingFilled ? existingFilled.toISOString().split('T')[0] : '';
+      if (existingDateStr === match[1]) continue; // já está correto
+      (p as any).filledAt = saturdayDate;
+      await (p as any).save();
+      updated++;
+    }
+
+    res.json({
+      success: true,
+      message: `${updated} pagamento(s) corrigido(s): filledAt agora reflete a data do sábado de reposição.`,
+      total: selfRepaidPayments.length,
+      updated,
+    });
+  } catch (error: any) {
+    console.error('Erro ao corrigir datas de pagamento:', error);
+    res.status(500).json({ error: 'Erro ao corrigir datas', details: error.message });
+  }
+});
+
 console.log('🔥 ROTAS REGISTRADAS: GET /, POST /, PUT /:id/attendance, PUT /:id, DELETE /:id');
-console.log('🔥 NOVAS ROTAS: POST /:id/process, GET /teacher-debts/:teacherId, POST /generate-from-debts, PUT /:id/confirm-slots, POST /:id/fix-retroactive');
+console.log('🔥 NOVAS ROTAS: POST /:id/process, GET /teacher-debts/:teacherId, POST /generate-from-debts, PUT /:id/confirm-slots, POST /:id/fix-retroactive, POST /fix-payment-dates');
 
 export default router;

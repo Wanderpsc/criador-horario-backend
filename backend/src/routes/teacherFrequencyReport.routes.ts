@@ -341,11 +341,18 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                   }
                   const isSelfRepaid = payment?.substituteTeacherId === teacher._id.toString() ||
                     payment?.substituteTeacherId === String(teacher._id);
+                  // Para auto-reposição de sábado, extrair data real do campo notes
+                  // (compatibilidade retroativa: registros antigos têm filledAt=data de cadastro)
+                  let paymentDateVal: Date | null = payment ? (payment.filledAt || (payment as any).updatedAt || null) : null;
+                  if (payment && isSelfRepaid && (payment as any).notes) {
+                    const mSat = String((payment as any).notes).match(/sábado de reposição (\d{4}-\d{2}-\d{2})/);
+                    if (mSat) paymentDateVal = new Date(mSat[1] + 'T12:00:00');
+                  }
                   absenceDates.push({
                     date: dayStr,
                     period: entry.period ?? null,
                     paymentStatus: payment ? payment.status : null,
-                    paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
+                    paymentDate: paymentDateVal,
                     substituteTeacherName: payment
                       ? (isSelfRepaid ? `Prof. próprio — ${payment.substituteTeacherName || 'Reposição'}` : payment.substituteTeacherName)
                       : null,
@@ -462,11 +469,18 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
                     }
                     const isSelfRepaid = payment?.substituteTeacherId === teacher._id.toString() ||
                       payment?.substituteTeacherId === String(teacher._id);
+                    // Para auto-reposição de sábado, extrair data real do campo notes
+                    // (compatibilidade retroativa: registros antigos têm filledAt=data de cadastro)
+                    let paymentDateFb: Date | null = payment ? (payment.filledAt || (payment as any).updatedAt || null) : null;
+                    if (payment && isSelfRepaid && (payment as any).notes) {
+                      const mSat = String((payment as any).notes).match(/sábado de reposição (\d{4}-\d{2}-\d{2})/);
+                      if (mSat) paymentDateFb = new Date(mSat[1] + 'T12:00:00');
+                    }
                     absenceDatesFallback.push({
                       date: dayStr,
                       period: entry.period ?? null,
                       paymentStatus: payment ? payment.status : null,
-                      paymentDate: payment ? (payment.filledAt || (payment as any).updatedAt || null) : null,
+                      paymentDate: paymentDateFb,
                       substituteTeacherName: payment
                         ? (isSelfRepaid ? `Prof. próprio — ${payment.substituteTeacherName || 'Reposição'}` : payment.substituteTeacherName)
                         : null,
@@ -536,9 +550,10 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
     for (const report of reports) {
       const tid = report.teacherId.toString();
 
-      // Aulas cobertas por substituto (professor estava ausente, alguém cobriu)
+      // Aulas cobertas por substituto (professor estava ausente, OUTRO professor cobriu)
+      // Excluir auto-reposição (próprio professor repôs suas próprias aulas no sábado)
       const coveredBySubstitute = allPayments
-        .filter(p => p.absentTeacherId === tid && p.substituteTeacherName)
+        .filter(p => p.absentTeacherId === tid && p.substituteTeacherName && String(p.substituteTeacherId) !== tid)
         .map(p => ({
           date: p.date,
           period: p.period,
@@ -552,10 +567,12 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           paymentId: p._id,
         }));
 
-      // Aulas dadas como substituto (esse professor cobriu ausência de outro)
+      // Aulas dadas como substituto (esse professor cobriu ausência de OUTRO professor)
+      // Excluir auto-reposição (próprio professor repôs suas próprias aulas no sábado)
       const givenAsSubstitute = allPayments
-        .filter(p => p.substituteTeacherName === report.teacherName ||
+        .filter(p => (p.substituteTeacherName === report.teacherName ||
                      (p.substituteTeacherId && p.substituteTeacherId === tid))
+                     && p.absentTeacherId !== tid) // excluir auto-reposição
         .map(p => ({
           date: p.date,
           period: p.period,

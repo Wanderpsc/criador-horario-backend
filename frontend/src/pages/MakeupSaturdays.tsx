@@ -667,6 +667,17 @@ export default function MakeupSaturdays() {
     onError: () => toast.error('Erro ao aplicar correção retroativa'),
   });
 
+  // Corrigir datas de filledAt em ClassPayments de auto-reposição existentes
+  const fixPaymentDatesMutation = useMutation({
+    mutationFn: async () => {
+      return await api.post('/saturday-makeup/fix-payment-dates');
+    },
+    onSuccess: (response) => {
+      toast.success(`✅ ${response.data.message}`);
+    },
+    onError: () => toast.error('Erro ao corrigir datas de pagamento'),
+  });
+
   const handleSave = () => {
     if (!selectedDate) {
       toast.error('Selecione uma data para o sábado de reposição');
@@ -1024,13 +1035,31 @@ export default function MakeupSaturdays() {
 
       {/* Header */}
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-        <h1 className="text-3xl font-bold flex items-center gap-3 text-blue-800">
-          <Calendar className="text-blue-600" />
-          Sábados de Reposição
-        </h1>
-        <p className="text-blue-700 mt-2">
-          Gere automaticamente horários de reposição para professores que faltaram durante a semana
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3 text-blue-800">
+              <Calendar className="text-blue-600" />
+              Sábados de Reposição
+            </h1>
+            <p className="text-blue-700 mt-2">
+              Gere automaticamente horários de reposição para professores que faltaram durante a semana
+            </p>
+          </div>
+          {/* Correção de datas de pagamentos antigos */}
+          <button
+            onClick={() => {
+              if (confirm('Corrigir datas de pagamento de aulas próprias de reposição?\n\nEsta ação atualiza registros existentes para refletir a data correta do sábado de reposição (não a data de hoje).'))  {
+                fixPaymentDatesMutation.mutate();
+              }
+            }}
+            disabled={fixPaymentDatesMutation.isPending}
+            className="btn btn-sm bg-slate-600 text-white hover:bg-slate-700 flex items-center gap-1 mt-1"
+            title="Corrigir datas de filledAt em ClassPayments de auto-reposição (registros antigos)"
+          >
+            <CheckCircle size={14} />
+            {fixPaymentDatesMutation.isPending ? 'Corrigindo...' : '🗓️ Corrigir Datas Antigas'}
+          </button>
+        </div>
       </div>
 
       {/* Lista de Horários Salvos - DESTACADA */}
