@@ -520,13 +520,24 @@ async function createPaymentsFromAttendance(
   }
 
   let paymentsCreated = 0;
+  // Nota para identificar pagamentos criados por ESTE sábado especificamente
+  const saturdayNoteMarker = `Reposto no sábado de reposição ${saturdayDateStr}`;
 
   for (const [teacherId, { count, teacherName }] of teacherMap) {
-    // Todos os pagamentos já existentes para este professor (qualquer turma/disciplina)
-    const existingPayments = await ClassPayment.find({ schoolId, absentTeacherId: teacherId });
+    // Pagamentos já criados por ESTE sábado especificamente (via campo notes)
+    // Isso evita over-criar quando fix-retroactive é chamado várias vezes
+    const existingFromThisSat = await ClassPayment.find({
+      schoolId, absentTeacherId: teacherId, notes: saturdayNoteMarker,
+    });
+    const alreadyCreatedHere = existingFromThisSat.length;
+    const toCreate = Math.max(0, count - alreadyCreatedHere);
+    if (toCreate === 0) continue; // este sábado já criou todos os pagamentos necessários
+
+    // Todos os pagamentos existentes (incluindo outros sábados) para não re-pagar ausências já abatidas
+    const allPayments = await ClassPayment.find({ schoolId, absentTeacherId: teacherId });
     // Chave mais específica: data|período|turma|disciplina para evitar falsos positivos
     const paidSet = new Set<string>(
-      existingPayments.map((p: any) => `${p.date}|${p.period}|${p.classId}|${p.subjectId}`)
+      allPayments.map((p: any) => `${p.date}|${p.period}|${p.classId}|${p.subjectId}`)
     );
 
     // Buscar todas as ausências do professor até a data do sábado, em ordem cronológica
@@ -536,7 +547,7 @@ async function createPaymentsFromAttendance(
       date: { $lte: saturdayDateStr },
     }).sort({ date: 1 });
 
-    let remaining = count;
+    let remaining = toCreate;
     // Dedup dentro do array classes de cada documento TeacherAttendance
     const seenAbsences = new Set<string>();
 
