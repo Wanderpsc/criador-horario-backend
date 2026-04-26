@@ -94,6 +94,10 @@ const teacherAttendanceSchema = new mongoose.Schema({
     type: String,
     required: true,
     index: true
+  },
+  schoolYear: {
+    type: Number,
+    index: true
   }
 }, {
   timestamps: true

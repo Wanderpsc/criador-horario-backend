@@ -1,0 +1,27 @@
+{
+  "realizadoEm": "23/04/2026, 23:07:04",
+  "timestamp": "2026-04-23_23-07-03",
+  "totalEscolas": 1,
+  "escolas": [
+    {
+      "escola": "CETI - Centro de Educação",
+      "schoolId": "6948aa5c54a857ec2cf21a84",
+      "dataBackup": "23/04/2026, 23:07:04",
+      "timestamp": "2026-04-23_23-07-03",
+      "contagens": {
+        "professores": 30,
+        "disciplinas": 9,
+        "series": 0,
+        "turmas": 14,
+        "grades_horario": 0,
+        "horarios_gerados": 22,
+        "horario_emergencial": 0,
+        "dias_calendario": 212,
+        "funcionarios": 1,
+        "carga_horaria": 45,
+        "registros_frequencia": 80,
+        "sabados_reposicao": 1
+      }
+    }
+  ]
+}

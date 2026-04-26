@@ -231,7 +231,8 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       // Buscar disciplinas e turmas do professor (TeacherSubject tem String IDs, não refs)
       const teacherSubjects = await TeacherSubject.find({ 
         teacherId: teacher._id, 
-        schoolId 
+        schoolId,
+        ...(reportYear ? { schoolYear: reportYear } : {}),
       });
 
       // Buscar registros de frequência do mês (TeacherAttendance.date é String)

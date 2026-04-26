@@ -31,6 +31,7 @@ import SubstitutePublic from './pages/SubstitutePublic';
 import EmployeePublicForm from './pages/EmployeePublicForm';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
+import AnoLetivo from './pages/AnoLetivo';
 import SchoolUserLogin from './pages/SchoolUserLogin';
 import Settings from './pages/Settings';
 import AuditLogs from './pages/AuditLogs';
@@ -163,6 +164,7 @@ function App() {
           <Route path="class-payments" element={<ClientRoute><ClassPayments /></ClientRoute>} />
           <Route path="teacher-attendance" element={<ClientRoute><TeacherAttendance /></ClientRoute>} />
           <Route path="teacher-frequency-report" element={<ClientRoute><TeacherFrequencyReport /></ClientRoute>} />
+          <Route path="ano-letivo" element={<ClientRoute><AnoLetivo /></ClientRoute>} />
           <Route path="display-panel-config" element={<ClientRoute><DisplayPanelConfig /></ClientRoute>} />
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
           <Route path="employees" element={<ClientRoute><Employees /></ClientRoute>} />

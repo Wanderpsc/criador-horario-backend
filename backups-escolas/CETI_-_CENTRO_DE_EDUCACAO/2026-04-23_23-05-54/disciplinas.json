@@ -1,0 +1,192 @@
+[
+  {
+    "_id": "69bd71bff128d7eb7637e876",
+    "name": "MODELAGEM DE BANCO DE DADOS",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T16:11:43.849Z",
+    "updatedAt": "2026-03-20T16:19:38.596Z",
+    "__v": 1
+  },
+  {
+    "_id": "69bd7409f128d7eb7637ec64",
+    "name": "MENTORIAS TEC II",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "6949c593b30f8044bfd98dda"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T16:21:29.054Z",
+    "updatedAt": "2026-03-20T16:45:51.991Z",
+    "__v": 1
+  },
+  {
+    "_id": "69bd74f9f128d7eb7637f0a1",
+    "name": "ARQUITETURA DE COMPUTADORES E INFRAESTRUTURA DE TI",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "6948144ea3fd5c6752dbabab"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T16:25:29.461Z",
+    "updatedAt": "2026-03-20T16:26:49.469Z",
+    "__v": 1
+  },
+  {
+    "_id": "69bd8ef0f128d7eb763800e8",
+    "name": "BIOSSEGURANÇA NO SETOR FARMACÊUTICO",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "695ad9cf63ff96d19338d714"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T18:16:16.773Z",
+    "updatedAt": "2026-03-20T19:25:46.642Z",
+    "__v": 1
+  },
+  {
+    "_id": "69bd9180f128d7eb7638053f",
+    "name": "FINANÇAS E ECONOMIA",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T18:27:12.507Z",
+    "updatedAt": "2026-03-20T18:31:29.043Z",
+    "__v": 1
+  },
+  {
+    "_id": "69bd929cf128d7eb763808b0",
+    "name": "LOGÍSTICA E OPERAÇÕES",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T18:31:56.516Z",
+    "updatedAt": "2026-03-20T18:34:52.840Z",
+    "__v": 1
+  },
+  {
+    "_id": "69bd93adf128d7eb76380be5",
+    "name": "FUNDAMENTOS DA ADMINISTRAÇÃO E GESTÃO DE PESSOAS",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69481009fcdf1265c9cb61f2"
+    ],
+    "classIds": [
+      "69481509a3fd5c6752dbabc4"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-20T18:36:29.240Z",
+    "updatedAt": "2026-03-20T18:38:30.426Z",
+    "__v": 1
+  },
+  {
+    "_id": "69c7c263b9e5dc5548bc69e7",
+    "name": "TESTE DE SISTEMAS E SEGURANÇA DE DADOS",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69481019fcdf1265c9cb61f6"
+    ],
+    "classIds": [
+      "69481554a3fd5c6752dbabdd",
+      "69481571a3fd5c6752dbabe6"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-28T11:58:27.269Z",
+    "updatedAt": "2026-04-14T00:32:58.229Z",
+    "__v": 2
+  },
+  {
+    "_id": "69c7c294b9e5dc5548bc6bd1",
+    "name": "FUNDAMENTOS DA ADMINISTRAÇÃO",
+    "workloadHours": 40,
+    "weeklyHours": 2,
+    "description": "",
+    "scheduleNotes": "",
+    "color": "#4a90e2",
+    "gradeIds": [
+      "69480fecfcdf1265c9cb61ee"
+    ],
+    "classIds": [
+      "69481428a3fd5c6752dbab9b"
+    ],
+    "isActive": true,
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-03-28T11:59:16.671Z",
+    "updatedAt": "2026-03-28T12:03:52.005Z",
+    "__v": 1
+  }
+]

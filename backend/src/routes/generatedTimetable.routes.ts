@@ -427,7 +427,8 @@ router.post('/', auth, async (req: AuthRequest, res) => {
         slots,
         title,
         school: schoolId,  // ✅ Associar à escola
-        userId
+        userId,
+        schoolYear: req.body.schoolYear || new Date().getFullYear(),
       });
       await timetable.save();
       savedTimetables.push(timetable);

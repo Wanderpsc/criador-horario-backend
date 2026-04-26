@@ -29,16 +29,30 @@ import {
   ScrollText,
   CalendarCheck,
   Briefcase,
+  ChevronDown,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import NotificationCenter from './NotificationCenter';
 import { loadPrintHeader } from '../utils/printHeader';
 
 export default function Layout() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, schoolYear, setSchoolYear } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarSchoolName, setSidebarSchoolName] = useState<string>('');
+  const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(e.target as Node)) {
+        setYearDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const fetchName = () => {
@@ -232,6 +246,14 @@ export default function Layout() {
             highlight: true,
             subtitle: 'Análise de Déficits'
           },
+          {
+            icon: Calendar,
+            label: 'Ano Letivo',
+            path: '/ano-letivo',
+            description: '🗓️ Gerencie e inicie anos letivos. Copie lotações para o próximo ano.',
+            color: 'blue',
+            subtitle: 'Gestão de Anos'
+          },
           { 
             icon: Tv, 
             label: 'Painel de Avisos (TV)', 
@@ -413,6 +435,46 @@ export default function Layout() {
           
           {/* User Info Moderna com Centro de Notificações */}
           <div className="flex items-center gap-3 lg:gap-4">
+            {/* Seletor de Ano Letivo - Apenas para clientes */}
+            {user?.role !== 'admin' && user?.role !== 'super-admin' && (
+              <div className="relative" ref={yearDropdownRef}>
+                <button
+                  onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
+                  className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-all"
+                  title="Ano letivo ativo"
+                >
+                  🗓️ {schoolYear}
+                  <ChevronDown size={14} className={`transition-transform ${yearDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {yearDropdownOpen && (
+                  <div className="absolute right-0 mt-1 w-40 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-100">
+                      Ano Letivo
+                    </div>
+                    {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map(y => (
+                      <button
+                        key={y}
+                        onClick={() => { setSchoolYear(y); setYearDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition-colors ${
+                          schoolYear === y ? 'font-bold text-blue-600 bg-blue-50' : 'text-gray-700'
+                        }`}
+                      >
+                        {y === new Date().getFullYear() ? `${y} (atual)` : y}
+                      </button>
+                    ))}
+                    <div className="border-t border-gray-100">
+                      <button
+                        onClick={() => { navigate('/ano-letivo'); setYearDropdownOpen(false); }}
+                        className="w-full text-left px-4 py-2 text-xs text-blue-600 hover:bg-blue-50 font-medium transition-colors"
+                      >
+                        ✨ Iniciar novo ano...
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Centro de Notificações - Apenas para clientes */}
             {user?.role !== 'admin' && user?.role !== 'super-admin' && <NotificationCenter />}
             

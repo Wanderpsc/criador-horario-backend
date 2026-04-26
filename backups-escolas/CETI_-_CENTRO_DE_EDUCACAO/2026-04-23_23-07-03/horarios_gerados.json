@@ -1,0 +1,6448 @@
+[
+  {
+    "_id": "69e557b92a31b32addf4d582",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481793d1c0d7cf40718865",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "696d074724013a8f25f4a061",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d06fb24013a8f25f49e28",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694834ba8f31664565b221ae",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694ed08f1659703ca38a1f46",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d08a124013a8f25f4a2ab",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:21.811Z",
+    "updatedAt": "2026-04-20T00:14:45.310Z",
+    "__v": 1
+  },
+  {
+    "_id": "69e557b92a31b32addf4d584",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6949b9a50ee55f2aa4956a7f",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694834ba8f31664565b221ae",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "694ed08f1659703ca38a1f46",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696d06fb24013a8f25f49e28",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d074724013a8f25f4a061",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "696d08a124013a8f25f4a2ab",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:22.000Z",
+    "updatedAt": "2026-04-20T00:14:45.494Z",
+    "__v": 1
+  },
+  {
+    "_id": "69e557ba2a31b32addf4d586",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "694814eca3fd5c6752dbabbb",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948322b8f31664565b22133",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948325f8f31664565b2213c",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "69848c76209d7bf5ea13e7ff",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694831288f31664565b22112",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "69700c7b55e19d9ee09e1c64",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "695b180963ff96d19338dfd9",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "694814eca3fd5c6752dbabbb"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:22.202Z",
+    "updatedAt": "2026-04-20T00:14:45.676Z",
+    "__v": 1
+  },
+  {
+    "_id": "69e557ba2a31b32addf4d588",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481428a3fd5c6752dbab9b",
+    "slots": [
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "696d64bc24013a8f25f4c9d5",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "69c7c294b9e5dc5548bc6bd1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "696d64bc24013a8f25f4c9d5",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696d649924013a8f25f4c8c1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "69c7c294b9e5dc5548bc6bd1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "696d647d24013a8f25f4c835",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694832198f31664565b22130",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696d649924013a8f25f4c8c1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "696d64ef24013a8f25f4cb75",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "696d64ef24013a8f25f4cb75",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d64e124013a8f25f4caea",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481428a3fd5c6752dbab9b"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:22.389Z",
+    "updatedAt": "2026-04-19T22:31:22.389Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e557ba2a31b32addf4d58a",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481509a3fd5c6752dbabc4",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "69bd9180f128d7eb7638053f",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "69700c7b55e19d9ee09e1c64",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "69bd9180f128d7eb7638053f",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "69bd929cf128d7eb763808b0",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d164624013a8f25f4a7bd",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d1a5c24013a8f25f4ae10",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696d164624013a8f25f4a7bd",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "69bd93adf128d7eb76380be5",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "69bd93adf128d7eb76380be5",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "69bd929cf128d7eb763808b0",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "69bd9180f128d7eb7638053f",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "69bd929cf128d7eb763808b0",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:22.578Z",
+    "updatedAt": "2026-04-19T22:31:22.578Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e557ba2a31b32addf4d58c",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6948144ea3fd5c6752dbabab",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "69bd74f9f128d7eb7637f0a1",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694833d98f31664565b22184",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "69bd71bff128d7eb7637e876",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "696d244624013a8f25f4bcf7",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "69bd74f9f128d7eb7637f0a1",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "694833d98f31664565b22184",
+        "teacherId": "",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "696d6fc224013a8f25f4cffb",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "69bd71bff128d7eb7637e876",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "694832198f31664565b22130",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "694ed2821659703ca38a23cb",
+        "teacherId": "",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "694ed2821659703ca38a23cb",
+        "teacherId": "",
+        "classId": "6948144ea3fd5c6752dbabab"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:22.765Z",
+    "updatedAt": "2026-04-20T00:14:45.858Z",
+    "__v": 1
+  },
+  {
+    "_id": "69e557ba2a31b32addf4d58e",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6949c593b30f8044bfd98dda",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "6948335b8f31664565b2216c",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "694832d08f31664565b22151",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694830bd8f31664565b22109",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948347f8f31664565b221a2",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "694831f68f31664565b2212d",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "694834d58f31664565b221b4",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694833348f31664565b22163",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "694831908f31664565b2211b",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696d245224013a8f25f4bd83",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "6948325f8f31664565b2213c",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694833c78f31664565b22181",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "696d247324013a8f25f4be97",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d257324013a8f25f4c0d2",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "695abc1763ff96d19338cec8",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "6948349f8f31664565b221a8",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "69bd7409f128d7eb7637ec64",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "694831788f31664565b22118",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949c593b30f8044bfd98dda"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:22.952Z",
+    "updatedAt": "2026-04-19T22:31:22.952Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e557bb2a31b32addf4d590",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481571a3fd5c6752dbabe6",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "6948346c8f31664565b2219f",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "694831a18f31664565b2211e",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694832b38f31664565b2214b",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "6948337b8f31664565b22172",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b182c63ff96d19338e055",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694831c38f31664565b22124",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948334e8f31664565b22169",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "694830e88f31664565b2210c",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481571a3fd5c6752dbabe6"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:23.140Z",
+    "updatedAt": "2026-04-20T01:56:48.611Z",
+    "__v": 1
+  },
+  {
+    "_id": "69e557bb2a31b32addf4d592",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481554a3fd5c6752dbabdd",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694832b38f31664565b2214b",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "694830e88f31664565b2210c",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "6948337b8f31664565b22172",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "694831a18f31664565b2211e",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694831c38f31664565b22124",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948346c8f31664565b2219f",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182c63ff96d19338e055",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948334e8f31664565b22169",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:23.328Z",
+    "updatedAt": "2026-04-19T22:31:23.328Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e557bb2a31b32addf4d594",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "695ad9cf63ff96d19338d714",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "696d751a24013a8f25f4d28d",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "69bd8ef0f128d7eb763800e8",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "696d752f24013a8f25f4d319",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "696d752f24013a8f25f4d319",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "696d753e24013a8f25f4d3a2",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694832198f31664565b22130",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d753e24013a8f25f4d3a2",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696d756a24013a8f25f4d4b9",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "696d756a24013a8f25f4d4b9",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d751a24013a8f25f4d28d",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "69bd8ef0f128d7eb763800e8",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "695ad9cf63ff96d19338d714"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:23.514Z",
+    "updatedAt": "2026-04-20T00:14:46.042Z",
+    "__v": 2
+  },
+  {
+    "_id": "69e557bb2a31b32addf4d596",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6948153aa3fd5c6752dbabd4",
+    "slots": [
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696d202324013a8f25f4b7c3",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "695abbce63ff96d19338ce08",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "6948335b8f31664565b2216c",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948349f8f31664565b221a8",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d203f24013a8f25f4b8d7",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "696d1ffb24013a8f25f4b6ae",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "694830bd8f31664565b22109",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "694831908f31664565b2211b",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "696d201324013a8f25f4b737",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948325f8f31664565b2213c",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696d203224013a8f25f4b84c",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694831f68f31664565b2212d",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d202324013a8f25f4b7c3",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "696d1ffb24013a8f25f4b6ae",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d1fe624013a8f25f4b623",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694833c78f31664565b22181",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "695abbfa63ff96d19338ce7b",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      }
+    ],
+    "title": "HORÁRIO 028 - BACK UP",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-19T22:31:23.701Z",
+    "updatedAt": "2026-04-20T00:14:46.227Z",
+    "__v": 2
+  },
+  {
+    "_id": "69e7a8a3796aba49b1a5dfeb",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481793d1c0d7cf40718865",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "696d074724013a8f25f4a061",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d06fb24013a8f25f49e28",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694834ba8f31664565b221ae",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694ed08f1659703ca38a1f46",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d08a124013a8f25f4a2ab",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481793d1c0d7cf40718865"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481793d1c0d7cf40718865"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:07.984Z",
+    "updatedAt": "2026-04-21T16:41:07.984Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a4796aba49b1a5dfed",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6949b9a50ee55f2aa4956a7f",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694834ba8f31664565b221ae",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "694ed08f1659703ca38a1f46",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "6948344e8f31664565b22199",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696d06fb24013a8f25f49e28",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69a2559f00d0dc999598be28",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d074724013a8f25f4a061",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694831b08f31664565b22121",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "696d08a124013a8f25f4a2ab",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949b9a50ee55f2aa4956a7f"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:08.184Z",
+    "updatedAt": "2026-04-21T16:41:08.184Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a4796aba49b1a5dfef",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "694814eca3fd5c6752dbabbb",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948322b8f31664565b22133",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "69700c7b55e19d9ee09e1c64",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948325f8f31664565b2213c",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "69848c76209d7bf5ea13e7ff",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694831288f31664565b22112",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "695b182163ff96d19338e02e",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "695b180963ff96d19338dfd9",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "694814eca3fd5c6752dbabbb"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "694814eca3fd5c6752dbabbb"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:08.370Z",
+    "updatedAt": "2026-04-21T16:41:08.370Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a4796aba49b1a5dff1",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481428a3fd5c6752dbab9b",
+    "slots": [
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "696d64bc24013a8f25f4c9d5",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "69c7c294b9e5dc5548bc6bd1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "696d64bc24013a8f25f4c9d5",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696d649924013a8f25f4c8c1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "69c7c294b9e5dc5548bc6bd1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947444657dd5d416622e645",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "696d647d24013a8f25f4c835",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694832198f31664565b22130",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696d649924013a8f25f4c8c1",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "696d64ef24013a8f25f4cb75",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "696d64ef24013a8f25f4cb75",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d64e124013a8f25f4caea",
+        "teacherId": "69c6c6dbb9e5dc5548bc4cb5",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481428a3fd5c6752dbab9b"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481428a3fd5c6752dbab9b"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:08.555Z",
+    "updatedAt": "2026-04-21T16:41:08.555Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a4796aba49b1a5dff3",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481509a3fd5c6752dbabc4",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "69bd9180f128d7eb7638053f",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "69700c7b55e19d9ee09e1c64",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "69bd9180f128d7eb7638053f",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "69bd929cf128d7eb763808b0",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d164624013a8f25f4a7bd",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d1a5c24013a8f25f4ae10",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694833098f31664565b2215a",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696d164624013a8f25f4a7bd",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "69bd93adf128d7eb76380be5",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "69bd93adf128d7eb76380be5",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "69bd929cf128d7eb763808b0",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "69bd9180f128d7eb7638053f",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "69bd929cf128d7eb763808b0",
+        "teacherId": "69c6c70bb9e5dc5548bc4cc1",
+        "classId": "69481509a3fd5c6752dbabc4"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:08.744Z",
+    "updatedAt": "2026-04-21T16:41:08.744Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a4796aba49b1a5dff5",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6948144ea3fd5c6752dbabab",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "69bd74f9f128d7eb7637f0a1",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694833d98f31664565b22184",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "69bd71bff128d7eb7637e876",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "696d244624013a8f25f4bcf7",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "69bd74f9f128d7eb7637f0a1",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "694833d98f31664565b22184",
+        "teacherId": "",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "696d6fc224013a8f25f4cffb",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "69bd71bff128d7eb7637e876",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "694832198f31664565b22130",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "694ed2821659703ca38a23cb",
+        "teacherId": "",
+        "classId": "6948144ea3fd5c6752dbabab"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "694ed2821659703ca38a23cb",
+        "teacherId": "",
+        "classId": "6948144ea3fd5c6752dbabab"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:08.929Z",
+    "updatedAt": "2026-04-21T16:41:08.929Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a5796aba49b1a5dff7",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6949c593b30f8044bfd98dda",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "6948335b8f31664565b2216c",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "694832d08f31664565b22151",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694830bd8f31664565b22109",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948347f8f31664565b221a2",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "694831f68f31664565b2212d",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "694834d58f31664565b221b4",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694833348f31664565b22163",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "694831908f31664565b2211b",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696d245224013a8f25f4bd83",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "6948325f8f31664565b2213c",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694833c78f31664565b22181",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "696d247324013a8f25f4be97",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d257324013a8f25f4c0d2",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "695abc1763ff96d19338cec8",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "6948349f8f31664565b221a8",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "69bd7409f128d7eb7637ec64",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "694831788f31664565b22118",
+        "teacherId": "69bd4e1ef128d7eb7637e29f",
+        "classId": "6949c593b30f8044bfd98dda"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6949c593b30f8044bfd98dda"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:09.116Z",
+    "updatedAt": "2026-04-21T16:41:09.116Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a5796aba49b1a5dff9",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481571a3fd5c6752dbabe6",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "6948346c8f31664565b2219f",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "694831a18f31664565b2211e",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "694832b38f31664565b2214b",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "6948337b8f31664565b22172",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b182c63ff96d19338e055",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694831c38f31664565b22124",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948334e8f31664565b22169",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481571a3fd5c6752dbabe6"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "694830e88f31664565b2210c",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481571a3fd5c6752dbabe6"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:09.304Z",
+    "updatedAt": "2026-04-21T16:41:09.304Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a5796aba49b1a5dffb",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "69481554a3fd5c6752dbabdd",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694832b38f31664565b2214b",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "6948340a8f31664565b2218d",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "694830e88f31664565b2210c",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "696cfe6424013a8f25f49803",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "6948337b8f31664565b22172",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "694831a18f31664565b2211e",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694831c38f31664565b22124",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948346c8f31664565b2219f",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694833b58f31664565b2217e",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "695b182c63ff96d19338e055",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947433e57dd5d416622e633",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "694831e38f31664565b2212a",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "695b182763ff96d19338e040",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948334e8f31664565b22169",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473f8c57dd5d416622e610",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "69481554a3fd5c6752dbabdd"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "69c7c263b9e5dc5548bc69e7",
+        "teacherId": "6947447557dd5d416622e648",
+        "classId": "69481554a3fd5c6752dbabdd"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:09.490Z",
+    "updatedAt": "2026-04-21T16:41:09.490Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a5796aba49b1a5dffd",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "695ad9cf63ff96d19338d714",
+    "slots": [
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "696d751a24013a8f25f4d28d",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "69473fc757dd5d416622e613",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "696cf5f924013a8f25f48bb7",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "69bd8ef0f128d7eb763800e8",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "696d752f24013a8f25f4d319",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b182e63ff96d19338e05b",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "696d06b624013a8f25f49bf2",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "696d752f24013a8f25f4d319",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "696d753e24013a8f25f4d3a2",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694832198f31664565b22130",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d753e24013a8f25f4d3a2",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696d756a24013a8f25f4d4b9",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "696d1a2324013a8f25f4ad80",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "696d756a24013a8f25f4d4b9",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "696d751a24013a8f25f4d28d",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "69bd8ef0f128d7eb763800e8",
+        "teacherId": "69e53a752a31b32addf4ccef",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694741eb57dd5d416622e627",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696cf52124013a8f25f48978",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "696cf80c24013a8f25f48e13",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "695ad9cf63ff96d19338d714"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "694830ac8f31664565b22106",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "695ad9cf63ff96d19338d714"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:09.675Z",
+    "updatedAt": "2026-04-21T16:41:09.675Z",
+    "__v": 0
+  },
+  {
+    "_id": "69e7a8a5796aba49b1a5dfff",
+    "scheduleId": "69483bf78f31664565b22216",
+    "classId": "6948153aa3fd5c6752dbabd4",
+    "slots": [
+      {
+        "day": "Terça",
+        "period": 1,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 6,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 4,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 6,
+        "subjectId": "696d202324013a8f25f4b7c3",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 4,
+        "subjectId": "694ece7d1659703ca38a1bff",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 6,
+        "subjectId": "695abbce63ff96d19338ce08",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 5,
+        "subjectId": "6948336b8f31664565b2216f",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 6,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 7,
+        "subjectId": "6948335b8f31664565b2216c",
+        "teacherId": "69a7380ccab5cc393bb48def",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 2,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 3,
+        "subjectId": "695b181663ff96d19338e007",
+        "teacherId": "694743f957dd5d416622e63f",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 4,
+        "subjectId": "6948349f8f31664565b221a8",
+        "teacherId": "694742b557dd5d416622e62d",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 1,
+        "subjectId": "696cf92924013a8f25f49060",
+        "teacherId": "694743c557dd5d416622e63c",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 6,
+        "subjectId": "696d203f24013a8f25f4b8d7",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 8,
+        "subjectId": "696d1ffb24013a8f25f4b6ae",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 2,
+        "subjectId": "695b181763ff96d19338e00a",
+        "teacherId": "69475b16f52cd36ee8b1dc65",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 3,
+        "subjectId": "6948351e8f31664565b221bd",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 1,
+        "subjectId": "694830bd8f31664565b22109",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 5,
+        "subjectId": "696d201324013a8f25f4b737",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 8,
+        "subjectId": "694831908f31664565b2211b",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 1,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 3,
+        "subjectId": "6948352f8f31664565b221c0",
+        "teacherId": "69474669e704c5f3ec4330cd",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 4,
+        "subjectId": "694835608f31664565b221c6",
+        "teacherId": "6947427957dd5d416622e62a",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 5,
+        "subjectId": "6948325f8f31664565b2213c",
+        "teacherId": "69473ff957dd5d416622e616",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 8,
+        "subjectId": "696d203224013a8f25f4b84c",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 2,
+        "subjectId": "695b181163ff96d19338dff4",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 3,
+        "subjectId": "695b182063ff96d19338e028",
+        "teacherId": "6947403b57dd5d416622e619",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 2,
+        "subjectId": "695b182563ff96d19338e03a",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 8,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 2,
+        "subjectId": "694832418f31664565b22136",
+        "teacherId": "694741c057dd5d416622e624",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 3,
+        "subjectId": "694835808f31664565b221cc",
+        "teacherId": "6947431357dd5d416622e630",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 4,
+        "subjectId": "694831f68f31664565b2212d",
+        "teacherId": "6947469de704c5f3ec4330d0",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quinta",
+        "period": 8,
+        "subjectId": "696d202324013a8f25f4b7c3",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Segunda",
+        "period": 7,
+        "subjectId": "696d1ffb24013a8f25f4b6ae",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Terça",
+        "period": 7,
+        "subjectId": "696d1fe624013a8f25f4b623",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 7,
+        "subjectId": "694833c78f31664565b22181",
+        "teacherId": "6947437257dd5d416622e636",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 1,
+        "subjectId": "695b181c63ff96d19338e01c",
+        "teacherId": "6947441f57dd5d416622e642",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Sexta",
+        "period": 7,
+        "subjectId": "695abbfa63ff96d19338ce7b",
+        "teacherId": "69e542ad2a31b32addf4d08e",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      },
+      {
+        "day": "Quarta",
+        "period": 5,
+        "subjectId": "695b180863ff96d19338dfd6",
+        "teacherId": "694743a157dd5d416622e639",
+        "classId": "6948153aa3fd5c6752dbabd4"
+      }
+    ],
+    "title": "HORÁRIO 029",
+    "userId": "6948aa5c54a857ec2cf21a84",
+    "school": "6948aa5c54a857ec2cf21a84",
+    "createdAt": "2026-04-21T16:41:09.859Z",
+    "updatedAt": "2026-04-21T16:41:09.859Z",
+    "__v": 0
+  }
+]

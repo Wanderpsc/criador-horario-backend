@@ -85,11 +85,15 @@ router.use(authenticate);
 router.get('/complete/:userId', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
+    const schoolYear = req.query.schoolYear ? Number(req.query.schoolYear) : undefined;
     const Teacher = require('../models/Teacher').default;
     const Subject = require('../models/Subject').default;
     const Class = require('../models/Class').default;
     
-    const associations = await TeacherSubject.find({ userId: { $in: scopedUserIds } });
+    const associations = await TeacherSubject.find({
+      userId: { $in: scopedUserIds },
+      ...(schoolYear ? { schoolYear } : {}),
+    });
     
     // Buscar dados completos
     const teacherIds = [...new Set(associations.map(a => a.teacherId))];
@@ -131,7 +135,11 @@ router.get('/complete/:userId', async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const scopedUserIds = getScopedUserIds(req);
-    const associations = await TeacherSubject.find({ userId: { $in: scopedUserIds } });
+    const schoolYear = req.query.schoolYear ? Number(req.query.schoolYear) : undefined;
+    const associations = await TeacherSubject.find({
+      userId: { $in: scopedUserIds },
+      ...(schoolYear ? { schoolYear } : {}),
+    });
     res.json({ success: true, data: associations });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -252,7 +260,8 @@ router.post('/', async (req, res) => {
     const association = new TeacherSubject({
       ...req.body,
       userId,
-      schoolId
+      schoolId,
+      schoolYear: req.body.schoolYear || new Date().getFullYear(),
     });
     await association.save();
 
@@ -388,7 +397,8 @@ router.post('/bulk', async (req, res) => {
             subjectId,
             classId,
             schoolId,
-            userId
+            userId,
+            schoolYear: req.body.schoolYear || new Date().getFullYear(),
           });
         }
       } else {
@@ -396,7 +406,8 @@ router.post('/bulk', async (req, res) => {
           teacherId,
           subjectId,
           schoolId,
-          userId
+          userId,
+          schoolYear: req.body.schoolYear || new Date().getFullYear(),
         });
       }
     }

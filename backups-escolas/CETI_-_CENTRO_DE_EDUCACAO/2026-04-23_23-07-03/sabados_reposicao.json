@@ -1,0 +1,523 @@
+[
+  {
+    "_id": "69e760ddddf63f0f06e8829c",
+    "date": "2026-04-25T00:00:00.000Z",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "schedule": {
+      "6948153aa3fd5c6752dbabd4": [
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "69473ff957dd5d416622e616",
+          "teacherName": "Ionize de Sousa Guerra",
+          "subjectId": "6948325f8f31664565b2213c",
+          "subjectName": "LEITURA E PRODUÇÃO TEXTUAL",
+          "classId": "6948153aa3fd5c6752dbabd4",
+          "className": "2ª Série - EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "69473ff957dd5d416622e616",
+          "teacherName": "Ionize de Sousa Guerra",
+          "subjectId": "6948336b8f31664565b2216f",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - LÍNGUA PORTUGUESA/RECOMPOSIÇÃO DA APRENDIZAGEM",
+          "classId": "6948153aa3fd5c6752dbabd4",
+          "className": "2ª Série - EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "69473ff957dd5d416622e616",
+          "teacherName": "Ionize de Sousa Guerra",
+          "subjectId": "6948351e8f31664565b221bd",
+          "subjectName": "LÍNGUA PORTUGUESA",
+          "classId": "6948153aa3fd5c6752dbabd4",
+          "className": "2ª Série - EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "694741c057dd5d416622e624",
+          "teacherName": "Ivônia Carla Bispo Jacobina",
+          "subjectId": "694832418f31664565b22136",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBÓTICA",
+          "classId": "6948153aa3fd5c6752dbabd4",
+          "className": "2ª Série - EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "6947437257dd5d416622e636",
+          "teacherName": "Maria Benedita Barbosa de Oliveira",
+          "subjectId": "694833c78f31664565b22181",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MONITORIA / HORÁRIO DE ESTUDO",
+          "classId": "6948153aa3fd5c6752dbabd4",
+          "className": "2ª Série - EMTPMARK-DIG-2ª SERIE - INTEGRAL-I-A"
+        }
+      ],
+      "69481428a3fd5c6752dbab9b": [
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "69473ff957dd5d416622e616",
+          "teacherName": "Ionize de Sousa Guerra",
+          "subjectId": "6948351e8f31664565b221bd",
+          "subjectName": "LÍNGUA PORTUGUESA",
+          "classId": "69481428a3fd5c6752dbab9b",
+          "className": "1ª Série - EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "694741eb57dd5d416622e627",
+          "teacherName": "João Henrique Martins de Oliveira",
+          "subjectId": "694835608f31664565b221c6",
+          "subjectName": "MATEMÁTICA",
+          "classId": "69481428a3fd5c6752dbab9b",
+          "className": "1ª Série - EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "694741eb57dd5d416622e627",
+          "teacherName": "João Henrique Martins de Oliveira",
+          "subjectId": "695b182563ff96d19338e03a",
+          "subjectName": "INTELIGÊNCIA ARTIFICIAL",
+          "classId": "69481428a3fd5c6752dbab9b",
+          "className": "1ª Série - EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "6947431357dd5d416622e630",
+          "teacherName": "Kátia Isidoria Rocha Marques de Alencar",
+          "subjectId": "694835808f31664565b221cc",
+          "subjectName": "QUÍMICA",
+          "classId": "69481428a3fd5c6752dbab9b",
+          "className": "1ª Série - EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "694743a157dd5d416622e639",
+          "teacherName": "Marilene Marques de Oliveira",
+          "subjectId": "694832198f31664565b22130",
+          "subjectName": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "classId": "69481428a3fd5c6752dbab9b",
+          "className": "1ª Série - EMTPADM-ENF-EMP-1ª SERIE - INTEGRAL-I-B"
+        }
+      ],
+      "6948144ea3fd5c6752dbabab": [
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "69473ff957dd5d416622e616",
+          "teacherName": "Ionize de Sousa Guerra",
+          "subjectId": "6948351e8f31664565b221bd",
+          "subjectName": "LÍNGUA PORTUGUESA",
+          "classId": "6948144ea3fd5c6752dbabab",
+          "className": "1ª Série - EMTPDES-SIS-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "694741eb57dd5d416622e627",
+          "teacherName": "João Henrique Martins de Oliveira",
+          "subjectId": "694835608f31664565b221c6",
+          "subjectName": "MATEMÁTICA",
+          "classId": "6948144ea3fd5c6752dbabab",
+          "className": "1ª Série - EMTPDES-SIS-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "6947431357dd5d416622e630",
+          "teacherName": "Kátia Isidoria Rocha Marques de Alencar",
+          "subjectId": "694835808f31664565b221cc",
+          "subjectName": "QUÍMICA",
+          "classId": "6948144ea3fd5c6752dbabab",
+          "className": "1ª Série - EMTPDES-SIS-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "6947437257dd5d416622e636",
+          "teacherName": "Maria Benedita Barbosa de Oliveira",
+          "subjectId": "694ece7d1659703ca38a1bff",
+          "subjectName": "SOCIOLOGIA",
+          "classId": "6948144ea3fd5c6752dbabab",
+          "className": "1ª Série - EMTPDES-SIS-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "694743a157dd5d416622e639",
+          "teacherName": "Marilene Marques de Oliveira",
+          "subjectId": "694832198f31664565b22130",
+          "subjectName": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "classId": "6948144ea3fd5c6752dbabab",
+          "className": "1ª Série - EMTPDES-SIS-1ª SERIE - INTEGRAL-I-B"
+        }
+      ],
+      "6949c593b30f8044bfd98dda": [
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "694741c057dd5d416622e624",
+          "teacherName": "Ivônia Carla Bispo Jacobina",
+          "subjectId": "694832418f31664565b22136",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBÓTICA",
+          "classId": "6949c593b30f8044bfd98dda",
+          "className": "2ª Série - EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "6947437257dd5d416622e636",
+          "teacherName": "Maria Benedita Barbosa de Oliveira",
+          "subjectId": "694833c78f31664565b22181",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - MONITORIA / HORÁRIO DE ESTUDO",
+          "classId": "6949c593b30f8044bfd98dda",
+          "className": "2ª Série - EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "694743f957dd5d416622e63f",
+          "teacherName": "Ricardo da Silva Guerra",
+          "subjectId": "695b181663ff96d19338e007",
+          "subjectName": "FILOSOFIA",
+          "classId": "6949c593b30f8044bfd98dda",
+          "className": "2ª Série - EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "69474669e704c5f3ec4330cd",
+          "teacherName": "Amândia Amaral Vogado do Lago",
+          "subjectId": "6948352f8f31664565b221c0",
+          "subjectName": "LÍNGUA ESTRANGEIRA INGLÊS",
+          "classId": "6949c593b30f8044bfd98dda",
+          "className": "2ª Série - EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "69475b16f52cd36ee8b1dc65",
+          "teacherName": "Carlos Eduardo Nunes",
+          "subjectId": "695b181763ff96d19338e00a",
+          "subjectName": "FÍSICA",
+          "classId": "6949c593b30f8044bfd98dda",
+          "className": "2ª Série - EMTPDES-SIS-2ª SERIE - INTEGRAL-I-B"
+        }
+      ],
+      "69481554a3fd5c6752dbabdd": [
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "694741c057dd5d416622e624",
+          "teacherName": "Ivônia Carla Bispo Jacobina",
+          "subjectId": "694832b38f31664565b2214b",
+          "subjectName": "ATIVIDADES INTEGRADORAS - ESPORTE INTEGRADO A EDUCAÇÃO FÍSICA",
+          "classId": "69481554a3fd5c6752dbabdd",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "6947431357dd5d416622e630",
+          "teacherName": "Kátia Isidoria Rocha Marques de Alencar",
+          "subjectId": "694835808f31664565b221cc",
+          "subjectName": "QUÍMICA",
+          "classId": "69481554a3fd5c6752dbabdd",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "694743a157dd5d416622e639",
+          "teacherName": "Marilene Marques de Oliveira",
+          "subjectId": "694831a18f31664565b2211e",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - CIÊNCIAS DA NATUREZA",
+          "classId": "69481554a3fd5c6752dbabdd",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "694743f957dd5d416622e63f",
+          "teacherName": "Ricardo da Silva Guerra",
+          "subjectId": "695b181663ff96d19338e007",
+          "subjectName": "FILOSOFIA",
+          "classId": "69481554a3fd5c6752dbabdd",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-B"
+        }
+      ],
+      "69481571a3fd5c6752dbabe6": [
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "694741c057dd5d416622e624",
+          "teacherName": "Ivônia Carla Bispo Jacobina",
+          "subjectId": "694832b38f31664565b2214b",
+          "subjectName": "ATIVIDADES INTEGRADORAS - ESPORTE INTEGRADO A EDUCAÇÃO FÍSICA",
+          "classId": "69481571a3fd5c6752dbabe6",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "6947437257dd5d416622e636",
+          "teacherName": "Maria Benedita Barbosa de Oliveira",
+          "subjectId": "694ece7d1659703ca38a1bff",
+          "subjectName": "SOCIOLOGIA",
+          "classId": "69481571a3fd5c6752dbabe6",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "694743a157dd5d416622e639",
+          "teacherName": "Marilene Marques de Oliveira",
+          "subjectId": "694831a18f31664565b2211e",
+          "subjectName": "PERCURSOS DE APROFUNDAMENTO E INTEGRAÇÃO DE ESTUDOS - CIÊNCIAS DA NATUREZA",
+          "classId": "69481571a3fd5c6752dbabe6",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A"
+        },
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "69475b16f52cd36ee8b1dc65",
+          "teacherName": "Carlos Eduardo Nunes",
+          "subjectId": "695b181763ff96d19338e00a",
+          "subjectName": "FÍSICA",
+          "classId": "69481571a3fd5c6752dbabe6",
+          "className": "3ª Série - EMTPDES-SIS-3ª SERIE - INTEGRAL-I-A"
+        }
+      ],
+      "694814eca3fd5c6752dbabbb": [
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "694741c057dd5d416622e624",
+          "teacherName": "Ivônia Carla Bispo Jacobina",
+          "subjectId": "694833098f31664565b2215a",
+          "subjectName": "ESPORTE/CULTURA/CLUBE DE LEITURA OU ROBOTICA(ELETIVA OBRIGATORIA)",
+          "classId": "694814eca3fd5c6752dbabbb",
+          "className": "3ª Série - EMRINTEGRAL-3ª SERIE-I-A"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "6947431357dd5d416622e630",
+          "teacherName": "Kátia Isidoria Rocha Marques de Alencar",
+          "subjectId": "694835808f31664565b221cc",
+          "subjectName": "QUÍMICA",
+          "classId": "694814eca3fd5c6752dbabbb",
+          "className": "3ª Série - EMRINTEGRAL-3ª SERIE-I-A"
+        },
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "694743f957dd5d416622e63f",
+          "teacherName": "Ricardo da Silva Guerra",
+          "subjectId": "695b181663ff96d19338e007",
+          "subjectName": "FILOSOFIA",
+          "classId": "694814eca3fd5c6752dbabbb",
+          "className": "3ª Série - EMRINTEGRAL-3ª SERIE-I-A"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "69474669e704c5f3ec4330cd",
+          "teacherName": "Amândia Amaral Vogado do Lago",
+          "subjectId": "695b182e63ff96d19338e05b",
+          "subjectName": "LÍNGUA INGLESA",
+          "classId": "694814eca3fd5c6752dbabbb",
+          "className": "3ª Série - EMRINTEGRAL-3ª SERIE-I-A"
+        },
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "69475b16f52cd36ee8b1dc65",
+          "teacherName": "Carlos Eduardo Nunes",
+          "subjectId": "694831288f31664565b22112",
+          "subjectName": "FISICA - APROFUNDAMENTO",
+          "classId": "694814eca3fd5c6752dbabbb",
+          "className": "3ª Série - EMRINTEGRAL-3ª SERIE-I-A"
+        }
+      ],
+      "69481509a3fd5c6752dbabc4": [
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "694741eb57dd5d416622e627",
+          "teacherName": "João Henrique Martins de Oliveira",
+          "subjectId": "694830ac8f31664565b22106",
+          "subjectName": "EDUCAÇÃO FINANCEIRA",
+          "classId": "69481509a3fd5c6752dbabc4",
+          "className": "2ª Série - EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A"
+        },
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "6947431357dd5d416622e630",
+          "teacherName": "Kátia Isidoria Rocha Marques de Alencar",
+          "subjectId": "694835808f31664565b221cc",
+          "subjectName": "QUÍMICA",
+          "classId": "69481509a3fd5c6752dbabc4",
+          "className": "2ª Série - EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "6947437257dd5d416622e636",
+          "teacherName": "Maria Benedita Barbosa de Oliveira",
+          "subjectId": "694ece7d1659703ca38a1bff",
+          "subjectName": "SOCIOLOGIA",
+          "classId": "69481509a3fd5c6752dbabc4",
+          "className": "2ª Série - EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A"
+        },
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "694743f957dd5d416622e63f",
+          "teacherName": "Ricardo da Silva Guerra",
+          "subjectId": "695b181663ff96d19338e007",
+          "subjectName": "FILOSOFIA",
+          "classId": "69481509a3fd5c6752dbabc4",
+          "className": "2ª Série - EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "69474669e704c5f3ec4330cd",
+          "teacherName": "Amândia Amaral Vogado do Lago",
+          "subjectId": "695b182e63ff96d19338e05b",
+          "subjectName": "LÍNGUA INGLESA",
+          "classId": "69481509a3fd5c6752dbabc4",
+          "className": "2ª Série - EMTPADMI-2ª SERIE - PROPEDEUTICO-I-A"
+        }
+      ],
+      "695ad9cf63ff96d19338d714": [
+        {
+          "period": 4,
+          "startTime": "10:00",
+          "endTime": "11:00",
+          "teacherId": "694741eb57dd5d416622e627",
+          "teacherName": "João Henrique Martins de Oliveira",
+          "subjectId": "694835608f31664565b221c6",
+          "subjectName": "MATEMÁTICA",
+          "classId": "695ad9cf63ff96d19338d714",
+          "className": "1ª Série - EMTPFARM-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "694743a157dd5d416622e639",
+          "teacherName": "Marilene Marques de Oliveira",
+          "subjectId": "694832198f31664565b22130",
+          "subjectName": "PROJETO DE VIDA/EMPREENDEDORISMO",
+          "classId": "695ad9cf63ff96d19338d714",
+          "className": "1ª Série - EMTPFARM-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 5,
+          "startTime": "11:00",
+          "endTime": "12:00",
+          "teacherId": "694743f957dd5d416622e63f",
+          "teacherName": "Ricardo da Silva Guerra",
+          "subjectId": "695b181663ff96d19338e007",
+          "subjectName": "FILOSOFIA",
+          "classId": "695ad9cf63ff96d19338d714",
+          "className": "1ª Série - EMTPFARM-1ª SERIE - INTEGRAL-I-B"
+        },
+        {
+          "period": 1,
+          "startTime": "07:00",
+          "endTime": "08:00",
+          "teacherId": "69474669e704c5f3ec4330cd",
+          "teacherName": "Amândia Amaral Vogado do Lago",
+          "subjectId": "695b182e63ff96d19338e05b",
+          "subjectName": "LÍNGUA INGLESA",
+          "classId": "695ad9cf63ff96d19338d714",
+          "className": "1ª Série - EMTPFARM-1ª SERIE - INTEGRAL-I-B"
+        }
+      ],
+      "69481793d1c0d7cf40718865": [
+        {
+          "period": 2,
+          "startTime": "08:00",
+          "endTime": "09:00",
+          "teacherId": "69475b16f52cd36ee8b1dc65",
+          "teacherName": "Carlos Eduardo Nunes",
+          "subjectId": "695b181763ff96d19338e00a",
+          "subjectName": "FÍSICA",
+          "classId": "69481793d1c0d7cf40718865",
+          "className": "9º Ano - EFR-FUND IIANOS FINAIS INT-9º ANO-I-A"
+        }
+      ],
+      "6949b9a50ee55f2aa4956a7f": [
+        {
+          "period": 3,
+          "startTime": "09:00",
+          "endTime": "10:00",
+          "teacherId": "69475b16f52cd36ee8b1dc65",
+          "teacherName": "Carlos Eduardo Nunes",
+          "subjectId": "695b181763ff96d19338e00a",
+          "subjectName": "FÍSICA",
+          "classId": "6949b9a50ee55f2aa4956a7f",
+          "className": "9º Ano - EFR-FUND IIANOS FINAIS INT-9º ANO-I-B"
+        }
+      ]
+    },
+    "attendedTeachers": [],
+    "absentTeachers": [],
+    "status": "planned",
+    "totalScheduledHours": 44,
+    "totalRealizedHours": 0,
+    "createdAt": "2026-04-21T11:34:53.398Z",
+    "updatedAt": "2026-04-21T11:35:05.933Z",
+    "__v": 0
+  }
+]

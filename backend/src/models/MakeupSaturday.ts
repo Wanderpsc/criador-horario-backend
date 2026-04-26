@@ -90,7 +90,11 @@ const MakeupSaturdaySchema = new Schema<IMakeupSaturday>(
         subjectName: String,
         hours: Number
       }]
-    }]
+    }],
+    schoolYear: {
+      type: Number,
+      index: true
+    }
   },
   {
     timestamps: true

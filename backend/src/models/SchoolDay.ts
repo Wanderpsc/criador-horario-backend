@@ -51,6 +51,10 @@ const SchoolDaySchema = new Schema<ISchoolDay>(
       type: String,
       enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
       required: false
+    },
+    schoolYear: {
+      type: Number,
+      index: true
     }
   },
   {

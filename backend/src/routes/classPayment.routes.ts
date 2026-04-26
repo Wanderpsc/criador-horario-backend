@@ -11,7 +11,8 @@ const router = express.Router();
 router.get('/', auth, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
-    const { startDate, endDate, month, year } = req.query;
+    const { startDate, endDate, month, year, schoolYear } = req.query;
+    const schoolYearFilter = schoolYear ? { schoolYear: Number(schoolYear) } : {};
 
     let dateFilter: any = {};
     if (startDate && endDate) {
@@ -25,6 +26,7 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 
     const payments = await ClassPayment.find({
       schoolId,
+      ...schoolYearFilter,
       ...(Object.keys(dateFilter).length ? { date: dateFilter } : {}),
     }).sort({ date: -1, period: 1 });
 
@@ -126,6 +128,7 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       notes: notes || '',
       createdBy: req.user!.id,
       filledAt: new Date(),
+      schoolYear: date ? new Date(date).getFullYear() : new Date().getFullYear(),
     });
 
     await payment.save();

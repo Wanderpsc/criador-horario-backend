@@ -366,7 +366,10 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     const attendanceData = {
       ...req.body,
       schoolId,
-      timestamp: new Date()
+      timestamp: new Date(),
+      schoolYear: req.body.date
+        ? new Date(req.body.date).getFullYear()
+        : new Date().getFullYear(),
     };
 
     // Verificar se já existe registro para este professor nesta data

@@ -14,8 +14,10 @@ interface AuthState {
   token: string | null;
   user: User | null;
   isHydrated: boolean;
+  schoolYear: number;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
+  setSchoolYear: (year: number) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,8 +26,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       isHydrated: false,
+      schoolYear: new Date().getFullYear(),
       setAuth: (token, user) => set({ token, user }),
       logout: () => set({ token: null, user: null }),
+      setSchoolYear: (year) => set({ schoolYear: year }),
     }),
     {
       name: 'auth-storage',

@@ -7,6 +7,7 @@ export interface ITeacherSubject extends Document {
   weeklyHours?: number; // Carga horária específica deste professor neste componente/turma
   schoolId: string;
   userId: string;
+  schoolYear: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,14 +41,19 @@ const teacherSubjectSchema = new Schema<ITeacherSubject>(
       type: String,
       required: true,
     },
+    schoolYear: {
+      type: Number,
+      required: true,
+      default: 2026,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Índice único para evitar duplicatas (professor + componente + turma)
-teacherSubjectSchema.index({ teacherId: 1, subjectId: 1, classId: 1 }, { unique: true });
+// Índice único por ano letivo (permite copiar estrutura para novo ano)
+teacherSubjectSchema.index({ teacherId: 1, subjectId: 1, classId: 1, schoolYear: 1 }, { unique: true });
 
 // Índice para buscar por usuário
 teacherSubjectSchema.index({ userId: 1 });

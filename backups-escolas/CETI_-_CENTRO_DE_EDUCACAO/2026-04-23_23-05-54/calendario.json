@@ -1,0 +1,2131 @@
+[
+  {
+    "_id": "6987213fcb2467c1dcbb1953",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-19T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T11:25:51.409Z",
+    "updatedAt": "2026-04-21T19:30:30.824Z",
+    "__v": 0
+  },
+  {
+    "_id": "698721a5e4029052cca31caa",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-20T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T11:27:33.516Z",
+    "updatedAt": "2026-04-21T19:30:31.582Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872f10aaefb0ae2d7ff7d9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:24:48.788Z",
+    "updatedAt": "2026-04-21T19:30:35.570Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872f14aaefb0ae2d7ff7ed",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:24:52.266Z",
+    "updatedAt": "2026-04-21T19:30:34.340Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872f1faaefb0ae2d7ff814",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:25:03.962Z",
+    "updatedAt": "2026-04-21T19:30:33.695Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872f25aaefb0ae2d7ff828",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:25:09.310Z",
+    "updatedAt": "2026-04-21T19:30:32.943Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872f28aaefb0ae2d7ff83e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-02-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:25:12.958Z",
+    "updatedAt": "2026-04-21T19:30:32.496Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fa3aaefb0ae2d7ff892",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-07T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:15.113Z",
+    "updatedAt": "2026-04-21T19:33:39.752Z",
+    "__v": 0,
+    "followWeekday": "monday"
+  },
+  {
+    "_id": "69872fa7aaefb0ae2d7ff8a6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-28T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:19.138Z",
+    "updatedAt": "2026-04-21T19:33:51.011Z",
+    "__v": 0,
+    "followWeekday": "friday"
+  },
+  {
+    "_id": "69872fabaaefb0ae2d7ff8ba",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-02T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:23.039Z",
+    "updatedAt": "2026-04-21T19:30:52.560Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872faeaaefb0ae2d7ff8ce",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:26.962Z",
+    "updatedAt": "2026-04-21T19:30:53.033Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fb1aaefb0ae2d7ff8e2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:29.994Z",
+    "updatedAt": "2026-04-21T19:30:53.777Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fb4aaefb0ae2d7ff8f6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-05T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:32.800Z",
+    "updatedAt": "2026-04-21T19:30:53.948Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fb7aaefb0ae2d7ff90a",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:35.091Z",
+    "updatedAt": "2026-04-21T19:30:54.548Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fbaaaefb0ae2d7ff91e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:38.339Z",
+    "updatedAt": "2026-04-21T19:30:56.496Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fbcaaefb0ae2d7ff932",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:40.936Z",
+    "updatedAt": "2026-04-21T19:30:57.245Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fbfaaefb0ae2d7ff948",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:43.838Z",
+    "updatedAt": "2026-04-21T19:30:57.979Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fc2aaefb0ae2d7ff95c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-12T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:46.110Z",
+    "updatedAt": "2026-04-21T19:30:59.102Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fc4aaefb0ae2d7ff970",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-13T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:48.833Z",
+    "updatedAt": "2026-04-21T19:30:59.393Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fc8aaefb0ae2d7ff984",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:52.371Z",
+    "updatedAt": "2026-04-21T19:31:01.195Z",
+    "__v": 0,
+    "notes": "1° MINITESTE"
+  },
+  {
+    "_id": "69872fcaaaefb0ae2d7ff998",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:54.738Z",
+    "updatedAt": "2026-04-21T19:31:06.401Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fccaaefb0ae2d7ff9ac",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-30T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:27:56.817Z",
+    "updatedAt": "2026-04-21T19:31:10.729Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fd0aaefb0ae2d7ff9c1",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:00.123Z",
+    "updatedAt": "2026-04-21T19:31:01.936Z",
+    "__v": 0,
+    "notes": "1° MINITESTE"
+  },
+  {
+    "_id": "69872fd2aaefb0ae2d7ff9d5",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:02.598Z",
+    "updatedAt": "2026-04-21T19:31:06.792Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fd4aaefb0ae2d7ff9e9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-31T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:04.780Z",
+    "updatedAt": "2026-04-21T19:31:11.209Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fd7aaefb0ae2d7ff9fd",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-18T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:07.694Z",
+    "updatedAt": "2026-04-21T19:31:02.585Z",
+    "__v": 0,
+    "notes": "1° MINITESTE"
+  },
+  {
+    "_id": "69872fdaaaefb0ae2d7ffa11",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:10.247Z",
+    "updatedAt": "2026-04-21T19:31:07.524Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fdcaaefb0ae2d7ffa25",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-19T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:12.386Z",
+    "updatedAt": "2026-04-21T19:31:03.248Z",
+    "__v": 0,
+    "notes": "1° MINITESTE"
+  },
+  {
+    "_id": "69872fdeaaefb0ae2d7ffa3b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-20T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:14.886Z",
+    "updatedAt": "2026-04-21T19:31:03.883Z",
+    "__v": 0,
+    "notes": "1° MINITESTE"
+  },
+  {
+    "_id": "69872fe0aaefb0ae2d7ffa4f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:16.846Z",
+    "updatedAt": "2026-04-21T19:31:08.586Z",
+    "__v": 0
+  },
+  {
+    "_id": "69872fe3aaefb0ae2d7ffa63",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-03-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T12:28:19.246Z",
+    "updatedAt": "2026-04-21T19:31:08.848Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737c18d267634df1ad03b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-01T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:01:53.504Z",
+    "updatedAt": "2026-04-21T19:29:54.079Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737ca8d267634df1ad050",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-02T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:02.040Z",
+    "updatedAt": "2026-04-21T19:34:08.279Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737cf8d267634df1ad064",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-03T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:07.807Z",
+    "updatedAt": "2026-04-21T19:34:15.055Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737e18d267634df1ad08e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:25.692Z",
+    "updatedAt": "2026-04-21T19:29:56.723Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737e48d267634df1ad0a2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-07T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:28.295Z",
+    "updatedAt": "2026-04-21T19:29:57.666Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737e78d267634df1ad0b6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-08T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:31.019Z",
+    "updatedAt": "2026-04-21T19:29:59.120Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737ea8d267634df1ad0ca",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:34.925Z",
+    "updatedAt": "2026-04-21T19:29:59.276Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737ee8d267634df1ad0de",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:38.903Z",
+    "updatedAt": "2026-04-21T19:30:00.037Z",
+    "__v": 0
+  },
+  {
+    "_id": "698737f58d267634df1ad0f2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-11T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:02:45.602Z",
+    "updatedAt": "2026-04-21T19:34:51.905Z",
+    "__v": 0,
+    "followWeekday": "monday"
+  },
+  {
+    "_id": "698738238d267634df1ad11d",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-13T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:03:31.107Z",
+    "updatedAt": "2026-04-21T19:30:17.335Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738258d267634df1ad131",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-14T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:03:33.506Z",
+    "updatedAt": "2026-04-21T19:30:17.678Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738288d267634df1ad145",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-15T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:03:36.016Z",
+    "updatedAt": "2026-04-21T19:30:18.271Z",
+    "__v": 0
+  },
+  {
+    "_id": "6987382a8d267634df1ad159",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:03:38.383Z",
+    "updatedAt": "2026-04-21T19:30:19.403Z",
+    "__v": 0
+  },
+  {
+    "_id": "6987382c8d267634df1ad16d",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:03:40.840Z",
+    "updatedAt": "2026-04-21T19:30:19.882Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738a78d267634df1ad18b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-20T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:05:43.529Z",
+    "updatedAt": "2026-04-21T19:34:58.652Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738ac8d267634df1ad1b3",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-22T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:05:48.303Z",
+    "updatedAt": "2026-04-24T00:41:24.855Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738ae8d267634df1ad1c7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:05:50.346Z",
+    "updatedAt": "2026-04-24T00:41:28.941Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738b08d267634df1ad1dd",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:05:52.379Z",
+    "updatedAt": "2026-02-07T13:05:52.379Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738c38d267634df1ad205",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:06:11.397Z",
+    "updatedAt": "2026-02-07T13:06:11.397Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738c58d267634df1ad219",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-28T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:06:13.794Z",
+    "updatedAt": "2026-02-07T13:06:13.794Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738c88d267634df1ad22d",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-29T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:06:16.425Z",
+    "updatedAt": "2026-02-07T13:06:16.425Z",
+    "__v": 0
+  },
+  {
+    "_id": "698738cb8d267634df1ad241",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-30T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:06:19.108Z",
+    "updatedAt": "2026-02-07T13:06:19.108Z",
+    "__v": 0
+  },
+  {
+    "_id": "698739368d267634df1ad26f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-04-21T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": true,
+    "createdAt": "2026-02-07T13:08:06.138Z",
+    "updatedAt": "2026-04-21T19:29:46.353Z",
+    "__v": 0,
+    "followWeekday": "monday"
+  },
+  {
+    "_id": "69873c2c6945eb6199baf1b2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-01T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:20:44.008Z",
+    "updatedAt": "2026-02-07T13:20:44.008Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c366945eb6199baf1ca",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:20:54.924Z",
+    "updatedAt": "2026-02-07T13:20:54.924Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c396945eb6199baf1e0",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-05T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:20:57.759Z",
+    "updatedAt": "2026-02-07T13:20:57.759Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c3d6945eb6199baf1f7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:01.177Z",
+    "updatedAt": "2026-02-07T13:21:01.177Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c3f6945eb6199baf20d",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-07T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:03.999Z",
+    "updatedAt": "2026-02-07T13:21:03.999Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c436945eb6199baf223",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-08T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:07.932Z",
+    "updatedAt": "2026-02-07T13:21:07.932Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c4e6945eb6199baf239",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-09T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:18.154Z",
+    "updatedAt": "2026-02-07T13:21:18.154Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c596945eb6199baf251",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:29.280Z",
+    "updatedAt": "2026-02-07T13:21:29.280Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c5c6945eb6199baf267",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-12T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:32.359Z",
+    "updatedAt": "2026-02-07T13:21:32.359Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c5f6945eb6199baf27d",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-13T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:35.110Z",
+    "updatedAt": "2026-02-07T13:21:35.110Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c616945eb6199baf293",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-14T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:37.213Z",
+    "updatedAt": "2026-02-07T13:21:37.213Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c666945eb6199baf2a9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-15T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:21:42.089Z",
+    "updatedAt": "2026-02-07T13:21:42.089Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c7a6945eb6199baf2c2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-18T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:02.957Z",
+    "updatedAt": "2026-02-07T13:22:02.957Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c7e6945eb6199baf2d8",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-19T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:06.769Z",
+    "updatedAt": "2026-02-07T13:22:06.769Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c816945eb6199baf2ee",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-20T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:09.444Z",
+    "updatedAt": "2026-02-07T13:22:09.444Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c846945eb6199baf304",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-21T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:12.623Z",
+    "updatedAt": "2026-02-07T13:22:12.623Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c866945eb6199baf31a",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-22T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:14.780Z",
+    "updatedAt": "2026-02-07T13:22:14.780Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c9c6945eb6199baf332",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:36.250Z",
+    "updatedAt": "2026-02-07T13:22:36.250Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873c9e6945eb6199baf348",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:38.446Z",
+    "updatedAt": "2026-02-07T13:22:38.446Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873ca06945eb6199baf35e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:40.583Z",
+    "updatedAt": "2026-02-07T13:22:40.583Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873ca26945eb6199baf374",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-28T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:42.946Z",
+    "updatedAt": "2026-02-07T13:22:42.946Z",
+    "__v": 0
+  },
+  {
+    "_id": "69873ca56945eb6199baf38a",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-05-29T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-02-07T13:22:45.003Z",
+    "updatedAt": "2026-02-07T13:22:45.003Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85331acdd37b05401a621",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-01T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:17.443Z",
+    "updatedAt": "2026-03-28T22:16:17.443Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85336acdd37b05401a639",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-02T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:22.321Z",
+    "updatedAt": "2026-03-28T22:16:22.321Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85339acdd37b05401a651",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:25.400Z",
+    "updatedAt": "2026-03-28T22:16:25.400Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8533bacdd37b05401a669",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:27.946Z",
+    "updatedAt": "2026-03-28T22:16:27.946Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8533facdd37b05401a681",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-05T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:31.843Z",
+    "updatedAt": "2026-03-28T22:16:31.843Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85354acdd37b05401a69b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-08T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:52.565Z",
+    "updatedAt": "2026-03-28T22:16:52.565Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85358acdd37b05401a6b3",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:56.108Z",
+    "updatedAt": "2026-03-28T22:16:56.108Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8535bacdd37b05401a6cb",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:16:59.033Z",
+    "updatedAt": "2026-03-28T22:16:59.033Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8535eacdd37b05401a6e4",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:02.613Z",
+    "updatedAt": "2026-03-28T22:17:02.613Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85361acdd37b05401a6fc",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-12T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:05.545Z",
+    "updatedAt": "2026-03-28T22:17:05.545Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85365acdd37b05401a716",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-15T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:09.157Z",
+    "updatedAt": "2026-03-28T22:17:09.157Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85367acdd37b05401a72e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:11.962Z",
+    "updatedAt": "2026-03-28T22:17:11.962Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8536bacdd37b05401a746",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:15.263Z",
+    "updatedAt": "2026-03-28T22:17:15.263Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8536eacdd37b05401a75e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-18T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:18.398Z",
+    "updatedAt": "2026-03-28T22:17:18.398Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85371acdd37b05401a776",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-19T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:21.551Z",
+    "updatedAt": "2026-03-28T22:17:21.551Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85375acdd37b05401a78e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-22T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:25.792Z",
+    "updatedAt": "2026-03-28T22:17:25.792Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85378acdd37b05401a7a6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:28.721Z",
+    "updatedAt": "2026-03-28T22:17:28.721Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8537bacdd37b05401a7be",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:31.820Z",
+    "updatedAt": "2026-03-28T22:17:31.820Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85380acdd37b05401a7d6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:36.454Z",
+    "updatedAt": "2026-03-28T22:17:36.454Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85382acdd37b05401a7f0",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:38.852Z",
+    "updatedAt": "2026-03-28T22:17:38.852Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8538dacdd37b05401a808",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-27T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:49.250Z",
+    "updatedAt": "2026-03-28T22:17:49.250Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85393acdd37b05401a820",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-29T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:55.627Z",
+    "updatedAt": "2026-03-28T22:17:55.627Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85396acdd37b05401a838",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-06-30T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:17:58.696Z",
+    "updatedAt": "2026-03-28T22:17:58.696Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853bcacdd37b05401a865",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-01T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:18:36.426Z",
+    "updatedAt": "2026-03-28T22:18:36.426Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853bfacdd37b05401a87f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-02T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:18:39.444Z",
+    "updatedAt": "2026-03-28T22:18:39.444Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853c3acdd37b05401a897",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:18:43.207Z",
+    "updatedAt": "2026-03-28T22:18:43.207Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853caacdd37b05401a8af",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:18:50.061Z",
+    "updatedAt": "2026-03-28T22:18:50.061Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853cdacdd37b05401a8c7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-08T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:18:53.395Z",
+    "updatedAt": "2026-03-28T22:18:53.395Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853d2acdd37b05401a8df",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-07T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:18:58.563Z",
+    "updatedAt": "2026-03-28T22:18:58.563Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853f5acdd37b05401a928",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:19:33.825Z",
+    "updatedAt": "2026-03-28T22:19:33.825Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c853fdacdd37b05401a942",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:19:41.638Z",
+    "updatedAt": "2026-03-28T22:19:41.638Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85403acdd37b05401a95a",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-11T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:19:47.384Z",
+    "updatedAt": "2026-03-28T22:19:47.384Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85439acdd37b05401a977",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-30T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:20:41.486Z",
+    "updatedAt": "2026-03-28T22:20:41.486Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8543dacdd37b05401a98f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-07-31T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:20:45.047Z",
+    "updatedAt": "2026-03-28T22:20:45.047Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85646acdd37b05401a9d6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:26.106Z",
+    "updatedAt": "2026-03-28T22:29:26.106Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85649acdd37b05401a9ee",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:29.371Z",
+    "updatedAt": "2026-03-28T22:29:29.371Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8564dacdd37b05401aa06",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-05T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:33.173Z",
+    "updatedAt": "2026-03-28T22:29:33.173Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8564facdd37b05401aa1e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:35.978Z",
+    "updatedAt": "2026-03-28T22:29:35.978Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85653acdd37b05401aa38",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-07T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:39.256Z",
+    "updatedAt": "2026-03-28T22:29:39.256Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85657acdd37b05401aa50",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:43.865Z",
+    "updatedAt": "2026-03-28T22:29:43.865Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8565bacdd37b05401aa68",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:47.146Z",
+    "updatedAt": "2026-03-28T22:29:47.146Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8565eacdd37b05401aa80",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-12T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:50.194Z",
+    "updatedAt": "2026-03-28T22:29:50.194Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85661acdd37b05401aa98",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-13T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:53.522Z",
+    "updatedAt": "2026-03-28T22:29:53.522Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85664acdd37b05401aab0",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-14T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:29:56.331Z",
+    "updatedAt": "2026-03-28T22:29:56.331Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85668acdd37b05401aac9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:00.865Z",
+    "updatedAt": "2026-03-28T22:30:00.865Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8566cacdd37b05401aae1",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-18T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:04.014Z",
+    "updatedAt": "2026-03-28T22:30:04.014Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8566facdd37b05401aaf9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-19T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:07.266Z",
+    "updatedAt": "2026-03-28T22:30:07.266Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85672acdd37b05401ab13",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-20T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:10.398Z",
+    "updatedAt": "2026-03-28T22:30:10.398Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85675acdd37b05401ab2b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-21T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:13.421Z",
+    "updatedAt": "2026-03-28T22:30:13.421Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85678acdd37b05401ab43",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:16.660Z",
+    "updatedAt": "2026-03-28T22:30:16.660Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8567bacdd37b05401ab5b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:19.246Z",
+    "updatedAt": "2026-03-28T22:30:19.246Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8567eacdd37b05401ab73",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:22.162Z",
+    "updatedAt": "2026-03-28T22:30:22.162Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85680acdd37b05401ab8b",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:24.734Z",
+    "updatedAt": "2026-03-28T22:30:24.734Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85682acdd37b05401aba3",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-28T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:26.865Z",
+    "updatedAt": "2026-03-28T22:30:26.865Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85687acdd37b05401abbb",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-22T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:31.939Z",
+    "updatedAt": "2026-03-28T22:30:31.939Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8568aacdd37b05401abd3",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-08-31T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:30:34.597Z",
+    "updatedAt": "2026-03-28T22:30:34.597Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856e1acdd37b05401ac05",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-12T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:01.740Z",
+    "updatedAt": "2026-03-28T22:32:01.740Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856e7acdd37b05401ac1d",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-26T00:00:00.000Z",
+    "dayType": "saturday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:07.303Z",
+    "updatedAt": "2026-03-28T22:32:07.303Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856ebacdd37b05401ac37",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-01T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:11.435Z",
+    "updatedAt": "2026-03-28T22:32:11.435Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856eeacdd37b05401ac4f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-02T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:14.611Z",
+    "updatedAt": "2026-03-28T22:32:14.611Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856f1acdd37b05401ac67",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:17.373Z",
+    "updatedAt": "2026-03-28T22:32:17.373Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856f4acdd37b05401ac7f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:20.440Z",
+    "updatedAt": "2026-03-28T22:32:20.440Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856faacdd37b05401acaf",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-08T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:26.518Z",
+    "updatedAt": "2026-03-28T22:32:26.518Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c856fdacdd37b05401acc7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:29.574Z",
+    "updatedAt": "2026-03-28T22:32:29.574Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85700acdd37b05401acdf",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:32.602Z",
+    "updatedAt": "2026-03-28T22:32:32.602Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85703acdd37b05401acf7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:35.319Z",
+    "updatedAt": "2026-03-28T22:32:35.319Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85706acdd37b05401ad10",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-14T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:38.028Z",
+    "updatedAt": "2026-03-28T22:32:38.028Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85708acdd37b05401ad29",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-15T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:40.594Z",
+    "updatedAt": "2026-03-28T22:32:40.594Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85718acdd37b05401ad41",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:56.017Z",
+    "updatedAt": "2026-03-28T22:32:56.017Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8571bacdd37b05401ad59",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:32:59.368Z",
+    "updatedAt": "2026-03-28T22:32:59.368Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8571dacdd37b05401ad72",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-18T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:01.670Z",
+    "updatedAt": "2026-03-28T22:33:01.670Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85720acdd37b05401ad8a",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-21T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:04.755Z",
+    "updatedAt": "2026-03-28T22:33:04.755Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85723acdd37b05401ada2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-22T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:07.887Z",
+    "updatedAt": "2026-03-28T22:33:07.887Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85726acdd37b05401adbc",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:10.829Z",
+    "updatedAt": "2026-03-28T22:33:10.829Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85728acdd37b05401add4",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:12.983Z",
+    "updatedAt": "2026-03-28T22:33:12.983Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8572bacdd37b05401adec",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:15.913Z",
+    "updatedAt": "2026-03-28T22:33:15.913Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8572eacdd37b05401ae04",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-28T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:18.318Z",
+    "updatedAt": "2026-03-28T22:33:18.318Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85731acdd37b05401ae1c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-29T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:21.616Z",
+    "updatedAt": "2026-03-28T22:33:21.616Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85734acdd37b05401ae38",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-30T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:33:24.594Z",
+    "updatedAt": "2026-03-28T22:33:24.594Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c857d0acdd37b05401aea1",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-09-07T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:36:00.762Z",
+    "updatedAt": "2026-03-28T22:36:00.762Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85825acdd37b05401aed2",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-01T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:25.791Z",
+    "updatedAt": "2026-03-28T22:37:25.791Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85829acdd37b05401aeea",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-02T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:29.315Z",
+    "updatedAt": "2026-03-28T22:37:29.315Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85830acdd37b05401af02",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-05T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:36.590Z",
+    "updatedAt": "2026-03-28T22:37:36.590Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85834acdd37b05401af1c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:40.774Z",
+    "updatedAt": "2026-03-28T22:37:40.774Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85839acdd37b05401af34",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-07T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:45.618Z",
+    "updatedAt": "2026-03-28T22:37:45.618Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8583cacdd37b05401af4c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-08T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:48.948Z",
+    "updatedAt": "2026-03-28T22:37:48.948Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85840acdd37b05401af64",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:52.312Z",
+    "updatedAt": "2026-03-28T22:37:52.312Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85847acdd37b05401af7c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-12T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:37:59.371Z",
+    "updatedAt": "2026-03-28T22:37:59.371Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8584aacdd37b05401af95",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-13T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:02.973Z",
+    "updatedAt": "2026-03-28T22:38:02.973Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8584dacdd37b05401afad",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-14T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:05.948Z",
+    "updatedAt": "2026-03-28T22:38:05.948Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85854acdd37b05401afc7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-15T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:12.589Z",
+    "updatedAt": "2026-03-28T22:38:12.589Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8585eacdd37b05401afdf",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:22.412Z",
+    "updatedAt": "2026-03-28T22:38:22.412Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8586eacdd37b05401aff8",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-20T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:38.076Z",
+    "updatedAt": "2026-03-28T22:38:38.076Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85872acdd37b05401b011",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-21T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:42.053Z",
+    "updatedAt": "2026-03-28T22:38:42.053Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85875acdd37b05401b029",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-22T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:45.159Z",
+    "updatedAt": "2026-03-28T22:38:45.159Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85878acdd37b05401b041",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:48.251Z",
+    "updatedAt": "2026-03-28T22:38:48.251Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c8587eacdd37b05401b059",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:54.138Z",
+    "updatedAt": "2026-03-28T22:38:54.138Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85881acdd37b05401b071",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:38:57.584Z",
+    "updatedAt": "2026-03-28T22:38:57.584Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c858beacdd37b05401b08e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-19T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:39:58.468Z",
+    "updatedAt": "2026-03-28T22:39:58.468Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c858e4acdd37b05401b0a9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-28T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:40:36.467Z",
+    "updatedAt": "2026-03-28T22:40:36.467Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c858e7acdd37b05401b0c3",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-29T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:40:39.506Z",
+    "updatedAt": "2026-03-28T22:40:39.506Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85947acdd37b05401b0e3",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-10-30T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:42:15.504Z",
+    "updatedAt": "2026-03-28T22:42:15.504Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859b3acdd37b05401b115",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-02T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:03.337Z",
+    "updatedAt": "2026-03-28T22:44:03.337Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859bbacdd37b05401b12f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:11.561Z",
+    "updatedAt": "2026-03-28T22:44:11.561Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859beacdd37b05401b147",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:14.951Z",
+    "updatedAt": "2026-03-28T22:44:14.951Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859c2acdd37b05401b15f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-05T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:18.400Z",
+    "updatedAt": "2026-03-28T22:44:18.400Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859c6acdd37b05401b177",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-06T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:22.012Z",
+    "updatedAt": "2026-03-28T22:44:22.012Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859d3acdd37b05401b18f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:35.830Z",
+    "updatedAt": "2026-03-28T22:44:35.830Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859d7acdd37b05401b1a9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:39.193Z",
+    "updatedAt": "2026-03-28T22:44:39.193Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859daacdd37b05401b1c1",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:42.568Z",
+    "updatedAt": "2026-03-28T22:44:42.568Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859deacdd37b05401b1d9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-12T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:46.583Z",
+    "updatedAt": "2026-03-28T22:44:46.583Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859e1acdd37b05401b1f1",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-13T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:44:49.682Z",
+    "updatedAt": "2026-03-28T22:44:49.682Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859f4acdd37b05401b20c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-20T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:08.827Z",
+    "updatedAt": "2026-03-28T22:45:08.827Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859f8acdd37b05401b224",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:12.986Z",
+    "updatedAt": "2026-03-28T22:45:12.986Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859fcacdd37b05401b23c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:16.029Z",
+    "updatedAt": "2026-03-28T22:45:16.029Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c859feacdd37b05401b254",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-18T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:18.979Z",
+    "updatedAt": "2026-03-28T22:45:18.979Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a01acdd37b05401b26c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-19T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:21.951Z",
+    "updatedAt": "2026-03-28T22:45:21.951Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a0facdd37b05401b284",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-23T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:35.125Z",
+    "updatedAt": "2026-03-28T22:45:35.125Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a14acdd37b05401b29e",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-24T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:40.104Z",
+    "updatedAt": "2026-03-28T22:45:40.104Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a17acdd37b05401b2b6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-25T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:43.100Z",
+    "updatedAt": "2026-03-28T22:45:43.100Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a1aacdd37b05401b2ce",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-26T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:46.590Z",
+    "updatedAt": "2026-03-28T22:45:46.590Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a1dacdd37b05401b2e6",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-27T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:49.565Z",
+    "updatedAt": "2026-03-28T22:45:49.565Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85a20acdd37b05401b2fe",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-11-30T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:45:52.910Z",
+    "updatedAt": "2026-03-28T22:45:52.910Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b11acdd37b05401b33c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-08T00:00:00.000Z",
+    "dayType": "holiday",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:49:53.449Z",
+    "updatedAt": "2026-03-28T22:49:53.449Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b2aacdd37b05401b357",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-10T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:18.066Z",
+    "updatedAt": "2026-03-28T22:50:18.066Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b2eacdd37b05401b36f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-09T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:22.430Z",
+    "updatedAt": "2026-03-28T22:50:22.430Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b31acdd37b05401b387",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-07T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:25.779Z",
+    "updatedAt": "2026-03-28T22:50:25.779Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b34acdd37b05401b39f",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-04T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:28.679Z",
+    "updatedAt": "2026-03-28T22:50:28.679Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b37acdd37b05401b3b7",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-03T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:31.814Z",
+    "updatedAt": "2026-03-28T22:50:31.814Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b3aacdd37b05401b3cf",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-02T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:34.887Z",
+    "updatedAt": "2026-03-28T22:50:34.887Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b41acdd37b05401b3e9",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-01T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:50:41.147Z",
+    "updatedAt": "2026-03-28T22:50:41.147Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b68acdd37b05401b404",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-11T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:51:20.430Z",
+    "updatedAt": "2026-03-28T22:51:20.430Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b6cacdd37b05401b41c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-14T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:51:24.073Z",
+    "updatedAt": "2026-03-28T22:51:24.073Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b6facdd37b05401b434",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-15T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:51:27.463Z",
+    "updatedAt": "2026-03-28T22:51:27.463Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b73acdd37b05401b44c",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-16T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:51:31.157Z",
+    "updatedAt": "2026-03-28T22:51:31.157Z",
+    "__v": 0
+  },
+  {
+    "_id": "69c85b76acdd37b05401b464",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "date": "2026-12-17T00:00:00.000Z",
+    "dayType": "regular",
+    "isCompleted": false,
+    "createdAt": "2026-03-28T22:51:34.193Z",
+    "updatedAt": "2026-03-28T22:51:34.193Z",
+    "__v": 0
+  }
+]

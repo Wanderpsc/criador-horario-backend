@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
  */
 const classPaymentSchema = new mongoose.Schema({
   schoolId: { type: String, required: true, index: true },
+  schoolYear: { type: Number, index: true },
 
   // Data da aula (YYYY-MM-DD)
   date: { type: String, required: true, index: true },

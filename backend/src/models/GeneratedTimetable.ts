@@ -47,6 +47,10 @@ const generatedTimetableSchema = new mongoose.Schema({
     type: String, 
     required: false,  // Opcional para compatibilidade com dados antigos
     index: true  // ✅ Indexar para performance nas queries
+  },
+  schoolYear: {
+    type: Number,
+    index: true
   }
 }, {
   timestamps: true

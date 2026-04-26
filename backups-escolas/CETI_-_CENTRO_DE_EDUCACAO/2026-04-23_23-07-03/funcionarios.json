@@ -1,0 +1,13 @@
+[
+  {
+    "_id": "69eabef350862b2948cac62a",
+    "schoolId": "6948aa5c54a857ec2cf21a84",
+    "name": "CHISLEY DE SOUSA CAMELO",
+    "cpf": "003.383.711-25",
+    "nacionalidade": "Brasileira",
+    "isActive": true,
+    "createdAt": "2026-04-24T00:53:07.498Z",
+    "updatedAt": "2026-04-24T00:53:07.498Z",
+    "__v": 0
+  }
+]

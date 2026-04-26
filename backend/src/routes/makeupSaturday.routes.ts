@@ -22,7 +22,9 @@ router.get('/', auth, async (req: Request, res: Response) => {
     }
 
     console.log('✅ Buscando sábados para schoolId:', schoolId);
-    const makeupSaturdays = await MakeupSaturday.find({ schoolId })
+    const schoolYearQ = (req as any).query?.schoolYear;
+    const schoolYearFilter = schoolYearQ ? { schoolYear: Number(schoolYearQ) } : {};
+    const makeupSaturdays = await MakeupSaturday.find({ schoolId, ...schoolYearFilter })
       .sort({ date: -1 });
 
     console.log('📦 Encontrados', makeupSaturdays.length, 'sábados');
@@ -110,7 +112,8 @@ router.post('/', auth, async (req: Request, res: Response) => {
       schedule,
       teacherDebts,
       totalScheduledHours,
-      status: 'planned'
+      status: 'planned',
+      schoolYear: new Date(date).getFullYear(),
     });
 
     await makeupSaturday.save();
