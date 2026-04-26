@@ -491,9 +491,11 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
 });
 
 // ─── Helper: criar ClassPayments lendo ausências do TeacherAttendance ────────
-// Para cada slot confirmado (teacherId+classId+subjectId), conta quantos
-// foram confirmados, busca ausências reais no TeacherAttendance (data ≤ sábado)
-// e cria um ClassPayment por ausência não paga, em ordem cronológica.
+// Lógica: cada slot confirmado = 1 ausência abatida para o professor.
+// Agrupa slots por professor → conta total de slots → abate as N ausências
+// mais antigas não pagas, independente de turma/disciplina do slot.
+// Isso resolve o caso onde o professor repõe em turmas/disciplinas diferentes
+// das quais estava ausente (o sábado é reposição geral, não por turma).
 async function createPaymentsFromAttendance(
   schoolId: string,
   confirmedSlots: Array<{
@@ -508,31 +510,26 @@ async function createPaymentsFromAttendance(
   const TeacherAttendance = (await import('../models/TeacherAttendance')).default;
   const ClassPayment = (await import('../models/ClassPayment')).default;
 
-  // Agrupar slots por (teacherId, classId, subjectId) e contar
-  const slotMap = new Map<string, {
-    count: number;
-    teacherId: string; teacherName: string;
-    classId: string; className: string;
-    subjectId: string; subjectName: string;
-  }>();
+  // Agrupar slots por teacherId apenas → contar total de slots por professor
+  const teacherMap = new Map<string, { count: number; teacherName: string }>();
   for (const slot of confirmedSlots) {
-    const key = `${slot.teacherId}|${slot.classId}|${slot.subjectId}`;
-    if (!slotMap.has(key)) {
-      slotMap.set(key, { count: 0, ...slot });
+    if (!teacherMap.has(slot.teacherId)) {
+      teacherMap.set(slot.teacherId, { count: 0, teacherName: slot.teacherName });
     }
-    slotMap.get(key)!.count++;
+    teacherMap.get(slot.teacherId)!.count++;
   }
 
   let paymentsCreated = 0;
 
-  for (const [, info] of slotMap) {
-    const { count, teacherId, teacherName, classId, className, subjectId, subjectName } = info;
+  for (const [teacherId, { count, teacherName }] of teacherMap) {
+    // Todos os pagamentos já existentes para este professor (qualquer turma/disciplina)
+    const existingPayments = await ClassPayment.find({ schoolId, absentTeacherId: teacherId });
+    // Chave mais específica: data|período|turma|disciplina para evitar falsos positivos
+    const paidSet = new Set<string>(
+      existingPayments.map((p: any) => `${p.date}|${p.period}|${p.classId}|${p.subjectId}`)
+    );
 
-    // Pagamentos já existentes para este professor+turma+disciplina
-    const existingPayments = await ClassPayment.find({ schoolId, absentTeacherId: teacherId, classId, subjectId });
-    const paidSet = new Set<string>(existingPayments.map((p: any) => `${p.date}|${p.period}`));
-
-    // Buscar todas as ausências do professor nesta turma+disciplina até a data do sábado
+    // Buscar todas as ausências do professor até a data do sábado, em ordem cronológica
     const attendanceRecords = await TeacherAttendance.find({
       schoolId,
       teacherId,
@@ -540,18 +537,21 @@ async function createPaymentsFromAttendance(
     }).sort({ date: 1 });
 
     let remaining = count;
+    // Dedup dentro do array classes de cada documento TeacherAttendance
+    const seenAbsences = new Set<string>();
 
     for (const record of attendanceRecords) {
       if (remaining <= 0) break;
-      const absentClasses = ((record.classes as any[]) || []).filter((cls: any) =>
-        cls.status === 'absent' &&
-        cls.subjectId === subjectId &&
-        cls.classId === classId
+      const absentClasses = ((record.classes as any[]) || []).filter(
+        (cls: any) => cls.status === 'absent'
       );
       for (const cls of absentClasses) {
         if (remaining <= 0) break;
-        const payKey = `${record.date}|${cls.period}`;
-        if (paidSet.has(payKey)) continue;
+        // Chave única para deduplicar entradas repetidas no mesmo documento
+        const absKey = `${record.date}|${cls.period}|${cls.classId}|${cls.subjectId}`;
+        if (seenAbsences.has(absKey)) continue; // duplicata no classes array
+        seenAbsences.add(absKey);
+        if (paidSet.has(absKey)) continue; // ausência já paga anteriormente
 
         await ClassPayment.create({
           schoolId,
@@ -559,19 +559,19 @@ async function createPaymentsFromAttendance(
           absentTeacherName: teacherName,
           substituteTeacherId: teacherId,
           substituteTeacherName: `Reposição (sáb. ${saturdayDateLabel})`,
-          date: record.date as string, // YYYY-MM-DD string do TeacherAttendance
+          date: record.date as string,
           period: cls.period,
-          classId: cls.classId || classId,
-          className: cls.className || className,
-          subjectId: cls.subjectId || subjectId,
-          subjectName: cls.subjectName || subjectName,
+          classId: cls.classId,
+          className: cls.className || '',
+          subjectId: cls.subjectId,
+          subjectName: cls.subjectName || '',
           status: 'paid',
-          filledAt: new Date(saturdayDateStr + 'T12:00:00'), // Data real do sábado, não a data de registro
+          filledAt: new Date(saturdayDateStr + 'T12:00:00'),
           notes: `Reposto no sábado de reposição ${saturdayDateStr}`,
         });
         paymentsCreated++;
         remaining--;
-        paidSet.add(payKey);
+        paidSet.add(absKey);
       }
     }
   }
