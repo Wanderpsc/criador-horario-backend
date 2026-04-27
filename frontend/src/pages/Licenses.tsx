@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { licenseAPI } from '../services/api';
-import { Key, Plus, CheckCircle, XCircle, X } from 'lucide-react';
+import { Key, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface License {
@@ -21,6 +21,9 @@ interface License {
 interface LicenseForm {
   expiryDate: string;
   maxSchools: number;
+  userEmail?: string;
+  userName?: string;
+  price?: number;
 }
 
 export default function Licenses() {

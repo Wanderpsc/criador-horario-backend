@@ -1,5 +1,5 @@
-import { Calendar, Download, Upload, Grid3x3, Plus, Save, Wand2, Printer } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Calendar, Download, Save, Wand2, Printer } from 'lucide-react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 // Interfaces baseadas nos dados reais das outras páginas
@@ -222,7 +222,7 @@ export default function Timetables() {
   };
 
   const handleAutoGenerate = () => {
-    toast.info('Geração automática em desenvolvimento...');
+    toast('Geração automática em desenvolvimento...');
   };
 
   const handlePrint = () => {
@@ -230,7 +230,7 @@ export default function Timetables() {
   };
 
   const handleExport = () => {
-    toast.info('Exportação para PDF/Excel em desenvolvimento...');
+    toast('Exportação para PDF/Excel em desenvolvimento...');
   };
 
   return (

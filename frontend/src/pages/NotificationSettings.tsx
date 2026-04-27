@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { Bell, MessageSquare, Clock, Save, RefreshCw, Smartphone, Send } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
 
 interface NotificationConfig {
   reminderEnabled: boolean;

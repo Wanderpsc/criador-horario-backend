@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Search, Edit, Trash2, CheckCircle, XCircle, Calendar, Mail, Building2 } from 'lucide-react';
+import { Users, Search, Trash2, CheckCircle, XCircle, Calendar, Mail, Building2 } from 'lucide-react';
 import { userAPI, User, UserStats } from '../services/userAPI';
 
 export default function UsersManagement() {

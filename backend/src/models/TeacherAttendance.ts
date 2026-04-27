@@ -41,6 +41,14 @@ const classAttendanceSchema = new mongoose.Schema({
   },
   markedAt: {
     type: Date
+  },
+  // Campos de pagamento: marcados quando a ausência foi paga/abatida
+  paidAt: {
+    type: Date
+  },
+  classPaymentId: {
+    type: String,
+    default: ''
   }
 }, { _id: true });
 

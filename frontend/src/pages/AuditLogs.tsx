@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Download, Filter, Calendar, User, Activity, AlertCircle } from 'lucide-react';
+import { FileText, Download, Filter, Activity, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 

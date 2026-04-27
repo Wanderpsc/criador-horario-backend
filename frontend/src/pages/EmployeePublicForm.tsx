@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
-  User, Phone, MapPin, Briefcase, FileText, BookOpen,
+  User, Phone, MapPin, Briefcase, FileText,
   CheckCircle, AlertCircle, ChevronDown, ChevronUp, Send,
 } from 'lucide-react';
 

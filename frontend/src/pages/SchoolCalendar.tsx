@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Check, X, Plus, Edit2, Trash2, Download, FileText, AlertTriangle, Printer, LayoutGrid } from 'lucide-react';
+import { Calendar, Check, X, Plus, Edit2, Trash2, FileText, AlertTriangle, Printer, LayoutGrid } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { schoolDayAPI, scheduleAPI, emergencyScheduleAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -131,12 +131,18 @@ const SchoolCalendar: React.FC = () => {
   const [selectedNotes, setSelectedNotes] = useState<string[]>([]);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [showDaySwapFor, setShowDaySwapFor] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    date: string;
+    dayType: 'regular' | 'saturday' | 'holiday' | 'recess';
+    scheduleId: string;
+    notes: string;
+    followWeekday: '' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
+  }>({
     date: '',
-    dayType: 'regular' as const,
+    dayType: 'regular',
     scheduleId: '',
     notes: '',
-    followWeekday: '' as '' | 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday',
+    followWeekday: '',
   });
 
   useEffect(() => {
@@ -468,8 +474,6 @@ const SchoolCalendar: React.FC = () => {
 
   const handlePrint = async () => {
     const header = await loadPrintHeader();
-    const year = selectedMonth.getFullYear();
-    const month = selectedMonth.getMonth();
     const monthName = selectedMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     const days = getDaysInMonth();
     const monthStats = getMonthStatistics();
@@ -1553,7 +1557,7 @@ const SchoolCalendar: React.FC = () => {
                 <select
                   value={formData.dayType}
                   onChange={e =>
-                    setFormData({ ...formData, dayType: e.target.value as any })
+                    setFormData({ ...formData, dayType: e.target.value as 'regular' | 'saturday' | 'holiday' | 'recess' })
                   }
                   className="w-full border rounded-lg px-3 py-2"
                 >

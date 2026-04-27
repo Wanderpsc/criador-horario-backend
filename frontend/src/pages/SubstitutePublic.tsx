@@ -7,8 +7,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
-  User, BookOpen, GraduationCap, Clock, CheckCircle, AlertCircle,
-  ChevronDown, ChevronRight, ArrowUpCircle, RotateCcw,
+  User, BookOpen, Clock, CheckCircle, AlertCircle,
+  ChevronRight, ArrowUpCircle, RotateCcw,
 } from 'lucide-react';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
@@ -519,7 +519,7 @@ export default function SubstitutePublic() {
                       submitting ||
                       !subjectId ||
                       !classId ||
-                      (fillType === 'reposicao' && teacherId && !selectedDebtId)
+                      (fillType === 'reposicao' && !!teacherId && !selectedDebtId)
                     }
                     onClick={handleSubmitFill}
                     className="flex-2 flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"

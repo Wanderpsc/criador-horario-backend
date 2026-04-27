@@ -24,6 +24,7 @@ import { toast } from 'react-hot-toast';
 
 interface Backup {
   _id: string;
+  id?: string;
   userId: {
     _id: string;
     name: string;

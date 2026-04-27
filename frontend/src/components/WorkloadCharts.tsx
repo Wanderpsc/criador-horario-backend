@@ -361,10 +361,10 @@ const WorkloadCharts: React.FC<WorkloadChartsProps> = ({
                 <Tooltip content={<TooltipWorkload />} cursor={{ fill: 'rgba(99,102,241,0.08)' }} />
                 <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12, paddingTop: 8 }} formatter={(v: string) => <span style={{ color: '#cbd5e1' }}>{v}</span>} />
                 <Bar dataKey="semanal" name="Semanal (h)" fill="url(#gradSemanal)" shape={<HBar3D />} barSize={18}>
-                  <LabelList dataKey="semanal" position="right" fill="#818cf8" fontSize={11} fontWeight="bold" formatter={(v: number) => `${v}h`} />
+                  <LabelList dataKey="semanal" position="right" fill="#818cf8" fontSize={11} fontWeight="bold" formatter={((v: number | string) => `${typeof v === 'number' ? v : 0}h`) as any} />
                 </Bar>
                 <Bar dataKey="mensal" name="Mensal (h)" fill="url(#gradMensal)" shape={<HBar3D />} barSize={18}>
-                  <LabelList dataKey="mensal" position="right" fill="#c084fc" fontSize={11} fontWeight="bold" formatter={(v: number) => `${v}h`} />
+                  <LabelList dataKey="mensal" position="right" fill="#c084fc" fontSize={11} fontWeight="bold" formatter={((v: number | string) => `${typeof v === 'number' ? v : 0}h`) as any} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

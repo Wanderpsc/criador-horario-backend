@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
 import WorkloadCharts from '../components/WorkloadCharts';
-import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml, type PrintHeaderData } from '../utils/printHeader';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface AbsenceDate {
   date: string;

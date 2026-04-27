@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import {
   Shield, Plus, Pencil, Trash2, Printer, Search, RefreshCw,
-  AlertTriangle, CheckCircle, X, Save, Filter, FileText,
+  AlertTriangle, CheckCircle, X, Save, FileText,
 } from 'lucide-react';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────

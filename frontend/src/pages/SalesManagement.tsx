@@ -53,10 +53,10 @@ export default function SalesManagement() {
         schoolId: payment.schoolId,
         amount: payment.amount,
         paymentMethod: payment.paymentMethod,
-        paymentStatus: payment.status === 'approved' ? 'paid' : 
+        paymentStatus: (payment.status === 'approved' ? 'paid' : 
                        payment.status === 'pending' ? 'pending' :
                        payment.status === 'rejected' ? 'failed' : 
-                       payment.status === 'refunded' ? 'refunded' : 'pending',
+                       payment.status === 'refunded' ? 'refunded' : 'pending') as 'pending' | 'paid' | 'failed' | 'refunded',
         saleDate: payment.createdAt || payment.updatedAt,
         school: {
           id: payment.schoolId,

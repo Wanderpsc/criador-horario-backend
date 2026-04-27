@@ -457,46 +457,6 @@ export default function ClassSubjects() {
     }));
   };
 
-  const handleSaveChanges = async (classId: string) => {
-    if (!pendingChanges[classId]) return;
-
-    try {
-      const classItem = classes.find(c => c.id === classId);
-      if (!classItem) return;
-
-      const changes = pendingChanges[classId];
-
-      await classAPI.update(classId, {
-        gradeId: classItem.gradeId,
-        name: classItem.name,
-        shift: classItem.shift,
-        capacity: classItem.capacity,
-        subjectIds: changes.subjectIds,
-        subjectWeeklyHours: changes.weeklyHours
-      });
-
-      // Limpar alterações pendentes
-      const newPendingChanges = { ...pendingChanges };
-      delete newPendingChanges[classId];
-      setPendingChanges(newPendingChanges);
-      setEditingClassId(null);
-
-      toast.success('✅ Associações salvas com sucesso!');
-      await loadData();
-    } catch (error) {
-      console.error('❌ Erro ao salvar associações:', error);
-      toast.error('Erro ao salvar associações');
-    }
-  };
-
-  const handleCancelChanges = (classId: string) => {
-    const newPendingChanges = { ...pendingChanges };
-    delete newPendingChanges[classId];
-    setPendingChanges(newPendingChanges);
-    setEditingClassId(null);
-    toast.success('Alterações descartadas');
-  };
-
   const handleSaveAll = async () => {
     const classesWithChanges = Object.keys(pendingChanges);
     if (classesWithChanges.length === 0) {

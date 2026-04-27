@@ -13,6 +13,7 @@ export interface ISchoolDay extends Document {
   isCompleted: boolean;
   notes?: string;
   followWeekday?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday';
+  schoolYear?: number;
   createdAt: Date;
   updatedAt: Date;
 }

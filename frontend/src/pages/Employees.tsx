@@ -170,7 +170,7 @@ export default function Employees() {
   });
 
   // Query de documentos (ativada quando modal aberto)
-  const { data: empDocs = [], isLoading: docsLoading, refetch: refetchDocs } = useQuery({
+  const { data: empDocs = [], isLoading: docsLoading } = useQuery({
     queryKey: ['employee-docs', docsModalEmp?._id],
     queryFn: async () => {
       if (!docsModalEmp?._id) return [];
@@ -208,7 +208,7 @@ export default function Employees() {
   const inviteMutation = useMutation({
     mutationFn: (employeeId?: string) =>
       api.post('/employee-invite-links', employeeId ? { employeeId } : {}),
-    onSuccess: (res, employeeId) => {
+    onSuccess: (res) => {
       const token = res.data.token;
       const base = window.location.origin + window.location.pathname;
       const url = `${base}#/employee-form/${token}`;

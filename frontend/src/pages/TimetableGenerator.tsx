@@ -7,7 +7,6 @@ import { useAuthStore } from '../store/authStore';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
-import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface TeacherAvailability {
   [day: string]: {

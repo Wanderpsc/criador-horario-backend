@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { scheduleAPI, schoolAPI } from '../services/api';
 import { subscriptionAPI } from '../services/subscriptionAPI';
 import { useAuthStore } from '../store/authStore';
-import { ArrowLeft, RefreshCw, Printer, Download, Lock } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Printer, Lock } from 'lucide-react';
 
 interface ScheduleSlot {
   id: string;

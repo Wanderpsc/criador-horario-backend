@@ -349,7 +349,7 @@ export default function DisplayPanel({
   });
 
   // Buscar horários emergenciais (via rota pública por ID)
-  const { data: emergencySchedules = [], isLoading: isLoadingEmergency } = useQuery({
+  const { data: emergencySchedules = [] } = useQuery({
     queryKey: ['emergency-schedules', selectedEmergencyId],
     queryFn: async () => {
       if (!selectedEmergencyId) return [];
@@ -1024,7 +1024,7 @@ export default function DisplayPanel({
   const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
   // Preparar dados para grade de horários (TODOS OS DIAS) - Memoizado para performance
-  const { allClasses, allPeriods, fullWeekGrid, classGradeMap } = useMemo(() => {
+  const { allClasses, allPeriods, fullWeekGrid } = useMemo(() => {
     // Derivar todas as turmas de TODOS os slots (todos os dias), com fallback de allClassesList
     const fromSlots: { className: string; gradeName?: string }[] = Array.from(
       new Map(
@@ -1698,7 +1698,7 @@ export default function DisplayPanel({
                     <th key={`class-header-${classIndex}-${className}`} className="border-2 border-gray-600 p-3 text-center font-bold min-w-[200px]">
                       <div className="text-lg">{className}</div>
                       {(gradeName || firstSlotForClass?.gradeName) && (
-                        <div className="text-sm text-yellow-300 font-normal mt-1">{gradeName || firstSlotForClass.gradeName}</div>
+                        <div className="text-sm text-yellow-300 font-normal mt-1">{gradeName || firstSlotForClass?.gradeName}</div>
                       )}
                     </th>
                   );
@@ -1722,7 +1722,6 @@ export default function DisplayPanel({
                       const gradeName = classObj.gradeName;
                       const classKey = `${className}|||${gradeName || ''}`;
                       const slot = periodSlots[classKey];
-                      const classInfo = allClassesList.find(c => c.className === className);
                       if (!slot) {
                         return (
                           <td key={`grid-empty-${period}-${classIndex}-${className}`} className="border-2 border-gray-600 p-3 bg-gray-800 text-center">
@@ -2076,7 +2075,7 @@ export default function DisplayPanel({
             }
 
             // ── AUTO ou MANUAL SALVO: linha única com período atual ──────────
-            const periodSlots = fullWeekGrid[selectedDay][activePeriod] || {};
+            const periodSlots = activePeriod !== null ? (fullWeekGrid[selectedDay][activePeriod] || {}) : {};
             const firstSlotInPeriod = Object.values(periodSlots)[0] as any;
             // Largura mínima por coluna (para scroll em mobile)
             const MIN_LABEL_W = 120;
@@ -2352,7 +2351,6 @@ export default function DisplayPanel({
                     const classKey = `${className}|||${gradeName || ''}`;
                     const slot = periodSlots[classKey];
                     // Buscar série diretamente no allClassesList
-                    const classInfo = allClassesList.find(c => c.className === className);
                     if (!slot) {
                       return (
                         <div key={`display-empty-${currentPeriod}-${classIndex}-${className}`} className="bg-gray-700 rounded-xl p-4 border-4 border-gray-600 opacity-30 min-h-[160px]">
@@ -2486,7 +2484,6 @@ export default function DisplayPanel({
                         const gradeName = classObj.gradeName;
                         const classKey = `${className}|||${gradeName || ''}`;
                         const slot = periodSlots[classKey];
-                        const classInfo = allClassesList.find(c => c.className === className);
                         if (!slot) {
                           return (
                             <div key={`airport-empty-${classIndex}-${className}`} className="bg-gray-700 rounded p-2 border border-gray-600 opacity-40">

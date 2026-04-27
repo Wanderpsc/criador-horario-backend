@@ -7,7 +7,7 @@ import {
   MapPin, FileText, DollarSign, Calendar, Users, Filter, 
   Trash2, Ban, PlayCircle, Edit, Save, AlertTriangle
 } from 'lucide-react';
-import { format, addDays, addMonths, addYears, isBefore, isAfter } from 'date-fns';
+import { format, addDays, addMonths, addYears, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface School {
@@ -22,6 +22,8 @@ interface School {
   state?: string;
   responsibleName?: string;
   responsibleEmail?: string;
+  responsibleCPF?: string;
+  responsiblePhone?: string;
   selectedPlan?: string;
   registrationStatus?: 'pending' | 'approved' | 'rejected' | 'suspended';
   paymentStatus: 'pending' | 'paid' | 'expired' | 'cancelled';
@@ -453,7 +455,6 @@ export default function SchoolsManagement() {
 
   const pendingCount = schools.filter(s => !s.approvedByAdmin).length;
   const activeCount = schools.filter(s => s.isActive && s.approvedByAdmin).length;
-  const inactiveCount = schools.filter(s => !s.isActive || !s.approvedByAdmin).length;
 
   return (
     <div>

@@ -34,6 +34,8 @@ interface ClassAttendance {
   grade: string;
   status: 'present' | 'absent' | 'pending';
   markedAt?: Date;
+  paidAt?: Date | string;
+  classPaymentId?: string;
 }
 
 interface AttendanceRecord {
@@ -86,82 +88,9 @@ export default function TeacherAttendance() {
   // Modo fixo: a página de frequência utiliza sempre o dia selecionado
   const reportType = 'daily' as const;
 
-  // Calcular datas automáticas baseado no tipo de relatório
+  // Calcular datas baseado no tipo de relatório (sempre diário)
   const getDateRangeForReportType = () => {
-    const date = new Date(selectedDate + 'T12:00:00');
-    
-    switch (reportType) {
-      case 'daily':
-        return { start: selectedDate, end: selectedDate };
-      
-      case 'weekly': {
-        // Início da semana (domingo)
-        const startOfWeek = new Date(date);
-        startOfWeek.setDate(date.getDate() - date.getDay());
-        // Fim da semana (sábado)
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        return {
-          start: startOfWeek.toISOString().split('T')[0],
-          end: endOfWeek.toISOString().split('T')[0]
-        };
-      }
-      
-      case 'monthly': {
-        // Primeiro dia do mês
-        const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-        // Último dia do mês
-        const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        return {
-          start: startOfMonth.toISOString().split('T')[0],
-          end: endOfMonth.toISOString().split('T')[0]
-        };
-      }
-
-      case 'bimonthly': {
-        const bimonth = Math.floor(date.getMonth() / 2) * 2;
-        const startOfBi = new Date(date.getFullYear(), bimonth, 1);
-        const endOfBi = new Date(date.getFullYear(), bimonth + 2, 0);
-        return {
-          start: startOfBi.toISOString().split('T')[0],
-          end: endOfBi.toISOString().split('T')[0]
-        };
-      }
-
-      case 'quarterly': {
-        const quarter = Math.floor(date.getMonth() / 3) * 3;
-        const startOfQ = new Date(date.getFullYear(), quarter, 1);
-        const endOfQ = new Date(date.getFullYear(), quarter + 3, 0);
-        return {
-          start: startOfQ.toISOString().split('T')[0],
-          end: endOfQ.toISOString().split('T')[0]
-        };
-      }
-
-      case 'semiannual': {
-        const half = date.getMonth() < 6 ? 0 : 6;
-        const startOfH = new Date(date.getFullYear(), half, 1);
-        const endOfH = new Date(date.getFullYear(), half + 6, 0);
-        return {
-          start: startOfH.toISOString().split('T')[0],
-          end: endOfH.toISOString().split('T')[0]
-        };
-      }
-
-      case 'yearly': {
-        // Primeiro dia do ano
-        const startOfYear = new Date(date.getFullYear(), 0, 1);
-        // Último dia do ano
-        const endOfYear = new Date(date.getFullYear(), 11, 31);
-        return {
-          start: startOfYear.toISOString().split('T')[0],
-          end: endOfYear.toISOString().split('T')[0]
-        };
-      }
-      
-      default:
-        return { start: selectedDate, end: selectedDate };
-    }
+    return { start: selectedDate, end: selectedDate };
   };
 
   const dateRange = useMemo(() => {
@@ -225,7 +154,7 @@ export default function TeacherAttendance() {
   }, [selectedDate, isSaturday, calendarData]);
 
   // Buscar horário completo do timetable selecionado
-  const { data: selectedTimetableData } = useQuery({
+  useQuery({
     queryKey: ['selected-timetable-detail', selectedTimetableId],
     queryFn: async () => {
       if (!selectedTimetableId || selectedTimetableId === 'auto') {
@@ -296,13 +225,6 @@ export default function TeacherAttendance() {
     },
     enabled: !!selectedDate
   });
-
-  // Normalizar retorno da API para evitar crashes quando vier objeto em vez de array
-  const calendarEvents: any[] = Array.isArray(calendarData)
-    ? calendarData
-    : Array.isArray((calendarData as any)?.data)
-      ? (calendarData as any).data
-      : [];
 
   const attendanceList: AttendanceRecord[] = Array.isArray(attendanceRecords)
     ? attendanceRecords
@@ -550,7 +472,7 @@ export default function TeacherAttendance() {
     window.print();
   };
 
-  // Gerar relatório por professor - AGORA USA DADOS DO BACKEND COM CÁLCULO CORRETO
+  // Gerar relatório por professor - usa dados do backend
   const generateReport = (): AttendanceReport[] => {
     // Usar dados do backend que já vêm com aulas previstas calculadas corretamente
     if (generalReportData && Array.isArray(generalReportData) && generalReportData.length > 0) {
@@ -599,7 +521,8 @@ export default function TeacherAttendance() {
     return Object.values(reportMap);
   };
 
-  const report = generateReport();
+  // Relatório calculado (gerado mas não exibido nesta página — ver TeacherFrequencyReport)
+  generateReport();
 
   // Abrir modal de seleção de impressão
 
@@ -1445,15 +1368,22 @@ export default function TeacherAttendance() {
                               </button>
                             </div>
                             
-                            {/* Botão de Pagamento - apenas para aulas ausentes */}
+                            {/* Pagamento - apenas para aulas ausentes */}
                             {cls.status === 'absent' && (
-                              <button
-                                onClick={() => handleOpenPaymentModalForClass(teacher, cls)}
-                                className="w-full mt-2 px-2 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded text-xs font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-1"
-                              >
-                                <DollarSign size={12} />
-                                Registrar Pagamento
-                              </button>
+                              cls.paidAt ? (
+                                <div className="w-full mt-2 px-2 py-1.5 bg-green-100 text-green-800 rounded text-xs font-medium flex items-center justify-center gap-1 border border-green-300">
+                                  <DollarSign size={12} />
+                                  Pago em {new Date(cls.paidAt).toLocaleDateString('pt-BR')}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenPaymentModalForClass(teacher, cls)}
+                                  className="w-full mt-2 px-2 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded text-xs font-medium hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-1"
+                                >
+                                  <DollarSign size={12} />
+                                  Registrar Pagamento
+                                </button>
+                              )
                             )}
                           </div>
                               );

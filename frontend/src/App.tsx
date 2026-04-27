@@ -18,7 +18,6 @@ import ClassSubjects from './pages/ClassSubjects';
 import TeacherSubjectAssociation from './pages/TeacherSubjectAssociation';
 import TimeSlots from './pages/TimeSlots';
 import SchoolCalendar from './pages/SchoolCalendar';
-import SchoolSettings from './pages/SchoolSettings';
 import DisplayPanel from './pages/DisplayPanel';
 import DisplayPanelConfig from './pages/DisplayPanelConfig';
 import EmergencySchedule from './pages/EmergencySchedule';

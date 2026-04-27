@@ -1,4 +1,4 @@
-import { Clock, Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Clock, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 

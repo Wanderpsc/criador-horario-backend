@@ -35,6 +35,7 @@ export interface IMakeupSaturday extends Document {
       hours: number;
     }>;
   }>;
+  schoolYear?: number;
   createdAt: Date;
   updatedAt: Date;
 }

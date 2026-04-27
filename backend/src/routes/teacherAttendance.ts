@@ -1774,18 +1774,11 @@ router.post('/payment-class', auth, async (req: AuthRequest, res) => {
 
     await payment.save();
 
-    // Atualizar o status da aula específica para "presente" (dando baixa)
-    attendanceRecord.classes[classIndex].status = 'present';
-    attendanceRecord.classes[classIndex].markedAt = new Date();
-
-    // Recalcular estatísticas
-    attendanceRecord.totalPresentClasses = attendanceRecord.classes.filter((c: any) => c.status === 'present').length;
-    attendanceRecord.totalAbsentClasses = attendanceRecord.classes.filter((c: any) => c.status === 'absent').length;
-    attendanceRecord.totalPendingClasses = attendanceRecord.classes.filter((c: any) => c.status === 'pending').length;
-
-    if (attendanceRecord.totalScheduledClasses > 0) {
-      attendanceRecord.attendanceRate = (attendanceRecord.totalPresentClasses / attendanceRecord.totalScheduledClasses) * 100;
-    }
+    // Marcar a aula como paga sem alterar o status 'absent'
+    // O status permanece 'absent' para rastreamento correto de déficits
+    // O abatimento do déficit é feito via consulta ao ClassPayment no relatório
+    (attendanceRecord.classes[classIndex] as any).paidAt = new Date();
+    (attendanceRecord.classes[classIndex] as any).classPaymentId = payment._id.toString();
 
     await attendanceRecord.save();
 

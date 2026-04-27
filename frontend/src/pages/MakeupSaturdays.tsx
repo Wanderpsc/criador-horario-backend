@@ -202,7 +202,7 @@ export default function MakeupSaturdays() {
 
     console.log(`📅 Período: ${startDate || 'início'} até ${endDate || 'fim'}`);
     console.log(`📚 Horários emergenciais no período: ${filteredSchedules.length}`);
-    console.log(`📋 Lista de horários emergenciais:`, filteredSchedules.map(s => ({
+    console.log(`📋 Lista de horários emergenciais:`, filteredSchedules.map((s: any) => ({
       title: s.title,
       date: s.date,
       makeupClassesCount: s.makeupClasses?.length || 0,
@@ -388,136 +388,6 @@ export default function MakeupSaturdays() {
     }
   };
 
-  // Gerar horário de reposição automaticamente (frontend - método antigo)
-  const generateMakeupSchedule = () => {
-    console.log('🎯 Iniciando geração de horário de reposição...');
-    console.log('📅 Data selecionada:', selectedDate);
-    console.log('📊 Débitos de professores:', teacherDebts);
-    console.log(`⏰ Configuração: ${maxPeriods} aulas de ${lessonDuration} minutos`);
-    
-    setIsGenerating(true);
-
-    try {
-      // 🎯 Gerar períodos baseados na configuração do usuário
-      const basePeriods = [];
-      let currentHour = 8; // Início às 8h
-      let currentMinute = 0;
-
-      for (let i = 1; i <= maxPeriods; i++) {
-        const startHour = currentHour.toString().padStart(2, '0');
-        const startMin = currentMinute.toString().padStart(2, '0');
-        
-        // Calcular horário de término
-        const totalMinutes = currentMinute + lessonDuration;
-        const endHour = currentHour + Math.floor(totalMinutes / 60);
-        const endMinute = totalMinutes % 60;
-        
-        const endHourStr = endHour.toString().padStart(2, '0');
-        const endMinStr = endMinute.toString().padStart(2, '0');
-
-        basePeriods.push({
-          period: i,
-          startTime: `${startHour}:${startMin}`,
-          endTime: `${endHourStr}:${endMinStr}`
-        });
-
-        // Atualizar para próximo período
-        currentHour = endHour;
-        currentMinute = endMinute;
-      }
-
-      console.log('📋 Períodos configurados:', basePeriods);
-
-      const schedule: { [classId: string]: MakeupSlot[] } = {};
-
-      // 🎯 MUDANÇA: Incluir TODOS os débitos, independente da quantidade de aulas por turma
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('📊 DISTRIBUINDO TODOS OS DÉBITOS POR TURMA/SÉRIE');
-      console.log('═══════════════════════════════════════════════════════');
-
-      // Distribuir as reposições por turma
-      teacherDebts.forEach(teacherDebt => {
-        console.log(`\n👨‍🏫 Professor: ${teacherDebt.teacherName} (${teacherDebt.totalDebts} aulas devidas)`);
-        
-        teacherDebt.debts.forEach(debt => {
-          if (!schedule[debt.classId]) {
-            schedule[debt.classId] = [];
-          }
-
-          console.log(`  📚 ${debt.subjectName} em ${debt.className}: ${debt.missedLessons} aula(s)`);
-
-          // ✅ CORRIGIDO: Adicionar TODAS as aulas que o professor deve
-          for (let i = 0; i < debt.missedLessons; i++) {
-            const currentLength = schedule[debt.classId].length;
-            
-            // Gerar período dinamicamente
-            let period, startTime, endTime;
-            
-            if (currentLength < basePeriods.length) {
-              // Usar períodos configurados
-              const basePeriod = basePeriods[currentLength];
-              period = basePeriod.period;
-              startTime = basePeriod.startTime;
-              endTime = basePeriod.endTime;
-            } else {
-              // Criar períodos extras além do máximo configurado
-              period = currentLength + 1;
-              
-              // Continuar calculando horários dinamicamente
-              const extraPeriodIndex = currentLength - basePeriods.length;
-              const lastPeriod = basePeriods[basePeriods.length - 1];
-              
-              // Parsear último horário
-              const [lastEndHour, lastEndMin] = lastPeriod.endTime.split(':').map(Number);
-              const totalMinutesFromLast = (extraPeriodIndex + 1) * lessonDuration;
-              
-              const startHour = lastEndHour + Math.floor(totalMinutesFromLast / 60);
-              const startMinute = (lastEndMin + (totalMinutesFromLast % 60)) % 60;
-              
-              const endHour = startHour + Math.floor(lessonDuration / 60);
-              const endMinute = (startMinute + (lessonDuration % 60)) % 60;
-              
-              startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
-              endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-            }
-
-            schedule[debt.classId].push({
-              period,
-              startTime,
-              endTime,
-              teacherId: teacherDebt.teacherId,
-              teacherName: teacherDebt.teacherName,
-              subjectId: debt.subjectId,
-              subjectName: debt.subjectName,
-              classId: debt.classId,
-              className: debt.className
-            });
-
-            console.log(`    ✓ Aula ${i + 1}/${debt.missedLessons} adicionada (período ${period}: ${startTime}-${endTime})`);
-          }
-        });
-      });
-
-      console.log('\n═══════════════════════════════════════════════════════');
-      console.log('✅ HORÁRIO GERADO COM TODOS OS DÉBITOS:');
-      console.log('═══════════════════════════════════════════════════════');
-      Object.entries(schedule).forEach(([classId, slots]) => {
-        const className = slots[0]?.className || classId;
-        console.log(`📋 ${className}: ${slots.length} aulas`);
-      });
-      console.log(`📚 Total de turmas: ${Object.keys(schedule).length}`);
-      console.log(`📊 Total de aulas: ${Object.values(schedule).flat().length}`);
-      console.log('═══════════════════════════════════════════════════════\n');
-      
-      setMakeupSchedule(schedule);
-      
-    } catch (error) {
-      console.error('❌ Erro ao gerar horário:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   // Salvar horário de reposição
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -590,51 +460,6 @@ export default function MakeupSaturdays() {
     onError: (error) => {
       console.error('Erro ao excluir:', error);
       toast.error('Erro ao excluir horário de reposição');
-    }
-  });
-
-  // Mutation para marcar presença de professor
-  const toggleTeacherAttendanceMutation = useMutation({
-    mutationFn: async ({ id, teacherId, attended }: { id: string; teacherId: string; attended: boolean }) => {
-      const url = `/saturday-makeup/${id}/attendance`;
-      console.log('🔄 Atualizando presença:', { id, teacherId, attended, url });
-      console.log('📡 URL completa:', `${api.defaults.baseURL}${url}`);
-      return await api.put(url, { teacherId, attended });
-    },
-    onSuccess: () => {
-      toast.success('✅ Presença atualizada!');
-      queryClient.invalidateQueries({ queryKey: ['makeup-saturdays'] });
-      queryClient.invalidateQueries({ queryKey: ['emergency-schedules'] });
-    },
-    onError: (error: any) => {
-      console.error('❌ Erro COMPLETO ao atualizar presença:', error);
-      console.error('📋 Status:', error.response?.status);
-      console.error('📋 Data:', error.response?.data);
-      console.error('📋 Config:', error.config);
-      toast.error('Erro ao atualizar presença');
-    }
-  });
-
-  // Processar sábado após realização (dar baixa e acumular débitos)
-  const processSaturdayMutation = useMutation({
-    mutationFn: async (saturdayId: string) => {
-      console.log('🔄 Processando sábado:', saturdayId);
-      return await api.post(`/saturday-makeup/${saturdayId}/process`);
-    },
-    onSuccess: (response) => {
-      const { totalRealizedHours, absentTeachers, attendedTeachers } = response.data.data;
-      toast.success(
-        `✅ Sábado processado!\n` +
-        `${totalRealizedHours} horas realizadas\n` +
-        `${attendedTeachers} professor(es) presente(s)\n` +
-        `${absentTeachers} ausente(s) - débitos acumulados`
-      );
-      queryClient.invalidateQueries({ queryKey: ['makeup-saturdays'] });
-      queryClient.invalidateQueries({ queryKey: ['emergency-schedules'] });
-    },
-    onError: (error: any) => {
-      console.error('❌ Erro ao processar sábado:', error);
-      toast.error('Erro ao processar sábado');
     }
   });
 
@@ -968,7 +793,7 @@ export default function MakeupSaturdays() {
   // Calcular resumo de confirmações a partir de um sábado salvo
   const getSavedSaturdaySlotSummary = (saved: any) => {
     const summary = new Map<string, { teacherName: string; total: number; confirmed: number }>();
-    Object.entries(saved.schedule || {}).forEach(([classId, slots]: [string, any]) => {
+    Object.entries(saved.schedule || {}).forEach(([_classId, slots]: [string, any]) => {
       (slots as any[]).forEach((slot: any) => {
         if (!slot?.teacherId) return;
         if (!summary.has(slot.teacherId)) {

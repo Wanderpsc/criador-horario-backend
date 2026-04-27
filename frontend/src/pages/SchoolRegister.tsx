@@ -52,7 +52,7 @@ export default function SchoolRegister() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [recommendedPlan, setRecommendedPlan] = useState<string>('');
+  const [, setRecommendedPlan] = useState<string>('');
   const navigate = useNavigate();
 
   const password = watch('password');
@@ -77,7 +77,6 @@ export default function SchoolRegister() {
   // Validar se o plano selecionado é adequado
   const validatePlanSelection = () => {
     const teachers = numberOfTeachers || 0;
-    const recommended = calculateRecommendedPlan();
     
     if (selectedPlan === 'basico' && teachers > 30) {
       return false;

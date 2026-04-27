@@ -52,7 +52,7 @@ export default function Teachers() {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<TeacherForm>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<TeacherForm>({
     defaultValues: {
       contractType: '40h',
       weeklyWorkload: 26

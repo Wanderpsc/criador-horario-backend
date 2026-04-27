@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DollarSign, CheckCircle, XCircle, Clock, RefreshCw, Search, Filter, Check, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';

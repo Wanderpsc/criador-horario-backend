@@ -1,4 +1,4 @@
-import { Key, CheckCircle, XCircle } from 'lucide-react';
+import { Key, CheckCircle } from 'lucide-react';
 
 export default function LicenseManagement() {
   return (

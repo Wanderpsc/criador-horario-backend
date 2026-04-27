@@ -132,6 +132,30 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     });
 
     await payment.save();
+
+    // Sincronizar com TeacherAttendance quando criado como pago
+    if (payment.status === 'paid' || payment.status === 'filled') {
+      try {
+        const attend = await TeacherAttendance.findOne({
+          schoolId,
+          teacherId: payment.absentTeacherId,
+          date: payment.date,
+        });
+        if (attend) {
+          const ci = (attend.classes as any[]).findIndex(
+            (c: any) => c.period === payment.period && c.classId === payment.classId
+          );
+          if (ci !== -1) {
+            (attend.classes[ci] as any).paidAt = new Date();
+            (attend.classes[ci] as any).classPaymentId = payment._id.toString();
+            await attend.save();
+          }
+        }
+      } catch (_syncErr) {
+        // Não bloquear a resposta por erro na sincronização
+      }
+    }
+
     res.status(201).json(payment);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -151,6 +175,30 @@ router.patch('/:id/status', auth, async (req: AuthRequest, res) => {
       { new: true }
     );
     if (!payment) return res.status(404).json({ message: 'Registro não encontrado' });
+
+    // Sincronizar com TeacherAttendance: marcar a aula como paga
+    if (status === 'paid' || status === 'filled') {
+      try {
+        const attend = await TeacherAttendance.findOne({
+          schoolId,
+          teacherId: payment.absentTeacherId,
+          date: payment.date,
+        });
+        if (attend) {
+          const ci = (attend.classes as any[]).findIndex(
+            (c: any) => c.period === payment.period && c.classId === payment.classId
+          );
+          if (ci !== -1) {
+            (attend.classes[ci] as any).paidAt = new Date();
+            (attend.classes[ci] as any).classPaymentId = payment._id.toString();
+            await attend.save();
+          }
+        }
+      } catch (_syncErr) {
+        // Não bloquear a resposta por erro na sincronização
+      }
+    }
+
     res.json(payment);
   } catch (err: any) {
     res.status(500).json({ message: err.message });

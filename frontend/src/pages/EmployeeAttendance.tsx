@@ -9,9 +9,8 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import {
-  Clock, Users, FileText, AlertTriangle, CheckCircle, XCircle,
-  Calendar, Printer, Download, ChevronDown, ChevronUp,
-  RefreshCw, Save, Search, Filter, Eye, Bell, BarChart2,
+  Clock, Printer, ChevronDown, ChevronUp,
+  RefreshCw, Save, Search, Bell, BarChart2,
 } from 'lucide-react';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -115,7 +114,6 @@ export default function EmployeeAttendancePage() {
   const [search, setSearch] = useState('');
   const [filterSetor, setFilterSetor] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   // ── Relatórios
   const [rptStart, setRptStart] = useState(() => {
@@ -458,7 +456,6 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
 
   // ─── IMPRESSÃO: NOTIFICAÇÕES EM LOTE ─────────────────────────────────────────
   const printAllNotices = (records: AttendanceRow[]) => {
-    const now = new Date().toLocaleString('pt-BR');
     const today = new Date().toLocaleDateString('pt-BR');
 
     const pages = records.map(r => {

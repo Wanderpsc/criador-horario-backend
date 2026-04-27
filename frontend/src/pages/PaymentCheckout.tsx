@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CreditCard, QrCode, Clock, Check, X, Loader, ChevronDown } from 'lucide-react';
+import { CreditCard, QrCode, Clock, Check, X, Loader } from 'lucide-react';
 import api from '../services/api';
 import SaleContractModal from '../components/SaleContractModal';
 import type { ContractAcceptanceData } from '../components/SaleContractModal';

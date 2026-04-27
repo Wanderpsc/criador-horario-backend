@@ -11,7 +11,7 @@ const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  console.log('🔍 [API] Fazendo request para:', config.baseURL + config.url);
+  console.log('🔍 [API] Fazendo request para:', (config.baseURL ?? '') + (config.url ?? ''));
   
   // Tenta pegar do zustand primeiro
   const authStorage = localStorage.getItem('auth-storage');

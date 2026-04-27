@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Eye, Download, Shield, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Download, Shield, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import SaleContractModal from '../components/SaleContractModal';
 import type { ContractAcceptanceData } from '../components/SaleContractModal';

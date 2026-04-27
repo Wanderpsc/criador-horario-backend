@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
-import { useAuthStore } from '../store/authStore';
 import {
-  DollarSign, Calendar, Clock, User, Link2, Copy, RefreshCw,
-  CheckCircle, XCircle, AlertCircle, Eye, Trash2, Plus, BookOpen,
+  DollarSign, User, Link2, Copy, RefreshCw,
+  CheckCircle, XCircle, AlertCircle, Trash2, BookOpen,
   GraduationCap, Share2, ExternalLink, Printer,
 } from 'lucide-react';
 
@@ -58,7 +57,6 @@ const statusColor = (s: ClassPayment['status']) =>
   'bg-yellow-100 text-yellow-800';
 
 export default function ClassPayments() {
-  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState<'gaps' | 'payments' | 'links' | 'report'>('gaps');
@@ -166,8 +164,6 @@ export default function ClassPayments() {
     },
   });
 
-  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
-    .replace('/api', '');
   const buildLinkUrl = (token: string) => `${window.location.origin}/#/substitute/${token}`;
 
   const copyToClipboard = (text: string) => {
