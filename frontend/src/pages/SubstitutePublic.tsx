@@ -66,6 +66,7 @@ export default function SubstitutePublic() {
   const [teachers, setTeachers] = useState<TeacherOption[]>([]);
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
   const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [teacherSubjectsMap, setTeacherSubjectsMap] = useState<Record<string, string[]>>({});
 
   const [step, setStep] = useState<Step>('identify');
 
@@ -98,6 +99,7 @@ export default function SubstitutePublic() {
         setTeachers(res.data.teachers || []);
         setSubjects(res.data.subjects || []);
         setClasses(res.data.classes || []);
+        setTeacherSubjectsMap(res.data.teacherSubjectsMap || {});
         setStatus('ok');
       })
       .catch(err => {
@@ -141,10 +143,18 @@ export default function SubstitutePublic() {
 
   const handleTeacherSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
-    if (val === '') { setTeacherId(''); setTeacherName(''); return; }
+    if (val === '') { setTeacherId(''); setTeacherName(''); setSubjectId(''); setSubjectName(''); return; }
     const t = teachers.find(t => t._id === val);
-    if (t) { setTeacherId(t._id); setTeacherName(t.name); }
+    if (t) { setTeacherId(t._id); setTeacherName(t.name); setSubjectId(''); setSubjectName(''); }
   };
+
+  // Disciplinas filtradas pelo professor selecionado (ou todas se não há mapeamento)
+  const filteredSubjects = (() => {
+    if (!teacherId) return subjects;
+    const allowedIds = teacherSubjectsMap[teacherId];
+    if (!allowedIds || allowedIds.length === 0) return subjects;
+    return subjects.filter(s => allowedIds.includes(s._id));
+  })();
 
   const handleSubjectSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const s = subjects.find(s => s._id === e.target.value);
@@ -425,10 +435,13 @@ export default function SubstitutePublic() {
                     className="w-full border rounded-lg px-3 py-2.5 text-sm"
                   >
                     <option value="">— Selecione a disciplina —</option>
-                    {subjects.map(s => (
+                    {filteredSubjects.map(s => (
                       <option key={s._id} value={s._id}>{s.name}</option>
                     ))}
                   </select>
+                  {teacherId && filteredSubjects.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">Nenhuma disciplina cadastrada para este professor.</p>
+                  )}
                 </div>
 
                 {/* Turma */}

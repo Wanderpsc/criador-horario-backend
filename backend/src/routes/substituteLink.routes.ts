@@ -8,9 +8,31 @@ import User from '../models/User';
 import Teacher from '../models/Teacher';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
+import Schedule from '../models/Schedule';
+import TeacherSubject from '../models/TeacherSubject';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
+
+// ─────────────────────────────────────────────
+// Helper: buscar mapa de períodos da escola (period -> {startTime, endTime})
+// ─────────────────────────────────────────────
+async function getSchedulePeriodMap(schoolId: string): Promise<Map<number, { startTime: string; endTime: string }>> {
+  const periodMap = new Map<number, { startTime: string; endTime: string }>();
+  try {
+    const schedule = await Schedule.findOne({ userId: schoolId }).sort({ createdAt: -1 }).lean();
+    if (schedule && schedule.periods && schedule.periods.length > 0) {
+      for (const p of schedule.periods) {
+        if (p.period != null && p.startTime && p.endTime) {
+          periodMap.set(Number(p.period), { startTime: p.startTime, endTime: p.endTime });
+        }
+      }
+    }
+  } catch (_) {
+    // Se não encontrar schedule, retorna mapa vazio
+  }
+  return periodMap;
+}
 
 // ─────────────────────────────────────────────
 // POST /  — gerar link para uma data (auth)
@@ -25,6 +47,9 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     const schoolUser = await User.findById(schoolId).select('schoolName name');
     const schoolName = (schoolUser as any)?.schoolName || (schoolUser as any)?.name || '';
 
+    // Buscar mapa de horários reais dos períodos (do Schedule configurado pela escola)
+    const periodMap = await getSchedulePeriodMap(schoolId);
+
     // Buscar ausências do dia
     const records = await TeacherAttendance.find({ schoolId, date });
 
@@ -37,10 +62,12 @@ router.post('/', auth, async (req: AuthRequest, res) => {
           const key = `${cls.period}|${rec.teacherId}|${cls.classId}`;
           if (seenSlots.has(key)) continue;
           seenSlots.add(key);
+          // Usar horários do Schedule da escola (se disponível) para garantir duração correta
+          const periodTimes = periodMap.get(cls.period);
           slots.push({
             period: cls.period,
-            startTime: cls.startTime,
-            endTime: cls.endTime,
+            startTime: periodTimes?.startTime || cls.startTime,
+            endTime: periodTimes?.endTime || cls.endTime,
             absentTeacherId: rec.teacherId,
             absentTeacherName: rec.teacherName,
             classId: cls.classId,
@@ -115,6 +142,9 @@ router.get('/public/:token', async (req, res) => {
     try {
       const records = await TeacherAttendance.find({ schoolId: link.schoolId, date: link.date });
       if (records.length > 0) {
+        // Buscar horários reais dos períodos do Schedule da escola
+        const periodMap = await getSchedulePeriodMap(link.schoolId.toString());
+
         const seenSlots = new Set<string>();
         const freshSlots: any[] = [];
 
@@ -133,10 +163,12 @@ router.get('/public/:token', async (req, res) => {
                   s.classId?.toString() === cls.classId?.toString()
               );
 
+              // Usar horários do Schedule da escola para garantir duração correta (60 min)
+              const periodTimes = periodMap.get(cls.period);
               freshSlots.push({
                 period: cls.period,
-                startTime: cls.startTime,
-                endTime: cls.endTime,
+                startTime: periodTimes?.startTime || cls.startTime,
+                endTime: periodTimes?.endTime || cls.endTime,
                 absentTeacherId: rec.teacherId,
                 absentTeacherName: rec.teacherName,
                 classId: cls.classId,
@@ -168,7 +200,19 @@ router.get('/public/:token', async (req, res) => {
     const classes = await Class.find({ userId: link.schoolId })
       .select('_id name').lean();
 
-    res.json({ link, teachers, subjects, classes });
+    // Buscar disciplinas por professor (TeacherSubject) para filtrar no formulário
+    const teacherSubjectAssocs = await TeacherSubject.find({ schoolId: link.schoolId })
+      .select('teacherId subjectId').lean();
+    // Montar mapa: teacherId -> Set de subjectIds únicos
+    const teacherSubjectsMap: Record<string, string[]> = {};
+    for (const assoc of teacherSubjectAssocs) {
+      const tid = assoc.teacherId.toString();
+      const sid = assoc.subjectId.toString();
+      if (!teacherSubjectsMap[tid]) teacherSubjectsMap[tid] = [];
+      if (!teacherSubjectsMap[tid].includes(sid)) teacherSubjectsMap[tid].push(sid);
+    }
+
+    res.json({ link, teachers, subjects, classes, teacherSubjectsMap });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -322,6 +366,9 @@ router.put('/:id/refresh', auth, async (req: AuthRequest, res) => {
     // Re-buscar ausências do dia
     const records = await TeacherAttendance.find({ schoolId, date: link.date });
 
+    // Buscar horários reais dos períodos do Schedule da escola
+    const periodMap = await getSchedulePeriodMap(schoolId);
+
     const seenSlots = new Set<string>();
     const freshSlots: any[] = [];
 
@@ -340,10 +387,12 @@ router.put('/:id/refresh', auth, async (req: AuthRequest, res) => {
               s.classId?.toString() === cls.classId?.toString()
           );
 
+          // Usar horários do Schedule da escola para garantir duração correta (60 min)
+          const periodTimes = periodMap.get(cls.period);
           freshSlots.push({
             period: cls.period,
-            startTime: cls.startTime,
-            endTime: cls.endTime,
+            startTime: periodTimes?.startTime || cls.startTime,
+            endTime: periodTimes?.endTime || cls.endTime,
             absentTeacherId: rec.teacherId,
             absentTeacherName: rec.teacherName,
             classId: cls.classId,
