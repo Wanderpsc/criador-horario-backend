@@ -26,6 +26,7 @@ import ClassPayments from './pages/ClassPayments';
 import Employees from './pages/Employees';
 import EmployeeAttendance from './pages/EmployeeAttendance';
 import EPIControl from './pages/EPIControl';
+import Ferias from './pages/Ferias';
 import SubstitutePublic from './pages/SubstitutePublic';
 import EmployeePublicForm from './pages/EmployeePublicForm';
 import TeacherAttendance from './pages/TeacherAttendance';
@@ -169,6 +170,7 @@ function App() {
           <Route path="employees" element={<ClientRoute><Employees /></ClientRoute>} />
           <Route path="employee-attendance" element={<ClientRoute><EmployeeAttendance /></ClientRoute>} />
           <Route path="epi-control" element={<ClientRoute><EPIControl /></ClientRoute>} />
+          <Route path="ferias" element={<ClientRoute><Ferias /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><Settings /></ClientRoute>} />
           <Route path="audit-logs" element={<ClientRoute><AuditLogs /></ClientRoute>} />
           <Route path="timetables" element={<ClientRoute><Timetables /></ClientRoute>} />

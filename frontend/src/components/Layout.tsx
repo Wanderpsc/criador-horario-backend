@@ -29,6 +29,7 @@ import {
   ScrollText,
   CalendarCheck,
   Briefcase,
+  Palmtree,
   ChevronDown,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -324,6 +325,16 @@ export default function Layout() {
             badge: 'NOVO',
             highlight: true,
             subtitle: 'Segurança do Trabalho'
+          },
+          {
+            icon: Palmtree,
+            label: 'Controle de Férias',
+            path: '/ferias',
+            description: '🌴 Agendamento, aviso e termo de férias de funcionários e professores',
+            color: 'teal',
+            badge: 'NOVO',
+            highlight: true,
+            subtitle: 'Gestão de Pessoal'
           }
         ]
       : []),
