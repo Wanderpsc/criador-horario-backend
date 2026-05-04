@@ -61,6 +61,7 @@ import employeeAttendanceRoutes from './routes/employeeAttendance.routes';
 import employeeDocumentRoutes from './routes/employeeDocument.routes';
 import epiControlRoutes from './routes/epiControl.routes';
 import feriasRoutes from './routes/ferias.routes';
+import attendanceLinkRoutes from './routes/attendanceLink.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
@@ -223,6 +224,7 @@ app.use('/api/employee-attendance', employeeAttendanceRoutes);
 app.use('/api/employee-documents', employeeDocumentRoutes);
 app.use('/api/epi-control', epiControlRoutes);
 app.use('/api/ferias', feriasRoutes);
+app.use('/api/attendance-links', attendanceLinkRoutes);
 
 // Rota de health check
 const healthPayload = () => ({

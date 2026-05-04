@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { scheduleAPI, teacherAPI } from '../services/api';
+import api, { scheduleAPI, teacherAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit2, Trash2, X, Printer, Download, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Printer, Download, FileSpreadsheet, Timer, Copy, CheckCheck } from 'lucide-react';
 import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss, printFooterCss, buildPrintFooterHtml } from '../utils/printHeader';
 
 interface TeacherAvailability {
@@ -52,6 +52,38 @@ export default function Teachers() {
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // ─── Link de ponto eletrônico ──────────────────────────────────
+  const [pontoModalOpen, setPontoModalOpen] = useState(false);
+  const [pontoLink, setPontoLink] = useState('');
+  const [pontoCopied, setPontoCopied] = useState(false);
+  const [pontoTeacherName, setPontoTeacherName] = useState('');
+  const [pontoGenerating, setPontoGenerating] = useState(false);
+
+  const generatePontoLink = async (teacher: Teacher) => {
+    setPontoGenerating(true);
+    try {
+      const res = await api.post('/attendance-links', { personType: 'teacher', personId: teacher.id });
+      const token = res.data.token;
+      const base = window.location.origin + window.location.pathname;
+      const url = `${base}#/ponto/${token}`;
+      setPontoLink(url);
+      setPontoTeacherName(teacher.name);
+      setPontoCopied(false);
+      setPontoModalOpen(true);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao gerar link de ponto.');
+    } finally {
+      setPontoGenerating(false);
+    }
+  };
+
+  const copyPontoLink = () => {
+    navigator.clipboard.writeText(pontoLink).then(() => {
+      setPontoCopied(true);
+      setTimeout(() => setPontoCopied(false), 2500);
+    });
+  };
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TeacherForm>({
     defaultValues: {
       contractType: '40h',
@@ -580,6 +612,14 @@ export default function Teachers() {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => generatePontoLink(teacher)}
+                    disabled={pontoGenerating}
+                    className="text-blue-500 hover:text-blue-700 disabled:opacity-50"
+                    title="Gerar link de ponto eletrônico"
+                  >
+                    <Timer className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleEdit(teacher)}
                     className="text-blue-600 hover:text-blue-700"
                   >
@@ -824,6 +864,63 @@ export default function Teachers() {
           onClose={() => setShowAvailabilityModal(false)}
           onSave={handleSaveAvailability}
         />
+      )}
+
+      {/* ── MODAL PONTO ELETRÔNICO ─────────────────────────────────────────── */}
+      {pontoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Timer className="w-5 h-5 text-purple-600" />
+                <h2 className="text-base font-bold text-gray-800">Link de Ponto Eletrônico</h2>
+              </div>
+              <button onClick={() => setPontoModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                Envie o link abaixo para <strong>{pontoTeacherName}</strong> confirmar presença diariamente.
+                O link é <strong>permanente</strong> — use sempre o mesmo.
+              </p>
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <span className="text-xs text-gray-700 break-all flex-1 font-mono">{pontoLink}</span>
+                <button
+                  onClick={copyPontoLink}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs rounded-lg hover:bg-purple-700 font-medium"
+                >
+                  {pontoCopied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {pontoCopied ? 'Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 text-xs text-purple-700 space-y-1">
+                <p>📚 <strong>Como usar:</strong></p>
+                <p>1. Envie este link ao professor (salvar no celular ou via QR Code)</p>
+                <p>2. A cada dia, o professor acessa o link e confirma presença nas aulas</p>
+                <p>3. A frequência é lançada automaticamente no sistema</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    const text = `Olá ${pontoTeacherName}! Acesse o link abaixo para confirmar sua presença diária:\n${pontoLink}`;
+                    const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                    window.open(wa, '_blank');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 font-medium"
+                >
+                  📱 Enviar via WhatsApp
+                </button>
+                <button
+                  onClick={() => setPontoModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

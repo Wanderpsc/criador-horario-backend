@@ -29,6 +29,7 @@ import EPIControl from './pages/EPIControl';
 import Ferias from './pages/Ferias';
 import SubstitutePublic from './pages/SubstitutePublic';
 import EmployeePublicForm from './pages/EmployeePublicForm';
+import PontoPublico from './pages/PontoPublico';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
 import AnoLetivo from './pages/AnoLetivo';
@@ -140,6 +141,8 @@ function App() {
         <Route path="/substitute/:token" element={<SubstitutePublic />} />
         {/* Link público de cadastro/atualização de funcionário — sem auth */}
         <Route path="/employee-form/:token" element={<EmployeePublicForm />} />
+        {/* Link público de ponto eletrônico — sem auth */}
+        <Route path="/ponto/:token" element={<PontoPublico />} />
         
         <Route path="/" element={
           <PrivateRoute>

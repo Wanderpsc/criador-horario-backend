@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   Users, Plus, Search, Pencil, Trash2, Printer, X, ChevronDown, ChevronUp,
   User, Phone, MapPin, Briefcase, FileText, BookOpen, Eye, Link2, Copy, CheckCheck,
-  Upload, FolderOpen, Download, AlertTriangle,
+  Upload, FolderOpen, Download, AlertTriangle, Timer,
 } from 'lucide-react';
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -156,6 +156,12 @@ export default function Employees() {
   const [inviteCopied, setInviteCopied] = useState(false);
   const [inviteEmployeeName, setInviteEmployeeName] = useState('');
 
+  // ─── Link de ponto eletrônico ─────────────────────────────────────────────
+  const [pontoModalOpen, setPontoModalOpen] = useState(false);
+  const [pontoLink, setPontoLink] = useState('');
+  const [pontoCopied, setPontoCopied] = useState(false);
+  const [pontoEmployeeName, setPontoEmployeeName] = useState('');
+
   // ─── Queries ──────────────────────────────────────────────────────────────
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['employees', showInactive],
@@ -218,6 +224,27 @@ export default function Employees() {
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao gerar link.'),
   });
+
+  const pontoMutation = useMutation({
+    mutationFn: (employeeId: string) =>
+      api.post('/attendance-links', { personType: 'employee', personId: employeeId }),
+    onSuccess: (res) => {
+      const token = res.data.token;
+      const base = window.location.origin + window.location.pathname;
+      const url = `${base}#/ponto/${token}`;
+      setPontoLink(url);
+      setPontoCopied(false);
+      setPontoModalOpen(true);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Erro ao gerar link de ponto.'),
+  });
+
+  const copyPontoLink = () => {
+    navigator.clipboard.writeText(pontoLink).then(() => {
+      setPontoCopied(true);
+      setTimeout(() => setPontoCopied(false), 2500);
+    });
+  };
 
   const copyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink).then(() => {
@@ -514,6 +541,18 @@ export default function Employees() {
                         title="Gerar link para o funcionário atualizar seus dados"
                       >
                         <Link2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setPontoEmployeeName(emp.name);
+                          pontoMutation.mutate(emp._id);
+                        }}
+                        disabled={pontoMutation.isPending}
+                        className="p-1.5 text-gray-400 hover:text-blue-500 disabled:opacity-50"
+                        title="Gerar link de ponto eletrônico"
+                      >
+                        <Timer className="w-4 h-4" />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); openEdit(emp); }}
@@ -891,6 +930,63 @@ export default function Employees() {
                 </button>
                 <button
                   onClick={() => setInviteModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL PONTO ELETRÔNICO ────────────────────────────────────────── */}
+      {pontoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Timer className="w-5 h-5 text-blue-600" />
+                <h2 className="text-base font-bold text-gray-800">Link de Ponto Eletrônico</h2>
+              </div>
+              <button onClick={() => setPontoModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                Envie o link abaixo para <strong>{pontoEmployeeName}</strong> marcar o ponto diariamente.
+                O link é <strong>permanente</strong> — use sempre o mesmo.
+              </p>
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <span className="text-xs text-gray-700 break-all flex-1 font-mono">{pontoLink}</span>
+                <button
+                  onClick={copyPontoLink}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  {pontoCopied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {pontoCopied ? 'Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700 space-y-1">
+                <p>🕐 <strong>Como usar:</strong></p>
+                <p>1. Envie este link ao funcionário (salvar no celular ou via QR Code)</p>
+                <p>2. A cada dia, o funcionário acessa o link e registra entrada/saída</p>
+                <p>3. O ponto é lançado automaticamente no sistema</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    const text = `Olá ${pontoEmployeeName}! Acesse o link abaixo para registrar seu ponto diário:\n${pontoLink}`;
+                    const wa = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                    window.open(wa, '_blank');
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 font-medium"
+                >
+                  📱 Enviar via WhatsApp
+                </button>
+                <button
+                  onClick={() => setPontoModalOpen(false)}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
                 >
                   Fechar
