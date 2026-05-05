@@ -30,6 +30,7 @@ import Ferias from './pages/Ferias';
 import SubstitutePublic from './pages/SubstitutePublic';
 import EmployeePublicForm from './pages/EmployeePublicForm';
 import PontoPublico from './pages/PontoPublico';
+import PontoPublicoGeral from './pages/PontoPublicoGeral';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
 import AnoLetivo from './pages/AnoLetivo';
@@ -143,6 +144,8 @@ function App() {
         <Route path="/employee-form/:token" element={<EmployeePublicForm />} />
         {/* Link público de ponto eletrônico — sem auth */}
         <Route path="/ponto/:token" element={<PontoPublico />} />
+        {/* Link geral de ponto da escola — sem auth */}
+        <Route path="/ponto-geral/:token" element={<PontoPublicoGeral />} />
         
         <Route path="/" element={
           <PrivateRoute>
