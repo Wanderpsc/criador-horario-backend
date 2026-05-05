@@ -1248,9 +1248,9 @@ export default function DisplayPanel({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white p-6">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white overflow-hidden">
       {/* Header */}
-      <header className="mb-6 border-b-4 border-yellow-500 pb-4">
+      <header className="flex-shrink-0 px-6 pt-6 pb-4 mb-0 border-b-4 border-yellow-500">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1">
             <h1 className={`text-4xl font-bold mb-2 ${isEmergencyMode ? 'text-red-500 animate-pulse' : isMakeupMode ? 'text-purple-400' : ''}`}>
@@ -1487,6 +1487,9 @@ export default function DisplayPanel({
         </div>
       </header>
 
+      {/* Scrollable content area — garante barra de rolagem em TV box */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6">
+
       {/* Loading */}
       {isLoadingAvailable && (
         <div className="text-center py-20">
@@ -1721,7 +1724,9 @@ export default function DisplayPanel({
                       const className = classObj.className;
                       const gradeName = classObj.gradeName;
                       const classKey = `${className}|||${gradeName || ''}`;
+                      const editKey = `${period}|||${classKey}`;
                       const slot = periodSlots[classKey];
+
                       if (!slot) {
                         return (
                           <td key={`grid-empty-${period}-${classIndex}-${className}`} className="border-2 border-gray-600 p-3 bg-gray-800 text-center">
@@ -1729,25 +1734,61 @@ export default function DisplayPanel({
                           </td>
                         );
                       }
-                      
+
+                      const editedValue = manualEdits[editKey];
+                      const subjectName = editedValue?.subjectName || slot.subjectName;
+                      const teacherName = editedValue?.teacherName || slot.teacherName;
                       const status = getSlotStatus(slot);
                       const statusColor = getStatusColor(status);
-                      
+
+                      // Modo edição inline
+                      if (canEdit && editingCell === editKey) {
+                        const curSubj = manualEdits[editKey]?.subjectName || subjectName || '';
+                        const curTeacher = manualEdits[editKey]?.teacherName || teacherName || '';
+                        return (
+                          <td key={`grid-slot-${period}-${classIndex}-${className}`} className="border-2 border-blue-400 bg-blue-950 p-2 text-center align-middle" style={{ minWidth: '200px' }}>
+                            <div className="flex flex-col gap-1">
+                              <select
+                                value={curSubj}
+                                onChange={e => setManualEdits(prev => ({ ...prev, [editKey]: { subjectName: e.target.value, teacherName: prev[editKey]?.teacherName ?? curTeacher } }))}
+                                className="bg-gray-800 text-white rounded border border-gray-600 p-1 w-full text-sm"
+                              >
+                                <option value="">— Disciplina —</option>
+                                {uniqueSubjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                              </select>
+                              <select
+                                value={curTeacher}
+                                onChange={e => setManualEdits(prev => ({ ...prev, [editKey]: { subjectName: prev[editKey]?.subjectName ?? curSubj, teacherName: e.target.value } }))}
+                                className="bg-gray-800 text-white rounded border border-gray-600 p-1 w-full text-sm"
+                              >
+                                <option value="">— Professor —</option>
+                                {uniqueTeachers.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                              </select>
+                              <div className="flex gap-1 justify-center mt-1">
+                                <button onClick={() => setEditingCell(null)} className="px-2 py-1 bg-green-600 hover:bg-green-500 text-white rounded font-bold text-xs">✓ OK</button>
+                                <button onClick={() => { setManualEdits(prev => { const n = { ...prev }; delete n[editKey]; return n; }); setEditingCell(null); }} className="px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded font-bold text-xs">✗</button>
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      }
+
                       return (
                         <td 
-                          key={`grid-slot-${period}-${classIndex}-${className}`} 
-                          className={`border-2 border-gray-600 p-3 ${statusColor} transition-all duration-300`}
+                          key={`grid-slot-${period}-${classIndex}-${className}`}
+                          onClick={canEdit ? () => setEditingCell(editKey) : undefined}
+                          className={`border-2 border-gray-600 p-3 ${statusColor} transition-all duration-300 ${canEdit ? 'cursor-pointer hover:border-blue-400' : ''}`}
                           style={{ 
                             backgroundColor: slot.subjectColor ? `${slot.subjectColor}dd` : undefined,
                             animation: status === 'ongoing' ? 'pulse 2s infinite' : undefined
                           }}
                         >
                           <div className="space-y-1">
-                            <div className="font-bold text-lg truncate" title={slot.subjectName}>
-                              {slot.subjectName}
+                            <div className="font-bold text-lg truncate" title={subjectName}>
+                              {subjectName}
                             </div>
-                            <div className="text-sm opacity-90 truncate" title={slot.teacherName}>
-                              👨‍🏫 {slot.teacherName}
+                            <div className="text-sm opacity-90 truncate" title={teacherName}>
+                              👨‍🏫 {teacherName}
                             </div>
                             {absentTeacherIds.includes(slot.teacherId) && (
                               <div className="text-xs font-black text-red-400 animate-pulse mt-1">
@@ -1763,6 +1804,9 @@ export default function DisplayPanel({
                               <div className="text-xs font-bold bg-black bg-opacity-30 rounded px-2 py-1 inline-block">
                                 ⚠️ PRÓXIMA AULA
                               </div>
+                            )}
+                            {canEdit && (
+                              <div className="text-blue-400 opacity-60 text-xs mt-1">✏️ editar</div>
                             )}
                           </div>
                         </td>
@@ -2834,6 +2878,8 @@ export default function DisplayPanel({
           Atualização automática a cada {refreshInterval} segundos
         </p>
       </footer>
+
+      </div>{/* fim scrollable content */}
 
       {/* Botão Flutuante de Simulação de Data/Hora */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">

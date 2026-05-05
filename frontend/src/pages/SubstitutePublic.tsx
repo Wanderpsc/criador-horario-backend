@@ -148,22 +148,41 @@ export default function SubstitutePublic() {
     if (t) { setTeacherId(t._id); setTeacherName(t.name); setSubjectId(''); setSubjectName(''); }
   };
 
-  // Disciplinas filtradas pelo professor selecionado (ou todas se não há mapeamento)
-  const filteredSubjects = (() => {
-    if (!teacherId) return subjects;
-    const allowedIds = teacherSubjectsMap[teacherId];
-    if (!allowedIds || allowedIds.length === 0) return subjects;
-    return subjects.filter(s => allowedIds.includes(s._id));
+  // Classes/disciplinas das lacunas abertas (deduplicas por _id)
+  const openSlotClasses: ClassOption[] = (() => {
+    const map = new Map<string, ClassOption>();
+    openSlots.forEach(s => { if (!map.has(s.classId)) map.set(s.classId, { _id: s.classId, name: s.className }); });
+    return Array.from(map.values());
   })();
 
+  const openSlotSubjects: SubjectOption[] = (() => {
+    const map = new Map<string, SubjectOption>();
+    openSlots.forEach(s => { if (!map.has(s.subjectId)) map.set(s.subjectId, { _id: s.subjectId, name: s.subjectName }); });
+    return Array.from(map.values());
+  })();
+
+  // Disciplinas filtradas: apenas as das lacunas abertas, podendo filtrar por professor
+  const filteredSubjects = (() => {
+    const base = openSlotSubjects.length > 0 ? openSlotSubjects : subjects;
+    if (!teacherId) return base;
+    const allowedIds = teacherSubjectsMap[teacherId];
+    if (!allowedIds || allowedIds.length === 0) return base;
+    return base.filter(s => allowedIds.includes(s._id));
+  })();
+
+  // Classes filtradas: apenas as das lacunas abertas
+  const filteredClasses = openSlotClasses.length > 0 ? openSlotClasses : classes;
+
   const handleSubjectSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const s = subjects.find(s => s._id === e.target.value);
+    const pool = [...openSlotSubjects, ...subjects];
+    const s = pool.find(s => s._id === e.target.value);
     if (s) { setSubjectId(s._id); setSubjectName(s.name); }
     else { setSubjectId(''); setSubjectName(''); }
   };
 
   const handleClassSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const c = classes.find(c => c._id === e.target.value);
+    const pool = [...openSlotClasses, ...classes];
+    const c = pool.find(c => c._id === e.target.value);
     if (c) { setClassId(c._id); setClassName(c.name); }
     else { setClassId(''); setClassName(''); }
   };
@@ -355,7 +374,14 @@ export default function SubstitutePublic() {
                   {openSlots.map(slot => (
                     <button
                       key={slot._id}
-                      onClick={() => { setSelectedSlot(slot); setStep('fill-form'); }}
+                      onClick={() => {
+                        setSelectedSlot(slot);
+                        setClassId(slot.classId);
+                        setClassName(slot.className);
+                        setSubjectId(slot.subjectId);
+                        setSubjectName(slot.subjectName);
+                        setStep('fill-form');
+                      }}
                       className="w-full text-left p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition group"
                     >
                       <div className="flex items-center justify-between">
@@ -455,7 +481,7 @@ export default function SubstitutePublic() {
                     className="w-full border rounded-lg px-3 py-2.5 text-sm"
                   >
                     <option value="">— Selecione a turma —</option>
-                    {classes.map(c => (
+                    {filteredClasses.map(c => (
                       <option key={c._id} value={c._id}>{c.name}</option>
                     ))}
                   </select>

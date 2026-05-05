@@ -147,8 +147,17 @@ router.post('/public/:token/submit', async (req, res) => {
     // Filtrar apenas os campos permitidos do body
     const submittedData: Record<string, unknown> = {};
     for (const field of ALLOWED_FIELDS) {
-      if (req.body[field] !== undefined && req.body[field] !== '') {
-        submittedData[field] = req.body[field];
+      const val = req.body[field];
+      if (val !== undefined && val !== null && val !== '') {
+        submittedData[field] = val;
+      }
+    }
+
+    // Remover campos de enum com valor vazio/inválido (proteção extra contra validação)
+    const enumFields = ['tipoContrato', 'sexo', 'estadoCivil', 'tipoSanguineo'];
+    for (const field of enumFields) {
+      if (!submittedData[field]) {
+        delete submittedData[field];
       }
     }
 
@@ -162,7 +171,7 @@ router.post('/public/:token/submit', async (req, res) => {
       employee = await Employee.findOneAndUpdate(
         { _id: invite.originalEmployeeId, schoolId: invite.schoolId },
         { $set: submittedData },
-        { new: true, runValidators: true }
+        { new: true, runValidators: false }
       );
       if (!employee) {
         return res.status(404).json({ message: 'Funcionário não encontrado no sistema.' });
