@@ -199,7 +199,7 @@ export default function EPIControlPage() {
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ['employees-active'],
     queryFn: async () => {
-      const res = await api.get('/employees', { params: { isActive: true } });
+      const res = await api.get('/employees');
       return (res.data as any[]).map((e: any) => ({ ...e, _id: e._id || e.id || '' }));
     },
   });

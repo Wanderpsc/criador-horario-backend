@@ -150,73 +150,73 @@ export default function Dashboard() {
           <div className="flex gap-3 justify-center min-w-max mx-auto">
             <Link
               to="/display-panel"
-              className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl px-5 py-3.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">📺</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Painel TV</span>
+              <span className="text-3xl">📺</span>
+              <span className="text-xs font-black whitespace-nowrap">Painel TV</span>
             </Link>
             <Link
               to="/display-panel-config"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-purple-50 text-purple-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-purple-50 text-purple-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">⚙️</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Config. Painel</span>
+              <span className="text-3xl">⚙️</span>
+              <span className="text-xs font-black whitespace-nowrap">Config. Painel</span>
             </Link>
             <Link
               to="/teachers"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-purple-50 text-purple-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-purple-100 hover:border-purple-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-purple-50 text-purple-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-purple-100 hover:border-purple-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">👨‍🏫</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Professores</span>
+              <span className="text-3xl">👨‍🏫</span>
+              <span className="text-xs font-black whitespace-nowrap">Professores</span>
             </Link>
             <Link
               to="/grades"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-orange-50 text-orange-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-orange-100 hover:border-orange-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-orange-50 text-orange-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-orange-100 hover:border-orange-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">🎓</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Séries</span>
+              <span className="text-3xl">🎓</span>
+              <span className="text-xs font-black whitespace-nowrap">Séries</span>
             </Link>
             <Link
               to="/classes"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-red-50 text-red-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-red-100 hover:border-red-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-red-50 text-red-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-red-100 hover:border-red-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">🏫</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Turmas</span>
+              <span className="text-3xl">🏫</span>
+              <span className="text-xs font-black whitespace-nowrap">Turmas</span>
             </Link>
             <Link
               to="/subjects"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-green-50 text-green-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-green-100 hover:border-green-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-green-50 text-green-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-green-100 hover:border-green-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">📚</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Componentes</span>
+              <span className="text-3xl">📚</span>
+              <span className="text-xs font-black whitespace-nowrap">Componentes</span>
             </Link>
             <Link
               to="/class-subjects"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-pink-50 text-pink-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-pink-100 hover:border-pink-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-pink-50 text-pink-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-pink-100 hover:border-pink-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">📋</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Turmas & Comp.</span>
+              <span className="text-3xl">📋</span>
+              <span className="text-xs font-black whitespace-nowrap">Turmas & Comp.</span>
             </Link>
             <Link
               to="/teacher-subjects"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-teal-50 text-teal-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-teal-100 hover:border-teal-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-teal-50 text-teal-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-teal-100 hover:border-teal-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">👥</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Lotação</span>
+              <span className="text-3xl">👥</span>
+              <span className="text-xs font-black whitespace-nowrap">Lotação</span>
             </Link>
             <Link
               to="/schedules"
-              className="flex flex-col items-center justify-center gap-1.5 bg-white hover:bg-indigo-50 text-indigo-700 rounded-2xl px-5 py-3.5 shadow-md hover:shadow-xl border-2 border-indigo-100 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-indigo-50 text-indigo-700 rounded-2xl px-6 py-4 shadow-md hover:shadow-xl border-2 border-indigo-100 hover:border-indigo-400 transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">⏰</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Horários</span>
+              <span className="text-3xl">⏰</span>
+              <span className="text-xs font-black whitespace-nowrap">Horários</span>
             </Link>
             <Link
               to="/timetable-generator"
-              className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-2xl px-5 py-3.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[88px]"
+              className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[100px]"
             >
-              <span className="text-2xl">🚀</span>
-              <span className="text-[11px] font-black whitespace-nowrap">Gerador</span>
+              <span className="text-3xl">🚀</span>
+              <span className="text-xs font-black whitespace-nowrap">Gerador</span>
             </Link>
           </div>
         </div>
@@ -266,275 +266,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Guia Rápido Ultra Moderno */}
-        <div className="relative bg-gradient-to-br from-white to-purple-50 rounded-3xl shadow-2xl p-8 border-2 border-purple-100 overflow-hidden">
-          {/* Decoração de fundo */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-200/30 to-pink-200/30 rounded-full blur-3xl -mr-32 -mt-32"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-3 rounded-2xl shadow-lg">
-                <span className="text-2xl">🚀</span>
-              </div>
-              <div>
-                <h2 className="text-2xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Guia de Configuração
-                </h2>
-                <p className="text-sm text-gray-500 font-medium">8 passos simples</p>
-              </div>
-            </div>
-            <p className="text-gray-600 mb-6 text-sm">
-              Configure o sistema seguindo esta sequência:
-            </p>
-
-            {/* GRUPO 1: CADASTROS BÁSICOS */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-1 w-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded"></div>
-                <h3 className="text-xs font-black text-gray-600 uppercase tracking-wider">Cadastros Básicos</h3>
-              </div>
-              <div className="space-y-2.5">
-                {/* Etapa 1 */}
-                <Link 
-                  to="/teachers" 
-                  className="group block relative bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl hover:from-purple-500 hover:to-pink-500 border border-purple-200/50 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-purple-600 to-purple-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-black text-purple-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        👨‍🏫 Professores
-                      </h3>
-                      <p className="text-[11px] text-purple-600 group-hover:text-purple-100 transition-colors leading-tight">
-                        Cadastre o corpo docente
-                      </p>
-                    </div>
-                    <div className="text-purple-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Etapa 2 */}
-                <Link 
-                  to="/grades" 
-                  className="group block relative bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl hover:from-orange-500 hover:to-amber-500 border border-orange-200/50 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-orange-600 to-amber-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-black text-orange-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        🎓 Anos / Séries
-                      </h3>
-                      <p className="text-[11px] text-orange-600 group-hover:text-orange-100 transition-colors leading-tight">
-                        Níveis de ensino
-                      </p>
-                    </div>
-                    <div className="text-orange-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Etapa 3 */}
-                <Link 
-                  to="/classes" 
-                  className="group block relative bg-gradient-to-r from-red-50 to-rose-50 rounded-2xl hover:from-red-500 hover:to-rose-500 border border-red-200/50 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-red-600 to-rose-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-black text-red-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        🏫 Turmas
-                      </h3>
-                      <p className="text-[11px] text-red-600 group-hover:text-red-100 transition-colors leading-tight">
-                        Crie as salas de aula
-                      </p>
-                    </div>
-                    <div className="text-red-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Etapa 4 */}
-                <Link 
-                  to="/subjects" 
-                  className="group block relative bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl hover:from-green-500 hover:to-emerald-500 border border-green-200/50 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-green-600 to-emerald-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      4
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-black text-green-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        📚 Componentes Curriculares
-                      </h3>
-                      <p className="text-[11px] text-green-600 group-hover:text-green-100 transition-colors leading-tight">
-                        Matérias e disciplinas
-                      </p>
-                    </div>
-                    <div className="text-green-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-            {/* GRUPO 2: ASSOCIAÇÕES (ESSENCIAIS) */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-1 w-8 bg-gradient-to-r from-pink-400 to-teal-400 rounded"></div>
-                <h3 className="text-xs font-black text-gray-600 uppercase tracking-wider">Associações Essenciais</h3>
-                <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">
-                  OBRIGATÓRIO
-                </span>
-              </div>
-              <div className="space-y-2.5">
-                {/* Etapa 5 - ESSENCIAL */}
-                <Link 
-                  to="/class-subjects" 
-                  className="group block relative bg-gradient-to-r from-pink-50 to-fuchsia-50 rounded-2xl hover:from-pink-500 hover:to-fuchsia-500 border-2 border-pink-300 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="absolute top-2 right-2">
-                    <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[9px] px-2 py-1 rounded-full font-black shadow-lg animate-pulse">
-                      ESSENCIAL
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-pink-600 to-fuchsia-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      5
-                    </div>
-                    <div className="flex-1 pr-16">
-                      <h3 className="font-black text-pink-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        📋 Turmas & Componentes
-                      </h3>
-                      <p className="text-[11px] text-pink-600 group-hover:text-pink-100 transition-colors leading-tight">
-                        Aulas por semana/turma
-                      </p>
-                    </div>
-                    <div className="text-pink-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Etapa 6 - ESSENCIAL */}
-                <Link 
-                  to="/teacher-subjects" 
-                  className="group block relative bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl hover:from-teal-500 hover:to-cyan-500 border-2 border-teal-300 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="absolute top-2 right-2">
-                    <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[9px] px-2 py-1 rounded-full font-black shadow-lg animate-pulse">
-                      ESSENCIAL
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-teal-600 to-cyan-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      6
-                    </div>
-                    <div className="flex-1 pr-16">
-                      <h3 className="font-black text-teal-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        👥 Lotação de Professores
-                      </h3>
-                      <p className="text-[11px] text-teal-600 group-hover:text-teal-100 transition-colors leading-tight">
-                        Vincule docentes aos componentes
-                      </p>
-                    </div>
-                    <div className="text-teal-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-            {/* GRUPO 3: GERAÇÃO */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-1 w-8 bg-gradient-to-r from-indigo-400 to-yellow-400 rounded"></div>
-                <h3 className="text-xs font-black text-gray-600 uppercase tracking-wider">Configuração Final & Geração</h3>
-              </div>
-              <div className="space-y-2.5">
-                {/* Etapa 7 */}
-                <Link 
-                  to="/schedules" 
-                  className="group block relative bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl hover:from-indigo-500 hover:to-blue-500 border border-indigo-200/50 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-[1.02] p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-indigo-600 to-blue-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      7
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-black text-indigo-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        ⏰ Grade de Horários
-                      </h3>
-                      <p className="text-[11px] text-indigo-600 group-hover:text-indigo-100 transition-colors leading-tight">
-                        Períodos e intervalos
-                      </p>
-                    </div>
-                    <div className="text-indigo-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-
-                {/* Etapa 8 - GERAR */}
-                <Link 
-                  to="/timetable-generator" 
-                  className="group block relative bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl hover:from-yellow-500 hover:to-orange-500 border-2 border-yellow-300 hover:border-transparent transition-all duration-300 hover:shadow-2xl hover:scale-105 p-4"
-                >
-                  <div className="absolute top-2 right-2">
-                    <span className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-[9px] px-2 py-1 rounded-full font-black shadow-lg animate-pulse">
-                      GERAR
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-yellow-600 to-orange-700 text-white font-black text-base rounded-xl w-9 h-9 flex items-center justify-center flex-shrink-0 group-hover:scale-125 group-hover:rotate-12 transition-all shadow-lg">
-                      8
-                    </div>
-                    <div className="flex-1 pr-12">
-                      <h3 className="font-black text-yellow-700 group-hover:text-white mb-0.5 transition-colors text-sm">
-                        🚀 Gerador Inteligente
-                      </h3>
-                      <p className="text-[11px] text-yellow-600 group-hover:text-yellow-100 transition-colors leading-tight">
-                        IA cria horários sem conflitos!
-                      </p>
-                    </div>
-                    <div className="text-yellow-600 group-hover:text-white group-hover:translate-x-1 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <div className="mb-8">
         {/* Visão Geral Ultra Moderna */}
         <div className="relative bg-gradient-to-br from-white to-blue-50 rounded-3xl shadow-2xl p-8 border-2 border-blue-100 overflow-hidden">
           {/* Decoração de fundo */}

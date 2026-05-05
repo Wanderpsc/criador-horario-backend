@@ -365,6 +365,120 @@ export default function EmployeeAttendancePage() {
     }, 600);
   };
 
+  // ─── IMPRESSÃO: RELATÓRIO POR FUNÇÃO ─────────────────────────────────────────
+  const printReportByRole = () => {
+    const now = new Date().toLocaleString('pt-BR');
+
+    // Agrupa por cargo
+    const grouped: Record<string, ReportEmployee[]> = {};
+    filteredRpt.forEach(r => {
+      const key = r.cargo?.trim() || 'Sem Função';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(r);
+    });
+
+    const roleSections = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cargo, emps]) => {
+      const totPresent = emps.reduce((a, r) => a + r.presentDays, 0);
+      const totAbsent = emps.reduce((a, r) => a + r.absentDays, 0);
+      const totMedical = emps.reduce((a, r) => a + r.medicalLeaveDays, 0);
+      const totVacation = emps.reduce((a, r) => a + r.vacationDays, 0);
+      const totOvertime = emps.reduce((a, r) => a + r.totalOvertimeMinutes, 0);
+      const totWorked = emps.reduce((a, r) => a + r.totalWorkedMinutes, 0);
+
+      const empRows = emps.map(r => {
+        const freq = r.totalDays > 0 ? Math.round((r.presentDays / r.totalDays) * 100) : 0;
+        const freqColor = freq >= 75 ? '#16a34a' : freq >= 50 ? '#d97706' : '#dc2626';
+        return `<tr>
+          <td style="text-align:left">${r.employeeName}</td>
+          <td>${r.setor || '—'}</td>
+          <td>${r.totalDays}</td>
+          <td style="color:#16a34a;font-weight:bold">${r.presentDays}</td>
+          <td style="color:#dc2626;font-weight:bold">${r.absentDays}</td>
+          <td style="color:#d97706">${r.partialDays}</td>
+          <td style="color:#2563eb">${r.medicalLeaveDays}</td>
+          <td style="color:#7c3aed">${r.vacationDays}</td>
+          <td style="color:#ca8a04">${r.justifiedDays}</td>
+          <td>${fmtMin(r.totalWorkedMinutes)}</td>
+          <td style="color:#db2777">${fmtMin(r.totalOvertimeMinutes)}</td>
+          <td style="color:${freqColor};font-weight:bold">${freq}%${freq < 75 ? ' ⚠' : ''}</td>
+        </tr>`;
+      }).join('');
+
+      return `
+<div class="role-section">
+  <div class="role-header">
+    <span class="role-title">${cargo}</span>
+    <span class="role-meta">${emps.length} funcionário(s) &nbsp;|&nbsp;
+      Presenças: ${totPresent} &nbsp;|&nbsp;
+      Faltas: ${totAbsent} &nbsp;|&nbsp;
+      Atestados: ${totMedical} &nbsp;|&nbsp;
+      Férias: ${totVacation} &nbsp;|&nbsp;
+      H. Extra: ${fmtMin(totOvertime)} &nbsp;|&nbsp;
+      H. Trab.: ${fmtMin(totWorked)}
+    </span>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="text-align:left">Nome</th><th>Setor</th><th>Dias</th>
+      <th>Presente</th><th>Faltas</th><th>Parcial</th>
+      <th>Atestado</th><th>Férias</th><th>Justif.</th>
+      <th>H. Trab.</th><th>H. Extra</th><th>Freq.%</th>
+    </tr></thead>
+    <tbody>${empRows}</tbody>
+  </table>
+</div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html lang="pt-BR">
+<head><meta charset="utf-8"><title>Relatório por Função</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm 10mm 16mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 9px; color: #111; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 3px solid #0f766e; padding-bottom: 6px; margin-bottom: 10px; }
+  h1 { font-size: 13px; font-weight: 900; color: #0f766e; }
+  .sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
+  .role-section { margin-bottom: 14px; page-break-inside: avoid; }
+  .role-header { background: #0f766e; color: #fff; padding: 4px 6px; border-radius: 3px 3px 0 0;
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 0; }
+  .role-title { font-size: 10px; font-weight: 900; }
+  .role-meta { font-size: 8px; opacity: .9; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #134e4a; color: #fff; padding: 3px 4px; font-size: 8px; text-align: center; }
+  td { border: 1px solid #d1d5db; padding: 3px 4px; font-size: 8px; text-align: center; }
+  tr:nth-child(even) td { background: #f0fdfa; }
+  .footer { margin-top: 8px; border-top: 1px solid #d1d5db; padding-top: 4px;
+    display: flex; justify-content: space-between; font-size: 8px; color: #9ca3af; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="sub">${schoolName}</div>
+    <h1>Relatório de Frequência por Função</h1>
+    <div class="sub">Período: ${fmtDate(rptStart)} a ${fmtDate(rptEnd)} · ${filteredRpt.length} funcionário(s) · ${Object.keys(grouped).length} função(ões)</div>
+  </div>
+  <div style="font-size:9px;color:#374151;text-align:right">Gerado em: ${now}</div>
+</div>
+${roleSections}
+<div class="footer">
+  <span><strong>© 2025 Wander Pires Silva Coelho</strong> · wanderpsc@gmail.com · Sistema Criador de Horário de Aula Escolar</span>
+  <span>Gerado em ${now}</span>
+</div>
+</body></html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+    doc.open(); doc.write(html); doc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus(); iframe.contentWindow?.print();
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch (_) {} }, 2000);
+    }, 600);
+  };
+
   // ─── IMPRESSÃO: NOTIFICAÇÃO DE FALTA ─────────────────────────────────────────
   const printAbsenceNotice = (r: AttendanceRow) => {
     const dateStr = fmtDate(r.date || '');
@@ -798,12 +912,15 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
                 <label className="block text-sm font-semibold mb-1">Buscar funcionário</label>
                 <input type="text" placeholder="Nome..." value={rptSearch} onChange={e => setRptSearch(e.target.value)} className="input" />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={() => refetchRpt()} className="btn btn-outline flex items-center gap-1">
                   <RefreshCw size={14} /> Atualizar
                 </button>
                 <button onClick={printReport} className="btn btn-primary flex items-center gap-1">
-                  <Printer size={14} /> Imprimir / PDF
+                  <Printer size={14} /> Relatório Geral
+                </button>
+                <button onClick={printReportByRole} className="btn flex items-center gap-1 bg-teal-600 text-white hover:bg-teal-700">
+                  <Printer size={14} /> Por Função
                 </button>
               </div>
             </div>

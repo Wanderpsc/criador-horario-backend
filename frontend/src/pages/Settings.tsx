@@ -37,24 +37,117 @@ interface SchoolUser {
 }
 
 const permissionLabels: { [key: string]: string } = {
-  dashboard: 'Painel Principal',
-  teachers: 'Professores',
-  subjects: 'Componentes Curriculares',
-  grades: 'Anos / Séries',
-  classes: 'Turmas',
-  classSubjects: 'Turmas & Componentes',
-  teacherSubjects: 'Lotação de Professores',
-  schedules: 'Grade de Horários',
-  timetableGenerator: 'Gerador Inteligente',
-  calendar: 'Calendário Letivo',
-  emergencySchedule: 'Horário Emergencial e Sábado de Reposição',
-  teacherAttendance: 'Controle de Frequência',
-  frequencyReports: 'Relatórios de Frequência',
-  displayPanel: 'Painel de Avisos (TV)',
-  settings: 'Configurações Gerais',
-  users: 'Gerenciar Usuários',
-  auditLogs: 'Logs de Auditoria'
+  // Cadastros básicos
+  dashboard:            '📊 Painel Principal',
+  teachers:             '👩‍🏫 Professores',
+  subjects:             '📚 Componentes Curriculares',
+  grades:               '🏫 Anos / Séries',
+  classes:              '🏛️ Turmas',
+  // Associações
+  classSubjects:        '🔗 Turmas & Componentes',
+  teacherSubjects:      '📋 Lotação de Professores',
+  // Horários
+  schedules:            '📅 Grade de Horários',
+  timeslots:            '⏱️ Horários Padrão (Timeslots)',
+  timetableGenerator:   '⚡ Gerador Inteligente de Horários',
+  timetables:           '📑 Horários Gerados',
+  // Calendário e especiais
+  calendar:             '🗓️ Calendário Letivo',
+  emergencySchedule:    '🚨 Horário Emergencial',
+  makeupSaturdays:      '📆 Sábados de Reposição',
+  anoLetivo:            '🎓 Ano Letivo',
+  // Docente
+  teacherAttendance:    '✅ Frequência de Professores',
+  frequencyReports:     '📊 Relatórios de Frequência',
+  // Gestão de pessoal (funcionários)
+  employees:            '🗂️ Funcionários',
+  employeeAttendance:   '⏰ Ponto de Funcionários',
+  epiControl:           '🦺 Controle de EPIs',
+  ferias:               '🌴 Controle de Férias',
+  // Sistema
+  displayPanel:         '📺 Painel de Avisos (TV)',
+  displayPanelConfig:   '📺 Config. Painel TV',
+  classPayments:        '💳 Pagamentos de Turma',
+  saleContract:         '📄 Contrato de Compra/Venda',
+  settings:             '⚙️ Configurações Gerais',
+  users:                '👥 Gerenciar Usuários',
+  auditLogs:            '🔍 Logs de Auditoria',
 };
+
+// Ações disponíveis por recurso
+const RESOURCE_ACTIONS: { [key: string]: string[] } = {
+  dashboard:            ['access'],
+  teachers:             ['access', 'create', 'read', 'update', 'delete'],
+  subjects:             ['access', 'create', 'read', 'update', 'delete'],
+  grades:               ['access', 'create', 'read', 'update', 'delete'],
+  classes:              ['access', 'create', 'read', 'update', 'delete'],
+  classSubjects:        ['access', 'create', 'read', 'update', 'delete'],
+  teacherSubjects:      ['access', 'create', 'read', 'update', 'delete'],
+  schedules:            ['access', 'create', 'read', 'update', 'delete'],
+  timeslots:            ['access', 'create', 'read', 'update', 'delete'],
+  timetableGenerator:   ['access', 'generate'],
+  timetables:           ['access', 'read', 'delete'],
+  calendar:             ['access', 'create', 'read', 'update', 'delete'],
+  emergencySchedule:    ['access', 'create', 'read', 'update', 'delete'],
+  makeupSaturdays:      ['access', 'create', 'read', 'update', 'delete'],
+  anoLetivo:            ['access', 'read', 'update'],
+  teacherAttendance:    ['access', 'create', 'read', 'update', 'delete'],
+  frequencyReports:     ['access', 'read'],
+  employees:            ['access', 'create', 'read', 'update', 'delete'],
+  employeeAttendance:   ['access', 'create', 'read', 'update', 'delete'],
+  epiControl:           ['access', 'create', 'read', 'update', 'delete'],
+  ferias:               ['access', 'create', 'read', 'update', 'delete'],
+  displayPanel:         ['access', 'manage'],
+  displayPanelConfig:   ['access', 'manage'],
+  classPayments:        ['access', 'read'],
+  saleContract:         ['access'],
+  settings:             ['access'],
+  users:                ['access', 'manage'],
+  auditLogs:            ['access', 'read'],
+};
+
+const ACTION_LABELS: { [key: string]: string } = {
+  access:   '✅ Acessar',
+  create:   '➕ Criar',
+  read:     '👁️ Visualizar',
+  update:   '✏️ Editar',
+  delete:   '🗑️ Excluir',
+  generate: '⚡ Gerar',
+  manage:   '⚙️ Gerenciar',
+  send:     '📤 Enviar',
+};
+
+// Grupos de módulos para o modal de permissões
+const PERMISSION_GROUPS = [
+  {
+    id: 'cadastros', label: '📋 ETAPA 1 — CADASTROS BÁSICOS', color: 'blue',
+    resources: ['dashboard', 'teachers', 'subjects', 'grades', 'classes'],
+  },
+  {
+    id: 'associacoes', label: '🔗 ETAPA 2 — ASSOCIAÇÕES E CARGA HORÁRIA', color: 'pink',
+    resources: ['classSubjects', 'teacherSubjects'],
+  },
+  {
+    id: 'horarios', label: '⏰ ETAPA 3 — GRADE DE HORÁRIOS E GERAÇÃO', color: 'indigo',
+    resources: ['schedules', 'timeslots', 'timetableGenerator', 'timetables'],
+  },
+  {
+    id: 'calendario', label: '🗓️ CALENDÁRIO E HORÁRIOS ESPECIAIS', color: 'teal',
+    resources: ['calendar', 'emergencySchedule', 'makeupSaturdays', 'anoLetivo'],
+  },
+  {
+    id: 'docente', label: '👩‍🏫 CONTROLE DOCENTE', color: 'orange',
+    resources: ['teacherAttendance', 'frequencyReports'],
+  },
+  {
+    id: 'pessoal', label: '🧑‍💼 GESTÃO DE PESSOAL (FUNCIONÁRIOS)', color: 'violet',
+    resources: ['employees', 'employeeAttendance', 'epiControl', 'ferias'],
+  },
+  {
+    id: 'sistema', label: '⚙️ SISTEMA E CONFIGURAÇÕES', color: 'green',
+    resources: ['displayPanel', 'displayPanelConfig', 'classPayments', 'saleContract', 'settings', 'users', 'auditLogs'],
+  },
+];
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -470,6 +563,29 @@ export default function Settings() {
     }));
   };
 
+  const toggleAllInGroup = (resources: string[], value: boolean) => {
+    setEditingPermissions(prev => {
+      const next = { ...prev };
+      resources.forEach(res => {
+        const actions = RESOURCE_ACTIONS[res] || [];
+        const obj: any = {};
+        actions.forEach(a => { obj[a] = value; });
+        next[res] = obj;
+      });
+      return next;
+    });
+  };
+
+  const isGroupAllChecked = (resources: string[]) =>
+    resources.every(res =>
+      (RESOURCE_ACTIONS[res] || []).every(a => !!(editingPermissions[res] as any)?.[a])
+    );
+
+  const isGroupNoneChecked = (resources: string[]) =>
+    resources.every(res =>
+      (RESOURCE_ACTIONS[res] || []).every(a => !(editingPermissions[res] as any)?.[a])
+    );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -848,175 +964,86 @@ export default function Settings() {
               Marque os módulos que este usuário poderá acessar e as ações permitidas em cada módulo
             </p>
 
-            <div className="space-y-6">
-              {/* ETAPA 1: CADASTROS BÁSICOS */}
-              <div className="border-2 border-blue-200 rounded-lg p-5 bg-blue-50">
-                <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
-                  📋 ETAPA 1: CADASTROS BÁSICOS
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['dashboard', 'teachers', 'subjects', 'grades', 'classes'].map((resource) => {
-                    const resourcePerms = editingPermissions[resource] || {};
-                    const actions = Object.keys(resourcePerms);
-                    return (
-                      <div key={resource} className="bg-white border border-blue-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">{permissionLabels[resource]}</h4>
-                        <div className="space-y-2">
-                          {actions.map((action) => (
-                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                              <input
-                                type="checkbox"
-                                checked={(resourcePerms as any)[action] || false}
-                                onChange={() => togglePermission(resource, action)}
-                                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                              />
-                              <span className="text-sm text-gray-700">
-                                {action === 'access' && '✅ Acessar'}
-                                {action === 'create' && '➕ Criar'}
-                                {action === 'read' && '👁️ Visualizar'}
-                                {action === 'update' && '✏️ Editar'}
-                                {action === 'delete' && '🗑️ Deletar'}
-                                {action === 'generate' && '⚡ Gerar'}
-                                {action === 'manage' && '⚙️ Gerenciar'}
-                                {action === 'send' && '📤 Enviar'}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Botões globais */}
+            <div className="flex gap-2 mb-4 flex-wrap">
+              <button
+                onClick={() => toggleAllInGroup(Object.keys(RESOURCE_ACTIONS), true)}
+                className="btn btn-sm bg-green-600 text-white hover:bg-green-700 px-3 py-1.5 rounded text-xs font-semibold"
+              >✅ Liberar Tudo</button>
+              <button
+                onClick={() => toggleAllInGroup(Object.keys(RESOURCE_ACTIONS), false)}
+                className="btn btn-sm bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 rounded text-xs font-semibold"
+              >🚫 Bloquear Tudo</button>
+            </div>
 
-              {/* ETAPA 2: ASSOCIAÇÕES E CARGA HORÁRIA */}
-              <div className="border-2 border-pink-200 rounded-lg p-5 bg-pink-50">
-                <h3 className="text-lg font-bold text-pink-900 mb-4 flex items-center gap-2">
-                  🔗 ETAPA 2: ASSOCIAÇÕES E CARGA HORÁRIA
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['classSubjects', 'teacherSubjects'].map((resource) => {
-                    const resourcePerms = editingPermissions[resource] || {};
-                    const actions = Object.keys(resourcePerms);
-                    return (
-                      <div key={resource} className="bg-white border border-pink-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">{permissionLabels[resource]}</h4>
-                        <div className="space-y-2">
-                          {actions.map((action) => (
-                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                              <input
-                                type="checkbox"
-                                checked={(resourcePerms as any)[action] || false}
-                                onChange={() => togglePermission(resource, action)}
-                                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                              />
-                              <span className="text-sm text-gray-700">
-                                {action === 'access' && '✅ Acessar'}
-                                {action === 'create' && '➕ Criar'}
-                                {action === 'read' && '👁️ Visualizar'}
-                                {action === 'update' && '✏️ Editar'}
-                                {action === 'delete' && '🗑️ Deletar'}
-                                {action === 'generate' && '⚡ Gerar'}
-                                {action === 'manage' && '⚙️ Gerenciar'}
-                                {action === 'send' && '📤 Enviar'}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
+            <div className="space-y-5">
+              {PERMISSION_GROUPS.map(group => {
+                const colorMap: Record<string, { border: string; bg: string; head: string; card: string }> = {
+                  blue:   { border: 'border-blue-200',   bg: 'bg-blue-50',   head: 'text-blue-900',   card: 'border-blue-200' },
+                  pink:   { border: 'border-pink-200',   bg: 'bg-pink-50',   head: 'text-pink-900',   card: 'border-pink-200' },
+                  indigo: { border: 'border-indigo-200', bg: 'bg-indigo-50', head: 'text-indigo-900', card: 'border-indigo-200' },
+                  teal:   { border: 'border-teal-200',   bg: 'bg-teal-50',   head: 'text-teal-900',   card: 'border-teal-200' },
+                  orange: { border: 'border-orange-200', bg: 'bg-orange-50', head: 'text-orange-900', card: 'border-orange-200' },
+                  violet: { border: 'border-violet-200', bg: 'bg-violet-50', head: 'text-violet-900', card: 'border-violet-200' },
+                  green:  { border: 'border-green-200',  bg: 'bg-green-50',  head: 'text-green-900',  card: 'border-green-200' },
+                };
+                const c = colorMap[group.color] || colorMap.green;
+                const allChecked = isGroupAllChecked(group.resources);
+                const noneChecked = isGroupNoneChecked(group.resources);
+                return (
+                  <div key={group.id} className={`border-2 ${c.border} rounded-lg p-4 ${c.bg}`}>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <h3 className={`text-base font-bold ${c.head}`}>{group.label}</h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => toggleAllInGroup(group.resources, true)}
+                          disabled={allChecked}
+                          className="text-xs px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-40"
+                        >Liberar grupo</button>
+                        <button
+                          onClick={() => toggleAllInGroup(group.resources, false)}
+                          disabled={noneChecked}
+                          className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-40"
+                        >Bloquear grupo</button>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ETAPA 3: GRADE DE HORÁRIOS */}
-              <div className="border-2 border-indigo-200 rounded-lg p-5 bg-indigo-50">
-                <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                  ⏰ ETAPA 3: GRADE DE HORÁRIOS E GERAÇÃO
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {['schedules', 'timetableGenerator'].map((resource) => {
-                    const resourcePerms = editingPermissions[resource] || {};
-                    const actions = Object.keys(resourcePerms);
-                    return (
-                      <div key={resource} className="bg-white border border-indigo-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">{permissionLabels[resource]}</h4>
-                        <div className="space-y-2">
-                          {actions.map((action) => (
-                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                              <input
-                                type="checkbox"
-                                checked={(resourcePerms as any)[action] || false}
-                                onChange={() => togglePermission(resource, action)}
-                                className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                              />
-                              <span className="text-sm text-gray-700">
-                                {action === 'access' && '✅ Acessar'}
-                                {action === 'create' && '➕ Criar'}
-                                {action === 'read' && '👁️ Visualizar'}
-                                {action === 'update' && '✏️ Editar'}
-                                {action === 'delete' && '🗑️ Deletar'}
-                                {action === 'generate' && '⚡ Gerar'}
-                                {action === 'manage' && '⚙️ Gerenciar'}
-                                {action === 'send' && '📤 Enviar'}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* FERRAMENTAS E RECURSOS */}
-              <div className="border-2 border-green-200 rounded-lg p-5 bg-green-50">
-                <h3 className="text-lg font-bold text-green-900 mb-4 flex items-center gap-2">
-                  ⚙️ FERRAMENTAS E RECURSOS
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    'calendar',
-                    'emergencySchedule',
-                    'teacherAttendance',
-                    'frequencyReports',
-                    'displayPanel',
-                    'settings',
-                    'users',
-                    'auditLogs'
-                  ].map((resource) => {
-                    const resourcePerms = editingPermissions[resource] || {};
-                    const actions = Object.keys(resourcePerms);
-                    return (
-                      <div key={resource} className="bg-white border border-green-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">{permissionLabels[resource]}</h4>
-                        <div className="space-y-2">
-                          {actions.map((action) => (
-                            <label key={action} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1.5 rounded">
-                              <input
-                                type="checkbox"
-                                checked={(resourcePerms as any)[action] || false}
-                                onChange={() => togglePermission(resource, action)}
-                                className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                              />
-                              <span className="text-xs text-gray-700">
-                                {action === 'access' && '✅ Acessar'}
-                                {action === 'create' && '➕ Criar'}
-                                {action === 'read' && '👁️ Visualizar'}
-                                {action === 'update' && '✏️ Editar'}
-                                {action === 'delete' && '🗑️ Deletar'}
-                                {action === 'generate' && '⚡ Gerar'}
-                                {action === 'manage' && '⚙️ Gerenciar'}
-                                {action === 'send' && '📤 Enviar'}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {group.resources.map(resource => {
+                        const actions = RESOURCE_ACTIONS[resource] || [];
+                        const resourcePerms = editingPermissions[resource] || {};
+                        const accessOn = !!(resourcePerms as any)['access'];
+                        return (
+                          <div key={resource} className={`bg-white border ${c.card} rounded-lg p-3`}>
+                            <h4 className="font-semibold text-gray-900 mb-2 text-xs leading-tight">
+                              {permissionLabels[resource] || resource}
+                            </h4>
+                            <div className="space-y-1.5">
+                              {actions.map(action => (
+                                <label
+                                  key={action}
+                                  className={`flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded ${
+                                    action !== 'access' && !accessOn ? 'opacity-40 pointer-events-none' : ''
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={(resourcePerms as any)[action] || false}
+                                    onChange={() => togglePermission(resource, action)}
+                                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                                  />
+                                  <span className="text-xs text-gray-700">
+                                    {ACTION_LABELS[action] || action}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex gap-2 mt-6 sticky bottom-0 bg-white pt-4 border-t">
