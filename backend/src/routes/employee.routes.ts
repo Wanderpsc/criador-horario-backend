@@ -49,7 +49,14 @@ router.get('/:id', auth, async (req: AuthRequest, res) => {
 router.post('/', auth, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
-    const employee = new Employee({ ...req.body, schoolId });
+    const bodyData = { ...req.body };
+    const enumFields = ['tipoContrato', 'sexo', 'estadoCivil'];
+    for (const field of enumFields) {
+      if (bodyData[field] === '' || bodyData[field] === null || bodyData[field] === undefined) {
+        delete bodyData[field];
+      }
+    }
+    const employee = new Employee({ ...bodyData, schoolId });
     await employee.save();
     res.status(201).json(employee);
   } catch (err: any) {
@@ -62,10 +69,18 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
   try {
     if (!isValidId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
     const schoolId = req.user!.schoolId || req.user!.id;
+    // Remove campos de enum com string vazia para evitar falha de validação do Mongoose
+    const enumFields = ['tipoContrato', 'sexo', 'estadoCivil'];
+    const updateData = { ...req.body };
+    for (const field of enumFields) {
+      if (updateData[field] === '' || updateData[field] === null || updateData[field] === undefined) {
+        delete updateData[field];
+      }
+    }
     const employee = await Employee.findOneAndUpdate(
       { _id: req.params.id, schoolId },
-      { $set: req.body },
-      { new: true, runValidators: true }
+      { $set: updateData },
+      { new: true, runValidators: false }
     );
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
     res.json(employee);
