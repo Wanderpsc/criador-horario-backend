@@ -12,7 +12,7 @@ import {
   BookOpen, LogIn, LogOut, Search, ChevronRight, ArrowLeft,
 } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'https://criador-horario-aula-backend.onrender.com';
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 interface Person {
   _id: string;
@@ -45,10 +45,17 @@ interface PersonInfo {
   cargo?: string;
   setor?: string;
   jornadaTrabalho?: string;
+  workSchedule?: { entryTime: string; exitTime: string; workDays: string[]; toleranceMinutes: number } | null;
   today: string;
   dayLabel: string;
   schedule?: ScheduleSlot[];
   attendance: Attendance | null;
+  // geo settings from school link
+  requireGeolocation?: boolean;
+  latitude?: number;
+  longitude?: number;
+  areaM2?: number;
+  requirePhoto?: boolean;
 }
 
 type Step = 'select' | 'info' | 'done';
@@ -73,15 +80,24 @@ export default function PontoPublicoGeral() {
   const [marking, setMarking] = useState(false);
   const [result, setResult] = useState<{ message: string; alreadyMarked?: boolean; action?: string; workedMinutes?: number } | null>(null);
   const [updatedAttendance, setUpdatedAttendance] = useState<Attendance | null>(null);
+  const [photoData, setPhotoData] = useState<string | null>(null);
+  const [geoPos, setGeoPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoError, setGeoError] = useState('');
+  const [requireGeolocation, setRequireGeolocation] = useState(false);
+  const [requirePhoto, setRequirePhoto] = useState(false);
+  const [schoolGeoConfig, setSchoolGeoConfig] = useState<{ latitude?: number; longitude?: number; areaM2?: number }>({});
 
   // Carregar lista de pessoas
   useEffect(() => {
     if (!token) return;
     axios
-      .get(`${API}/api/attendance-links/school-public/${token}`)
+      .get(`${API}/attendance-links/school-public/${token}`)
       .then(r => {
         setSchoolName(r.data.schoolName);
         setPeople(r.data.people);
+        setRequireGeolocation(r.data.requireGeolocation || false);
+        setRequirePhoto(r.data.requirePhoto || false);
+        setSchoolGeoConfig({ latitude: r.data.latitude, longitude: r.data.longitude, areaM2: r.data.areaM2 });
       })
       .catch(e => setErrorPeople(e.response?.data?.message || 'Erro ao carregar lista.'))
       .finally(() => setLoadingPeople(false));
@@ -94,8 +110,11 @@ export default function PontoPublicoGeral() {
     setStep('info');
     setResult(null);
     setUpdatedAttendance(null);
+    setPhotoData(null);
+    setGeoPos(null);
+    setGeoError('');
     try {
-      const r = await axios.post(`${API}/api/attendance-links/school-public/${token}/person-info`, {
+      const r = await axios.post(`${API}/attendance-links/school-public/${token}/person-info`, {
         personType: person.type,
         personId: person._id,
       });
@@ -111,11 +130,28 @@ export default function PontoPublicoGeral() {
   async function markAttendance(action: 'entry' | 'exit' | 'confirm') {
     if (!selected) return;
     setMarking(true);
+    let lat: number | undefined;
+    let lng: number | undefined;
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        setGeoPos({ lat, lng });
+        setGeoError('');
+      } catch {
+        setGeoError('Localização não disponível.');
+      }
+    }
     try {
-      const r = await axios.post(`${API}/api/attendance-links/school-public/${token}/mark`, {
+      const r = await axios.post(`${API}/attendance-links/school-public/${token}/mark`, {
         personType: selected.type,
         personId: selected._id,
         action,
+        lat,
+        lng,
+        photoData: photoData || undefined,
       });
       setResult(r.data);
       setUpdatedAttendance(r.data.attendance);
@@ -303,21 +339,64 @@ export default function PontoPublicoGeral() {
 
                 {/* FUNCIONÁRIO: status entrada/saída */}
                 {!isTeacher && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className={`rounded-xl p-3 text-center ${hasEntry ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
-                      <LogIn className={`w-5 h-5 mx-auto mb-1 ${hasEntry ? 'text-green-600' : 'text-gray-300'}`} />
-                      <p className="text-xs text-gray-500">Entrada</p>
-                      <p className={`font-bold text-sm ${hasEntry ? 'text-green-700' : 'text-gray-300'}`}>
-                        {hasEntry ? (att as any).entryTime : '--:--'}
-                      </p>
+                  <>
+                    {personInfo?.workSchedule?.entryTime && (
+                      <div className="flex justify-between bg-indigo-50 rounded-lg p-3 text-sm">
+                        <span className="text-indigo-700">⏰ Horário previsto:</span>
+                        <span className="font-bold text-indigo-800">
+                          {personInfo.workSchedule.entryTime} – {personInfo.workSchedule.exitTime}
+                        </span>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className={`rounded-xl p-3 text-center ${hasEntry ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
+                        <LogIn className={`w-5 h-5 mx-auto mb-1 ${hasEntry ? 'text-green-600' : 'text-gray-300'}`} />
+                        <p className="text-xs text-gray-500">Entrada</p>
+                        <p className={`font-bold text-sm ${hasEntry ? 'text-green-700' : 'text-gray-300'}`}>
+                          {hasEntry ? (att as any).entryTime : '--:--'}
+                        </p>
+                      </div>
+                      <div className={`rounded-xl p-3 text-center ${hasExit ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
+                        <LogOut className={`w-5 h-5 mx-auto mb-1 ${hasExit ? 'text-red-600' : 'text-gray-300'}`} />
+                        <p className="text-xs text-gray-500">Saída</p>
+                        <p className={`font-bold text-sm ${hasExit ? 'text-red-700' : 'text-gray-300'}`}>
+                          {hasExit ? (att as any).exitTime : '--:--'}
+                        </p>
+                      </div>
                     </div>
-                    <div className={`rounded-xl p-3 text-center ${hasExit ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
-                      <LogOut className={`w-5 h-5 mx-auto mb-1 ${hasExit ? 'text-red-600' : 'text-gray-300'}`} />
-                      <p className="text-xs text-gray-500">Saída</p>
-                      <p className={`font-bold text-sm ${hasExit ? 'text-red-700' : 'text-gray-300'}`}>
-                        {hasExit ? (att as any).exitTime : '--:--'}
-                      </p>
-                    </div>
+                  </>
+                )}
+
+                {/* Foto de confirmação */}
+                {!isTeacher && !hasExit && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1">
+                      📸 Foto de confirmação {requirePhoto && <span className="text-red-500">*obrigatória</span>}
+                    </p>
+                    <input type="file" accept="image/*" capture="environment"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = ev => {
+                          const img = new Image();
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const MAX = 400;
+                            const ratio = Math.min(MAX / img.width, MAX / img.height);
+                            canvas.width = img.width * ratio;
+                            canvas.height = img.height * ratio;
+                            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            setPhotoData(canvas.toDataURL('image/jpeg', 0.6));
+                          };
+                          img.src = ev.target!.result as string;
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="block w-full text-xs text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium" />
+                    {photoData && <img src={photoData} alt="preview" className="mt-2 rounded-lg h-20 object-cover border" />}
+                    {geoPos && <p className="text-xs text-green-600 mt-1">📍 Localização obtida</p>}
+                    {geoError && <p className="text-xs text-orange-500 mt-1">⚠️ {geoError}</p>}
                   </div>
                 )}
 

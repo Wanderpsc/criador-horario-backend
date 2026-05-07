@@ -223,7 +223,7 @@ router.get('/public/:token', async (req, res) => {
 
     // ── FUNCIONÁRIO ────────────────────────────────────────────────────────
     const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId })
-      .select('jornadaTrabalho cargaHorariaSemanal setor cargo')
+      .select('jornadaTrabalho cargaHorariaSemanal setor cargo workSchedule')
       .lean();
 
     const attendance = await EmployeeAttendance.findOne({
@@ -231,9 +231,16 @@ router.get('/public/:token', async (req, res) => {
       date: today,
     }).lean();
 
+    const ws = (employee as any)?.workSchedule;
     return res.json({
       ...baseInfo,
       jornadaTrabalho: (employee as any)?.jornadaTrabalho || '',
+      workSchedule: ws ? {
+        entryTime: ws.entryTime,
+        exitTime: ws.exitTime,
+        workDays: ws.workDays,
+        toleranceMinutes: ws.toleranceMinutes ?? 10,
+      } : null,
       attendance: attendance || null,
     });
 
@@ -333,7 +340,13 @@ router.post('/public/:token/mark', async (req, res) => {
     }
 
     // ── FUNCIONÁRIO: marcar entrada ou saída ───────────────────────────────
-    const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId }).lean();
+    const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId })
+      .select('workSchedule jornadaTrabalho cargo setor')
+      .lean();
+    const ws = (employee as any)?.workSchedule;
+
+    // Helper para verificar geolocalização (AttendanceLink individual não tem geo — apenas link geral)
+    const { lat, lng, photoData } = req.body;
 
     const existing = await EmployeeAttendance.findOne({ employeeId: link.personId, date: today });
 
@@ -353,8 +366,35 @@ router.post('/public/:token/mark', async (req, res) => {
         if ((existing as any).entryTime) {
           const [eh, em] = (existing as any).entryTime.split(':').map(Number);
           const [xh, xm] = now.split(':').map(Number);
-          (existing as any).workedMinutes = (xh * 60 + xm) - (eh * 60 + em);
+          const worked = (xh * 60 + xm) - (eh * 60 + em);
+          (existing as any).workedMinutes = worked;
+
+          // Calcular déficit/saldo usando workSchedule
+          if (ws?.entryTime && ws?.exitTime) {
+            const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+            const expected = toMin(ws.exitTime) - toMin(ws.entryTime);
+            (existing as any).expectedMinutes = expected;
+            (existing as any).expectedEntryTime = ws.entryTime;
+            (existing as any).expectedExitTime = ws.exitTime;
+            // Atraso na entrada
+            const entryMin = toMin((existing as any).entryTime);
+            const expectedEntry = toMin(ws.entryTime);
+            const tolerance = ws.toleranceMinutes ?? 10;
+            const late = entryMin - expectedEntry - tolerance;
+            (existing as any).lateArrivalMinutes = late > 0 ? late : 0;
+            // Saída antecipada
+            const exitMin = toMin(now);
+            const expectedExit = toMin(ws.exitTime);
+            const early = expectedExit - exitMin;
+            (existing as any).earlyDepartureMinutes = early > 0 ? early : 0;
+            // Hora extra
+            const overtime = worked - expected;
+            (existing as any).overtimeMinutes = overtime > 0 ? overtime : 0;
+          }
         }
+        if (photoData) (existing as any).photoData = photoData;
+        if (lat != null) (existing as any).latitude = lat;
+        if (lng != null) (existing as any).longitude = lng;
         await existing.save();
         return res.json({ message: 'Saída registrada com sucesso.', attendance: existing });
       }
@@ -365,6 +405,9 @@ router.post('/public/:token/mark', async (req, res) => {
     }
 
     // Primeiro toque = entrada
+    const toMin2 = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const lateArr = (ws?.entryTime) ? Math.max(0, toMin2(now) - toMin2(ws.entryTime) - (ws.toleranceMinutes ?? 10)) : 0;
+
     const attendance = new EmployeeAttendance({
       schoolId: link.schoolId,
       employeeId: link.personId,
@@ -376,8 +419,15 @@ router.post('/public/:token/mark', async (req, res) => {
       shift: 'integral',
       status: 'present',
       entryTime: now,
+      expectedEntryTime: ws?.entryTime || '',
+      expectedExitTime: ws?.exitTime || '',
+      expectedMinutes: (ws?.entryTime && ws?.exitTime) ? toMin2(ws.exitTime) - toMin2(ws.entryTime) : 0,
+      lateArrivalMinutes: lateArr,
       markedById: 'self',
       markedByName: link.personName,
+      photoData: photoData || undefined,
+      latitude: lat != null ? lat : undefined,
+      longitude: lng != null ? lng : undefined,
     });
     await attendance.save();
     return res.json({ message: 'Entrada registrada com sucesso.', attendance });
@@ -426,7 +476,15 @@ router.get('/school-public/:token', async (req, res) => {
       ...teachers.map((t: any) => ({ _id: t._id, name: t.name, type: 'teacher' })),
     ].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
-    res.json({ schoolName: link.schoolName, people });
+    res.json({
+      schoolName: link.schoolName,
+      people,
+      requireGeolocation: link.requireGeolocation || false,
+      latitude: link.latitude,
+      longitude: link.longitude,
+      areaM2: link.areaM2 || 1000,
+      requirePhoto: link.requirePhoto || false,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -494,10 +552,12 @@ router.post('/school-public/:token/person-info', async (req, res) => {
     }
 
     // employee
-    const employee = await Employee.findOne({ _id: personId, schoolId: link.schoolId }).lean();
+    const employee = await Employee.findOne({ _id: personId, schoolId: link.schoolId })
+      .select('name cargo setor jornadaTrabalho workSchedule').lean();
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
 
     const attendance = await EmployeeAttendance.findOne({ employeeId: personId, date: today }).lean();
+    const ws = (employee as any).workSchedule;
 
     return res.json({
       schoolName: link.schoolName,
@@ -506,6 +566,12 @@ router.post('/school-public/:token/person-info', async (req, res) => {
       cargo: (employee as any).cargo || '',
       setor: (employee as any).setor || '',
       jornadaTrabalho: (employee as any).jornadaTrabalho || '',
+      workSchedule: ws ? {
+        entryTime: ws.entryTime,
+        exitTime: ws.exitTime,
+        workDays: ws.workDays,
+        toleranceMinutes: ws.toleranceMinutes ?? 10,
+      } : null,
       today,
       dayLabel,
       attendance: attendance || null,
@@ -594,8 +660,38 @@ router.post('/school-public/:token/mark', async (req, res) => {
     }
 
     // ── FUNCIONÁRIO ────────────────────────────────────────────────────────
-    const employee = await Employee.findOne({ _id: personId, schoolId: link.schoolId }).lean();
+    const employee = await Employee.findOne({ _id: personId, schoolId: link.schoolId })
+      .select('name cargo setor workSchedule').lean();
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
+
+    const ws = (employee as any).workSchedule;
+    const { lat, lng, photoData } = req.body;
+
+    // Validação de geolocalização
+    if (link.requireGeolocation) {
+      if (lat == null || lng == null) {
+        return res.status(400).json({ message: 'Geolocalização obrigatória. Permita o acesso à localização.' });
+      }
+      if (link.latitude != null && link.longitude != null) {
+        const R = 6371000;
+        const toRad = (d: number) => d * Math.PI / 180;
+        const dLat = toRad(lat - link.latitude!);
+        const dLon = toRad(lng - link.longitude!);
+        const a = Math.sin(dLat/2)**2 + Math.cos(toRad(link.latitude!))*Math.cos(toRad(lat))*Math.sin(dLon/2)**2;
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const radius = Math.sqrt((link.areaM2 || 1000) / Math.PI);
+        if (dist > radius) {
+          return res.status(400).json({ message: `Fora da área permitida (${Math.round(dist)}m de distância, máximo ${Math.round(radius)}m).` });
+        }
+      }
+    }
+
+    // Validação de foto
+    if (link.requirePhoto && !photoData) {
+      return res.status(400).json({ message: 'Foto obrigatória para confirmar o ponto.' });
+    }
+
+    const toMin3 = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
     const existing = await EmployeeAttendance.findOne({ employeeId: personId, date: today });
 
@@ -603,6 +699,7 @@ router.post('/school-public/:token/mark', async (req, res) => {
       if (action === 'exit') {
         return res.status(400).json({ message: 'Nenhuma entrada registrada hoje. Registre a entrada primeiro.' });
       }
+      const lateArr = ws?.entryTime ? Math.max(0, toMin3(now) - toMin3(ws.entryTime) - (ws.toleranceMinutes ?? 10)) : 0;
       const attendance = new EmployeeAttendance({
         schoolId: link.schoolId,
         employeeId: personId,
@@ -614,8 +711,16 @@ router.post('/school-public/:token/mark', async (req, res) => {
         shift: 'integral',
         status: 'present',
         entryTime: now,
+        expectedEntryTime: ws?.entryTime || '',
+        expectedExitTime: ws?.exitTime || '',
+        expectedMinutes: (ws?.entryTime && ws?.exitTime) ? toMin3(ws.exitTime) - toMin3(ws.entryTime) : 0,
+        lateArrivalMinutes: lateArr,
         markedById: 'self',
         markedByName: (employee as any).name,
+        photoData: photoData || undefined,
+        latitude: lat != null ? lat : undefined,
+        longitude: lng != null ? lng : undefined,
+        locationValid: lat != null ? true : undefined,
       });
       await attendance.save();
       return res.status(201).json({ message: `Entrada registrada às ${now}`, attendance, action: 'entry' });
@@ -627,14 +732,56 @@ router.post('/school-public/:token/mark', async (req, res) => {
 
     // Segundo toque = saída
     const entry = (existing as any).entryTime || '00:00';
-    const [eh, em] = entry.split(':').map(Number);
-    const [xh, xm] = now.split(':').map(Number);
+    const worked = Math.max(0, toMin3(now) - toMin3(entry));
     (existing as any).exitTime = now;
-    (existing as any).workedMinutes = Math.max(0, (xh * 60 + xm) - (eh * 60 + em));
+    (existing as any).workedMinutes = worked;
     (existing as any).status = 'present';
+    if (photoData) (existing as any).photoData = photoData;
+    if (lat != null) { (existing as any).latitude = lat; (existing as any).locationValid = true; }
+    if (lng != null) (existing as any).longitude = lng;
+
+    if (ws?.entryTime && ws?.exitTime) {
+      const expected = toMin3(ws.exitTime) - toMin3(ws.entryTime);
+      (existing as any).expectedMinutes = expected;
+      (existing as any).expectedExitTime = ws.exitTime;
+      const early = toMin3(ws.exitTime) - toMin3(now);
+      (existing as any).earlyDepartureMinutes = early > 0 ? early : 0;
+      (existing as any).overtimeMinutes = worked - expected > 0 ? worked - expected : 0;
+    }
     await existing.save();
     return res.json({ message: `Saída registrada às ${now}`, attendance: existing, action: 'exit' });
 
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /school-link/settings — atualizar configurações de geolocalização e foto
+router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
+  try {
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { requireGeolocation, latitude, longitude, areaM2, requirePhoto } = req.body;
+    const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });
+    if (!link) return res.status(404).json({ message: 'Link geral não encontrado.' });
+    if (requireGeolocation !== undefined) link.requireGeolocation = requireGeolocation;
+    if (latitude !== undefined) link.latitude = latitude;
+    if (longitude !== undefined) link.longitude = longitude;
+    if (areaM2 !== undefined) link.areaM2 = areaM2;
+    if (requirePhoto !== undefined) link.requirePhoto = requirePhoto;
+    await link.save();
+    res.json(link);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /school-link — retornar link ativo da escola (com configurações)
+router.get('/school-link', auth, async (req: AuthRequest, res) => {
+  try {
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });
+    if (!link) return res.status(404).json({ message: 'Nenhum link encontrado.' });
+    res.json(link);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

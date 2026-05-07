@@ -11,6 +11,13 @@ export interface ISchoolPontoLink extends Document {
   token: string;
   isActive: boolean;
   createdBy: string;
+  // Configurações de geolocalização
+  requireGeolocation: boolean;
+  latitude?: number;
+  longitude?: number;
+  areaM2: number;           // área em m² para cálculo do raio (padrão 1000)
+  // Configuração de foto
+  requirePhoto: boolean;
   createdAt: Date;
 }
 
@@ -21,6 +28,11 @@ const SchoolPontoLinkSchema = new Schema<ISchoolPontoLink>(
     token:      { type: String, required: true, unique: true },
     isActive:   { type: Boolean, default: true },
     createdBy:  { type: String, required: true },
+    requireGeolocation: { type: Boolean, default: false },
+    latitude:           { type: Number },
+    longitude:          { type: Number },
+    areaM2:             { type: Number, default: 1000 },
+    requirePhoto:       { type: Boolean, default: false },
   },
   { timestamps: true }
 );

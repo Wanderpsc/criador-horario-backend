@@ -50,6 +50,12 @@ interface PageData {
   schedule?: TeacherClass[];
   // employee
   jornadaTrabalho?: string;
+  workSchedule?: {
+    entryTime: string;
+    exitTime: string;
+    workDays: string[];
+    toleranceMinutes: number;
+  } | null;
   // common
   attendance: TeacherAttendance | EmployeeAttendance | null;
 }
@@ -76,6 +82,9 @@ export default function PontoPublico() {
   const [marking, setMarking] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [markError, setMarkError] = useState('');
+  const [photoData, setPhotoData] = useState<string | null>(null);
+  const [geoPos, setGeoPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoError, setGeoError] = useState<string>('');
 
   const load = async () => {
     if (!token) { setPageStatus('error'); setErrorMsg('Token inválido.'); return; }
@@ -96,9 +105,32 @@ export default function PontoPublico() {
     setMarking(true);
     setMarkError('');
     setSuccessMsg('');
+
+    // Geolocalização (tenta sempre obter, backend valida se requireGeolocation)
+    let lat: number | undefined;
+    let lng: number | undefined;
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+        setGeoPos({ lat, lng });
+        setGeoError('');
+      } catch {
+        setGeoError('Localização não disponível.');
+      }
+    }
+
     try {
-      const res = await axios.post(`${API_URL}/attendance-links/public/${token}/mark`, { action });
+      const res = await axios.post(`${API_URL}/attendance-links/public/${token}/mark`, {
+        action,
+        lat,
+        lng,
+        photoData: photoData || undefined,
+      });
       setSuccessMsg(res.data.message || 'Ponto registrado!');
+      setPhotoData(null);
       // Recarregar dados após marcação
       await load();
     } catch (err: any) {
@@ -106,6 +138,27 @@ export default function PontoPublico() {
     } finally {
       setMarking(false);
     }
+  };
+
+  // ── Captura de foto ────────────────────────────────────────────────────────
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 400;
+        const ratio = Math.min(MAX / img.width, MAX / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setPhotoData(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = ev.target!.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -260,9 +313,18 @@ export default function PontoPublico() {
               </h2>
 
               {data.jornadaTrabalho && (
-                <p className="text-sm text-gray-500 mb-4 bg-blue-50 rounded-lg p-3">
+                <p className="text-sm text-gray-500 mb-2 bg-blue-50 rounded-lg p-3">
                   Jornada: <span className="font-medium text-gray-700">{data.jornadaTrabalho}</span>
                 </p>
+              )}
+
+              {data.workSchedule?.entryTime && (
+                <div className="flex justify-between bg-indigo-50 rounded-lg p-3 mb-3 text-sm">
+                  <span className="text-indigo-700">⏰ Horário previsto:</span>
+                  <span className="font-bold text-indigo-800">
+                    {data.workSchedule.entryTime} – {data.workSchedule.exitTime}
+                  </span>
+                </div>
               )}
 
               {(() => {
@@ -274,26 +336,44 @@ export default function PontoPublico() {
                     </p>
                   );
                 }
+                const empAtt = att as any;
                 return (
                   <div className="space-y-3">
                     <div className="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-xl">
                       <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <LogIn size={16} className="text-green-600" /> Entrada
                       </span>
-                      <span className="font-bold text-green-700">{att.entryTime || '—'}</span>
+                      <span className="font-bold text-green-700">{empAtt.entryTime || '—'}</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
                       <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
                         <LogOut size={16} className="text-gray-500" /> Saída
                       </span>
-                      <span className="font-bold text-gray-700">{att.exitTime || '—'}</span>
+                      <span className="font-bold text-gray-700">{empAtt.exitTime || '—'}</span>
                     </div>
-                    {att.workedMinutes !== undefined && att.workedMinutes > 0 && (
+                    {empAtt.workedMinutes !== undefined && empAtt.workedMinutes > 0 && (
                       <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-xl">
                         <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
                           <Clock size={16} className="text-blue-500" /> Total trabalhado
                         </span>
-                        <span className="font-bold text-blue-700">{minutesToHHmm(att.workedMinutes)}</span>
+                        <span className="font-bold text-blue-700">{minutesToHHmm(empAtt.workedMinutes)}</span>
+                      </div>
+                    )}
+                    {/* Déficit / Saldo */}
+                    {(empAtt.lateArrivalMinutes > 0 || empAtt.earlyDepartureMinutes > 0) && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm">
+                        <span className="font-semibold text-red-700">⚠️ Déficit:</span>
+                        {empAtt.lateArrivalMinutes > 0 && (
+                          <span className="ml-2 text-red-600">Atraso: {minutesToHHmm(empAtt.lateArrivalMinutes)}</span>
+                        )}
+                        {empAtt.earlyDepartureMinutes > 0 && (
+                          <span className="ml-2 text-red-600">Saída antecip.: {minutesToHHmm(empAtt.earlyDepartureMinutes)}</span>
+                        )}
+                      </div>
+                    )}
+                    {empAtt.overtimeMinutes > 0 && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm">
+                        <span className="font-semibold text-green-700">✅ Hora extra: {minutesToHHmm(empAtt.overtimeMinutes)}</span>
                       </div>
                     )}
                   </div>
@@ -301,11 +381,34 @@ export default function PontoPublico() {
               })()}
             </div>
 
+            {/* Captura de foto (opcional / obrigatória conforme configuração) */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">📸 Foto de confirmação</p>
+              <input type="file" accept="image/*" capture="environment"
+                onChange={handlePhotoChange}
+                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium hover:file:bg-blue-100" />
+              {photoData && (
+                <img src={photoData} alt="preview" className="mt-2 rounded-lg h-28 object-cover border" />
+              )}
+            </div>
+
+            {/* Status de geolocalização */}
+            {geoPos && (
+              <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 mb-2 flex items-center gap-1">
+                📍 Localização capturada ({geoPos.lat.toFixed(5)}, {geoPos.lng.toFixed(5)})
+              </div>
+            )}
+            {geoError && (
+              <div className="text-xs text-orange-600 bg-orange-50 rounded-lg p-2 mb-2">
+                ⚠️ {geoError}
+              </div>
+            )}
+
             {/* Botões entrada / saída */}
             {(() => {
               const att = data.attendance as EmployeeAttendance | null;
-              const hasEntry = !!(att?.entryTime);
-              const hasExit = !!(att?.exitTime);
+              const hasEntry = !!(att as any)?.entryTime;
+              const hasExit = !!(att as any)?.exitTime;
 
               if (hasExit) {
                 return (

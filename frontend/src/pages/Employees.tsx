@@ -56,6 +56,12 @@ interface Employee {
   cnhValidade?: string;
   reservista?: string;
   observacoes?: string;
+  workSchedule?: {
+    entryTime: string;
+    exitTime: string;
+    workDays: string[];
+    toleranceMinutes: number;
+  };
   isActive: boolean;
 }
 
@@ -70,6 +76,7 @@ const EMPTY: Omit<Employee, '_id' | 'isActive'> = {
   ctpsNumero: '', ctpsSerie: '', pisPasep: '', tituloEleitor: '', zonaEleitoral: '',
   secaoEleitoral: '', certificadoMilitar: '', cnhNumero: '', cnhCategoria: '',
   cnhValidade: '', reservista: '', observacoes: '',
+  workSchedule: { entryTime: '', exitTime: '', workDays: ['monday','tuesday','wednesday','thursday','friday'], toleranceMinutes: 10 },
 };
 
 // ─── Máscaras de entrada ────────────────────────────────────────────────────
@@ -1370,6 +1377,58 @@ export default function Employees() {
                       rows={3}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                       placeholder="Informações adicionais..." />
+                  </div>
+
+                  {/* ── Escala / Horário de Trabalho ── */}
+                  <div className="sm:col-span-2 border-t pt-4 mt-2">
+                    <h3 className="text-sm font-semibold text-indigo-700 mb-3">Escala / Horário de Trabalho</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Hora de Entrada</label>
+                        <input type="time" value={form.workSchedule?.entryTime || ''}
+                          onChange={e => setField('workSchedule', { ...form.workSchedule, entryTime: e.target.value } as any)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Hora de Saída</label>
+                        <input type="time" value={form.workSchedule?.exitTime || ''}
+                          onChange={e => setField('workSchedule', { ...form.workSchedule, exitTime: e.target.value } as any)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Tolerância (min)</label>
+                        <input type="number" min={0} max={60} value={form.workSchedule?.toleranceMinutes ?? 10}
+                          onChange={e => setField('workSchedule', { ...form.workSchedule, toleranceMinutes: Number(e.target.value) } as any)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs font-medium text-gray-600 mb-2">Dias de Trabalho</label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { key: 'monday', label: 'Seg' },
+                            { key: 'tuesday', label: 'Ter' },
+                            { key: 'wednesday', label: 'Qua' },
+                            { key: 'thursday', label: 'Qui' },
+                            { key: 'friday', label: 'Sex' },
+                            { key: 'saturday', label: 'Sáb' },
+                            { key: 'sunday', label: 'Dom' },
+                          ].map(({ key, label }) => {
+                            const selected = (form.workSchedule?.workDays || []).includes(key);
+                            return (
+                              <button key={key} type="button"
+                                onClick={() => {
+                                  const days = form.workSchedule?.workDays || [];
+                                  const newDays = selected ? days.filter(d => d !== key) : [...days, key];
+                                  setField('workSchedule', { ...form.workSchedule, workDays: newDays } as any);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${selected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

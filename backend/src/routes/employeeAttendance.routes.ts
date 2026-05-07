@@ -243,11 +243,24 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
       EmployeeAttendance.find({ schoolId, date: date as string }),
     ]);
 
+    // Determinar o dia da semana para a data pedida
+    const dateObj = new Date(date as string + 'T12:00:00');
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayKey = dayNames[dateObj.getDay()];
+
     const recordMap = new Map(existingRecords.map(r => [r.employeeId, r]));
 
     const rows = employees.map(emp => {
       const existing = recordMap.get(emp._id.toString());
-      return existing || {
+      if (existing) return existing;
+
+      const ws = (emp as any).workSchedule;
+      // Usa workSchedule se o dia estiver na escala
+      const hasWorkToday = ws?.workDays?.includes(dayKey);
+      const expectedEntryTime = hasWorkToday && ws?.entryTime ? ws.entryTime : '';
+      const expectedExitTime  = hasWorkToday && ws?.exitTime  ? ws.exitTime  : '';
+
+      return {
         employeeId: emp._id.toString(),
         employeeName: emp.name,
         cargo: emp.cargo,
@@ -257,8 +270,8 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         shift: emp.jornadaTrabalho?.toLowerCase().includes('manhã') ? 'manha' :
                emp.jornadaTrabalho?.toLowerCase().includes('tarde') ? 'tarde' :
                emp.jornadaTrabalho?.toLowerCase().includes('noturno') ? 'noturno' : 'integral',
-        expectedEntryTime: '',
-        expectedExitTime: '',
+        expectedEntryTime,
+        expectedExitTime,
         entryTime: '',
         exitTime: '',
       };

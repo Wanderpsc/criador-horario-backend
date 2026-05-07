@@ -41,6 +41,11 @@ export interface IEmployeeAttendance extends Document {
   // Controle
   markedById?: string;
   markedByName?: string;
+  // Foto e geolocalização (marcação pelo link público)
+  photoData?: string;       // base64 comprimido
+  latitude?: number;
+  longitude?: number;
+  locationValid?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,6 +87,10 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
     notificationDate: { type: Date },
     markedById: { type: String },
     markedByName: { type: String },
+    photoData:     { type: String },
+    latitude:      { type: Number },
+    longitude:     { type: Number },
+    locationValid: { type: Boolean },
   },
   { timestamps: true }
 );

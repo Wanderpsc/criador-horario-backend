@@ -106,7 +106,18 @@ export default function EmployeeAttendancePage() {
   const { user } = useAuthStore();
   const qc = useQueryClient();
 
-  const [tab, setTab] = useState<'ponto' | 'relatorios' | 'notificacoes'>('ponto');
+  const [tab, setTab] = useState<'ponto' | 'relatorios' | 'notificacoes' | 'configuracoes'>('ponto');
+
+  // ── Configurações de geolocalização / foto
+  const [geoSettings, setGeoSettings] = useState({
+    requireGeolocation: false,
+    latitude: '',
+    longitude: '',
+    areaM2: 1000,
+    requirePhoto: false,
+  });
+  const [geoSaving, setGeoSaving] = useState(false);
+  const [geoLoaded, setGeoLoaded] = useState(false);
 
   // ── Ponto diário
   const [selectedDate, setSelectedDate] = useState(TODAY);
@@ -139,6 +150,26 @@ export default function EmployeeAttendancePage() {
       return data;
     },
     staleTime: 0,
+  });
+
+  // ── Query: configurações do link geral (geolocalização / foto) ────────────
+  useQuery({
+    queryKey: ['school-link-settings'],
+    queryFn: async () => {
+      const res = await api.get('/attendance-links/school-link');
+      const d = res.data;
+      setGeoSettings({
+        requireGeolocation: d.requireGeolocation || false,
+        latitude: d.latitude != null ? String(d.latitude) : '',
+        longitude: d.longitude != null ? String(d.longitude) : '',
+        areaM2: d.areaM2 || 1000,
+        requirePhoto: d.requirePhoto || false,
+      });
+      setGeoLoaded(true);
+      return d;
+    },
+    retry: false,
+    staleTime: 30000,
   });
 
   // ── Query: relatório ────────────────────────────────────────────────────────
@@ -650,9 +681,10 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
       {/* Abas */}
       <div className="flex gap-2 border-b border-gray-200">
         {[
-          { id: 'ponto',        label: '📋 Ponto Diário',         icon: Clock },
-          { id: 'relatorios',   label: '📊 Relatórios',           icon: BarChart2 },
-          { id: 'notificacoes', label: '🔔 Notificações',         icon: Bell },
+          { id: 'ponto',          label: '📋 Ponto Diário',         icon: Clock },
+          { id: 'relatorios',     label: '📊 Relatórios',           icon: BarChart2 },
+          { id: 'notificacoes',   label: '🔔 Notificações',         icon: Bell },
+          { id: 'configuracoes',  label: '⚙️ Configurações',        icon: Clock },
         ].map(t => (
           <button
             key={t.id}
@@ -749,6 +781,7 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
                       <th className="p-3 text-center">Saída Prev.</th>
                       <th className="p-3 text-center">Entrada Real</th>
                       <th className="p-3 text-center">Saída Real</th>
+                      <th className="p-3 text-center">Atraso / Extra</th>
                       <th className="p-3 text-center">Detalhes</th>
                     </tr>
                   </thead>
@@ -800,6 +833,24 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
                             <td className="p-3 text-center">
                               <input type="time" value={row.exitTime} onChange={e => updateRow(rowIdx, 'exitTime', e.target.value)} className="input input-sm text-xs w-24" />
                             </td>
+                            <td className="p-3 text-center text-xs">
+                              {(row.lateArrivalMinutes != null && row.lateArrivalMinutes > 0) && (
+                                <span className="inline-block bg-red-100 text-red-700 rounded px-1 mb-0.5">
+                                  -{fmtMin(row.lateArrivalMinutes)} atraso
+                                </span>
+                              )}
+                              {(row.earlyDepartureMinutes != null && row.earlyDepartureMinutes > 0) && (
+                                <span className="inline-block bg-orange-100 text-orange-700 rounded px-1 mb-0.5">
+                                  -{fmtMin(row.earlyDepartureMinutes)} antecip.
+                                </span>
+                              )}
+                              {(row.overtimeMinutes != null && row.overtimeMinutes > 0) && (
+                                <span className="inline-block bg-green-100 text-green-700 rounded px-1 mb-0.5">
+                                  +{fmtMin(row.overtimeMinutes)} extra
+                                </span>
+                              )}
+                              {!row.lateArrivalMinutes && !row.earlyDepartureMinutes && !row.overtimeMinutes && '—'}
+                            </td>
                             <td className="p-3 text-center">
                               <button
                                 onClick={() => setExpandedRow(isExpanded ? null : row.employeeId)}
@@ -813,7 +864,7 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
 
                           {isExpanded && (
                             <tr key={`${row.employeeId}-exp`} className="bg-blue-50 border-b border-blue-100">
-                              <td colSpan={9} className="p-4">
+                              <td colSpan={10} className="p-4">
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                   <label className="flex items-center gap-2 text-sm font-medium col-span-2 md:col-span-1">
                                     <input
@@ -1113,6 +1164,104 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
               <li><strong>CLT Art. 58 §1º</strong> — Tolerância de até 5 minutos de atraso (máx. 10 min/dia)</li>
               <li>Para servidores públicos, aplicar normas do Estatuto do Servidor do ente respectivo.</li>
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════ ABA: CONFIGURAÇÕES ══════════════ */}
+      {tab === 'configuracoes' && (
+        <div className="card max-w-2xl space-y-6">
+          <h2 className="text-lg font-bold text-gray-800">⚙️ Configurações do Ponto</h2>
+
+          <div className="space-y-4">
+            <h3 className="font-semibold text-gray-700">📍 Geolocalização</h3>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={geoSettings.requireGeolocation}
+                onChange={e => setGeoSettings(s => ({ ...s, requireGeolocation: e.target.checked }))}
+                className="w-4 h-4 accent-indigo-600" />
+              <span className="text-sm">Exigir geolocalização ao marcar o ponto</span>
+            </label>
+
+            {geoSettings.requireGeolocation && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Latitude da escola</label>
+                    <input type="number" step="any" value={geoSettings.latitude}
+                      onChange={e => setGeoSettings(s => ({ ...s, latitude: e.target.value }))}
+                      placeholder="-15.7801"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Longitude da escola</label>
+                    <input type="number" step="any" value={geoSettings.longitude}
+                      onChange={e => setGeoSettings(s => ({ ...s, longitude: e.target.value }))}
+                      placeholder="-47.9292"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Área permitida (m²) — padrão 1000m²</label>
+                  <input type="number" min={100} value={geoSettings.areaM2}
+                    onChange={e => setGeoSettings(s => ({ ...s, areaM2: Number(e.target.value) }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                  <p className="text-xs text-gray-500 mt-1">
+                    1000m² = raio de aprox. {Math.round(Math.sqrt(1000 / Math.PI))}m.
+                    Raio atual: {Math.round(Math.sqrt((geoSettings.areaM2 || 1000) / Math.PI))}m.
+                  </p>
+                </div>
+                <button type="button"
+                  onClick={() => {
+                    if (!navigator.geolocation) { alert('Geolocalização não suportada.'); return; }
+                    navigator.geolocation.getCurrentPosition(pos => {
+                      setGeoSettings(s => ({
+                        ...s,
+                        latitude: String(pos.coords.latitude),
+                        longitude: String(pos.coords.longitude),
+                      }));
+                      toast.success('Coordenadas obtidas da localização atual!');
+                    }, () => toast.error('Não foi possível obter a localização.'));
+                  }}
+                  className="btn btn-sm btn-secondary">
+                  📡 Usar minha localização atual como referência
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-700">📸 Foto de Confirmação</h3>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={geoSettings.requirePhoto}
+                onChange={e => setGeoSettings(s => ({ ...s, requirePhoto: e.target.checked }))}
+                className="w-4 h-4 accent-indigo-600" />
+              <span className="text-sm">Exigir foto para confirmar o ponto</span>
+            </label>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              disabled={geoSaving || !geoLoaded}
+              onClick={async () => {
+                setGeoSaving(true);
+                try {
+                  await api.put('/attendance-links/school-link/settings', {
+                    requireGeolocation: geoSettings.requireGeolocation,
+                    latitude: geoSettings.latitude !== '' ? Number(geoSettings.latitude) : undefined,
+                    longitude: geoSettings.longitude !== '' ? Number(geoSettings.longitude) : undefined,
+                    areaM2: geoSettings.areaM2,
+                    requirePhoto: geoSettings.requirePhoto,
+                  });
+                  toast.success('Configurações salvas!');
+                } catch (e: any) {
+                  toast.error(e?.response?.data?.message || 'Erro ao salvar.');
+                } finally {
+                  setGeoSaving(false);
+                }
+              }}
+              className="btn btn-primary">
+              {geoSaving ? 'Salvando...' : '💾 Salvar Configurações'}
+            </button>
           </div>
         </div>
       )}

@@ -51,6 +51,13 @@ export interface IEmployee extends Document {
   cnhCategoria?: string;
   cnhValidade?: string;
   reservista?: string;
+  // Escala de trabalho (horário fixo)
+  workSchedule?: {
+    entryTime: string;        // HH:mm
+    exitTime: string;         // HH:mm
+    workDays: string[];       // ['monday','tuesday','wednesday','thursday','friday']
+    toleranceMinutes: number; // minutos de tolerância (padrão 10)
+  };
   // Outros
   observacoes?: string;
   isActive: boolean;
@@ -105,6 +112,12 @@ const employeeSchema = new Schema<IEmployee>(
     cnhCategoria: { type: String },
     cnhValidade: { type: String },
     reservista: { type: String },
+    workSchedule: {
+      entryTime:         { type: String, default: '' },
+      exitTime:          { type: String, default: '' },
+      workDays:          { type: [String], default: ['monday','tuesday','wednesday','thursday','friday'] },
+      toleranceMinutes:  { type: Number, default: 10 },
+    },
     observacoes: { type: String },
     isActive: { type: Boolean, default: true },
   },
