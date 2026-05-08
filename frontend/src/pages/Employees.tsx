@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import {
   Users, Plus, Search, Pencil, Trash2, Printer, X, ChevronDown, ChevronUp,
   User, Phone, MapPin, Briefcase, FileText, BookOpen, Eye, Link2, Copy, CheckCheck,
-  Upload, FolderOpen, Download, AlertTriangle, Timer,
+  Upload, FolderOpen, Download, AlertTriangle, Timer, Clock,
 } from 'lucide-react';
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
@@ -183,6 +183,38 @@ export default function Employees() {
     graceMinutes: 10,
   });
   const [geralSettingsSaving, setGeralSettingsSaving] = useState(false);
+
+  // ─── Modal de Horário Rápido ───────────────────────────────────────────────
+  const [scheduleModalEmp, setScheduleModalEmp] = useState<Employee | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    entryTime: '', exitTime: '', workDays: ['monday','tuesday','wednesday','thursday','friday'] as string[], toleranceMinutes: 10,
+  });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+
+  const openScheduleModal = (emp: Employee) => {
+    setScheduleModalEmp(emp);
+    setScheduleForm({
+      entryTime: emp.workSchedule?.entryTime || '',
+      exitTime: emp.workSchedule?.exitTime || '',
+      workDays: emp.workSchedule?.workDays || ['monday','tuesday','wednesday','thursday','friday'],
+      toleranceMinutes: emp.workSchedule?.toleranceMinutes ?? 10,
+    });
+  };
+
+  const saveSchedule = async () => {
+    if (!scheduleModalEmp?._id) return;
+    setScheduleSaving(true);
+    try {
+      await api.put(`/employees/${scheduleModalEmp._id}`, { workSchedule: scheduleForm });
+      toast.success('Horário salvo!');
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      setScheduleModalEmp(null);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao salvar horário.');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
 
   // ─── Queries ──────────────────────────────────────────────────────────────
   const { data: employees = [], isLoading } = useQuery({
@@ -622,6 +654,13 @@ export default function Employees() {
                         <Timer className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={e => { e.stopPropagation(); openScheduleModal(emp); }}
+                        className={`p-1.5 hover:text-indigo-600 ${emp.workSchedule?.entryTime ? 'text-indigo-400' : 'text-gray-300'}`}
+                        title="Configurar horário de entrada/saída"
+                      >
+                        <Clock className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={e => { e.stopPropagation(); openEdit(emp); }}
                         className="p-1.5 text-gray-400 hover:text-indigo-500"
                         title="Editar"
@@ -662,6 +701,29 @@ export default function Employees() {
                       <div><span className="text-gray-400 text-xs">Cidade/UF</span><p>{[emp.cidade, emp.estado].filter(Boolean).join('/') || '—'}</p></div>
                       <div><span className="text-gray-400 text-xs">Nasc.</span><p>{fmtDate(emp.dataNascimento)}</p></div>
                       <div><span className="text-gray-400 text-xs">C/H Semanal</span><p>{emp.cargaHorariaSemanal ? `${emp.cargaHorariaSemanal}h` : '—'}</p></div>
+                      {/* Horário de trabalho */}
+                      <div className="col-span-2 sm:col-span-4 border-t border-gray-100 pt-3 mt-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                          <span className="text-xs font-semibold text-indigo-700">Horário de Trabalho</span>
+                          <button
+                            onClick={e => { e.stopPropagation(); openScheduleModal(emp); }}
+                            className="ml-auto text-xs text-indigo-500 hover:text-indigo-700 underline"
+                          >editar</button>
+                        </div>
+                        {emp.workSchedule?.entryTime ? (
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <span><span className="text-gray-400 text-xs">Entrada: </span><strong>{emp.workSchedule.entryTime}</strong></span>
+                            <span><span className="text-gray-400 text-xs">Saída: </span><strong>{emp.workSchedule.exitTime || '—'}</strong></span>
+                            <span><span className="text-gray-400 text-xs">Tolerância: </span><strong>{emp.workSchedule.toleranceMinutes ?? 10} min</strong></span>
+                            <span><span className="text-gray-400 text-xs">Dias: </span><strong>{
+                              (emp.workSchedule.workDays || []).map(d => ({ monday:'Seg',tuesday:'Ter',wednesday:'Qua',thursday:'Qui',friday:'Sex',saturday:'Sáb',sunday:'Dom' }[d] || d)).join(', ')
+                            }</strong></span>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400 italic">Horário não configurado — clique em "editar" para definir.</p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -946,6 +1008,81 @@ export default function Employees() {
                 className="max-h-[80vh] max-w-full rounded-lg object-contain bg-white"
               />
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL HORÁRIO RÁPIDO ───────────────────────────────────────────── */}
+      {scheduleModalEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <h2 className="text-base font-bold text-gray-800">Horário de Trabalho</h2>
+                  <p className="text-xs text-gray-500">{scheduleModalEmp.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setScheduleModalEmp(null)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Hora de Entrada</label>
+                  <input type="time" value={scheduleForm.entryTime}
+                    onChange={e => setScheduleForm(s => ({ ...s, entryTime: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Hora de Saída</label>
+                  <input type="time" value={scheduleForm.exitTime}
+                    onChange={e => setScheduleForm(s => ({ ...s, exitTime: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Tolerância de atraso (minutos)</label>
+                <input type="number" min={0} max={60} value={scheduleForm.toleranceMinutes}
+                  onChange={e => setScheduleForm(s => ({ ...s, toleranceMinutes: Number(e.target.value) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Dias de trabalho</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'monday', label: 'Seg' }, { key: 'tuesday', label: 'Ter' },
+                    { key: 'wednesday', label: 'Qua' }, { key: 'thursday', label: 'Qui' },
+                    { key: 'friday', label: 'Sex' }, { key: 'saturday', label: 'Sáb' },
+                    { key: 'sunday', label: 'Dom' },
+                  ].map(({ key, label }) => {
+                    const selected = scheduleForm.workDays.includes(key);
+                    return (
+                      <button key={key} type="button"
+                        onClick={() => setScheduleForm(s => ({
+                          ...s,
+                          workDays: selected ? s.workDays.filter(d => d !== key) : [...s.workDays, key],
+                        }))}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${selected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 p-5 border-t border-gray-100">
+              <button onClick={() => setScheduleModalEmp(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={saveSchedule} disabled={scheduleSaving || !scheduleForm.entryTime || !scheduleForm.exitTime}
+                className="flex-1 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50">
+                {scheduleSaving ? 'Salvando...' : '💾 Salvar Horário'}
+              </button>
+            </div>
           </div>
         </div>
       )}
