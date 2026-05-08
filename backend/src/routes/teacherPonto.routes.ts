@@ -31,6 +31,17 @@ const DAYS_PT: Record<string, string> = {
   saturday: 'Sábado',
 };
 
+// Mapa inglês → formato curto em português (como armazenado nos slots do GeneratedTimetable)
+const EN_TO_PT_SHORT: Record<string, string> = {
+  sunday:    'Domingo',
+  monday:    'Segunda',
+  tuesday:   'Terça',
+  wednesday: 'Quarta',
+  thursday:  'Quinta',
+  friday:    'Sexta',
+  saturday:  'Sábado',
+};
+
 // Helpers BRT (UTC-3) — servidor Render roda em UTC
 function nowBRT(): Date {
   return new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -82,15 +93,24 @@ async function getTeacherSlotsForDay(
   dayKey: string,
   activeTimetableId?: string
 ): Promise<{ period: number; startTime: string; endTime: string; subjectId: string; subjectName: string; classId: string; className: string; grade: string }[]> {
-  // Filtrar pelo horário ativo se configurado
-  const query: any = { school: schoolId };
-  if (activeTimetableId) query.scheduleId = activeTimetableId;
+  // Filtrar pelo horário ativo se configurado; incluir timetables com school OU userId
+  const baseOr = [{ school: schoolId }, { userId: schoolId }];
+  const query: any = activeTimetableId
+    ? { $or: baseOr, scheduleId: activeTimetableId }
+    : { $or: baseOr };
   const timetables = await GeneratedTimetable.find(query).lean();
 
   const rawSlots: any[] = [];
+  // slot.day pode ser 'Segunda','Terça'... (PT curto) ou 'monday','tuesday'... (EN)
+  const dayKeyPT = EN_TO_PT_SHORT[dayKey] || dayKey; // ex: 'monday' → 'Segunda'
   for (const tt of timetables) {
     for (const slot of (tt as any).slots) {
-      if (String(slot.teacherId) === String(teacherId) && slot.day === dayKey) {
+      const slotDay: string = slot.day || '';
+      const matchesDay =
+        slotDay === dayKeyPT ||          // PT curto: 'Segunda'
+        slotDay === dayKey ||             // EN: 'monday'
+        slotDay.toLowerCase() === dayKey; // fallback case-insensitive EN
+      if (String(slot.teacherId) === String(teacherId) && matchesDay) {
         rawSlots.push({ ...slot, classId: tt.classId });
       }
     }
