@@ -378,6 +378,7 @@ export default function PontoPublicoTeacher() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-start justify-center p-4 pt-8 pb-20">
+        <AddToHomeScreen label={`Ponto Professor${linkConfig?.schoolName ? ' · ' + linkConfig.schoolName : ''}`} />
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           {/* Header */}
           <div className="bg-green-700 rounded-t-2xl p-5 text-white">
@@ -568,6 +569,7 @@ export default function PontoPublicoTeacher() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-start justify-center p-4 pt-8">
+        <AddToHomeScreen label={`Ponto Professor${linkConfig?.schoolName ? ' · ' + linkConfig.schoolName : ''}`} />
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           <div className="bg-green-700 rounded-t-2xl p-5 text-white">
             <button
@@ -666,6 +668,7 @@ export default function PontoPublicoTeacher() {
   // ─── Step: done (error) ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+      <AddToHomeScreen label={`Ponto Professor${linkConfig?.schoolName ? ' · ' + linkConfig.schoolName : ''}`} />
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center p-8">
         {markResult?.ok ? (
           <>

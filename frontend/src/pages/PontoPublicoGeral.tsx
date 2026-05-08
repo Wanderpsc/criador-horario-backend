@@ -301,6 +301,7 @@ export default function PontoPublicoGeral() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-start justify-center p-4 pt-8">
+        <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           {/* Header */}
           <div className={`rounded-t-2xl p-5 text-white ${isTeacher ? 'bg-purple-600' : 'bg-indigo-600'}`}>
@@ -518,6 +519,7 @@ export default function PontoPublicoGeral() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center p-4">
+      <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center p-8">
         {isSuccess ? (
           <>
