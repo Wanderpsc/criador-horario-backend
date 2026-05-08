@@ -92,7 +92,7 @@ async function getTeacherSlotsForDay(
   teacherId: string,
   dayKey: string,
   activeTimetableId?: string
-): Promise<{ period: number; startTime: string; endTime: string; subjectId: string; subjectName: string; classId: string; className: string; grade: string }[]> {
+): Promise<{ period: number; startTime: string; endTime: string; subjectId: string; subjectName: string; classId: string; className: string; grade: string; isPedagogical: boolean }[]> {
   // Filtrar pelo horário ativo se configurado; incluir timetables com school OU userId
   const baseOr = [{ school: schoolId }, { userId: schoolId }];
   const query: any = activeTimetableId
@@ -151,15 +151,18 @@ async function getTeacherSlotsForDay(
     .map((s: any) => {
       const pInfo = periodMap[s.period] || { startTime: '00:00', endTime: '00:00' };
       const cInfo = classMap[s.classId] || { name: 'Turma', grade: '' };
+      // Detectar HP: subjectId vazio ou subject inexistente no mapa
+      const isHP = !s.subjectId || s.subjectId === '' || (!subjectMap[s.subjectId] && !s.subjectId);
       return {
         period: s.period,
         startTime: s.startTime || pInfo.startTime,
         endTime: s.endTime || pInfo.endTime,
-        subjectId: s.subjectId,
-        subjectName: subjectMap[s.subjectId] || 'Disciplina',
-        classId: s.classId,
-        className: cInfo.name,
-        grade: cInfo.grade,
+        subjectId: s.subjectId || '',
+        subjectName: isHP ? 'Horário Pedagógico' : (subjectMap[s.subjectId] || 'Disciplina'),
+        classId: s.classId || '',
+        className: isHP ? '' : cInfo.name,
+        grade: isHP ? '' : cInfo.grade,
+        isPedagogical: isHP,
       };
     });
 }
@@ -302,7 +305,7 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
           className: s.className,
           grade: s.grade,
           status: 'pending',
-          isPedagogical: false,
+          isPedagogical: s.isPedagogical || false,
         })),
         schoolYear: new Date().getFullYear(),
       });
@@ -435,7 +438,7 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
           className: s.className,
           grade: s.grade,
           status: 'pending',
-          isPedagogical: false,
+          isPedagogical: s.isPedagogical || false,
         })),
         schoolYear: new Date().getFullYear(),
       });
