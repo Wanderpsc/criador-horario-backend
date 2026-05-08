@@ -96,6 +96,7 @@ export default function TeacherAttendance() {
     areaM2: '1000',
     requirePhoto: false,
     graceMinutes: '10',
+    activeTimetableId: '',
   });
 
   // Detectar se a data selecionada é um sábado
@@ -556,6 +557,7 @@ export default function TeacherAttendance() {
         areaM2: String(r.data.areaM2 || 1000),
         requirePhoto: r.data.requirePhoto || false,
         graceMinutes: String(r.data.graceMinutes ?? 10),
+        activeTimetableId: r.data.activeTimetableId || '',
       });
     } catch {
       toast.error('Erro ao carregar link de ponto de professores.');
@@ -574,6 +576,7 @@ export default function TeacherAttendance() {
         areaM2: parseInt(pontoSettings.areaM2 as string) || 1000,
         requirePhoto: pontoSettings.requirePhoto,
         graceMinutes: parseInt(pontoSettings.graceMinutes as string) || 10,
+        activeTimetableId: pontoSettings.activeTimetableId || '',
       });
       setTeacherPontoLink(r.data);
       toast.success('Configurações salvas!');
@@ -1094,13 +1097,33 @@ export default function TeacherAttendance() {
                     <span className="text-sm font-medium text-gray-700">📸 Exigir foto ao vivo</span>
                   </label>
 
-                  {/* Grace */}
+                  {/* Tolerância */}
                   <div className="flex items-center gap-3">
                     <label className="text-sm font-medium text-gray-700 flex-shrink-0">⏱️ Tolerância de entrada (minutos)</label>
                     <input type="number" min="0" max="60" value={pontoSettings.graceMinutes}
                       onChange={e => setPontoSettings(s => ({ ...s, graceMinutes: e.target.value }))}
                       className="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-green-400 focus:outline-none" />
                     <span className="text-xs text-gray-400">Após o término da aula</span>
+                  </div>
+
+                  {/* Horário de referência para o ponto */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      📋 Horário de aulas para o ponto eletrônico
+                    </label>
+                    <select
+                      value={pontoSettings.activeTimetableId}
+                      onChange={e => setPontoSettings(s => ({ ...s, activeTimetableId: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-400 focus:outline-none bg-white"
+                    >
+                      <option value="">🤖 Automático (todos os horários)</option>
+                      {availableTimetables.map((t: any) => (
+                        <option key={t.scheduleId} value={t.scheduleId}>{t.title}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Selecione qual horário de aulas define as aulas do ponto eletrônico dos professores (ex: Horário 030).
+                    </p>
                   </div>
 
                   <button
