@@ -268,3 +268,78 @@ export const sendPaymentProofNotification = async (schoolName: string, adminEmai
     return false;
   }
 };
+
+// ─── Notificação de Ponto Eletrônico ─────────────────────────────────────────
+export interface PontoNotificationData {
+  personName: string;
+  personEmail: string;
+  schoolName: string;
+  action: 'entry' | 'exit' | 'confirm';
+  time: string;        // HH:mm
+  date: string;        // DD/MM/YYYY
+  locationValid?: boolean;
+  lateArrivalMinutes?: number;
+  earlyDepartureMinutes?: number;
+}
+
+export const sendPontoNotificationEmail = async (data: PontoNotificationData): Promise<void> => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) return; // silencioso se não configurado
+  try {
+    const actionLabel = data.action === 'entry' ? '📥 Entrada' : data.action === 'exit' ? '📤 Saída' : '✅ Presença';
+    const actionColor = data.action === 'entry' ? '#16a34a' : data.action === 'exit' ? '#dc2626' : '#7c3aed';
+    let statusLine = '';
+    if (data.lateArrivalMinutes && data.lateArrivalMinutes > 0) {
+      statusLine = `<p style="color:#dc2626;margin:8px 0;">⚠️ Atraso de <strong>${data.lateArrivalMinutes} min</strong></p>`;
+    } else if (data.earlyDepartureMinutes && data.earlyDepartureMinutes > 0) {
+      statusLine = `<p style="color:#d97706;margin:8px 0;">⚠️ Saída antecipada em <strong>${data.earlyDepartureMinutes} min</strong></p>`;
+    } else if (data.action !== 'confirm') {
+      statusLine = `<p style="color:#16a34a;margin:8px 0;">✅ No horário</p>`;
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<body style="font-family:Arial,sans-serif;background:#f3f4f6;margin:0;padding:20px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="background:${actionColor};padding:24px;text-align:center;color:#fff;">
+      <h1 style="margin:0;font-size:22px;">${actionLabel} Registrado</h1>
+      <p style="margin:6px 0 0;font-size:14px;opacity:.9;">${data.schoolName}</p>
+    </div>
+    <div style="padding:24px;">
+      <p style="margin:0 0 4px;color:#6b7280;font-size:13px;">Funcionário / Professor</p>
+      <p style="margin:0 0 16px;font-size:18px;font-weight:bold;color:#111;">${data.personName}</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:10px;background:#f9fafb;border-radius:8px 8px 0 0;color:#374151;font-size:14px;border-bottom:1px solid #e5e7eb;">
+            <strong>Data:</strong> ${data.date}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px;background:#f9fafb;border-radius:0 0 8px 8px;color:#374151;font-size:14px;">
+            <strong>Horário:</strong> ${data.time}
+          </td>
+        </tr>
+      </table>
+      ${statusLine}
+      ${data.locationValid === false ? '<p style="color:#dc2626;margin:8px 0;font-size:13px;">📍 Localização não validada</p>' : ''}
+      <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb;">
+      <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+        Este é um e-mail automático do Sistema de Ponto Eletrônico.<br>
+        © 2025 Wander Pires Silva Coelho
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    await transporter.sendMail({
+      from: `"Ponto Eletrônico" <${process.env.EMAIL_USER}>`,
+      to: data.personEmail,
+      subject: `${actionLabel} às ${data.time} — ${data.schoolName}`,
+      html,
+    });
+    console.log(`✅ Notificação de ponto enviada para ${data.personEmail}`);
+  } catch (err: any) {
+    console.error('⚠️ Falha ao enviar notificação de ponto (não crítico):', err.message);
+  }
+};

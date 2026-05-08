@@ -40,8 +40,9 @@ export default function LiveCamera({ onCapture, onClear, required, captured }: L
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        videoRef.current.play().catch(() => {});
       }
+      // Se videoRef ainda é null (elemento ainda não montou), o useEffect acima aplica o stream
       setCameraState('live');
     } catch (e: any) {
       const msg = e?.name === 'NotAllowedError'
@@ -58,6 +59,18 @@ export default function LiveCamera({ onCapture, onClear, required, captured }: L
   useEffect(() => {
     return () => { stopStream(); };
   }, [stopStream]);
+
+  // Re-aplica stream ao <video> quando ele monta (após setCameraState('live'))
+  // O bug: quando startCamera() roda, o <video> ainda não existe (spinner está visível),
+  // então videoRef.current é null. Aqui garantimos que srcObject seja setado após montagem.
+  useEffect(() => {
+    if (cameraState === 'live' && videoRef.current && streamRef.current) {
+      if (!videoRef.current.srcObject) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  }, [cameraState]);
 
   // Se já tem foto capturada externamente, mostrar estado capturado
   useEffect(() => {

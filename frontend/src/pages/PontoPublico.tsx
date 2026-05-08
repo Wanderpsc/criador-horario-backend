@@ -86,6 +86,15 @@ export default function PontoPublico() {
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [geoPos, setGeoPos] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState<string>('');
+  const [clock, setClock] = useState(() => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+  // Relógio em tempo real
+  useEffect(() => {
+    const id = setInterval(() => {
+      setClock(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const load = async () => {
     if (!token) { setPageStatus('error'); setErrorMsg('Token inválido.'); return; }
@@ -198,6 +207,7 @@ export default function PontoPublico() {
           <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">
             <Calendar size={16} />
             <span>{data.dayLabel}, {formatDate(data.today)}</span>
+            <span className="ml-auto font-mono font-bold text-gray-700 text-base tracking-wider">{clock}</span>
           </div>
         </div>
 

@@ -17,6 +17,7 @@ import Subject from '../models/Subject';
 import Class from '../models/Class';
 import User from '../models/User';
 import { auth, AuthRequest } from '../middleware/auth';
+import { sendPontoNotificationEmail } from '../services/email.service';
 
 const router = express.Router();
 
@@ -553,7 +554,7 @@ router.post('/school-public/:token/person-info', async (req, res) => {
 
     // employee
     const employee = await Employee.findOne({ _id: personId, schoolId: link.schoolId })
-      .select('name cargo setor jornadaTrabalho workSchedule').lean();
+      .select('name cargo setor jornadaTrabalho workSchedule email').lean();
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
 
     const attendance = await EmployeeAttendance.findOne({ employeeId: personId, date: today }).lean();
@@ -572,6 +573,7 @@ router.post('/school-public/:token/person-info', async (req, res) => {
         workDays: ws.workDays,
         toleranceMinutes: ws.toleranceMinutes ?? 10,
       } : null,
+      requiresEmail: !!((employee as any).email), // indica ao frontend se deve pedir e-mail
       today,
       dayLabel,
       attendance: attendance || null,
@@ -661,11 +663,21 @@ router.post('/school-public/:token/mark', async (req, res) => {
 
     // ── FUNCIONÁRIO ────────────────────────────────────────────────────────
     const employee = await Employee.findOne({ _id: personId, schoolId: link.schoolId })
-      .select('name cargo setor workSchedule').lean();
+      .select('name cargo setor workSchedule email').lean();
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
 
     const ws = (employee as any).workSchedule;
-    const { lat, lng, photoData } = req.body;
+    const { lat, lng, photoData, email: providedEmail } = req.body;
+
+    // Verificação de e-mail (credencial anti-fraude)
+    const registeredEmail: string | undefined = (employee as any).email;
+    if (registeredEmail && providedEmail) {
+      if (providedEmail.trim().toLowerCase() !== registeredEmail.trim().toLowerCase()) {
+        return res.status(403).json({ message: 'E-mail não confere com o cadastro. Verifique e tente novamente.' });
+      }
+    } else if (registeredEmail && !providedEmail) {
+      return res.status(400).json({ message: 'Este funcionário requer confirmação por e-mail. Informe seu e-mail cadastrado.' });
+    }
 
     // Validação de geolocalização
     if (link.requireGeolocation) {
@@ -723,6 +735,20 @@ router.post('/school-public/:token/mark', async (req, res) => {
         locationValid: lat != null ? true : undefined,
       });
       await attendance.save();
+      // Notificação por e-mail (não-bloqueante)
+      if (registeredEmail) {
+        const school = await User.findById(link.schoolId).select('name').lean();
+        sendPontoNotificationEmail({
+          personName: (employee as any).name,
+          personEmail: registeredEmail,
+          schoolName: (school as any)?.name || 'Escola',
+          action: 'entry',
+          time: now,
+          date: new Date().toLocaleDateString('pt-BR'),
+          locationValid: lat != null ? true : undefined,
+          lateArrivalMinutes: lateArr,
+        }).catch(() => {});
+      }
       return res.status(201).json({ message: `Entrada registrada às ${now}`, attendance, action: 'entry' });
     }
 
@@ -749,6 +775,19 @@ router.post('/school-public/:token/mark', async (req, res) => {
       (existing as any).overtimeMinutes = worked - expected > 0 ? worked - expected : 0;
     }
     await existing.save();
+    // Notificação por e-mail de saída (não-bloqueante)
+    if (registeredEmail) {
+      const school = await User.findById(link.schoolId).select('name').lean();
+      sendPontoNotificationEmail({
+        personName: (employee as any).name,
+        personEmail: registeredEmail,
+        schoolName: (school as any)?.name || 'Escola',
+        action: 'exit',
+        time: now,
+        date: new Date().toLocaleDateString('pt-BR'),
+        earlyDepartureMinutes: (existing as any).earlyDepartureMinutes,
+      }).catch(() => {});
+    }
     return res.json({ message: `Saída registrada às ${now}`, attendance: existing, action: 'exit' });
 
   } catch (err: any) {

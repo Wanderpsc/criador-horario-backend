@@ -47,6 +47,7 @@ interface PersonInfo {
   setor?: string;
   jornadaTrabalho?: string;
   workSchedule?: { entryTime: string; exitTime: string; workDays: string[]; toleranceMinutes: number } | null;
+  requiresEmail?: boolean;
   today: string;
   dayLabel: string;
   schedule?: ScheduleSlot[];
@@ -84,9 +85,20 @@ export default function PontoPublicoGeral() {
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [geoPos, setGeoPos] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [requireGeolocation, setRequireGeolocation] = useState(false);
   const [requirePhoto, setRequirePhoto] = useState(false);
   const [schoolGeoConfig, setSchoolGeoConfig] = useState<{ latitude?: number; longitude?: number; areaM2?: number }>({});
+  const [clock, setClock] = useState(() => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+  // Relógio em tempo real
+  useEffect(() => {
+    const id = setInterval(() => {
+      setClock(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // Carregar lista de pessoas
   useEffect(() => {
@@ -114,6 +126,8 @@ export default function PontoPublicoGeral() {
     setPhotoData(null);
     setGeoPos(null);
     setGeoError('');
+    setEmailInput('');
+    setEmailError('');
     try {
       const r = await axios.post(`${API}/attendance-links/school-public/${token}/person-info`, {
         personType: person.type,
@@ -130,6 +144,14 @@ export default function PontoPublicoGeral() {
   // Registrar ponto
   async function markAttendance(action: 'entry' | 'exit' | 'confirm') {
     if (!selected) return;
+
+    // Validar e-mail se necessário
+    if (personInfo?.requiresEmail && !emailInput.trim()) {
+      setEmailError('Informe seu e-mail cadastrado para confirmar identidade.');
+      return;
+    }
+    setEmailError('');
+
     setMarking(true);
     let lat: number | undefined;
     let lng: number | undefined;
@@ -153,6 +175,7 @@ export default function PontoPublicoGeral() {
         lat,
         lng,
         photoData: photoData || undefined,
+        email: emailInput.trim() || undefined,
       });
       setResult(r.data);
       setUpdatedAttendance(r.data.attendance);
@@ -203,6 +226,7 @@ export default function PontoPublicoGeral() {
             <Clock className="w-10 h-10 mx-auto mb-2 opacity-90" />
             <h1 className="text-xl font-bold">Ponto Eletrônico</h1>
             {schoolName && <p className="text-indigo-200 text-sm mt-1">{schoolName}</p>}
+            <p className="text-3xl font-mono font-bold mt-2 tracking-widest">{clock}</p>
           </div>
 
           <div className="p-5 space-y-4">
@@ -279,7 +303,7 @@ export default function PontoPublicoGeral() {
           {/* Header */}
           <div className={`rounded-t-2xl p-5 text-white ${isTeacher ? 'bg-purple-600' : 'bg-indigo-600'}`}>
             <button
-              onClick={() => { setStep('select'); setSelected(null); setPersonInfo(null); }}
+              onClick={() => { setStep('select'); setSelected(null); setPersonInfo(null); setEmailInput(''); setEmailError(''); }}
               className="flex items-center gap-1 text-white/70 hover:text-white text-xs mb-3"
             >
               <ArrowLeft className="w-3 h-3" /> Voltar
@@ -309,6 +333,7 @@ export default function PontoPublicoGeral() {
                 <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-2 text-sm text-gray-600">
                   <Clock className="w-4 h-4 text-gray-400" />
                   <span>{personInfo?.dayLabel} · {personInfo?.today}</span>
+                  <span className="ml-auto font-mono font-bold text-gray-800 tracking-wider">{clock}</span>
                 </div>
 
                 {/* PROFESSOR: aulas do dia */}
@@ -349,6 +374,30 @@ export default function PontoPublicoGeral() {
                         </span>
                       </div>
                     )}
+
+                    {/* Credencial de e-mail — exibida se o cadastro tiver e-mail */}
+                    {personInfo?.requiresEmail && !hasExit && (
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          ✉️ Confirme seu e-mail cadastrado
+                          <span className="text-red-500 ml-1">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={emailInput}
+                          onChange={e => { setEmailInput(e.target.value); setEmailError(''); }}
+                          placeholder="seu@email.com"
+                          className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                        />
+                        {emailError && (
+                          <p className="text-xs text-red-600">{emailError}</p>
+                        )}
+                        <p className="text-xs text-gray-400">
+                          O e-mail é usado para verificar sua identidade e enviar notificação do ponto.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3">
                       <div className={`rounded-xl p-3 text-center ${hasEntry ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
                         <LogIn className={`w-5 h-5 mx-auto mb-1 ${hasEntry ? 'text-green-600' : 'text-gray-300'}`} />
@@ -370,7 +419,25 @@ export default function PontoPublicoGeral() {
 
                 {/* Foto de confirmação ao vivo */}
                 {!isTeacher && !hasExit && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    {/* Campo de e-mail como credencial */}
+                    {personInfo?.requiresEmail && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                          ✉️ Confirme sua identidade
+                          <span className="text-red-500 ml-1">*obrigatório</span>
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="Seu e-mail cadastrado"
+                          value={emailInput}
+                          onChange={e => { setEmailInput(e.target.value); setEmailError(''); }}
+                          className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${emailError ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+                        />
+                        {emailError && <p className="text-xs text-red-600 mt-1">{emailError}</p>}
+                        <p className="text-xs text-gray-400 mt-1">Apenas você pode bater o seu ponto. O e-mail confere com o cadastro.</p>
+                      </div>
+                    )}
                     <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">
                       📸 Foto ao vivo
                       {requirePhoto && <span className="text-red-500 ml-1">*obrigatória</span>}
