@@ -35,17 +35,23 @@ const DAYS_PT: Record<string, string> = {
 
 const DAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+// Retorna o instante atual ajustado para o fuso BRT (UTC-3)
+// Usando deslocamento fixo pois o servidor (Render) roda em UTC
+function nowBRT(): Date {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000);
+}
+
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+  return nowBRT().toISOString().slice(0, 10); // YYYY-MM-DD (BRT)
 }
 
 function todayDayKey(): string {
-  return DAYS_EN[new Date().getDay()];
+  return DAYS_EN[nowBRT().getUTCDay()];
 }
 
 function nowHHmm(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const d = nowBRT();
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

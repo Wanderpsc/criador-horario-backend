@@ -174,6 +174,15 @@ export default function Employees() {
   const [geralLink, setGeralLink] = useState('');
   const [geralCopied, setGeralCopied] = useState(false);
   const [geralGenerating, setGeralGenerating] = useState(false);
+  const [geralSettings, setGeralSettings] = useState({
+    requireGeolocation: false,
+    latitude: '',
+    longitude: '',
+    areaM2: 1000,
+    requirePhoto: false,
+    graceMinutes: 10,
+  });
+  const [geralSettingsSaving, setGeralSettingsSaving] = useState(false);
 
   // ─── Queries ──────────────────────────────────────────────────────────────
   const { data: employees = [], isLoading } = useQuery({
