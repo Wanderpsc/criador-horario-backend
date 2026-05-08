@@ -31,6 +31,7 @@ import SubstitutePublic from './pages/SubstitutePublic';
 import EmployeePublicForm from './pages/EmployeePublicForm';
 import PontoPublico from './pages/PontoPublico';
 import PontoPublicoGeral from './pages/PontoPublicoGeral';
+import PontoPublicoTeacher from './pages/PontoPublicoTeacher';
 import TeacherAttendance from './pages/TeacherAttendance';
 import TeacherFrequencyReport from './pages/TeacherFrequencyReport';
 import AnoLetivo from './pages/AnoLetivo';
@@ -146,6 +147,8 @@ function App() {
         <Route path="/ponto/:token" element={<PontoPublico />} />
         {/* Link geral de ponto da escola — sem auth */}
         <Route path="/ponto-geral/:token" element={<PontoPublicoGeral />} />
+        {/* Link de ponto por aula para professores — sem auth */}
+        <Route path="/ponto-teacher/:token" element={<PontoPublicoTeacher />} />
         
         <Route path="/" element={
           <PrivateRoute>

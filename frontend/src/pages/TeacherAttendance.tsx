@@ -20,7 +20,11 @@ import {
   ChevronUp,
   ChevronDown,
   DollarSign,
-  Search
+  Search,
+  Link2,
+  Copy,
+  Settings,
+  RefreshCw,
 } from 'lucide-react';
 
 interface ClassAttendance {
@@ -78,6 +82,21 @@ export default function TeacherAttendance() {
   const [showPaymentReceipt, setShowPaymentReceipt] = useState(false);
   const [paymentReceiptData, setPaymentReceiptData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Teacher ponto link state
+  const [teacherPontoLink, setTeacherPontoLink] = useState<any>(null);
+  const [loadingPontoLink, setLoadingPontoLink] = useState(false);
+  const [showPontoLinkSection, setShowPontoLinkSection] = useState(false);
+  const [pontoLinkCopied, setPontoLinkCopied] = useState(false);
+  const [savingPontoSettings, setSavingPontoSettings] = useState(false);
+  const [pontoSettings, setPontoSettings] = useState({
+    requireGeolocation: false,
+    latitude: '',
+    longitude: '',
+    areaM2: '1000',
+    requirePhoto: false,
+    graceMinutes: '10',
+  });
 
   // Detectar se a data selecionada é um sábado
   const isSaturday = useMemo(() => {
@@ -524,6 +543,60 @@ export default function TeacherAttendance() {
   // Relatório calculado (gerado mas não exibido nesta página — ver TeacherFrequencyReport)
   generateReport();
 
+  // Teacher ponto link helpers
+  async function loadTeacherPontoLink() {
+    setLoadingPontoLink(true);
+    try {
+      const r = await api.get('/teacher-ponto/teacher-ponto-link');
+      setTeacherPontoLink(r.data);
+      setPontoSettings({
+        requireGeolocation: r.data.requireGeolocation || false,
+        latitude: r.data.latitude ?? '',
+        longitude: r.data.longitude ?? '',
+        areaM2: String(r.data.areaM2 || 1000),
+        requirePhoto: r.data.requirePhoto || false,
+        graceMinutes: String(r.data.graceMinutes ?? 10),
+      });
+    } catch {
+      toast.error('Erro ao carregar link de ponto de professores.');
+    } finally {
+      setLoadingPontoLink(false);
+    }
+  }
+
+  async function saveTeacherPontoSettings() {
+    setSavingPontoSettings(true);
+    try {
+      const r = await api.put('/teacher-ponto/teacher-ponto-link/settings', {
+        requireGeolocation: pontoSettings.requireGeolocation,
+        latitude: pontoSettings.latitude !== '' ? parseFloat(pontoSettings.latitude as string) : undefined,
+        longitude: pontoSettings.longitude !== '' ? parseFloat(pontoSettings.longitude as string) : undefined,
+        areaM2: parseInt(pontoSettings.areaM2 as string) || 1000,
+        requirePhoto: pontoSettings.requirePhoto,
+        graceMinutes: parseInt(pontoSettings.graceMinutes as string) || 10,
+      });
+      setTeacherPontoLink(r.data);
+      toast.success('Configurações salvas!');
+    } catch {
+      toast.error('Erro ao salvar configurações.');
+    } finally {
+      setSavingPontoSettings(false);
+    }
+  }
+
+  function copyTeacherPontoLink() {
+    if (!teacherPontoLink?.token) return;
+    const url = `${window.location.origin}${window.location.pathname}#/ponto-teacher/${teacherPontoLink.token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setPontoLinkCopied(true);
+      setTimeout(() => setPontoLinkCopied(false), 2000);
+    });
+  }
+
+  const teacherPontoUrl = teacherPontoLink?.token
+    ? `${window.location.origin}${window.location.pathname}#/ponto-teacher/${teacherPontoLink.token}`
+    : '';
+
   // Abrir modal de seleção de impressão
 
   // Confirmar e imprimir
@@ -902,6 +975,146 @@ export default function TeacherAttendance() {
         <p className="text-blue-700 mt-2">
           Registre a presença de cada professor por aula individual do dia
         </p>
+      </div>
+
+      {/* Link de Ponto do Professor */}
+      <div className="card no-print border border-green-200">
+        <button
+          onClick={() => {
+            setShowPontoLinkSection(v => {
+              const next = !v;
+              if (next && !teacherPontoLink) loadTeacherPontoLink();
+              return next;
+            });
+          }}
+          className="w-full flex items-center justify-between gap-2 text-left"
+        >
+          <div className="flex items-center gap-2">
+            <Link2 className="text-green-600" size={20} />
+            <span className="text-lg font-bold text-gray-800">🔗 Link de Ponto do Professor</span>
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">por aula</span>
+          </div>
+          {showPontoLinkSection ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+        </button>
+
+        {showPontoLinkSection && (
+          <div className="mt-4 space-y-4">
+            {loadingPontoLink ? (
+              <div className="flex items-center gap-2 text-gray-500"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />Carregando...</div>
+            ) : !teacherPontoLink ? (
+              <button onClick={loadTeacherPontoLink} className="btn btn-primary text-sm">Gerar link de ponto</button>
+            ) : (
+              <>
+                {/* URL */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">🌐 Link público para professores</label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      readOnly
+                      value={teacherPontoUrl}
+                      className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 font-mono truncate"
+                    />
+                    <button
+                      onClick={copyTeacherPontoLink}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${pontoLinkCopied ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      <Copy size={14} /> {pontoLinkCopied ? 'Copiado!' : 'Copiar'}
+                    </button>
+                    <a href={teacherPontoUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    >
+                      Abrir
+                    </a>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Compartilhe com os professores. Cada um seleciona seu nome e registra entrada/saída por aula.</p>
+                </div>
+
+                {/* Settings */}
+                <div className="border-t pt-4 space-y-4">
+                  <p className="text-sm font-semibold text-gray-700 flex items-center gap-1"><Settings size={14} /> Configurações</p>
+
+                  {/* Geo */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={pontoSettings.requireGeolocation}
+                        onChange={e => setPontoSettings(s => ({ ...s, requireGeolocation: e.target.checked }))}
+                        className="rounded" />
+                      <span className="text-sm font-medium text-gray-700">📍 Exigir geolocalização</span>
+                    </label>
+                    {pontoSettings.requireGeolocation && (
+                      <div className="ml-6 grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Latitude</label>
+                          <input type="number" step="0.000001" value={pontoSettings.latitude}
+                            onChange={e => setPontoSettings(s => ({ ...s, latitude: e.target.value }))}
+                            placeholder="-3.7172"
+                            className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-green-400 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Longitude</label>
+                          <input type="number" step="0.000001" value={pontoSettings.longitude}
+                            onChange={e => setPontoSettings(s => ({ ...s, longitude: e.target.value }))}
+                            placeholder="-38.5433"
+                            className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-green-400 focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Área (m²)</label>
+                          <input type="number" min="100" value={pontoSettings.areaM2}
+                            onChange={e => setPontoSettings(s => ({ ...s, areaM2: e.target.value }))}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-green-400 focus:outline-none" />
+                          <p className="text-xs text-gray-400 mt-0.5">Raio ≈ {Math.round(Math.sqrt(parseInt(pontoSettings.areaM2 as string || '1000') / Math.PI))}m</p>
+                        </div>
+                        <div className="flex items-end">
+                          <button
+                            onClick={() => {
+                              if (!navigator.geolocation) return;
+                              navigator.geolocation.getCurrentPosition(p => {
+                                setPontoSettings(s => ({
+                                  ...s,
+                                  latitude: String(p.coords.latitude),
+                                  longitude: String(p.coords.longitude),
+                                }));
+                                toast.success('Coordenadas capturadas!');
+                              }, () => toast.error('Não foi possível obter localização.'));
+                            }}
+                            className="w-full text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-2 py-1.5 hover:bg-blue-100"
+                          >
+                            📍 Minha localização
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Photo */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={pontoSettings.requirePhoto}
+                      onChange={e => setPontoSettings(s => ({ ...s, requirePhoto: e.target.checked }))}
+                      className="rounded" />
+                    <span className="text-sm font-medium text-gray-700">📸 Exigir foto ao vivo</span>
+                  </label>
+
+                  {/* Grace */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700 flex-shrink-0">⏱️ Tolerância de entrada (minutos)</label>
+                    <input type="number" min="0" max="60" value={pontoSettings.graceMinutes}
+                      onChange={e => setPontoSettings(s => ({ ...s, graceMinutes: e.target.value }))}
+                      className="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-green-400 focus:outline-none" />
+                    <span className="text-xs text-gray-400">Após o término da aula</span>
+                  </div>
+
+                  <button
+                    onClick={saveTeacherPontoSettings}
+                    disabled={savingPontoSettings}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-lg"
+                  >
+                    {savingPontoSettings ? <><RefreshCw size={14} className="animate-spin" /> Salvando...</> : 'Salvar configurações'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Seção de Registro Diário */}

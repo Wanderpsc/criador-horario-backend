@@ -14,6 +14,7 @@ import {
   BookOpen, LogIn, LogOut, Calendar, MapPin,
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
+import AddToHomeScreen from '../components/AddToHomeScreen';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -179,6 +180,7 @@ export default function PontoPublico() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-start justify-center">
+      <AddToHomeScreen label={`Ponto${data?.schoolName ? ' · ' + data.schoolName : ''}`} />
       <div className="w-full max-w-md">
         {/* Cabeçalho */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
