@@ -31,15 +31,19 @@ const DAYS_PT: Record<string, string> = {
   saturday: 'Sábado',
 };
 
+// Helpers BRT (UTC-3) — servidor Render roda em UTC
+function nowBRT(): Date {
+  return new Date(Date.now() - 3 * 60 * 60 * 1000);
+}
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return nowBRT().toISOString().slice(0, 10); // YYYY-MM-DD (BRT)
 }
 function todayDayKey(): string {
-  return DAYS_EN[new Date().getDay()];
+  return DAYS_EN[nowBRT().getUTCDay()];
 }
 function nowHHmm(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const d = nowBRT();
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 function toMin(t: string): number {
   const [h, m] = t.split(':').map(Number);
@@ -75,9 +79,13 @@ const DEFAULT_PERIODS = [
 async function getTeacherSlotsForDay(
   schoolId: string,
   teacherId: string,
-  dayKey: string
+  dayKey: string,
+  activeTimetableId?: string
 ): Promise<{ period: number; startTime: string; endTime: string; subjectId: string; subjectName: string; classId: string; className: string; grade: string }[]> {
-  const timetables = await GeneratedTimetable.find({ school: schoolId }).lean();
+  // Filtrar pelo horário ativo se configurado
+  const query: any = { school: schoolId };
+  if (activeTimetableId) query.scheduleId = activeTimetableId;
+  const timetables = await GeneratedTimetable.find(query).lean();
 
   const rawSlots: any[] = [];
   for (const tt of timetables) {
@@ -163,10 +171,10 @@ router.get('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
 router.put('/teacher-ponto-link/settings', auth, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
-    const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes } = req.body;
+    const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes, activeTimetableId } = req.body;
     const link = await TeacherPontoLink.findOneAndUpdate(
       { schoolId, isActive: true },
-      { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes },
+      { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes, activeTimetableId: activeTimetableId || '' },
       { new: true }
     );
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
@@ -249,8 +257,8 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
     const now    = nowHHmm();
     const graceMinutes = link.graceMinutes ?? 10;
 
-    // Slots do horário gerado
-    const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, dayKey);
+    // Slots do horário gerado (filtrado pelo timetable ativo se configurado)
+    const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, dayKey, link.activeTimetableId || undefined);
 
     // Buscar ou criar registro de frequência do dia
     let attendance = await TeacherAttendance.findOne({ teacherId, schoolId: link.schoolId, date: today });
@@ -386,8 +394,8 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     let attendance = await TeacherAttendance.findOne({ teacherId, schoolId: link.schoolId, date: today });
 
     if (!attendance) {
-      // Initialize from timetable
-      const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, dayKey);
+      // Initialize from timetable (filtrado pelo timetable ativo se configurado)
+      const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, dayKey, link.activeTimetableId || undefined);
       if (slots.length === 0) {
         return res.status(400).json({ message: 'Nenhuma aula programada para hoje.' });
       }

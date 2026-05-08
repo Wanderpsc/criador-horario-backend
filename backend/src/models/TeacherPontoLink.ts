@@ -17,6 +17,7 @@ export interface ITeacherPontoLink extends Document {
   areaM2: number;
   requirePhoto: boolean;
   graceMinutes: number;
+  activeTimetableId?: string; // scheduleId do GeneratedTimetable ativo para o ponto
   createdAt: Date;
 }
 
@@ -33,6 +34,7 @@ const TeacherPontoLinkSchema = new Schema<ITeacherPontoLink>(
     areaM2:             { type: Number, default: 1000 },
     requirePhoto:       { type: Boolean, default: false },
     graceMinutes:       { type: Number, default: 10 },
+    activeTimetableId:  { type: String, default: '' }, // scheduleId do timetable ativo para o ponto
   },
   { timestamps: true }
 );
