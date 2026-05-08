@@ -10,10 +10,20 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import {
   Clock, Printer, ChevronDown, ChevronUp,
-  RefreshCw, Save, Search, Bell, BarChart2,
+  RefreshCw, Save, Search, Bell, BarChart2, Pencil, X, History,
 } from 'lucide-react';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
+interface Rectification {
+  rectifiedBy: string;
+  rectifiedByName: string;
+  rectifiedAt: string;
+  reason: string;
+  originalEntryTime?: string;
+  originalExitTime?: string;
+  originalStatus?: string;
+}
+
 interface AttendanceRow {
   _id?: string;
   employeeId: string;
@@ -38,6 +48,7 @@ interface AttendanceRow {
   justification?: string;
   observations?: string;
   notificationGenerated?: boolean;
+  rectifications?: Rectification[];
 }
 
 interface ReportEmployee {
@@ -138,6 +149,38 @@ export default function EmployeeAttendancePage() {
   // ── Notificações
   const [ntfStart, setNtfStart] = useState(rptStart);
   const [ntfEnd, setNtfEnd] = useState(TODAY);
+
+  // ── Retificação de ponto (somente administrador)
+  const [rectifyRow, setRectifyRow] = useState<AttendanceRow | null>(null);
+  const [rectifyForm, setRectifyForm] = useState({ entryTime: '', exitTime: '', status: '', reason: '' });
+  const [rectifying, setRectifying] = useState(false);
+
+  const openRectify = (row: AttendanceRow) => {
+    setRectifyRow(row);
+    setRectifyForm({
+      entryTime: row.entryTime || '',
+      exitTime:  row.exitTime  || '',
+      status:    row.status    || '',
+      reason:    '',
+    });
+  };
+
+  const submitRectify = async () => {
+    if (!rectifyRow?._id) return;
+    if (!rectifyForm.reason.trim()) { toast.error('Informe o motivo da retificação.'); return; }
+    setRectifying(true);
+    try {
+      await api.put(`/employee-attendance/${rectifyRow._id}/rectify`, rectifyForm);
+      toast.success('Ponto retificado com sucesso!');
+      qc.invalidateQueries({ queryKey: ['emp-attendance-day'] });
+      refetchDay();
+      setRectifyRow(null);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao retificar.');
+    } finally {
+      setRectifying(false);
+    }
+  };
 
   const schoolName = user?.schoolName || user?.name || 'Escola';
 
@@ -854,13 +897,29 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
                               {!row.lateArrivalMinutes && !row.earlyDepartureMinutes && !row.overtimeMinutes && '—'}
                             </td>
                             <td className="p-3 text-center">
-                              <button
-                                onClick={() => setExpandedRow(isExpanded ? null : row.employeeId)}
-                                className="btn btn-sm btn-outline flex items-center gap-1 mx-auto"
-                              >
-                                {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                {isExpanded ? 'Fechar' : 'Mais'}
-                              </button>
+                              <div className="flex flex-col items-center gap-1">
+                                <button
+                                  onClick={() => setExpandedRow(isExpanded ? null : row.employeeId)}
+                                  className="btn btn-sm btn-outline flex items-center gap-1 mx-auto"
+                                >
+                                  {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                  {isExpanded ? 'Fechar' : 'Mais'}
+                                </button>
+                                {user?.role === 'school' && row._id && (
+                                  <button
+                                    onClick={() => openRectify(row)}
+                                    className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 border border-amber-300 rounded px-2 py-0.5 hover:bg-amber-50 transition-colors"
+                                    title="Retificar registro de ponto"
+                                  >
+                                    <Pencil size={11} /> Retificar
+                                  </button>
+                                )}
+                                {(row.rectifications && row.rectifications.length > 0) && (
+                                  <span className="text-xs text-amber-600 font-medium flex items-center gap-0.5">
+                                    <History size={10} /> Retificado
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
 
@@ -1318,6 +1377,107 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
               className="btn btn-primary">
               {geoSaving ? 'Salvando...' : '💾 Salvar Configurações'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL DE RETIFICAÇÃO ─────────────────────────────────────────── */}
+      {rectifyRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            {/* Cabeçalho */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-amber-600" />
+                <div>
+                  <h2 className="text-base font-bold text-gray-800">Retificação de Ponto</h2>
+                  <p className="text-xs text-gray-500">{rectifyRow.employeeName} — {rectifyRow.date ? new Date(rectifyRow.date + 'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
+                </div>
+              </div>
+              <button onClick={() => setRectifyRow(null)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Valores originais */}
+            <div className="px-5 pt-4">
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 mb-4">
+                <p className="font-semibold text-gray-700 mb-1">Registro atual (antes da retificação):</p>
+                <div className="flex flex-wrap gap-4">
+                  <span>Entrada: <strong>{rectifyRow.entryTime || '—'}</strong></span>
+                  <span>Saída: <strong>{rectifyRow.exitTime || '—'}</strong></span>
+                  <span>Status: <strong>{STATUS_OPTS.find(s => s.value === rectifyRow.status)?.label || rectifyRow.status || '—'}</strong></span>
+                </div>
+              </div>
+
+              {/* Novos valores */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nova Hora de Entrada</label>
+                  <input type="time" value={rectifyForm.entryTime}
+                    onChange={e => setRectifyForm(f => ({ ...f, entryTime: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Nova Hora de Saída</label>
+                  <input type="time" value={rectifyForm.exitTime}
+                    onChange={e => setRectifyForm(f => ({ ...f, exitTime: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Novo Status</label>
+                  <select value={rectifyForm.status}
+                    onChange={e => setRectifyForm(f => ({ ...f, status: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400">
+                    <option value="">— Manter status atual —</option>
+                    {STATUS_OPTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Motivo da retificação <span className="text-red-500">*</span></label>
+                  <textarea
+                    rows={3}
+                    placeholder="Ex: Erro no registro automático — funcionário bateu ponto mas sistema registrou horário errado..."
+                    value={rectifyForm.reason}
+                    onChange={e => setRectifyForm(f => ({ ...f, reason: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Histórico de retificações anteriores */}
+              {rectifyRow.rectifications && rectifyRow.rectifications.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 mb-2">
+                    <History size={12} /> Histórico de retificações
+                  </div>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {[...rectifyRow.rectifications].reverse().map((r, i) => (
+                      <div key={i} className="bg-amber-50 border border-amber-100 rounded-lg p-2 text-xs">
+                        <div className="flex justify-between text-gray-500 mb-0.5">
+                          <span className="font-medium text-gray-700">{r.rectifiedByName}</span>
+                          <span>{new Date(r.rectifiedAt).toLocaleString('pt-BR')}</span>
+                        </div>
+                        <p className="text-gray-600">{r.reason}</p>
+                        <p className="text-gray-400 mt-0.5">
+                          Entrada: {r.originalEntryTime || '—'} → Saída: {r.originalExitTime || '—'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé */}
+            <div className="flex gap-3 p-5 border-t border-gray-100">
+              <button onClick={() => setRectifyRow(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button onClick={submitRectify} disabled={rectifying || !rectifyForm.reason.trim()}
+                className="flex-1 px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-50">
+                {rectifying ? 'Salvando...' : '✏️ Confirmar Retificação'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -46,6 +46,16 @@ export interface IEmployeeAttendance extends Document {
   latitude?: number;
   longitude?: number;
   locationValid?: boolean;
+  // Retificações feitas pelo administrador
+  rectifications?: {
+    rectifiedBy: string;
+    rectifiedByName: string;
+    rectifiedAt: Date;
+    reason: string;
+    originalEntryTime?: string;
+    originalExitTime?: string;
+    originalStatus?: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -91,6 +101,15 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
     latitude:      { type: Number },
     longitude:     { type: Number },
     locationValid: { type: Boolean },
+    rectifications: [{
+      rectifiedBy:     { type: String, required: true },
+      rectifiedByName: { type: String, required: true },
+      rectifiedAt:     { type: Date,   required: true },
+      reason:          { type: String, required: true },
+      originalEntryTime: { type: String },
+      originalExitTime:  { type: String },
+      originalStatus:    { type: String },
+    }],
   },
   { timestamps: true }
 );

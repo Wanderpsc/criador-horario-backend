@@ -155,6 +155,57 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
   }
 });
 
+// ── PUT /:id/rectify — retificação administrativa (somente role 'school') ──────
+router.put('/:id/rectify', auth, async (req: AuthRequest, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
+
+    // Apenas administrador da escola pode retificar
+    if (req.user!.role !== 'school') {
+      return res.status(403).json({ message: 'Acesso negado. Somente o administrador pode retificar registros de ponto.' });
+    }
+
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { entryTime, exitTime, status, reason } = req.body;
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: 'O motivo da retificação é obrigatório.' });
+    }
+
+    const doc = await EmployeeAttendance.findOne({ _id: req.params.id, schoolId });
+    if (!doc) return res.status(404).json({ message: 'Registro não encontrado.' });
+
+    // Guardar valores originais antes de alterar
+    const rectEntry = {
+      rectifiedBy:       req.user!.id,
+      rectifiedByName:   (req.user as any).name || (req.user as any).schoolName || 'Administrador',
+      rectifiedAt:       new Date(),
+      reason:            reason.trim(),
+      originalEntryTime: doc.entryTime,
+      originalExitTime:  doc.exitTime,
+      originalStatus:    doc.status,
+    };
+
+    // Atualizar campos solicitados
+    if (entryTime !== undefined) doc.entryTime = entryTime;
+    if (exitTime  !== undefined) doc.exitTime  = exitTime;
+    if (status    !== undefined) doc.status    = status;
+
+    // Recalcular derivados
+    const derived = calcDerived({ ...doc.toObject(), entryTime: doc.entryTime, exitTime: doc.exitTime });
+    Object.assign(doc, derived);
+
+    // Anexar histórico
+    if (!doc.rectifications) (doc as any).rectifications = [];
+    (doc as any).rectifications.push(rectEntry);
+
+    await doc.save();
+    res.json(doc);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── DELETE /:id ───────────────────────────────────────────────────────────────
 router.delete('/:id', auth, async (req: AuthRequest, res) => {
   try {
