@@ -115,6 +115,7 @@ export default function EmployeeAttendancePage() {
     longitude: '',
     areaM2: 1000,
     requirePhoto: false,
+    graceMinutes: 10,
   });
   const [geoSaving, setGeoSaving] = useState(false);
   const [geoLoaded, setGeoLoaded] = useState(false);
@@ -164,6 +165,7 @@ export default function EmployeeAttendancePage() {
         longitude: d.longitude != null ? String(d.longitude) : '',
         areaM2: d.areaM2 || 1000,
         requirePhoto: d.requirePhoto || false,
+        graceMinutes: d.graceMinutes ?? 10,
       });
       setGeoLoaded(true);
       return d;
@@ -1273,6 +1275,25 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
             </label>
           </div>
 
+          {/* ── Tolerância ─────────────────────────────────────────────── */}
+          <div className="space-y-3 border border-gray-200 rounded-xl p-4">
+            <div>
+              <h3 className="font-semibold text-gray-800">⏱️ Tolerância de Horário</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Minutos de carência antes e depois do horário cadastrado. O funcionário verá aviso de pontualidade ao bater o ponto.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 flex-shrink-0">⏱️ Tolerância de entrada (minutos)</label>
+              <input
+                type="number" min="0" max="60"
+                value={geoSettings.graceMinutes}
+                onChange={e => setGeoSettings(s => ({ ...s, graceMinutes: Number(e.target.value) }))}
+                className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+              <span className="text-xs text-gray-400">minutos antes e depois do horário</span>
+            </div>
+          </div>
+
           <div className="flex gap-3">
             <button
               disabled={geoSaving || !geoLoaded}
@@ -1285,6 +1306,7 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
                     longitude: geoSettings.longitude !== '' ? Number(geoSettings.longitude) : undefined,
                     areaM2: geoSettings.areaM2,
                     requirePhoto: geoSettings.requirePhoto,
+                    graceMinutes: Number(geoSettings.graceMinutes),
                   });
                   toast.success('Configurações salvas com sucesso!');
                 } catch (e: any) {

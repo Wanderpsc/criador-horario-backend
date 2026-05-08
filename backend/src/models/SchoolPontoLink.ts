@@ -18,6 +18,7 @@ export interface ISchoolPontoLink extends Document {
   areaM2: number;           // área em m² para cálculo do raio (padrão 1000)
   // Configuração de foto
   requirePhoto: boolean;
+  graceMinutes: number;
   createdAt: Date;
 }
 
@@ -33,6 +34,7 @@ const SchoolPontoLinkSchema = new Schema<ISchoolPontoLink>(
     longitude:          { type: Number },
     areaM2:             { type: Number, default: 1000 },
     requirePhoto:       { type: Boolean, default: false },
+    graceMinutes:       { type: Number, default: 10 },
   },
   { timestamps: true }
 );

@@ -799,7 +799,7 @@ router.post('/school-public/:token/mark', async (req, res) => {
 router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
-    const { requireGeolocation, latitude, longitude, areaM2, requirePhoto } = req.body;
+    const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes } = req.body;
     const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });
     if (!link) return res.status(404).json({ message: 'Link geral não encontrado.' });
     if (requireGeolocation !== undefined) link.requireGeolocation = requireGeolocation;
@@ -807,6 +807,7 @@ router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
     if (longitude !== undefined) link.longitude = longitude;
     if (areaM2 !== undefined) link.areaM2 = areaM2;
     if (requirePhoto !== undefined) link.requirePhoto = requirePhoto;
+    if (graceMinutes !== undefined) link.graceMinutes = graceMinutes;
     await link.save();
     res.json(link);
   } catch (err: any) {
