@@ -9,8 +9,9 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   User, Users, Clock, CheckCircle, XCircle, AlertCircle,
-  BookOpen, LogIn, LogOut, Search, ChevronRight, ArrowLeft,
+  BookOpen, LogIn, LogOut, Search, ChevronRight, ArrowLeft, MapPin,
 } from 'lucide-react';
+import LiveCamera from '../components/LiveCamera';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -367,36 +368,29 @@ export default function PontoPublicoGeral() {
                   </>
                 )}
 
-                {/* Foto de confirmação */}
+                {/* Foto de confirmação ao vivo */}
                 {!isTeacher && !hasExit && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 mb-1">
-                      📸 Foto de confirmação {requirePhoto && <span className="text-red-500">*obrigatória</span>}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                      📸 Foto ao vivo
+                      {requirePhoto && <span className="text-red-500 ml-1">*obrigatória</span>}
                     </p>
-                    <input type="file" accept="image/*" capture="environment"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = ev => {
-                          const img = new Image();
-                          img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const MAX = 400;
-                            const ratio = Math.min(MAX / img.width, MAX / img.height);
-                            canvas.width = img.width * ratio;
-                            canvas.height = img.height * ratio;
-                            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            setPhotoData(canvas.toDataURL('image/jpeg', 0.6));
-                          };
-                          img.src = ev.target!.result as string;
-                        };
-                        reader.readAsDataURL(file);
-                      }}
-                      className="block w-full text-xs text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium" />
-                    {photoData && <img src={photoData} alt="preview" className="mt-2 rounded-lg h-20 object-cover border" />}
-                    {geoPos && <p className="text-xs text-green-600 mt-1">📍 Localização obtida</p>}
-                    {geoError && <p className="text-xs text-orange-500 mt-1">⚠️ {geoError}</p>}
+                    <LiveCamera
+                      captured={photoData}
+                      onCapture={setPhotoData}
+                      onClear={() => setPhotoData(null)}
+                      required={requirePhoto}
+                    />
+                    {/* Status geo */}
+                    <div className="flex items-center gap-1 text-xs mt-1">
+                      <MapPin size={12} className={geoPos ? 'text-green-600' : 'text-gray-400'} />
+                      {geoPos
+                        ? <span className="text-green-700">Localização obtida — será validada com o local de trabalho</span>
+                        : geoError
+                        ? <span className="text-orange-600">{geoError}</span>
+                        : <span className="text-gray-400">Localização será capturada ao registrar</span>
+                      }
+                    </div>
                   </div>
                 )}
 

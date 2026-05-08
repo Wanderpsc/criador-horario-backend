@@ -11,8 +11,9 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   User, Clock, CheckCircle, XCircle, AlertCircle,
-  BookOpen, LogIn, LogOut, Calendar,
+  BookOpen, LogIn, LogOut, Calendar, MapPin,
 } from 'lucide-react';
+import LiveCamera from '../components/LiveCamera';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -138,27 +139,6 @@ export default function PontoPublico() {
     } finally {
       setMarking(false);
     }
-  };
-
-  // ── Captura de foto ────────────────────────────────────────────────────────
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX = 400;
-        const ratio = Math.min(MAX / img.width, MAX / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setPhotoData(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.src = ev.target!.result as string;
-    };
-    reader.readAsDataURL(file);
   };
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -381,28 +361,35 @@ export default function PontoPublico() {
               })()}
             </div>
 
-            {/* Captura de foto (opcional / obrigatória conforme configuração) */}
+            {/* Câmera ao vivo para confirmação de ponto */}
             <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
-              <p className="text-sm font-semibold text-gray-700 mb-2">📸 Foto de confirmação</p>
-              <input type="file" accept="image/*" capture="environment"
-                onChange={handlePhotoChange}
-                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:font-medium hover:file:bg-blue-100" />
-              {photoData && (
-                <img src={photoData} alt="preview" className="mt-2 rounded-lg h-28 object-cover border" />
-              )}
+              <p className="text-sm font-semibold text-gray-700 mb-3">📸 Foto ao vivo para confirmação</p>
+              <LiveCamera
+                captured={photoData}
+                onCapture={setPhotoData}
+                onClear={() => setPhotoData(null)}
+              />
             </div>
 
             {/* Status de geolocalização */}
-            {geoPos && (
-              <div className="text-xs text-green-600 bg-green-50 rounded-lg p-2 mb-2 flex items-center gap-1">
-                📍 Localização capturada ({geoPos.lat.toFixed(5)}, {geoPos.lng.toFixed(5)})
-              </div>
-            )}
-            {geoError && (
-              <div className="text-xs text-orange-600 bg-orange-50 rounded-lg p-2 mb-2">
-                ⚠️ {geoError}
-              </div>
-            )}
+            <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                <MapPin size={15} className="text-indigo-500" /> Localização
+              </p>
+              {!geoPos && !geoError && (
+                <p className="text-xs text-gray-400">A localização será capturada automaticamente ao registrar o ponto.</p>
+              )}
+              {geoPos && (
+                <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg p-2 flex items-center gap-1">
+                  ✅ Localização obtida — pronta para validação
+                </div>
+              )}
+              {geoError && (
+                <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg p-2">
+                  ⚠️ {geoError} — o ponto será registrado sem validação de localização.
+                </div>
+              )}
+            </div>
 
             {/* Botões entrada / saída */}
             {(() => {

@@ -1173,69 +1173,103 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
         <div className="card max-w-2xl space-y-6">
           <h2 className="text-lg font-bold text-gray-800">⚙️ Configurações do Ponto</h2>
 
-          <div className="space-y-4">
-            <h3 className="font-semibold text-gray-700">📍 Geolocalização</h3>
+          {/* ── Geolocalização ──────────────────────────────────────────────── */}
+          <div className="space-y-4 border border-gray-200 rounded-xl p-4">
+            <div>
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                📍 Local de Trabalho Fixo (Geolocalização)
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Cadastre as coordenadas do local de trabalho. Quando ativado, o ponto só será aceito
+                se o funcionário estiver dentro do raio permitido em relação a este local.
+              </p>
+            </div>
+
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" checked={geoSettings.requireGeolocation}
                 onChange={e => setGeoSettings(s => ({ ...s, requireGeolocation: e.target.checked }))}
                 className="w-4 h-4 accent-indigo-600" />
-              <span className="text-sm">Exigir geolocalização ao marcar o ponto</span>
+              <span className="text-sm font-medium">Exigir que o funcionário esteja no local de trabalho para marcar o ponto</span>
             </label>
 
-            {geoSettings.requireGeolocation && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Latitude da escola</label>
-                    <input type="number" step="any" value={geoSettings.latitude}
-                      onChange={e => setGeoSettings(s => ({ ...s, latitude: e.target.value }))}
-                      placeholder="-15.7801"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Longitude da escola</label>
-                    <input type="number" step="any" value={geoSettings.longitude}
-                      onChange={e => setGeoSettings(s => ({ ...s, longitude: e.target.value }))}
-                      placeholder="-47.9292"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Área permitida (m²) — padrão 1000m²</label>
-                  <input type="number" min={100} value={geoSettings.areaM2}
-                    onChange={e => setGeoSettings(s => ({ ...s, areaM2: Number(e.target.value) }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
-                  <p className="text-xs text-gray-500 mt-1">
-                    1000m² = raio de aprox. {Math.round(Math.sqrt(1000 / Math.PI))}m.
-                    Raio atual: {Math.round(Math.sqrt((geoSettings.areaM2 || 1000) / Math.PI))}m.
-                  </p>
-                </div>
-                <button type="button"
-                  onClick={() => {
-                    if (!navigator.geolocation) { alert('Geolocalização não suportada.'); return; }
-                    navigator.geolocation.getCurrentPosition(pos => {
-                      setGeoSettings(s => ({
-                        ...s,
-                        latitude: String(pos.coords.latitude),
-                        longitude: String(pos.coords.longitude),
-                      }));
-                      toast.success('Coordenadas obtidas da localização atual!');
-                    }, () => toast.error('Não foi possível obter a localização.'));
-                  }}
-                  className="btn btn-sm btn-secondary">
-                  📡 Usar minha localização atual como referência
-                </button>
-              </>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Latitude do local de trabalho
+                </label>
+                <input type="number" step="any" value={geoSettings.latitude}
+                  onChange={e => setGeoSettings(s => ({ ...s, latitude: e.target.value }))}
+                  placeholder="-15.7801"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Longitude do local de trabalho
+                </label>
+                <input type="number" step="any" value={geoSettings.longitude}
+                  onChange={e => setGeoSettings(s => ({ ...s, longitude: e.target.value }))}
+                  placeholder="-47.9292"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+
+            {(geoSettings.latitude || geoSettings.longitude) && (
+              <div className="text-xs bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-indigo-800">
+                📌 Local registrado: {geoSettings.latitude || '—'}, {geoSettings.longitude || '—'}
+                <br />
+                <a
+                  href={`https://www.google.com/maps?q=${geoSettings.latitude},${geoSettings.longitude}`}
+                  target="_blank" rel="noreferrer"
+                  className="text-indigo-600 underline mt-1 inline-block"
+                >
+                  Ver no Google Maps ↗
+                </a>
+              </div>
             )}
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Raio de tolerância (área permitida em m²)
+              </label>
+              <input type="number" min={100} value={geoSettings.areaM2}
+                onChange={e => setGeoSettings(s => ({ ...s, areaM2: Number(e.target.value) }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
+              <p className="text-xs text-gray-500 mt-1">
+                {geoSettings.areaM2 || 1000}m² → raio de aprox. <strong>{Math.round(Math.sqrt((geoSettings.areaM2 || 1000) / Math.PI))}m</strong>.
+                O funcionário precisa estar dentro deste raio para marcar o ponto.
+              </p>
+            </div>
+
+            <button type="button"
+              onClick={() => {
+                if (!navigator.geolocation) { alert('Geolocalização não suportada neste navegador.'); return; }
+                navigator.geolocation.getCurrentPosition(pos => {
+                  setGeoSettings(s => ({
+                    ...s,
+                    latitude: String(pos.coords.latitude),
+                    longitude: String(pos.coords.longitude),
+                  }));
+                  toast.success('Coordenadas do local atual registradas!');
+                }, () => toast.error('Não foi possível obter a localização. Verifique as permissões do navegador.'));
+              }}
+              className="btn btn-sm btn-secondary flex items-center gap-2">
+              📡 Capturar coordenadas da minha localização atual
+            </button>
           </div>
 
-          <div className="space-y-3">
-            <h3 className="font-semibold text-gray-700">📸 Foto de Confirmação</h3>
+          {/* ── Foto ──────────────────────────────────────────────────────── */}
+          <div className="space-y-3 border border-gray-200 rounded-xl p-4">
+            <div>
+              <h3 className="font-semibold text-gray-800">📸 Foto ao Vivo para Confirmação</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Quando ativado, o funcionário precisa tirar uma foto ao vivo pela câmera do dispositivo para confirmar o ponto.
+              </p>
+            </div>
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" checked={geoSettings.requirePhoto}
                 onChange={e => setGeoSettings(s => ({ ...s, requirePhoto: e.target.checked }))}
                 className="w-4 h-4 accent-indigo-600" />
-              <span className="text-sm">Exigir foto para confirmar o ponto</span>
+              <span className="text-sm font-medium">Exigir foto ao vivo para confirmar o ponto</span>
             </label>
           </div>
 
@@ -1252,7 +1286,7 @@ ${r.justification ? `<div class="field"><span class="label">Justificativa inform
                     areaM2: geoSettings.areaM2,
                     requirePhoto: geoSettings.requirePhoto,
                   });
-                  toast.success('Configurações salvas!');
+                  toast.success('Configurações salvas com sucesso!');
                 } catch (e: any) {
                   toast.error(e?.response?.data?.message || 'Erro ao salvar.');
                 } finally {
