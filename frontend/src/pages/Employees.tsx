@@ -267,6 +267,19 @@ export default function Employees() {
       const base = window.location.origin + window.location.pathname;
       setGeralLink(`${base}#/ponto-geral/${token}`);
       setGeralCopied(false);
+      // Carregar configurações existentes
+      try {
+        const cfg = await api.get('/attendance-links/school-link');
+        const d = cfg.data;
+        setGeralSettings({
+          requireGeolocation: d.requireGeolocation || false,
+          latitude: d.latitude != null ? String(d.latitude) : '',
+          longitude: d.longitude != null ? String(d.longitude) : '',
+          areaM2: d.areaM2 || 1000,
+          requirePhoto: d.requirePhoto || false,
+          graceMinutes: d.graceMinutes ?? 10,
+        });
+      } catch {}
       setGeralModalOpen(true);
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Erro ao gerar link geral.');
@@ -1096,6 +1109,102 @@ export default function Employees() {
             <div className="bg-orange-50 rounded-xl p-3 text-xs text-orange-700">
               <strong>Este link é permanente</strong> — funciona para todos ao mesmo tempo.
               Ao abrir, cada pessoa seleciona o próprio nome e registra entrada ou saída.
+            </div>
+
+            {/* ── Configurações ──────────────────────────────────────── */}
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-700">⚙️ Configurações</p>
+
+              {/* Geolocalizacão */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={geralSettings.requireGeolocation}
+                  onChange={e => setGeralSettings(s => ({ ...s, requireGeolocation: e.target.checked }))}
+                  className="rounded" />
+                <span className="text-sm font-medium text-gray-700">📍 Exigir geolocalização</span>
+              </label>
+              {geralSettings.requireGeolocation && (
+                <div className="ml-6 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Latitude</label>
+                    <input type="number" step="0.000001" value={geralSettings.latitude}
+                      onChange={e => setGeralSettings(s => ({ ...s, latitude: e.target.value }))}
+                      placeholder="-3.7172"
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-orange-400 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Longitude</label>
+                    <input type="number" step="0.000001" value={geralSettings.longitude}
+                      onChange={e => setGeralSettings(s => ({ ...s, longitude: e.target.value }))}
+                      placeholder="-38.5433"
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-orange-400 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Área (m²)</label>
+                    <input type="number" min="100" value={geralSettings.areaM2}
+                      onChange={e => setGeralSettings(s => ({ ...s, areaM2: Number(e.target.value) }))}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-orange-400 focus:outline-none" />
+                    <p className="text-xs text-gray-400 mt-0.5">Raio ≈ {Math.round(Math.sqrt(Number(geralSettings.areaM2 || 1000) / Math.PI))}m</p>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!navigator.geolocation) return;
+                        navigator.geolocation.getCurrentPosition(p => {
+                          setGeralSettings(s => ({ ...s, latitude: String(p.coords.latitude), longitude: String(p.coords.longitude) }));
+                          toast.success('Coordenadas capturadas!');
+                        }, () => toast.error('Não foi possível obter localização.'));
+                      }}
+                      className="w-full text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-2 py-1.5 hover:bg-blue-100"
+                    >
+                      📍 Minha localização
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Foto */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={geralSettings.requirePhoto}
+                  onChange={e => setGeralSettings(s => ({ ...s, requirePhoto: e.target.checked }))}
+                  className="rounded" />
+                <span className="text-sm font-medium text-gray-700">📸 Exigir foto ao vivo</span>
+              </label>
+
+              {/* Tolerância */}
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 flex-shrink-0">⏱️ Tolerância de entrada (minutos)</label>
+                <input type="number" min="0" max="60" value={geralSettings.graceMinutes}
+                  onChange={e => setGeralSettings(s => ({ ...s, graceMinutes: Number(e.target.value) }))}
+                  className="w-20 text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-orange-400 focus:outline-none" />
+                <span className="text-xs text-gray-400">antes e depois</span>
+              </div>
+
+              <button
+                type="button"
+                disabled={geralSettingsSaving}
+                onClick={async () => {
+                  setGeralSettingsSaving(true);
+                  try {
+                    await api.put('/attendance-links/school-link/settings', {
+                      requireGeolocation: geralSettings.requireGeolocation,
+                      latitude: geralSettings.latitude !== '' ? Number(geralSettings.latitude) : undefined,
+                      longitude: geralSettings.longitude !== '' ? Number(geralSettings.longitude) : undefined,
+                      areaM2: geralSettings.areaM2,
+                      requirePhoto: geralSettings.requirePhoto,
+                      graceMinutes: Number(geralSettings.graceMinutes),
+                    });
+                    toast.success('Configurações salvas!');
+                  } catch (e: any) {
+                    toast.error(e?.response?.data?.message || 'Erro ao salvar.');
+                  } finally {
+                    setGeralSettingsSaving(false);
+                  }
+                }}
+                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-lg"
+              >
+                {geralSettingsSaving ? 'Salvando...' : '💾 Salvar configurações'}
+              </button>
             </div>
           </div>
         </div>
