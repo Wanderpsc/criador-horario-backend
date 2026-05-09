@@ -10,6 +10,7 @@ export interface ITeacherPontoLink extends Document {
   schoolName: string;
   token: string;
   isActive: boolean;
+  isEnabled: boolean;   // liga/desliga o ponto sem apagar dados
   createdBy: string;
   requireGeolocation: boolean;
   latitude?: number;
@@ -17,7 +18,7 @@ export interface ITeacherPontoLink extends Document {
   areaM2: number;
   requirePhoto: boolean;
   graceMinutes: number;
-  activeTimetableId?: string; // scheduleId do GeneratedTimetable ativo para o ponto
+  activeTimetableId?: string;
   createdAt: Date;
 }
 
@@ -27,6 +28,7 @@ const TeacherPontoLinkSchema = new Schema<ITeacherPontoLink>(
     schoolName: { type: String, default: '' },
     token:      { type: String, required: true, unique: true },
     isActive:   { type: Boolean, default: true },
+    isEnabled:  { type: Boolean, default: true },   // liga/desliga o ponto sem apagar dados
     createdBy:  { type: String, required: true },
     requireGeolocation: { type: Boolean, default: false },
     latitude:           { type: Number },

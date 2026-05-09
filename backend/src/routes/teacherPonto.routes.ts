@@ -207,6 +207,20 @@ router.put('/teacher-ponto-link/settings', auth, async (req: AuthRequest, res) =
   }
 });
 
+// PUT /teacher-ponto-link/toggle — liga ou desliga o ponto sem perder dados
+router.put('/teacher-ponto-link/toggle', auth, async (req: AuthRequest, res) => {
+  try {
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const link = await TeacherPontoLink.findOne({ schoolId, isActive: true });
+    if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    link.isEnabled = !link.isEnabled;
+    await link.save();
+    res.json(link);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // DELETE /teacher-ponto-link — desativa link e gera novo token
 router.delete('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
   try {
@@ -239,6 +253,11 @@ router.get('/teacher-public/:token', async (req, res) => {
   try {
     const link = await TeacherPontoLink.findOne({ token: req.params.token, isActive: true });
     if (!link) return res.status(404).json({ message: 'Link não encontrado ou inativo.' });
+
+    // Ponto desativado pelo administrador
+    if (link.isEnabled === false) {
+      return res.status(403).json({ message: 'O ponto eletrônico está desativado no momento. Contate a administração.' });
+    }
 
     const teachers = await Teacher.find({ schoolId: link.schoolId, isActive: true })
       .select('_id name')
@@ -351,6 +370,10 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
   try {
     const link = await TeacherPontoLink.findOne({ token: req.params.token, isActive: true });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+
+    if (link.isEnabled === false) {
+      return res.status(403).json({ message: 'O ponto eletrônico está desativado. Não é possível registrar.' });
+    }
 
     const {
       teacherId,

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
+import PontoReport from '../components/PontoReport';
 import { 
   CheckCircle, 
   XCircle, 
@@ -25,6 +26,10 @@ import {
   Copy,
   Settings,
   RefreshCw,
+  ToggleLeft,
+  ToggleRight,
+  BarChart2,
+  Power,
 } from 'lucide-react';
 
 interface ClassAttendance {
@@ -596,6 +601,22 @@ export default function TeacherAttendance() {
     });
   }
 
+  const [togglingPonto, setTogglingPonto] = useState(false);
+  const [showPontoReport, setShowPontoReport] = useState(false);
+
+  async function togglePontoEnabled() {
+    setTogglingPonto(true);
+    try {
+      const r = await api.put('/teacher-ponto/teacher-ponto-link/toggle');
+      setTeacherPontoLink(r.data);
+      toast.success(r.data.isEnabled ? '✅ Ponto eletrônico ATIVADO' : '🔴 Ponto eletrônico DESATIVADO');
+    } catch {
+      toast.error('Erro ao alterar estado do ponto eletrônico.');
+    } finally {
+      setTogglingPonto(false);
+    }
+  }
+
   const teacherPontoUrl = teacherPontoLink?.token
     ? `${window.location.origin}${window.location.pathname}#/ponto-teacher/${teacherPontoLink.token}`
     : '';
@@ -994,8 +1015,18 @@ export default function TeacherAttendance() {
         >
           <div className="flex items-center gap-2">
             <Link2 className="text-green-600" size={20} />
-            <span className="text-lg font-bold text-gray-800">🔗 Link de Ponto do Professor</span>
+            <span className="text-lg font-bold text-gray-800">🔗 Ponto Eletrônico de Professor</span>
             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">por aula</span>
+            {teacherPontoLink && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                teacherPontoLink.isEnabled !== false
+                  ? 'bg-green-500 text-white'
+                  : 'bg-red-100 text-red-700 border border-red-300'
+              }`}>
+                <Power size={10} />
+                {teacherPontoLink.isEnabled !== false ? 'ATIVO' : 'DESATIVADO'}
+              </span>
+            )}
           </div>
           {showPontoLinkSection ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
         </button>
@@ -1008,6 +1039,43 @@ export default function TeacherAttendance() {
               <button onClick={loadTeacherPontoLink} className="btn btn-primary text-sm">Gerar link de ponto</button>
             ) : (
               <>
+                {/* ── TOGGLE LIGAR/DESLIGAR ───────────────────────────── */}
+                <div className={`flex items-center justify-between rounded-xl p-4 border-2 ${
+                  teacherPontoLink.isEnabled !== false
+                    ? 'bg-green-50 border-green-300'
+                    : 'bg-red-50 border-red-300'
+                }`}>
+                  <div>
+                    <p className="font-bold text-gray-800 flex items-center gap-2">
+                      <Power size={16} className={teacherPontoLink.isEnabled !== false ? 'text-green-600' : 'text-red-500'} />
+                      Ponto Eletrônico
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {teacherPontoLink.isEnabled !== false
+                        ? 'Professores podem registrar presença pelo link. O sistema contabiliza automaticamente.'
+                        : 'Desativado. Professores não podem registrar. O controle manual continua funcionando normalmente.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={togglePontoEnabled}
+                    disabled={togglingPonto}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-60 ${
+                      teacherPontoLink.isEnabled !== false
+                        ? 'bg-green-600 hover:bg-red-600 text-white'
+                        : 'bg-red-500 hover:bg-green-600 text-white'
+                    }`}
+                    title={teacherPontoLink.isEnabled !== false ? 'Clique para DESATIVAR' : 'Clique para ATIVAR'}
+                  >
+                    {togglingPonto ? (
+                      <RefreshCw size={16} className="animate-spin" />
+                    ) : teacherPontoLink.isEnabled !== false ? (
+                      <><ToggleRight size={20} /> Desativar</>
+                    ) : (
+                      <><ToggleLeft size={20} /> Ativar</>
+                    )}
+                  </button>
+                </div>
+
                 {/* URL */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">🌐 Link público para professores</label>
@@ -1029,8 +1097,22 @@ export default function TeacherAttendance() {
                       Abrir
                     </a>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Compartilhe com os professores. Cada um seleciona seu nome e registra entrada/saída por aula.</p>
+                  <p className="text-xs text-gray-400 mt-1">Compartilhe com os professores. Podem salvar como atalho no celular (Add to Home Screen).</p>
                 </div>
+
+                {/* Botão relatório de ponto */}
+                <button
+                  onClick={() => setShowPontoReport(v => !v)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl text-sm font-medium hover:bg-indigo-100 transition-colors"
+                >
+                  <BarChart2 size={16} />
+                  {showPontoReport ? 'Ocultar' : 'Ver'} Relatório de Ponto Eletrônico
+                </button>
+
+                {/* ── RELATÓRIO DE PONTO ─────────────────────────────── */}
+                {showPontoReport && (
+                  <PontoReport date={selectedDate} attendanceList={attendanceList} schoolData={schoolData} />
+                )}
 
                 {/* Settings */}
                 <div className="border-t pt-4 space-y-4">
@@ -1136,6 +1218,18 @@ export default function TeacherAttendance() {
                 </div>
               </>
             )}
+          </div>
+        )}
+      </div>
+        </button>
+
+        {showPontoLinkSection && (
+          <div className="mt-4 space-y-4">
+            {loadingPontoLink ? (
+              <div className="flex items-center gap-2 text-gray-500"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />Carregando...</div>
+            ) : !teacherPontoLink ? (
+              <button onClick={loadTeacherPontoLink} className="btn btn-primary text-sm">Gerar link de ponto</button>
+            ) : null}
           </div>
         )}
       </div>
