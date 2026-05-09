@@ -31,6 +31,8 @@ import {
   Briefcase,
   Palmtree,
   ChevronDown,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -46,6 +48,7 @@ export default function Layout() {
   const location = useLocation();
   const [sidebarSchoolName, setSidebarSchoolName] = useState<string>('');
   const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fechar dropdown ao clicar fora
@@ -440,6 +443,14 @@ export default function Layout() {
       <header className="bg-gradient-to-r from-primary-600 via-primary-700 to-blue-900 shadow-lg border-b-4 border-blue-500 no-print">
         <div className="px-4 lg:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-6">
+            {/* Hamburger */}
+            <button
+              onClick={() => setSidebarOpen(v => !v)}
+              className="p-2 rounded-lg hover:bg-white/15 text-white transition-all"
+              title="Menu lateral"
+            >
+              <Menu size={22} />
+            </button>
             {/* Logo e Título Sofisticado */}
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -582,6 +593,96 @@ export default function Layout() {
           <p>wanderpsc@gmail.com - Todos os direitos reservados</p>
         </footer>
       </main>
+
+      {/* ─── Sidebar Lateral ──────────────────────────────────────────── */}
+      <div className={`fixed inset-0 z-50 no-print transition-all duration-300 ${sidebarOpen ? 'visible' : 'invisible'}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+        {/* Painel */}
+        <aside className={`absolute left-0 top-0 h-full w-72 bg-white shadow-2xl flex flex-col transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          {/* Cabeçalho do sidebar */}
+          <div className="flex items-center justify-between px-4 py-4 bg-gradient-to-r from-primary-700 to-blue-900 text-white flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <GraduationCap size={20} />
+              <div>
+                <p className="font-bold text-base leading-tight">EduSync-PRO</p>
+                <p className="text-[10px] text-blue-200">Sistema de Horários</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 rounded-lg hover:bg-white/15 transition-colors"
+              title="Fechar menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Nome da escola */}
+          {sidebarSchoolName && (
+            <div className="px-4 py-2 bg-primary-50 border-b border-primary-100">
+              <p className="text-xs text-primary-700 font-medium truncate">🏫 {sidebarSchoolName}</p>
+            </div>
+          )}
+
+          {/* Itens de navegação */}
+          <nav className="flex-1 overflow-y-auto py-2">
+            {navigation.map((item, index) => {
+              if (item.divider) {
+                return (
+                  <div key={`divider-${index}`} className="px-4 pt-4 pb-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-tight">{item.label}</p>
+                  </div>
+                );
+              }
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={`sidebar-${item.path}-${index}`}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-700 hover:bg-primary-50 hover:text-primary-700'
+                  }`}
+                  title={item.description}
+                >
+                  {Icon && <Icon size={16} className="flex-shrink-0" />}
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {item.badge && (
+                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex-shrink-0 ${
+                      item.badge === 'NOVO' ? 'bg-green-500 text-white' :
+                      item.badge === 'IA'   ? 'bg-yellow-500 text-black' :
+                                             'bg-blue-500 text-white'
+                    }`}>{item.badge}</span>
+                  )}
+                  {item.step && (
+                    <span className="w-5 h-5 flex items-center justify-center bg-primary-500 text-white text-[10px] font-bold rounded-full flex-shrink-0">
+                      {item.step}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Rodapé com logout */}
+          <div className="border-t border-gray-200 p-3 flex-shrink-0">
+            <p className="text-xs text-gray-500 px-2 pb-2 font-semibold truncate">{user?.name}</p>
+            <button
+              onClick={() => { setSidebarOpen(false); handleLogout(); }}
+              className="w-full flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <LogOut size={16} /> Sair do Sistema
+            </button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
