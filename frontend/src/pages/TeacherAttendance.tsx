@@ -1221,18 +1221,6 @@ export default function TeacherAttendance() {
           </div>
         )}
       </div>
-        </button>
-
-        {showPontoLinkSection && (
-          <div className="mt-4 space-y-4">
-            {loadingPontoLink ? (
-              <div className="flex items-center gap-2 text-gray-500"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />Carregando...</div>
-            ) : !teacherPontoLink ? (
-              <button onClick={loadTeacherPontoLink} className="btn btn-primary text-sm">Gerar link de ponto</button>
-            ) : null}
-          </div>
-        )}
-      </div>
 
       {/* Seção de Registro Diário */}
       <div className="card no-print print-teacher-cards">{/* Nota: print-teacher-cards controla se os cards dos professores serão impressos */}
