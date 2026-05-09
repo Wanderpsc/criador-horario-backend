@@ -55,6 +55,8 @@ interface ScheduleData {
   requiresEmail: boolean;
   today: string;
   dayLabel: string;
+  isMakeupSaturday?: boolean;
+  followWeekday?: string | null;
   slots: ScheduleSlot[];
   attendance: {
     _id?: string;
@@ -390,6 +392,14 @@ export default function PontoPublicoTeacher() {
               <Clock className="w-4 h-4 text-gray-400" />
               <span>{scheduleData?.dayLabel} · {scheduleData?.today}</span>
             </div>
+
+            {/* Sábado letivo aviso */}
+            {scheduleData?.isMakeupSaturday && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>Sábado Letivo — seguindo a grade de <strong>{scheduleData.dayLabel.replace('Sábado Letivo (referência: ', '').replace(')', '')}</strong></span>
+              </div>
+            )}
 
             {/* Success toast */}
             {markResult?.ok && (

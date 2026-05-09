@@ -13,6 +13,7 @@ import Teacher from '../models/Teacher';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
 import Schedule from '../models/Schedule';
+import SchoolDay from '../models/SchoolDay';
 import User from '../models/User';
 import { auth, AuthRequest } from '../middleware/auth';
 
@@ -84,6 +85,39 @@ const DEFAULT_PERIODS = [
   { period: 7, startTime: '13:40', endTime: '14:30' },
   { period: 8, startTime: '14:30', endTime: '15:20' },
 ];
+
+// ─── Detectar sábado letivo com referência de dia ────────────────────────────
+// Retorna { effectiveDayKey, isMakeupSaturday, followWeekday }
+// effectiveDayKey = followWeekday se for sábado letivo, caso contrário = dayKey
+async function getEffectiveDayKey(
+  schoolId: string,
+  dateISO: string,
+  dayKey: string
+): Promise<{ effectiveDayKey: string; isMakeupSaturday: boolean; followWeekday: string | null }> {
+  if (dayKey !== 'saturday') {
+    return { effectiveDayKey: dayKey, isMakeupSaturday: false, followWeekday: null };
+  }
+  try {
+    // Buscar SchoolDay para esta data (tipo saturday com followWeekday)
+    const start = new Date(dateISO + 'T00:00:00.000Z');
+    const end   = new Date(dateISO + 'T23:59:59.999Z');
+    const schoolDay = await SchoolDay.findOne({
+      schoolId,
+      date: { $gte: start, $lte: end },
+      dayType: 'saturday',
+      followWeekday: { $exists: true, $ne: '' },
+    }).lean() as any;
+
+    if (schoolDay?.followWeekday) {
+      return {
+        effectiveDayKey: schoolDay.followWeekday as string,
+        isMakeupSaturday: true,
+        followWeekday: schoolDay.followWeekday as string,
+      };
+    }
+  } catch (_) {}
+  return { effectiveDayKey: dayKey, isMakeupSaturday: false, followWeekday: null };
+}
 
 // ─── Fetch or build teacher's schedule slots for a given day ─────────────────
 
@@ -299,8 +333,11 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
     const now    = nowHHmm();
     const graceMinutes = link.graceMinutes ?? 10;
 
+    // Verificar sábado letivo com followWeekday
+    const { effectiveDayKey, isMakeupSaturday, followWeekday } = await getEffectiveDayKey(link.schoolId, today, dayKey);
+
     // Slots do horário gerado (filtrado pelo timetable ativo se configurado)
-    const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, dayKey, link.activeTimetableId || undefined);
+    const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, effectiveDayKey, link.activeTimetableId || undefined);
 
     // Buscar ou criar registro de frequência do dia
     let attendance = await TeacherAttendance.findOne({ teacherId, schoolId: link.schoolId, date: today });
@@ -313,7 +350,7 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
         teacherName: teacherDoc.name,
         schoolId: link.schoolId,
         date: today,
-        dayOfWeek: dayKey,
+        dayOfWeek: effectiveDayKey,
         classes: slots.map(s => ({
           period: s.period,
           startTime: s.startTime,
@@ -354,7 +391,11 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
       teacherName: (teacher as any).name,
       requiresEmail: !!((teacher as any).email),
       today,
-      dayLabel: DAYS_PT[dayKey] || dayKey,
+      dayLabel: isMakeupSaturday && followWeekday
+        ? `Sábado Letivo (referência: ${DAYS_PT[followWeekday] || followWeekday})`
+        : DAYS_PT[effectiveDayKey] || effectiveDayKey,
+      isMakeupSaturday,
+      followWeekday,
       slots,       // horário do timetable (para referência)
       attendance: attendance ? attendance.toObject() : null,
     });
@@ -436,12 +477,15 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     const now    = nowHHmm();
     const graceMinutes = link.graceMinutes ?? 10;
 
+    // Verificar sábado letivo com followWeekday
+    const { effectiveDayKey: markDayKey } = await getEffectiveDayKey(link.schoolId, today, dayKey);
+
     // Build or fetch attendance record
     let attendance = await TeacherAttendance.findOne({ teacherId, schoolId: link.schoolId, date: today });
 
     if (!attendance) {
       // Initialize from timetable (filtrado pelo timetable ativo se configurado)
-      const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, dayKey, link.activeTimetableId || undefined);
+      const slots = await getTeacherSlotsForDay(link.schoolId, teacherId, markDayKey, link.activeTimetableId || undefined);
       if (slots.length === 0) {
         return res.status(400).json({ message: 'Nenhuma aula programada para hoje.' });
       }
@@ -450,7 +494,7 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
         teacherName: teacher.name,
         schoolId: link.schoolId,
         date: today,
-        dayOfWeek: dayKey,
+        dayOfWeek: markDayKey,
         classes: slots.map(s => ({
           period: s.period,
           startTime: s.startTime,

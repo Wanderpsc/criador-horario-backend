@@ -219,6 +219,81 @@ router.get('/public/:token', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// GET /public/:token/teacher-classes/:teacherId — buscar aulas do professor no dia do link (sem auth)
+// Query param opcional: classId  — filtrar pela turma do slot selecionado
+// ─────────────────────────────────────────────
+router.get('/public/:token/teacher-classes/:teacherId', async (req, res) => {
+  try {
+    const link = await SubstituteLink.findOne({ token: req.params.token });
+    if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
+
+    const { classId } = req.query as { classId?: string };
+
+    // Buscar presença do professor naquele dia
+    const attendance = await TeacherAttendance.findOne({
+      teacherId: req.params.teacherId,
+      date: link.date,
+      schoolId: link.schoolId,
+    }).lean() as any;
+
+    if (!attendance) {
+      // Se não houver registro de presença, tentar no horário gerado
+      const periodMap = await getSchedulePeriodMap(link.schoolId.toString());
+      const dateObj = new Date(link.date + 'T12:00:00');
+      const daysEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const dayName = daysEn[dateObj.getDay()];
+
+      const timetables = await (await import('../models/GeneratedTimetable')).default.find({
+        school: link.schoolId.toString(),
+      }).lean() as any[];
+
+      const ownClasses: any[] = [];
+      const seenPeriods = new Set<string>();
+      for (const tt of timetables) {
+        for (const slot of (tt.slots || [])) {
+          if (slot.teacherId?.toString() !== req.params.teacherId) continue;
+          if (slot.day !== dayName) continue;
+          if (classId && slot.classId?.toString() !== classId) continue;
+          const key = `${slot.period}|${slot.classId}`;
+          if (seenPeriods.has(key)) continue;
+          seenPeriods.add(key);
+          const periodTimes = periodMap.get(Number(slot.period));
+          ownClasses.push({
+            period: slot.period,
+            startTime: periodTimes?.startTime || slot.startTime || '',
+            endTime: periodTimes?.endTime || slot.endTime || '',
+            subjectId: slot.subjectId,
+            subjectName: slot.subjectName || slot.subjectId,
+            classId: slot.classId,
+            className: tt.classId === slot.classId ? (tt as any).className || slot.classId : slot.classId,
+          });
+        }
+      }
+      return res.json(ownClasses.sort((a, b) => a.period - b.period));
+    }
+
+    // Filtrar aulas presentes (não ausentes) do professor naquele dia
+    let classes: any[] = (attendance.classes || []).filter((c: any) => c.status !== 'absent');
+    if (classId) {
+      classes = classes.filter((c: any) => c.classId?.toString() === classId);
+    }
+    // Remover duplicatas por period+classId
+    const seen = new Set<string>();
+    classes = classes.filter((c: any) => {
+      const k = `${c.period}|${c.classId}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    res.json(classes.sort((a: any, b: any) => a.period - b.period));
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // GET /public/:token/debts/:teacherId — buscar débitos do professor (sem auth)
 // ─────────────────────────────────────────────
 router.get('/public/:token/debts/:teacherId', async (req, res) => {
@@ -271,17 +346,25 @@ router.post('/public/:token/fill', async (req, res) => {
       subjectName,
       classId,
       className,
-      // Tipo de preenchimento: 'reposicao' | 'adiantamento'
+      // Tipo de preenchimento: 'reposicao' | 'adiantamento' | 'subindo_aula'
       fillType,
       // Se reposição: ID do TeacherDebtRecord a ser abatido
       debtRecordId,
+      // Se subindo_aula: informações da aula própria que está sendo adiantada
+      ownPeriod,          // período original da aula própria do professor
+      ownSubjectId,
+      ownSubjectName,
+      keepOriginalSlot,   // boolean: true = mantem o slot original, false = deixa vago
     } = req.body;
 
     if (!slotId || !teacherName?.trim()) {
       return res.status(400).json({ message: 'slotId e teacherName são obrigatórios.' });
     }
-    if (!fillType || !['reposicao', 'adiantamento'].includes(fillType)) {
-      return res.status(400).json({ message: 'fillType deve ser "reposicao" ou "adiantamento".' });
+    if (!fillType || !['reposicao', 'adiantamento', 'subindo_aula'].includes(fillType)) {
+      return res.status(400).json({ message: 'fillType deve ser "reposicao", "adiantamento" ou "subindo_aula".' });
+    }
+    if (fillType === 'subindo_aula' && (ownPeriod == null || !ownSubjectId)) {
+      return res.status(400).json({ message: 'Para "Subindo aula", informe o período e a disciplina da sua aula.' });
     }
 
     const link = await SubstituteLink.findOne({ token: req.params.token });
@@ -316,6 +399,21 @@ router.post('/public/:token/fill', async (req, res) => {
     }
 
     // Criar ClassPayment
+    const slotVagantNote = (fillType === 'subindo_aula' && !keepOriginalSlot)
+      ? ` — slot do ${ownPeriod}º período deixado vago`
+      : (fillType === 'subindo_aula' && keepOriginalSlot)
+        ? ` — manterá o ${ownPeriod}º período normalmente`
+        : '';
+
+    let notes = '';
+    if (fillType === 'adiantamento') {
+      notes = `Adiantamento de aula — Prof. ${teacherName.trim()}`;
+    } else if (fillType === 'subindo_aula') {
+      notes = `Subiu aula do ${ownPeriod}º período (${ownSubjectName || ownSubjectId}) para cobrir ausência de ${slot.absentTeacherName}${slotVagantNote}`;
+    } else {
+      notes = `Reposição — ${debtRecord ? `Abatido débito de ${debtRecord.absenceDate?.toISOString?.().split?.('T')?.[0] || ''}` : ''}`;
+    }
+
     const payment = new ClassPayment({
       schoolId: link.schoolId,
       date: link.date,
@@ -328,23 +426,30 @@ router.post('/public/:token/fill', async (req, res) => {
       substituteTeacherName: teacherName.trim(),
       classId: classId || slot.classId,
       className: className || slot.className,
-      subjectId: subjectId || slot.subjectId,
-      subjectName: subjectName || slot.subjectName,
+      subjectId: (fillType === 'subindo_aula' ? ownSubjectId : subjectId) || slot.subjectId,
+      subjectName: (fillType === 'subindo_aula' ? ownSubjectName : subjectName) || slot.subjectName,
       filledViaLink: true,
       substituteToken: link.token,
       status: fillType === 'adiantamento' ? 'paid' : 'filled',
-      notes: fillType === 'adiantamento'
-        ? `Adiantamento de aula — Prof. ${teacherName.trim()}`
-        : `Reposição — ${debtRecord ? `Abatido débito de ${debtRecord.absenceDate?.toISOString?.().split?.('T')?.[0] || ''}` : ''}`,
+      notes,
       // filledAt = data real da aula (data do link), não a data de preenchimento do form
       filledAt: new Date(link.date + 'T12:00:00'),
     });
     await payment.save();
 
+    let message = '';
+    if (fillType === 'adiantamento') {
+      message = 'Adiantamento registrado! Será contabilizado como saldo no relatório.';
+    } else if (fillType === 'subindo_aula') {
+      message = keepOriginalSlot
+        ? 'Subida de aula registrada! Você manterá sua aula original e também cobrirá este horário.'
+        : 'Subida de aula registrada! Seu horário original ficará vago para outro professor.';
+    } else {
+      message = 'Reposição registrada com sucesso! O déficit foi abatido.';
+    }
+
     res.json({
-      message: fillType === 'adiantamento'
-        ? 'Adiantamento registrado! Será contabilizado como saldo no relatório.'
-        : 'Reposição registrada com sucesso! O déficit foi abatido.',
+      message,
       payment,
       debtDeducted: !!debtRecord,
     });

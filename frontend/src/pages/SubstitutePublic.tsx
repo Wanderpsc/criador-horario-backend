@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   User, BookOpen, Clock, CheckCircle, AlertCircle,
-  ChevronRight, ArrowUpCircle, RotateCcw,
+  ChevronRight, ArrowUpCircle, RotateCcw, TrendingUp,
 } from 'lucide-react';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
@@ -55,6 +55,16 @@ interface DebtItem {
   absenceDate: string;
 }
 
+interface OwnClassItem {
+  period: number;
+  startTime: string;
+  endTime: string;
+  subjectId: string;
+  subjectName: string;
+  classId: string;
+  className: string;
+}
+
 type Step = 'identify' | 'select-slot' | 'fill-form' | 'success';
 
 export default function SubstitutePublic() {
@@ -79,7 +89,7 @@ export default function SubstitutePublic() {
   const [selectedSlot, setSelectedSlot] = useState<SlotData | null>(null);
 
   // Passo 3 — Formulário
-  const [fillType, setFillType] = useState<'reposicao' | 'adiantamento'>('reposicao');
+  const [fillType, setFillType] = useState<'reposicao' | 'adiantamento' | 'subindo_aula'>('reposicao');
   const [subjectId, setSubjectId] = useState('');
   const [subjectName, setSubjectName] = useState('');
   const [classId, setClassId] = useState('');
@@ -89,6 +99,12 @@ export default function SubstitutePublic() {
   const [selectedDebtId, setSelectedDebtId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Subindo aula
+  const [ownClasses, setOwnClasses] = useState<OwnClassItem[]>([]);
+  const [loadingOwnClasses, setLoadingOwnClasses] = useState(false);
+  const [selectedOwnClass, setSelectedOwnClass] = useState<OwnClassItem | null>(null);
+  const [keepOriginalSlot, setKeepOriginalSlot] = useState<boolean | null>(null);
 
   // ── Carregar link ────────────────────────────────────────────────────────────
   const fetchLink = () => {
@@ -127,6 +143,19 @@ export default function SubstitutePublic() {
       .then(res => { setDebts(res.data); setLoadingDebts(false); })
       .catch(() => { setDebts([]); setLoadingDebts(false); });
   }, [teacherId, fillType, token]);
+
+  // ── Carregar aulas próprias do professor (para subindo_aula) ─────────────────
+  useEffect(() => {
+    if (!teacherId || fillType !== 'subindo_aula' || !selectedSlot) return;
+    setLoadingOwnClasses(true);
+    setSelectedOwnClass(null);
+    setKeepOriginalSlot(null);
+    axios.get(`${API_URL}/substitute-links/public/${token}/teacher-classes/${teacherId}`, {
+      params: { classId: selectedSlot.classId },
+    })
+      .then(res => { setOwnClasses(res.data || []); setLoadingOwnClasses(false); })
+      .catch(() => { setOwnClasses([]); setLoadingOwnClasses(false); });
+  }, [teacherId, fillType, token, selectedSlot]);
 
   // Deduplica slots por período + professor ausente + turma (links gerados antes da correção do backend)
   const dedupeSlots = (slots: SlotData[]) => {
@@ -196,6 +225,14 @@ export default function SubstitutePublic() {
       alert('Selecione qual débito está repondo.');
       return;
     }
+    if (fillType === 'subindo_aula' && !selectedOwnClass) {
+      alert('Selecione qual aula sua você quer subir para este horário.');
+      return;
+    }
+    if (fillType === 'subindo_aula' && keepOriginalSlot === null) {
+      alert('Informe se manterá sua aula no horário original ou deixará vago.');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await axios.post(
@@ -210,6 +247,11 @@ export default function SubstitutePublic() {
           className,
           fillType,
           debtRecordId: fillType === 'reposicao' ? selectedDebtId : undefined,
+          // Subindo aula
+          ownPeriod: fillType === 'subindo_aula' ? selectedOwnClass?.period : undefined,
+          ownSubjectId: fillType === 'subindo_aula' ? selectedOwnClass?.subjectId : undefined,
+          ownSubjectName: fillType === 'subindo_aula' ? selectedOwnClass?.subjectName : undefined,
+          keepOriginalSlot: fillType === 'subindo_aula' ? keepOriginalSlot : undefined,
         }
       );
       setSuccessMsg(res.data.message);
@@ -422,9 +464,9 @@ export default function SubstitutePublic() {
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Tipo de aula
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
-                      onClick={() => { setFillType('reposicao'); setSelectedDebtId(''); }}
+                      onClick={() => { setFillType('reposicao'); setSelectedDebtId(''); setSelectedOwnClass(null); setKeepOriginalSlot(null); }}
                       className={`p-3 rounded-xl border-2 text-sm font-medium transition ${
                         fillType === 'reposicao'
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
@@ -436,7 +478,7 @@ export default function SubstitutePublic() {
                       <div className="text-xs font-normal mt-0.5">Abate um débito</div>
                     </button>
                     <button
-                      onClick={() => { setFillType('adiantamento'); setSelectedDebtId(''); }}
+                      onClick={() => { setFillType('adiantamento'); setSelectedDebtId(''); setSelectedOwnClass(null); setKeepOriginalSlot(null); }}
                       className={`p-3 rounded-xl border-2 text-sm font-medium transition ${
                         fillType === 'adiantamento'
                           ? 'border-green-500 bg-green-50 text-green-800'
@@ -447,11 +489,123 @@ export default function SubstitutePublic() {
                       Adiantamento
                       <div className="text-xs font-normal mt-0.5">Gera saldo positivo</div>
                     </button>
+                    <button
+                      onClick={() => { setFillType('subindo_aula'); setSelectedDebtId(''); }}
+                      className={`p-3 rounded-xl border-2 text-sm font-medium transition ${
+                        fillType === 'subindo_aula'
+                          ? 'border-purple-500 bg-purple-50 text-purple-800'
+                          : 'border-gray-200 text-gray-600 hover:border-purple-200'
+                      }`}
+                    >
+                      <TrendingUp className="w-5 h-5 mx-auto mb-1" />
+                      Subindo aula
+                      <div className="text-xs font-normal mt-0.5">Adianta sua própria aula</div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Disciplina que vai ministrar */}
-                <div>
+                {/* Subindo aula: seleção da aula própria + opção keep/vacate */}
+                {fillType === 'subindo_aula' && (
+                  <div className="space-y-4">
+                    {!teacherId && (
+                      <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        Para subir sua aula, escolha seu nome na lista de professores cadastrados (Passo 1).
+                      </div>
+                    )}
+                    {teacherId && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Qual sua aula nesta turma que deseja subir para este horário?
+                          </label>
+                          {loadingOwnClasses && (
+                            <div className="text-sm text-gray-500 py-2">Carregando suas aulas...</div>
+                          )}
+                          {!loadingOwnClasses && ownClasses.length === 0 && (
+                            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                              Nenhuma aula sua encontrada nesta turma para este dia. Verifique se sua frequência foi registrada.
+                            </div>
+                          )}
+                          {!loadingOwnClasses && ownClasses.length > 0 && (
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                              {ownClasses.map(oc => (
+                                <label
+                                  key={`${oc.period}-${oc.subjectId}`}
+                                  className={`flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition ${
+                                    selectedOwnClass?.period === oc.period && selectedOwnClass?.subjectId === oc.subjectId
+                                      ? 'border-purple-500 bg-purple-50'
+                                      : 'border-gray-200 hover:border-purple-200'
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="ownClass"
+                                    checked={selectedOwnClass?.period === oc.period && selectedOwnClass?.subjectId === oc.subjectId}
+                                    onChange={() => setSelectedOwnClass(oc)}
+                                    className="mt-1"
+                                  />
+                                  <div className="text-sm">
+                                    <div className="font-medium text-gray-800">
+                                      {oc.subjectName}
+                                    </div>
+                                    <div className="text-gray-500 text-xs">
+                                      {oc.period}º período — {oc.startTime}–{oc.endTime}
+                                    </div>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedOwnClass && (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              O que acontece com seu {selectedOwnClass.period}º período original?
+                            </label>
+                            <div className="space-y-2">
+                              <label className={`flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition ${
+                                keepOriginalSlot === true ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'
+                              }`}>
+                                <input
+                                  type="radio"
+                                  name="keepOriginal"
+                                  checked={keepOriginalSlot === true}
+                                  onChange={() => setKeepOriginalSlot(true)}
+                                  className="mt-0.5"
+                                />
+                                <div className="text-sm">
+                                  <div className="font-medium text-gray-800">Manter — ainda terei esta aula no horário original</div>
+                                  <div className="text-xs text-gray-500 mt-0.5">Você ministrará a disciplina duas vezes: agora e no {selectedOwnClass.period}º período</div>
+                                </div>
+                              </label>
+                              <label className={`flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition ${
+                                keepOriginalSlot === false ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-200'
+                              }`}>
+                                <input
+                                  type="radio"
+                                  name="keepOriginal"
+                                  checked={keepOriginalSlot === false}
+                                  onChange={() => setKeepOriginalSlot(false)}
+                                  className="mt-0.5"
+                                />
+                                <div className="text-sm">
+                                  <div className="font-medium text-gray-800">Liberar — meu horário original ficará vago</div>
+                                  <div className="text-xs text-gray-500 mt-0.5">O {selectedOwnClass.period}º período ficará disponível para outro professor neste dia</div>
+                                </div>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Disciplina que vai ministrar — oculto em subindo_aula (usa própria disciplina) */}
+                {fillType !== 'subindo_aula' && (
+                  <>
+                  <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Disciplina que você vai ministrar
                   </label>
@@ -486,6 +640,8 @@ export default function SubstitutePublic() {
                     ))}
                   </select>
                 </div>
+                  </>
+                )}
 
                 {/* Se reposição: mostrar lista de débitos */}
                 {fillType === 'reposicao' && teacherId && (
@@ -556,14 +712,20 @@ export default function SubstitutePublic() {
                   <button
                     disabled={
                       submitting ||
-                      !subjectId ||
-                      !classId ||
-                      (fillType === 'reposicao' && !!teacherId && !selectedDebtId)
+                      (fillType !== 'subindo_aula' && (!subjectId || !classId)) ||
+                      (fillType === 'reposicao' && !!teacherId && !selectedDebtId) ||
+                      (fillType === 'subindo_aula' && (!selectedOwnClass || keepOriginalSlot === null || !teacherId))
                     }
                     onClick={handleSubmitFill}
                     className="flex-2 flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-40"
                   >
-                    {submitting ? 'Registrando...' : fillType === 'adiantamento' ? '✅ Registrar Adiantamento' : '✅ Confirmar Reposição'}
+                    {submitting
+                      ? 'Registrando...'
+                      : fillType === 'adiantamento'
+                        ? '✅ Registrar Adiantamento'
+                        : fillType === 'subindo_aula'
+                          ? '✅ Confirmar Subida de Aula'
+                          : '✅ Confirmar Reposição'}
                   </button>
                 </div>
               </div>
