@@ -161,7 +161,7 @@ async function getTeacherSlotsForDay(
         subjectName: isHP ? 'Horário Pedagógico' : (subjectMap[s.subjectId] || 'Disciplina'),
         classId: s.classId || '',
         className: isHP ? '' : cInfo.name,
-        grade: isHP ? '' : cInfo.grade,
+        grade: isHP ? '' : (cInfo.grade || s.grade || ''),
         isPedagogical: isHP,
       };
     });
