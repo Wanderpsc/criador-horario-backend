@@ -8,8 +8,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
-  BookOpen, Clock, CheckCircle, XCircle, AlertCircle,
-  LogIn, LogOut, Search, ChevronRight, ArrowLeft, MapPin,
+  BookOpen, Clock, CheckCircle, XCircle,
+  LogIn, Search, ChevronRight, ArrowLeft, MapPin,
   AlertTriangle, GraduationCap,
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
@@ -99,7 +99,6 @@ export default function PontoPublicoTeacher() {
 
   // Confirm step
   const [activePeriod, setActivePeriod] = useState<number | null>(null);
-  const [activeAction, setActiveAction] = useState<'entry' | 'exit'>('entry');
   const [warningSlot, setWarningSlot]   = useState<ClassRecord | null>(null); // off-schedule warning
   const [showWarning, setShowWarning]   = useState(false);
 
@@ -158,29 +157,19 @@ export default function PontoPublicoTeacher() {
     }
   }
 
-  function classStatus(cls: ClassRecord): 'pending' | 'active' | 'present' | 'absent' {
+  function classStatus(cls: ClassRecord): 'pending' | 'present' | 'absent' {
     if (cls.status === 'absent') return 'absent';
-    if (cls.entryTime && !cls.exitTime) return 'active';
-    if (cls.exitTime) return 'present';
+    if (cls.status === 'present' || cls.entryTime) return 'present';
     return 'pending';
   }
 
   function isEnterable(cls: ClassRecord): boolean {
-    if (cls.status === 'absent' || cls.entryTime) return false;
+    if (cls.status === 'present' || cls.status === 'absent' || cls.entryTime) return false;
     const grace = linkConfig?.graceMinutes ?? 10;
-    // can enter if now <= endTime + grace
     if (cls.endTime) {
       return toMin(nowHHmm()) <= toMin(cls.endTime) + grace;
     }
     return true;
-  }
-
-  function isExitable(cls: ClassRecord): boolean {
-    return !!(cls.entryTime && !cls.exitTime);
-  }
-
-  function hasActiveClass(): ClassRecord | undefined {
-    return scheduleData?.attendance?.classes.find(c => c.entryTime && !c.exitTime);
   }
 
   function isScheduledNow(cls: ClassRecord): boolean {
@@ -190,16 +179,14 @@ export default function PontoPublicoTeacher() {
     return now >= toMin(cls.startTime) - grace && now <= toMin(cls.endTime) + grace;
   }
 
-  function initiateAction(cls: ClassRecord, action: 'entry' | 'exit') {
+  function initiateAction(cls: ClassRecord) {
     setActivePeriod(cls.period);
-    setActiveAction(action);
     setPhotoData(null);
     setGeoPos(null);
     setGeoError('');
     setEmailError('');
 
-    // Check if off-schedule (only for entry)
-    if (action === 'entry' && !isScheduledNow(cls)) {
+    if (!isScheduledNow(cls)) {
       setWarningSlot(cls);
       setShowWarning(true);
     } else {
@@ -245,7 +232,7 @@ export default function PontoPublicoTeacher() {
       const r = await axios.post(`${API}/teacher-ponto/teacher-public/${token}/mark`, {
         teacherId: selected._id,
         period: activePeriod,
-        action: activeAction,
+        action: 'entry',
         lat,
         lng,
         photoData: photoData || undefined,
@@ -361,17 +348,13 @@ export default function PontoPublicoTeacher() {
   if (step === 'schedule') {
     const classes = scheduleData?.attendance?.classes || [];
 
-    const activeClass = hasActiveClass();
-
-    const statusColor: Record<string, string> = {
+    return (
       pending: 'bg-gray-100 text-gray-500',
-      active: 'bg-yellow-100 text-yellow-700 border border-yellow-300',
       present: 'bg-green-100 text-green-700',
       absent: 'bg-red-100 text-red-700',
     };
     const statusLabel: Record<string, string> = {
       pending: 'Pendente',
-      active: 'Em aula',
       present: 'Presente',
       absent: 'Ausente',
     };
@@ -433,16 +416,7 @@ export default function PontoPublicoTeacher() {
               </div>
             )}
 
-            {/* Active class banner */}
-            {activeClass && (
-              <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-xl">
-                <span className="animate-pulse w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0" />
-                <span className="text-sm">
-                  <strong>Em aula</strong> — {activeClass.subjectName} ({activeClass.className}) · Período {activeClass.period}
-                  {activeClass.entryTime && <span className="ml-1 text-yellow-600">desde {activeClass.entryTime}</span>}
-                </span>
-              </div>
-            )}
+            {/* Active class banner — removido: presença é registrada de uma vez */}
 
             {/* Class list */}
             {!loadingSchedule && classes.length > 0 && (
@@ -450,15 +424,12 @@ export default function PontoPublicoTeacher() {
                 <p className="text-xs font-semibold text-gray-500 uppercase">Aulas de hoje</p>
                 {classes.map(cls => {
                   const st = classStatus(cls);
-                  const canEnter = st === 'pending' && isEnterable(cls) && !activeClass;
-                  const canExit  = st === 'active';
-                  const blockedByActive = st === 'pending' && isEnterable(cls) && !!activeClass;
+                  const canMark = st === 'pending' && isEnterable(cls);
 
                   return (
                     <div
                       key={cls.period}
                       className={`rounded-xl border p-3 transition-all ${
-                        st === 'active' ? 'border-yellow-300 bg-yellow-50' :
                         st === 'present' ? 'border-green-200 bg-green-50' :
                         st === 'absent' ? 'border-red-200 bg-red-50' :
                         'border-gray-100 bg-white'
@@ -467,7 +438,6 @@ export default function PontoPublicoTeacher() {
                       <div className="flex items-start gap-3">
                         {/* Period badge */}
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
-                          st === 'active' ? 'bg-yellow-400 text-yellow-900' :
                           st === 'present' ? 'bg-green-500 text-white' :
                           st === 'absent' ? 'bg-red-400 text-white' :
                           'bg-gray-200 text-gray-600'
@@ -482,7 +452,6 @@ export default function PontoPublicoTeacher() {
                               {cls.isPedagogical ? '📋 Horário Pedagógico' : cls.subjectName}
                             </p>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor[st]}`}>
-                              {st === 'active' && <span className="animate-pulse mr-1">●</span>}
                               {statusLabel[st]}
                             </span>
                           </div>
@@ -492,30 +461,18 @@ export default function PontoPublicoTeacher() {
                           <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
                             <span><Clock className="inline w-3 h-3 mr-0.5" />{cls.startTime}–{cls.endTime}</span>
                             {cls.entryTime && <span className="text-green-600"><LogIn className="inline w-3 h-3 mr-0.5" />{cls.entryTime}</span>}
-                            {cls.exitTime && <span className="text-red-500"><LogOut className="inline w-3 h-3 mr-0.5" />{cls.exitTime}</span>}
                           </div>
                         </div>
 
-                        {/* Action buttons */}
+                        {/* Action button */}
                         <div className="flex-shrink-0">
-                          {canEnter && (
+                          {canMark && (
                             <button
-                              onClick={() => initiateAction(cls, 'entry')}
+                              onClick={() => initiateAction(cls)}
                               className="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
                             >
-                              <LogIn className="w-3 h-3" /> Entrar
+                              <LogIn className="w-3 h-3" /> Registrar
                             </button>
-                          )}
-                          {canExit && (
-                            <button
-                              onClick={() => initiateAction(cls, 'exit')}
-                              className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"
-                            >
-                              <LogOut className="w-3 h-3" /> Sair
-                            </button>
-                          )}
-                          {blockedByActive && (
-                            <span className="text-xs text-gray-400 italic">Saia primeiro</span>
                           )}
                         </div>
                       </div>
@@ -579,7 +536,7 @@ export default function PontoPublicoTeacher() {
               <ArrowLeft className="w-3 h-3" /> Voltar
             </button>
             <p className="font-bold">
-              {activeAction === 'entry' ? '📥 Registrar Entrada' : '📤 Registrar Saída'}
+              📝 Registrar Presença
             </p>
             {cls && (
               <p className="text-green-200 text-sm mt-1">
@@ -648,16 +605,9 @@ export default function PontoPublicoTeacher() {
             <button
               onClick={executeAction}
               disabled={marking || (linkConfig?.requirePhoto && !photoData)}
-              className={`w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-white disabled:opacity-60 ${
-                activeAction === 'entry'
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-red-500 hover:bg-red-600'
-              }`}
+              className="w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-white bg-green-600 hover:bg-green-700 disabled:opacity-60"
             >
-              {activeAction === 'entry'
-                ? <><LogIn className="w-5 h-5" />{marking ? 'Registrando...' : 'Confirmar Entrada'}</>
-                : <><LogOut className="w-5 h-5" />{marking ? 'Registrando...' : 'Confirmar Saída'}</>
-              }
+              <LogIn className="w-5 h-5" />{marking ? 'Registrando...' : 'Confirmar Presença'}
             </button>
           </div>
         </div>

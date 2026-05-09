@@ -593,7 +593,7 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
               subjectName: subject?.name || 'Disciplina não encontrada',
               classId: slot.classId?.toString(),
               className: classInfo?.name || 'Turma não encontrada',
-              grade: classInfo?.gradeId?.toString() || '',
+              grade: (classInfo as any)?.grade || (classInfo as any)?.gradeId?.toString() || '',
               status: slot.period === period ? status : 'pending',
               markedAt: slot.period === period ? new Date() : undefined
             };
@@ -1591,11 +1591,11 @@ router.post('/daily-record', auth, async (req: AuthRequest, res) => {
       return res.status(400).json({ message: 'Dados incompletos' });
     }
 
-    // Validar cada aula
+    // Validar cada aula (grade é opcional — pode ser vazio em Horário Pedagógico)
     for (let i = 0; i < classes.length; i++) {
       const cls = classes[i];
-      const requiredFields = ['period', 'startTime', 'endTime', 'subjectId', 'subjectName', 'classId', 'className', 'grade'];
-      const missingFields = requiredFields.filter(field => !cls[field]);
+      const requiredFields = ['period', 'startTime', 'endTime', 'subjectId', 'subjectName', 'classId', 'className'];
+      const missingFields = requiredFields.filter(field => cls[field] === undefined || cls[field] === null);
       
       if (missingFields.length > 0) {
         console.error(`❌ Aula ${i} está faltando campos:`, missingFields);

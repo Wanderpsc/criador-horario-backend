@@ -365,8 +365,8 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     if (!teacherId || !mongoose.isValidObjectId(teacherId)) {
       return res.status(400).json({ message: 'teacherId inválido.' });
     }
-    if (!period || !['entry', 'exit'].includes(action)) {
-      return res.status(400).json({ message: 'period e action são obrigatórios.' });
+    if (!period || action !== 'entry') {
+      return res.status(400).json({ message: 'period é obrigatório.' });
     }
 
     const teacher = await Teacher.findOne({ _id: teacherId, schoolId: link.schoolId })
@@ -451,48 +451,24 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     }
     const cls = (attendance as any).classes[clsIndex];
 
-    if (action === 'entry') {
-      if (cls.entryTime) {
-        return res.status(400).json({ message: 'Entrada já registrada para este período.' });
-      }
-
-      // Check 10-min grace: cannot enter more than graceMinutes after end
-      if (cls.endTime && toMin(now) > toMin(cls.endTime) + graceMinutes) {
-        return res.status(400).json({ message: 'Prazo de entrada encerrado para este período.' });
-      }
-
-      // Check no other class is active (entryTime set, no exitTime)
-      const activeClass = (attendance as any).classes.find(
-        (c: any) => c.entryTime && !c.exitTime && c.period !== period
-      );
-      if (activeClass) {
-        return res.status(400).json({
-          message: `Você já está ativo no período ${activeClass.period}. Registre a saída primeiro.`,
-          activePeriod: activeClass.period,
-        });
-      }
-
-      cls.entryTime    = now;
-      cls.status       = 'present';
-      cls.markedAt     = new Date();
-      cls.locationValid = locationValid;
-      if (photoData) cls.photoData = photoData;
-
-    } else {
-      // exit
-      if (!cls.entryTime) {
-        return res.status(400).json({ message: 'Registre a entrada antes de sair.' });
-      }
-      if (cls.exitTime) {
-        return res.status(400).json({ message: 'Saída já registrada para este período.' });
-      }
-      cls.exitTime     = now;
-      cls.locationValid = locationValid;
-      if (photoData) cls.photoData = photoData;
+    // Único toque: registrar presença imediatamente
+    if (cls.entryTime || cls.status === 'present') {
+      return res.status(400).json({ message: 'Presença já registrada para este período.' });
     }
 
+    // Check grace: não pode registrar após o fim do período + tolerância
+    if (cls.endTime && toMin(now) > toMin(cls.endTime) + graceMinutes) {
+      return res.status(400).json({ message: 'Prazo de registro encerrado para este período.' });
+    }
+
+    cls.entryTime     = now;
+    cls.status        = 'present';
+    cls.markedAt      = new Date();
+    cls.locationValid = locationValid;
+    if (photoData) cls.photoData = photoData;
+
     await attendance.save();
-    res.json({ message: action === 'entry' ? 'Entrada registrada.' : 'Saída registrada.', attendance });
+    res.json({ message: 'Presença registrada com sucesso.', attendance });
   } catch (err: any) {
     console.error('[teacher-ponto] mark error:', err);
     res.status(500).json({ message: err.message });
