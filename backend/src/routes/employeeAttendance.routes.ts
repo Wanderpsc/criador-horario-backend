@@ -306,7 +306,47 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
       if (existing) return existing;
 
       const ws = (emp as any).workSchedule;
-      // Usa workSchedule se o dia estiver na escala
+      const shiftMode = ws?.shiftMode || 'fixed';
+
+      // ── Escala Rotativa (24×1, 36×1, 72×1) ──────────────────────────────
+      if (shiftMode === 'rotating' && ws?.rotatingWorkHours && ws?.rotatingCycleStart) {
+        const cycleHours: number = ws.rotatingWorkHours;       // 24 | 36 | 72
+        const restDays: number   = ws.rotatingRestDays ?? 1;   // 1 | 2 | 3
+        const cycleTotalHours    = cycleHours + restDays * 24; // total do ciclo em horas
+        const cycleStart         = new Date(ws.rotatingCycleStart + 'T' + (ws.rotatingEntryTime || '07:00') + ':00');
+        const targetMs           = new Date(date as string + 'T12:00:00').getTime();
+        const diffMs             = targetMs - cycleStart.getTime();
+        const diffHours          = diffMs / 3_600_000;
+        const posInCycle         = ((diffHours % cycleTotalHours) + cycleTotalHours) % cycleTotalHours;
+        const isWorkDay          = posInCycle < cycleHours;
+
+        return {
+          employeeId: emp._id.toString(),
+          employeeName: emp.name,
+          cargo: emp.cargo,
+          setor: emp.setor,
+          date,
+          status: null,
+          shift: 'plantao',
+          shiftMode: 'rotating',
+          rotatingWorkHours: cycleHours,
+          rotatingRestDays: restDays,
+          rotatingEntryTime: ws.rotatingEntryTime || '',
+          isRotatingWorkDay: isWorkDay,
+          expectedEntryTime: isWorkDay ? (ws.rotatingEntryTime || '') : '',
+          expectedExitTime: '',  // saída é no dia seguinte — não cabível em HH:mm simples
+          toleranceMinutes: ws.toleranceMinutes ?? 10,
+          workDays: [],
+          shiftType: 'single',
+          expectedEntryTime2: '', expectedExitTime2: '',
+          expectedEntryTime3: '', expectedExitTime3: '',
+          entryTime: '', exitTime: '',
+          entryTime2: '', exitTime2: '',
+          entryTime3: '', exitTime3: '',
+        };
+      }
+
+      // ── Escala Fixa ───────────────────────────────────────────────────────
       const hasWorkToday = ws?.workDays?.includes(dayKey);
       const expectedEntryTime = hasWorkToday && ws?.entryTime ? ws.entryTime : '';
       const expectedExitTime  = hasWorkToday && ws?.exitTime  ? ws.exitTime  : '';
@@ -321,6 +361,7 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         shift: emp.jornadaTrabalho?.toLowerCase().includes('manhã') ? 'manha' :
                emp.jornadaTrabalho?.toLowerCase().includes('tarde') ? 'tarde' :
                emp.jornadaTrabalho?.toLowerCase().includes('noturno') ? 'noturno' : 'integral',
+        shiftMode: 'fixed',
         expectedEntryTime,
         expectedExitTime,
         toleranceMinutes: ws?.toleranceMinutes ?? 10,
@@ -351,11 +392,13 @@ router.put('/update-schedule/:employeeId', auth, async (req: AuthRequest, res) =
     if (!isValidId(req.params.employeeId)) return res.status(400).json({ message: 'ID inválido.' });
     const schoolId = req.user!.schoolId || req.user!.id;
     const { entryTime, exitTime, workDays, toleranceMinutes, shiftType,
-             shift2EntryTime, shift2ExitTime, shift3EntryTime, shift3ExitTime } = req.body;
+             shift2EntryTime, shift2ExitTime, shift3EntryTime, shift3ExitTime,
+             shiftMode, rotatingWorkHours, rotatingRestDays, rotatingCycleStart, rotatingEntryTime } = req.body;
 
     const emp = await Employee.findOneAndUpdate(
       { _id: req.params.employeeId, schoolId },
       { $set: {
+        'workSchedule.shiftMode': shiftMode || 'fixed',
         'workSchedule.entryTime': entryTime || '',
         'workSchedule.exitTime': exitTime || '',
         'workSchedule.workDays': Array.isArray(workDays) ? workDays : ['monday','tuesday','wednesday','thursday','friday'],
@@ -365,6 +408,10 @@ router.put('/update-schedule/:employeeId', auth, async (req: AuthRequest, res) =
         'workSchedule.shift2ExitTime': shift2ExitTime || '',
         'workSchedule.shift3EntryTime': shift3EntryTime || '',
         'workSchedule.shift3ExitTime': shift3ExitTime || '',
+        'workSchedule.rotatingWorkHours': rotatingWorkHours ? Number(rotatingWorkHours) : undefined,
+        'workSchedule.rotatingRestDays': rotatingRestDays ? Number(rotatingRestDays) : undefined,
+        'workSchedule.rotatingCycleStart': rotatingCycleStart || '',
+        'workSchedule.rotatingEntryTime': rotatingEntryTime || '',
       }},
       { new: true }
     );

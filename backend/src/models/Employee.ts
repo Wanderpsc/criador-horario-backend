@@ -53,6 +53,9 @@ export interface IEmployee extends Document {
   reservista?: string;
   // Escala de trabalho (horário fixo)
   workSchedule?: {
+    // --- Modo: fixo ou rotativo ---
+    shiftMode: 'fixed' | 'rotating';  // fixo (dias da semana) | rotativo (ciclo horas)
+    // --- Escala fixa ---
     entryTime: string;         // HH:mm — 1º turno entrada
     exitTime: string;          // HH:mm — 1º turno saída
     workDays: string[];        // ['monday','tuesday','wednesday','thursday','friday']
@@ -62,6 +65,11 @@ export interface IEmployee extends Document {
     shift2ExitTime?: string;   // HH:mm — 2º turno saída
     shift3EntryTime?: string;  // HH:mm — 3º turno entrada
     shift3ExitTime?: string;   // HH:mm — 3º turno saída
+    // --- Escala rotativa (vigias: 24×1, 36×1, 72×1) ---
+    rotatingWorkHours?: number;  // horas de serviço: 24 | 36 | 72
+    rotatingRestDays?: number;   // dias de folga após: 1 | 2 | 3
+    rotatingCycleStart?: string; // YYYY-MM-DD — data de início do 1º ciclo
+    rotatingEntryTime?: string;  // HH:mm — horário de entrada em cada ciclo
   };
   // Outros
   observacoes?: string;
@@ -118,15 +126,20 @@ const employeeSchema = new Schema<IEmployee>(
     cnhValidade: { type: String },
     reservista: { type: String },
     workSchedule: {
-      entryTime:         { type: String, default: '' },
-      exitTime:          { type: String, default: '' },
-      workDays:          { type: [String], default: ['monday','tuesday','wednesday','thursday','friday'] },
-      toleranceMinutes:  { type: Number, default: 10 },
-      shiftType:         { type: String, enum: ['single','split2','split3'], default: 'single' },
-      shift2EntryTime:   { type: String, default: '' },
-      shift2ExitTime:    { type: String, default: '' },
-      shift3EntryTime:   { type: String, default: '' },
-      shift3ExitTime:    { type: String, default: '' },
+      shiftMode:           { type: String, enum: ['fixed','rotating'], default: 'fixed' },
+      entryTime:           { type: String, default: '' },
+      exitTime:            { type: String, default: '' },
+      workDays:            { type: [String], default: ['monday','tuesday','wednesday','thursday','friday'] },
+      toleranceMinutes:    { type: Number, default: 10 },
+      shiftType:           { type: String, enum: ['single','split2','split3'], default: 'single' },
+      shift2EntryTime:     { type: String, default: '' },
+      shift2ExitTime:      { type: String, default: '' },
+      shift3EntryTime:     { type: String, default: '' },
+      shift3ExitTime:      { type: String, default: '' },
+      rotatingWorkHours:   { type: Number },
+      rotatingRestDays:    { type: Number },
+      rotatingCycleStart:  { type: String },
+      rotatingEntryTime:   { type: String, default: '' },
     },
     observacoes: { type: String },
     isActive: { type: Boolean, default: true },
