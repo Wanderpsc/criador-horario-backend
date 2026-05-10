@@ -32,6 +32,18 @@ export interface IEmployeeAttendance extends Document {
   isPlantao?: boolean;
   plantaoStart?: string;
   plantaoEnd?: string;
+  // Tipo de turno (direto | 2 turnos | 3 turnos)
+  shiftType?: 'single' | 'split2' | 'split3';
+  // 2º turno
+  expectedEntryTime2?: string;
+  expectedExitTime2?: string;
+  entryTime2?: string;
+  exitTime2?: string;
+  // 3º turno
+  expectedEntryTime3?: string;
+  expectedExitTime3?: string;
+  entryTime3?: string;
+  exitTime3?: string;
   // Justificativa
   justification?: string;
   observations?: string;
@@ -91,6 +103,15 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
     isPlantao: { type: Boolean, default: false },
     plantaoStart: { type: String },
     plantaoEnd: { type: String },
+    shiftType: { type: String, enum: ['single','split2','split3'], default: 'single' },
+    expectedEntryTime2: { type: String },
+    expectedExitTime2:  { type: String },
+    entryTime2:         { type: String },
+    exitTime2:          { type: String },
+    expectedEntryTime3: { type: String },
+    expectedExitTime3:  { type: String },
+    entryTime3:         { type: String },
+    exitTime3:          { type: String },
     justification: { type: String },
     observations: { type: String },
     notificationGenerated: { type: Boolean, default: false },

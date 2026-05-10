@@ -323,12 +323,71 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
                emp.jornadaTrabalho?.toLowerCase().includes('noturno') ? 'noturno' : 'integral',
         expectedEntryTime,
         expectedExitTime,
+        toleranceMinutes: ws?.toleranceMinutes ?? 10,
+        workDays: ws?.workDays || ['monday','tuesday','wednesday','thursday','friday'],
+        shiftType: (ws as any)?.shiftType || 'single',
+        expectedEntryTime2: hasWorkToday && (ws as any)?.shift2EntryTime ? (ws as any).shift2EntryTime : '',
+        expectedExitTime2:  hasWorkToday && (ws as any)?.shift2ExitTime  ? (ws as any).shift2ExitTime  : '',
+        expectedEntryTime3: hasWorkToday && (ws as any)?.shift3EntryTime ? (ws as any).shift3EntryTime : '',
+        expectedExitTime3:  hasWorkToday && (ws as any)?.shift3ExitTime  ? (ws as any).shift3ExitTime  : '',
         entryTime: '',
         exitTime: '',
+        entryTime2: '',
+        exitTime2: '',
+        entryTime3: '',
+        exitTime3: '',
       };
     });
 
     res.json({ rows, date });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── PUT /update-schedule/:employeeId — salvar horário de plantão na ficha ──────
+router.put('/update-schedule/:employeeId', auth, async (req: AuthRequest, res) => {
+  try {
+    if (!isValidId(req.params.employeeId)) return res.status(400).json({ message: 'ID inválido.' });
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { entryTime, exitTime, workDays, toleranceMinutes, shiftType,
+             shift2EntryTime, shift2ExitTime, shift3EntryTime, shift3ExitTime } = req.body;
+
+    const emp = await Employee.findOneAndUpdate(
+      { _id: req.params.employeeId, schoolId },
+      { $set: {
+        'workSchedule.entryTime': entryTime || '',
+        'workSchedule.exitTime': exitTime || '',
+        'workSchedule.workDays': Array.isArray(workDays) ? workDays : ['monday','tuesday','wednesday','thursday','friday'],
+        'workSchedule.toleranceMinutes': toleranceMinutes != null ? Number(toleranceMinutes) : 10,
+        'workSchedule.shiftType': shiftType || 'single',
+        'workSchedule.shift2EntryTime': shift2EntryTime || '',
+        'workSchedule.shift2ExitTime': shift2ExitTime || '',
+        'workSchedule.shift3EntryTime': shift3EntryTime || '',
+        'workSchedule.shift3ExitTime': shift3ExitTime || '',
+      }},
+      { new: true }
+    );
+    if (!emp) return res.status(404).json({ message: 'Funcionário não encontrado.' });
+    res.json({ message: 'Horário de plantão salvo com sucesso.', workSchedule: (emp as any).workSchedule });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── GET /report-late — registros com atraso no período ───────────────────────
+router.get('/report-late', auth, async (req: AuthRequest, res) => {
+  try {
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { startDate, endDate } = req.query;
+    const filter: any = { schoolId, lateArrivalMinutes: { $gt: 0 } };
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = startDate;
+      if (endDate)   filter.date.$lte = endDate;
+    }
+    const records = await EmployeeAttendance.find(filter).sort({ date: -1, employeeName: 1 });
+    res.json(records);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

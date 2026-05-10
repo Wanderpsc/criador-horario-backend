@@ -53,10 +53,15 @@ export interface IEmployee extends Document {
   reservista?: string;
   // Escala de trabalho (horário fixo)
   workSchedule?: {
-    entryTime: string;        // HH:mm
-    exitTime: string;         // HH:mm
-    workDays: string[];       // ['monday','tuesday','wednesday','thursday','friday']
-    toleranceMinutes: number; // minutos de tolerância (padrão 10)
+    entryTime: string;         // HH:mm — 1º turno entrada
+    exitTime: string;          // HH:mm — 1º turno saída
+    workDays: string[];        // ['monday','tuesday','wednesday','thursday','friday']
+    toleranceMinutes: number;  // minutos de tolerância (padrão 10)
+    shiftType: 'single' | 'split2' | 'split3'; // turno direto | 2 turnos | 3 turnos
+    shift2EntryTime?: string;  // HH:mm — 2º turno entrada
+    shift2ExitTime?: string;   // HH:mm — 2º turno saída
+    shift3EntryTime?: string;  // HH:mm — 3º turno entrada
+    shift3ExitTime?: string;   // HH:mm — 3º turno saída
   };
   // Outros
   observacoes?: string;
@@ -117,6 +122,11 @@ const employeeSchema = new Schema<IEmployee>(
       exitTime:          { type: String, default: '' },
       workDays:          { type: [String], default: ['monday','tuesday','wednesday','thursday','friday'] },
       toleranceMinutes:  { type: Number, default: 10 },
+      shiftType:         { type: String, enum: ['single','split2','split3'], default: 'single' },
+      shift2EntryTime:   { type: String, default: '' },
+      shift2ExitTime:    { type: String, default: '' },
+      shift3EntryTime:   { type: String, default: '' },
+      shift3ExitTime:    { type: String, default: '' },
     },
     observacoes: { type: String },
     isActive: { type: Boolean, default: true },
