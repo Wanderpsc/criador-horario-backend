@@ -20,7 +20,13 @@ function timeToMinutes(t: string): number {
 }
 
 function calcDerived(data: any) {
-  const { entryTime, exitTime, expectedEntryTime, expectedExitTime, isPlantao, plantaoStart, plantaoEnd } = data;
+  const {
+    entryTime, exitTime, expectedEntryTime, expectedExitTime,
+    isPlantao, plantaoStart, plantaoEnd,
+    shiftType,
+    entryTime2, exitTime2, expectedEntryTime2, expectedExitTime2,
+    entryTime3, exitTime3, expectedEntryTime3, expectedExitTime3,
+  } = data;
 
   let workedMinutes = 0;
   let expectedMinutes = 0;
@@ -30,21 +36,46 @@ function calcDerived(data: any) {
 
   if (isPlantao && plantaoStart && plantaoEnd) {
     workedMinutes = timeToMinutes(plantaoEnd) - timeToMinutes(plantaoStart);
-  } else if (entryTime && exitTime) {
-    workedMinutes = timeToMinutes(exitTime) - timeToMinutes(entryTime);
+  } else {
+    // 1º turno
+    if (entryTime && exitTime) workedMinutes += timeToMinutes(exitTime) - timeToMinutes(entryTime);
+    // 2º turno (split2 ou split3)
+    if ((shiftType === 'split2' || shiftType === 'split3') && entryTime2 && exitTime2) {
+      workedMinutes += timeToMinutes(exitTime2) - timeToMinutes(entryTime2);
+    }
+    // 3º turno (split3)
+    if (shiftType === 'split3' && entryTime3 && exitTime3) {
+      workedMinutes += timeToMinutes(exitTime3) - timeToMinutes(entryTime3);
+    }
   }
 
+  // Minutos esperados (soma de todos os turnos ativos)
   if (expectedEntryTime && expectedExitTime) {
-    expectedMinutes = timeToMinutes(expectedExitTime) - timeToMinutes(expectedEntryTime);
+    expectedMinutes += timeToMinutes(expectedExitTime) - timeToMinutes(expectedEntryTime);
+  }
+  if ((shiftType === 'split2' || shiftType === 'split3') && expectedEntryTime2 && expectedExitTime2) {
+    expectedMinutes += timeToMinutes(expectedExitTime2) - timeToMinutes(expectedEntryTime2);
+  }
+  if (shiftType === 'split3' && expectedEntryTime3 && expectedExitTime3) {
+    expectedMinutes += timeToMinutes(expectedExitTime3) - timeToMinutes(expectedEntryTime3);
   }
 
+  // Atraso baseado no 1º turno
   if (entryTime && expectedEntryTime) {
     const diff = timeToMinutes(entryTime) - timeToMinutes(expectedEntryTime);
     lateArrivalMinutes = diff > 0 ? diff : 0;
   }
 
-  if (exitTime && expectedExitTime) {
-    const diff = timeToMinutes(expectedExitTime) - timeToMinutes(exitTime);
+  // Saída antecipada baseada no último turno ativo
+  const lastExitTime = (shiftType === 'split3' && exitTime3) ? exitTime3
+    : (shiftType === 'split2' && exitTime2) ? exitTime2
+    : exitTime;
+  const lastExpectedExitTime = (shiftType === 'split3' && expectedExitTime3) ? expectedExitTime3
+    : (shiftType === 'split2' && expectedExitTime2) ? expectedExitTime2
+    : expectedExitTime;
+
+  if (lastExitTime && lastExpectedExitTime) {
+    const diff = timeToMinutes(lastExpectedExitTime) - timeToMinutes(lastExitTime);
     earlyDepartureMinutes = diff > 0 ? diff : 0;
   }
 
