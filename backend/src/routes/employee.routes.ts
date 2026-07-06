@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Employee from '../models/Employee';
+import Ferias from '../models/Ferias';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -83,6 +84,23 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
       { new: true, runValidators: false }
     );
     if (!employee) return res.status(404).json({ message: 'Funcionário não encontrado.' });
+
+    // Sincroniza campos de snapshot nas férias existentes deste funcionário
+    const feriasSyncFields: Record<string, any> = {};
+    if (updateData.name       !== undefined) feriasSyncFields.nomeCompleto  = updateData.name;
+    if (updateData.cpf        !== undefined) feriasSyncFields.cpf           = updateData.cpf;
+    if (updateData.matricula  !== undefined) feriasSyncFields.matricula     = updateData.matricula;
+    if (updateData.cargo      !== undefined) feriasSyncFields.cargo         = updateData.cargo;
+    if (updateData.setor      !== undefined) feriasSyncFields.setor         = updateData.setor;
+    if (updateData.tipoContrato !== undefined) feriasSyncFields.tipoContrato = updateData.tipoContrato;
+    if (updateData.dataAdmissao !== undefined) feriasSyncFields.dataAdmissao = updateData.dataAdmissao;
+    if (Object.keys(feriasSyncFields).length > 0) {
+      await Ferias.updateMany(
+        { schoolId, employeeId: String(employee._id) },
+        { $set: feriasSyncFields }
+      );
+    }
+
     res.json(employee);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
