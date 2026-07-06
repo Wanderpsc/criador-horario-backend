@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -14,7 +14,7 @@ import {
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
 interface Employee {
-  _id: string;
+  id: string;
   name: string;
   cpf?: string;
   matricula?: string;
@@ -26,7 +26,7 @@ interface Employee {
 }
 
 interface Ferias {
-  _id: string;
+  id: string;
   employeeId: string;
   nomeCompleto: string;
   cpf?: string;
@@ -114,6 +114,7 @@ const emptyForm = (): FeriasForm => ({
 
 export default function Ferias() {
   const qc = useQueryClient();
+  const isCreatingRef = useRef(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -138,10 +139,16 @@ export default function Ferias() {
       editingId
         ? api.put(`/ferias/${editingId}`, data).then(r => r.data)
         : api.post('/ferias', data).then(r => r.data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['ferias'] });
-      toast.success(editingId ? 'Férias atualizadas!' : 'Férias cadastradas!');
-      closeModal();
+      if (isCreatingRef.current) {
+        toast.success('Férias cadastradas! Gerando termo...');
+        closeModal();
+        setTimeout(() => printDocumento(data as Ferias, 'termo'), 800);
+      } else {
+        toast.success('Férias atualizadas!');
+        closeModal();
+      }
     },
     onError: (err: any) => toast.error(err?.response?.data?.message || 'Erro ao salvar.'),
   });
@@ -165,14 +172,14 @@ export default function Ferias() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   function handleEmployeeSelect(id: string) {
-    const emp = employees.find(e => e._id === id);
+    const emp = employees.find(e => e.id === id);
     if (!emp) {
       setForm(f => ({ ...f, employeeId: id }));
       return;
     }
     setForm(f => ({
       ...f,
-      employeeId: emp._id,
+      employeeId: emp.id,
       nomeCompleto: emp.name,
       cpf: emp.cpf || '',
       matricula: emp.matricula || '',
@@ -190,7 +197,7 @@ export default function Ferias() {
   }
 
   function openEdit(f: Ferias) {
-    setEditingId(f._id);
+    setEditingId(f.id);
     setForm({
       employeeId: f.employeeId,
       nomeCompleto: f.nomeCompleto,
@@ -224,6 +231,7 @@ export default function Ferias() {
     e.preventDefault();
     if (!form.employeeId) return toast.error('Selecione um funcionário.');
     if (!form.dataInicio || !form.dataFim) return toast.error('Informe as datas de gozo.');
+    isCreatingRef.current = !editingId;
     saveMutation.mutate(form);
   }
 
@@ -261,20 +269,43 @@ export default function Ferias() {
       <meta charset="UTF-8"/>
       <title>${tipo === 'aviso' ? 'Aviso de Férias' : 'Termo de Férias'} — ${f.nomeCompleto}</title>
       <style>
+        @page { size: A4 portrait; margin: 8mm 12mm 8mm 15mm; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #111; background: #fff; padding: 20mm 20mm 20mm 25mm; }
+        body { font-family: 'Times New Roman', serif; font-size: 10pt; color: #111; background: #fff; padding: 6mm 8mm; }
         ${printHeaderCss}
         ${printFooterCss}
-        .doc-title { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 20px; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px; }
-        .doc-body { line-height: 1.9; text-align: justify; margin-bottom: 18px; }
-        .doc-body p { margin-bottom: 12px; }
+        .doc-title { text-align: center; font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin: 10px 0 10px; border-bottom: 2px solid #1e3a5f; padding-bottom: 6px; }
+        .doc-body { line-height: 1.75; text-align: justify; margin-bottom: 14px; }
+        .doc-body p { margin-bottom: 10px; }
         .campo { font-weight: bold; text-decoration: underline; }
-        .assinaturas { display: flex; gap: 60px; justify-content: center; margin-top: 60px; flex-wrap: wrap; }
+        .assinaturas { display: flex; gap: 60px; justify-content: center; margin-top: 40px; flex-wrap: wrap; }
         .assinatura-bloco { text-align: center; min-width: 200px; }
         .assinatura-linha { border-top: 1px solid #333; margin: 0 auto 6px; width: 220px; }
         .assinatura-nome { font-size: 10pt; }
         .assinatura-cargo { font-size: 9pt; color: #555; }
-        @media print { body { padding: 15mm; } }
+        /* ── Termo profissional ── */
+        .doc-id { text-align: right; font-size: 8pt; color: #666; margin-bottom: 3px; }
+        .sec-title { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #1e3a5f; background: #e8eef7; border-left: 4px solid #1e3a5f; padding: 3px 8px; margin: 8px 0 3px; }
+        .ficha { width: 100%; border-collapse: collapse; margin-bottom: 2px; font-size: 9pt; }
+        .ficha td { border: 1px solid #c8cdd8; padding: 3px 7px; vertical-align: middle; }
+        .fl { font-weight: bold; color: #333; background: #f4f6fb; white-space: nowrap; font-size: 8pt; }
+        .fv { color: #111; }
+        .fv-bold { color: #111; font-weight: bold; }
+        .corpo { line-height: 1.65; text-align: justify; margin: 6px 0 8px; font-size: 10pt; }
+        .corpo p { margin-bottom: 7px; }
+        .local-data { text-align: right; font-size: 9.5pt; margin: 6px 0 12px; }
+        .t-assinaturas { display: flex; gap: 50px; justify-content: center; margin-top: 10px; flex-wrap: wrap; page-break-inside: avoid; }
+        .t-ass-bloco { text-align: center; min-width: 210px; }
+        .t-ass-linha { border-top: 1.5px solid #222; margin: 0 auto 5px; width: 230px; }
+        .t-ass-nome { font-size: 9.5pt; font-weight: bold; }
+        .t-ass-detalhe { font-size: 8pt; color: #444; margin-top: 2px; }
+        .t-ass-data { font-size: 8.5pt; color: #555; margin-top: 5px; }
+        .recibo { page-break-before: always; border-top: 2px dashed #999; padding-top: 14px; }
+        .recibo-titulo { font-size: 8.5pt; font-weight: bold; text-align: center; color: #555; margin-bottom: 10px; letter-spacing: 0.3px; }
+        .recibo-texto { font-size: 10pt; margin-bottom: 16px; }
+        .recibo-ass { display: flex; justify-content: space-between; font-size: 10pt; margin-bottom: 4px; }
+        .recibo-nome { font-size: 8.5pt; color: #444; }
+        @media print { body { padding: 0; } }
       </style>
     </head><body>
       ${headerHtml}
@@ -323,49 +354,96 @@ export default function Ferias() {
   }
 
   function buildTermoHtml(f: Ferias, localData: string): string {
+    const now = new Date();
+    const dataEmissao = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+    const dataRetorno = (() => {
+      if (!f.dataFim) return '—';
+      const d = new Date(f.dataFim + 'T12:00:00');
+      d.setDate(d.getDate() + 1);
+      return formatDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    })();
     return `
+      <div class="doc-id">Emitido em: ${dataEmissao}</div>
       <div class="doc-title">Termo de Concessão de Férias</div>
-      <div class="doc-body">
-        <p>Pelo presente Termo, a Unidade Escolar <strong>(${localData})</strong> concede ao(à)
-        servidor(a) / funcionário(a) <span class="campo">${f.nomeCompleto}</span>,
-        ${f.cargo ? `cargo: <span class="campo">${f.cargo}</span>,` : ''}
-        ${f.setor ? `setor: <span class="campo">${f.setor}</span>,` : ''}
-        ${f.matricula ? `matrícula n.º <span class="campo">${f.matricula}</span>,` : ''}
-        ${f.cpf ? `CPF <span class="campo">${f.cpf}</span>,` : ''}
-        ${f.tipoContrato ? `regime: <span class="campo">${f.tipoContrato}</span>,` : ''}
-        ${f.dataAdmissao ? `admitido(a) em <span class="campo">${formatDate(f.dataAdmissao)}</span>,` : ''}
-        as férias regulamentares a que faz jus, referentes ao período aquisitivo de
-        <span class="campo">${formatDate(f.periodoAquisitivoInicio)}</span> a
-        <span class="campo">${formatDate(f.periodoAquisitivoFim)}</span>
-        (Ano de Referência: <span class="campo">${f.anoReferencia}</span>).</p>
 
-        <p>Período de gozo: de <span class="campo">${formatDate(f.dataInicio)}</span> a
-        <span class="campo">${formatDate(f.dataFim)}</span>, correspondendo a
-        <span class="campo">${f.diasFerias} (${porExtenso(f.diasFerias)}) dias corridos</span> de férias.
-        ${f.diasAbono > 0 ? `Conversão de <span class="campo">${f.diasAbono} dias</span> em abono pecuniário conforme solicitação.` : ''}
-        </p>
+      <div class="sec-title">I — Identificação do Servidor / Funcionário</div>
+      <table class="ficha">
+        <tr>
+          <td class="fl">Nome Completo</td>
+          <td class="fv-bold" colspan="3">${f.nomeCompleto}</td>
+        </tr>
+        <tr>
+          <td class="fl">CPF</td><td class="fv">${f.cpf || '—'}</td>
+          <td class="fl">Matrícula</td><td class="fv">${f.matricula || '—'}</td>
+        </tr>
+        <tr>
+          <td class="fl">Cargo</td><td class="fv">${f.cargo || '—'}</td>
+          <td class="fl">Setor / Lotação</td><td class="fv">${f.setor || '—'}</td>
+        </tr>
+        <tr>
+          <td class="fl">Regime</td><td class="fv">${f.tipoContrato || '—'}</td>
+          <td class="fl">Data de Admissão</td><td class="fv">${formatDate(f.dataAdmissao)}</td>
+        </tr>
+      </table>
 
-        ${f.dataAviso ? `<p>Aviso de férias comunicado em: <span class="campo">${formatDate(f.dataAviso)}</span>.</p>` : ''}
+      <div class="sec-title">II — Período Aquisitivo</div>
+      <table class="ficha">
+        <tr>
+          <td class="fl">Ano de Referência</td><td class="fv-bold">${f.anoReferencia}</td>
+          <td class="fl">Início do Período Aquisitivo</td><td class="fv">${formatDate(f.periodoAquisitivoInicio)}</td>
+          <td class="fl">Fim do Período Aquisitivo</td><td class="fv">${formatDate(f.periodoAquisitivoFim)}</td>
+        </tr>
+      </table>
 
+      <div class="sec-title">III — Período de Gozo e Retorno</div>
+      <table class="ficha">
+        <tr>
+          <td class="fl">Início do Gozo</td><td class="fv-bold">${formatDate(f.dataInicio)}</td>
+          <td class="fl">Fim do Gozo</td><td class="fv-bold">${formatDate(f.dataFim)}</td>
+          <td class="fl">Retorno Previsto</td><td class="fv-bold">${dataRetorno}</td>
+        </tr>
+        <tr>
+          <td class="fl">Total de Dias</td><td class="fv">${f.diasFerias} (${porExtenso(f.diasFerias)}) dias</td>
+          <td class="fl">Abono Pecuniário</td><td class="fv">${f.diasAbono > 0 ? f.diasAbono + ' dia(s)' : 'Não solicitado'}</td>
+          <td class="fl">Aviso Concedido em</td><td class="fv">${formatDate(f.dataAviso)}</td>
+        </tr>
+      </table>
+
+      <div class="sec-title">IV — Declaração</div>
+      <div class="corpo">
+        <p>Pelo presente instrumento, a Unidade Escolar declara que o(a) servidor(a)/funcionário(a) acima identificado(a) faz jus a <strong>${f.diasFerias} (${porExtenso(f.diasFerias)}) dias</strong> de férias regulamentares referentes ao período aquisitivo de <strong>${formatDate(f.periodoAquisitivoInicio)}</strong> a <strong>${formatDate(f.periodoAquisitivoFim)}</strong> (Ano de Referência: <strong>${f.anoReferencia}</strong>), as quais são concedidas no período de <strong>${formatDate(f.dataInicio)}</strong> a <strong>${formatDate(f.dataFim)}</strong>, com retorno previsto para <strong>${dataRetorno}</strong>.</p>
+        ${f.diasAbono > 0 ? `<p>Será efetuado o pagamento de <strong>${f.diasAbono} (${porExtenso(f.diasAbono)}) dia(s)</strong> em forma de abono pecuniário (conversão de 1/3 das férias em pecúnia), nos termos da legislação trabalhista vigente.</p>` : ''}
+        ${f.dataAviso ? `<p>O aviso prévio de férias foi concedido em <strong>${formatDate(f.dataAviso)}</strong>, respeitando-se o prazo mínimo legal de 30 (trinta) dias de antecedência.</p>` : ''}
         ${f.observacoes ? `<p><strong>Observações:</strong> ${f.observacoes}</p>` : ''}
-
-        <p>O(A) funcionário(a) deverá retornar ao trabalho no dia útil seguinte ao término do período de gozo,
-        sob pena de configurar falta injustificada, salvo disposição legal em contrário.</p>
-
-        <p>Por ser expressão da verdade, as partes firmam o presente Termo em duas vias de igual teor.</p>
-        <p style="text-align:right; margin-top: 10px;">${localData}</p>
+        <p>O(A) funcionário(a) declara estar ciente do período concedido e compromete-se a retornar ao trabalho impreterivelmente no primeiro dia útil após o término do gozo, sob pena de configurar falta injustificada ao serviço.</p>
+        <p>Por ser expressão da verdade, as partes firmam o presente Termo em 02 (duas) vias de igual teor e forma, para um só efeito.</p>
       </div>
-      <div class="assinaturas">
-        <div class="assinatura-bloco">
-          <div class="assinatura-linha"></div>
-          <div class="assinatura-nome">${f.nomeCompleto}</div>
-          <div class="assinatura-cargo">Funcionário(a)</div>
+
+      <p class="local-data">${localData}</p>
+
+      <div class="t-assinaturas">
+        <div class="t-ass-bloco">
+          <div class="t-ass-linha"></div>
+          <div class="t-ass-nome">${f.nomeCompleto}</div>
+          <div class="t-ass-detalhe">${f.cargo || 'Funcionário(a)'}${f.cpf ? ` &nbsp;|&nbsp; CPF: ${f.cpf}` : ''}</div>
+          <div class="t-ass-data">Data: ____/____/________</div>
         </div>
-        <div class="assinatura-bloco">
-          <div class="assinatura-linha"></div>
-          <div class="assinatura-nome">Diretor(a) / Responsável</div>
-          <div class="assinatura-cargo">Unidade Escolar</div>
+        <div class="t-ass-bloco">
+          <div class="t-ass-linha"></div>
+          <div class="t-ass-nome">___________________________________</div>
+          <div class="t-ass-detalhe">Diretor(a) / Responsável pela Unidade</div>
+          <div class="t-ass-data">Data: ____/____/________</div>
         </div>
+      </div>
+
+      <div class="recibo">
+        <div class="recibo-titulo">✂ &nbsp;&nbsp; RECIBO — VIA DO FUNCIONÁRIO</div>
+        <p class="recibo-texto">Declaro ter recebido uma via do presente <strong>Termo de Concessão de Férias</strong> referente ao período de <strong>${formatDate(f.dataInicio)}</strong> a <strong>${formatDate(f.dataFim)}</strong> (${f.diasFerias} dias corridos).</p>
+        <div class="recibo-ass">
+          <span>Assinatura: _________________________________________</span>
+          <span>Data: ____/____/________</span>
+        </div>
+        <div class="recibo-nome">${f.nomeCompleto}${f.cargo ? ` — ${f.cargo}` : ''}</div>
       </div>
     `;
   }
@@ -532,9 +610,9 @@ export default function Ferias() {
         <div className="space-y-3">
           {filtered.map(f => {
             const st = STATUS_LABEL[f.status];
-            const expanded = expandedId === f._id;
+            const expanded = expandedId === f.id;
             return (
-              <div key={f._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div key={f.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* linha principal */}
                 <div className="flex items-center justify-between p-4 gap-3 flex-wrap">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -553,13 +631,13 @@ export default function Ferias() {
                     <span className="text-xs text-gray-500 hidden sm:inline">
                       {formatDate(f.dataInicio)} → {formatDate(f.dataFim)} ({f.diasFerias} dias)
                     </span>
-                    <button onClick={() => setExpandedId(expanded ? null : f._id)} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={() => setExpandedId(expanded ? null : f.id)} className="text-gray-400 hover:text-gray-600">
                       {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
                     <button onClick={() => openEdit(f)} className="text-blue-500 hover:text-blue-700 p-1">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(f._id, f.nomeCompleto)} className="text-red-400 hover:text-red-600 p-1">
+                    <button onClick={() => handleDelete(f.id, f.nomeCompleto)} className="text-red-400 hover:text-red-600 p-1">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -630,7 +708,7 @@ export default function Ferias() {
                   >
                     <option value="">— Selecione —</option>
                     {employees.map(e => (
-                      <option key={e._id} value={e._id}>{e.name}{e.matricula ? ` (${e.matricula})` : ''}</option>
+                      <option key={e.id} value={e.id}>{e.name}{e.matricula ? ` (${e.matricula})` : ''}</option>
                     ))}
                   </select>
                 </div>
