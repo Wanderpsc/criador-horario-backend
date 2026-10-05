@@ -12,7 +12,7 @@ import {
   Building2, DollarSign, Bell, MessageSquare, 
   Database, ShieldCheck, TrendingUp, Mail,
   FileText, Clock, CheckCircle, XCircle, AlertTriangle,
-  CreditCard
+  CreditCard, BookOpenCheck
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -409,6 +409,32 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+
+        {user.role === 'super-admin' && (
+          <section className="mt-8 border-2 border-emerald-700 bg-emerald-50 p-6 rounded-lg shadow-lg">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-start gap-4">
+                <div className="bg-emerald-800 text-white p-3 rounded-md shrink-0">
+                  <BookOpenCheck size={28} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-emerald-800">Acesso exclusivo do criador</p>
+                  <h2 className="text-xl font-black text-slate-900 mt-1">Manual Técnico do Sistema</h2>
+                  <p className="text-sm text-slate-700 mt-2 max-w-2xl">
+                    Arquitetura, linguagens, banco de dados, plataformas, comandos, módulos, segurança, diagnóstico, manutenção e publicação.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/technical-manual')}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-emerald-800 hover:bg-emerald-900 text-white font-bold rounded-md shadow transition-colors whitespace-nowrap"
+              >
+                <BookOpenCheck size={20} />
+                Abrir e imprimir manual
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

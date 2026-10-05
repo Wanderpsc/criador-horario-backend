@@ -45,6 +45,7 @@ import LeadsManagement from './pages/LeadsManagement';
 import SalesManagement from './pages/SalesManagement';
 import SchoolsManagement from './pages/SchoolsManagement';
 import AdminDashboard from './pages/AdminDashboard';
+import TechnicalManual from './pages/TechnicalManual';
 import BackupManagement from './pages/BackupManagement';
 import PaymentCheckout from './pages/PaymentCheckout';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -94,6 +95,24 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return (user.role === 'admin' || user.role === 'super-admin') 
     ? <>{children}</> 
     : <Navigate to="/dashboard" replace />;
+}
+
+function CreatorRoute({ children }: { children: React.ReactNode }) {
+  const { user, isHydrated } = useAuthStore();
+
+  if (!isHydrated) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      Carregando...
+    </div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return user.role === 'super-admin'
+    ? <>{children}</>
+    : <Navigate to={user.role === 'admin' ? '/admin-dashboard' : '/dashboard'} replace />;
 }
 
 function ClientRoute({ children }: { children: React.ReactNode }) {
@@ -189,6 +208,7 @@ function App() {
           
           {/* Admin Routes */}
           <Route path="admin-dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="technical-manual" element={<CreatorRoute><TechnicalManual /></CreatorRoute>} />
           <Route path="backup-management" element={<AdminRoute><BackupManagement /></AdminRoute>} />
           <Route path="messages" element={<AdminRoute><MessagesManagement /></AdminRoute>} />
           <Route path="sales-dashboard" element={<AdminRoute><SalesDashboard /></AdminRoute>} />

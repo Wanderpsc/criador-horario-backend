@@ -3,19 +3,33 @@
  * © 2025 Wander Pires Silva Coelho
  * Página: Controle de EPIs
  */
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import { loadPrintHeader, buildPrintHeaderHtml, printHeaderCss } from '../utils/printHeader';
 import {
   Shield, Plus, Pencil, Trash2, Printer, Search, RefreshCw,
-  AlertTriangle, CheckCircle, X, Save, FileText,
+  AlertTriangle, CheckCircle, X, Save,
 } from 'lucide-react';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 interface Employee {
-  _id: string; id?: string; name: string; cargo?: string; setor?: string;
+  _id: string; id?: string; name: string;
+  matricula?: string; cpf?: string; rg?: string; rgOrgao?: string; rgDataEmissao?: string;
+  dataNascimento?: string; naturalidade?: string; nacionalidade?: string; sexo?: string;
+  estadoCivil?: string; nomeMae?: string; nomePai?: string; tipoSanguineo?: string;
+  email?: string; celular?: string; telefoneFixo?: string;
+  cep?: string; logradouro?: string; numero?: string; complemento?: string;
+  bairro?: string; cidade?: string; estado?: string;
+  cargo?: string; setor?: string; tipoContrato?: string; dataAdmissao?: string;
+  dataInicioInstituicao?: string; dataDemissao?: string; jornadaTrabalho?: string;
+  cargaHorariaSemanal?: number; salario?: number;
+  ctpsNumero?: string; ctpsSerie?: string; pisPasep?: string; tituloEleitor?: string;
+  zonaEleitoral?: string; secaoEleitoral?: string; certificadoMilitar?: string;
+  cnhNumero?: string; cnhCategoria?: string; cnhValidade?: string; reservista?: string;
+  observacoes?: string;
 }
 
 interface EpiRecord {
@@ -166,6 +180,61 @@ function daysUntil(d?: string) {
   return diff;
 }
 
+function buildEmployeeDataHtml(employee: Employee | undefined, fallback: EpiRecord) {
+  const data = employee || { _id: fallback.employeeId, name: fallback.employeeName, cargo: fallback.cargo, setor: fallback.setor };
+  const address = data.logradouro
+    ? `${data.logradouro}, ${data.numero || 'S/N'}${data.complemento ? `, ${data.complemento}` : ''}`
+    : '';
+  const cityState = [data.cidade, data.estado].filter(Boolean).join('/');
+  const rg = data.rg
+    ? `${data.rg}${data.rgOrgao ? ` / ${data.rgOrgao}` : ''}${data.rgDataEmissao ? ` - emissão ${fmtDate(data.rgDataEmissao)}` : ''}`
+    : '';
+  const ctps = data.ctpsNumero
+    ? `${data.ctpsNumero}${data.ctpsSerie ? ` / série ${data.ctpsSerie}` : ''}`
+    : '';
+  const cnh = data.cnhNumero
+    ? `${data.cnhNumero}${data.cnhCategoria ? ` / cat. ${data.cnhCategoria}` : ''}${data.cnhValidade ? ` / validade ${fmtDate(data.cnhValidade)}` : ''}`
+    : '';
+
+  const sections: { title: string; fields: [string, string | number | undefined][] }[] = [
+    { title: 'Identificação', fields: [
+      ['Nome completo', data.name], ['Matrícula', data.matricula], ['CPF', data.cpf], ['RG', rg],
+      ['Nascimento', data.dataNascimento ? fmtDate(data.dataNascimento) : undefined], ['Naturalidade', data.naturalidade],
+      ['Nacionalidade', data.nacionalidade], ['Sexo', data.sexo], ['Estado civil', data.estadoCivil],
+      ['Tipo sanguíneo', data.tipoSanguineo], ['Nome da mãe', data.nomeMae], ['Nome do pai', data.nomePai],
+    ] },
+    { title: 'Contato e endereço', fields: [
+      ['E-mail', data.email], ['Celular', data.celular], ['Telefone fixo', data.telefoneFixo],
+      ['Endereço', address], ['Bairro', data.bairro], ['Cidade/UF', cityState], ['CEP', data.cep],
+    ] },
+    { title: 'Dados funcionais', fields: [
+      ['Cargo', data.cargo], ['Setor', data.setor], ['Contrato', data.tipoContrato],
+      ['Admissão', data.dataAdmissao ? fmtDate(data.dataAdmissao) : undefined],
+      ['Início na instituição', data.dataInicioInstituicao ? fmtDate(data.dataInicioInstituicao) : undefined],
+      ['Demissão', data.dataDemissao ? fmtDate(data.dataDemissao) : undefined],
+      ['Jornada', data.jornadaTrabalho],
+      ['Carga semanal', data.cargaHorariaSemanal !== undefined ? `${data.cargaHorariaSemanal} horas` : undefined],
+    ] },
+    { title: 'Documentos', fields: [
+      ['CTPS', ctps], ['PIS/PASEP', data.pisPasep], ['Título de eleitor', data.tituloEleitor],
+      ['Zona eleitoral', data.zonaEleitoral], ['Seção eleitoral', data.secaoEleitoral],
+      ['Certificado militar', data.certificadoMilitar], ['CNH', cnh], ['Reservista', data.reservista],
+    ] },
+    { title: 'Observações do cadastro', fields: [['Observações', data.observacoes]] },
+  ];
+
+  return sections.map(section => {
+    const fields = section.fields.filter(([, value]) => value !== undefined && value !== '');
+    if (fields.length === 0) return '';
+    return `<div class="employee-section">
+      <div class="employee-section-title">${section.title}</div>
+      <div class="employee-grid">${fields.map(([label, value]) =>
+        `<div class="employee-field"><span>${label}:</span> ${value}</div>`
+      ).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function EPIControlPage() {
   const { user } = useAuthStore();
@@ -178,6 +247,9 @@ export default function EPIControlPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<EpiRecord | null>(null);
   const [form, setForm] = useState<Omit<EpiRecord, '_id' | 'id' | 'isActive'>>(EMPTY_EPI);
+  const [formEpiTypes, setFormEpiTypes] = useState<Set<string>>(new Set());
+  const [formEpiQuantities, setFormEpiQuantities] = useState<Record<string, number>>({});
+  const [formEpiSearch, setFormEpiSearch] = useState('');
 
   // ── Entrega em Lote ──────────────────────────────────────────────────────────
   const [batchMode, setBatchMode] = useState(false);
@@ -204,6 +276,19 @@ export default function EPIControlPage() {
     },
   });
 
+  const employeesById = useMemo(() => new Map(
+    employees.map(employee => [employee._id || employee.id || '', employee])
+  ), [employees]);
+
+  const currentEmployeeData = (record: EpiRecord) => {
+    const employee = employeesById.get(record.employeeId);
+    return {
+      name: employee?.name || record.employeeName,
+      cargo: employee?.cargo || record.cargo || '',
+      setor: employee?.setor || record.setor || '',
+    };
+  };
+
   const { data: records = [], isLoading, refetch } = useQuery<EpiRecord[]>({
     queryKey: ['epi-control'],
     queryFn: async () => {
@@ -223,21 +308,45 @@ export default function EPIControlPage() {
   // ── Mutations ────────────────────────────────────────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!form.employeeId || !form.epiType || !form.deliveryDate) {
-        throw new Error('Funcionário, tipo de EPI e data de entrega são obrigatórios.');
+      const epiTypes = Array.from(formEpiTypes);
+      if (!form.employeeId || epiTypes.length === 0 || !form.deliveryDate) {
+        throw new Error('Funcionário, ao menos um tipo de EPI e data de entrega são obrigatórios.');
       }
       if (editing?._id) {
-        return api.put(`/epi-control/${editing._id}`, form);
+        const primaryType = epiTypes.includes(editing.epiType) ? editing.epiType : epiTypes[0];
+        const update = api.put(`/epi-control/${editing._id}`, {
+          ...form,
+          epiType: primaryType,
+          quantity: formEpiQuantities[primaryType] || 1,
+        });
+        const additions = epiTypes
+          .filter(epiType => epiType !== primaryType)
+          .map(epiType => api.post('/epi-control', {
+            ...form,
+            epiType,
+            quantity: formEpiQuantities[epiType] || 1,
+          }));
+        return Promise.all([update, ...additions]);
       }
-      return api.post('/epi-control', form);
+      return Promise.all(epiTypes.map(epiType => api.post('/epi-control', {
+        ...form,
+        epiType,
+        quantity: formEpiQuantities[epiType] || 1,
+      })));
     },
     onSuccess: () => {
-      toast.success(editing ? 'EPI atualizado!' : 'EPI registrado!');
+      const itemCount = formEpiTypes.size;
+      toast.success(editing
+        ? `Entrega atualizada com ${itemCount} EPI(s)!`
+        : `${itemCount} EPI(s) registrado(s)!`);
       qc.invalidateQueries({ queryKey: ['epi-control'] });
       qc.invalidateQueries({ queryKey: ['epi-expiring'] });
       setShowModal(false);
       setEditing(null);
       setForm(EMPTY_EPI);
+      setFormEpiTypes(new Set());
+      setFormEpiQuantities({});
+      setFormEpiSearch('');
     },
     onError: (err: any) => toast.error(err.message || 'Erro ao salvar.'),
   });
@@ -259,6 +368,9 @@ export default function EPIControlPage() {
       toast.success(`${variables.length} registro(s) de EPI criado(s) com sucesso!`);
       qc.invalidateQueries({ queryKey: ['epi-control'] });
       qc.invalidateQueries({ queryKey: ['epi-expiring'] });
+      if (selectedEmps.size === 1) {
+        void printTermoRecebimento(variables[0].employeeId, variables.map(record => ({ ...record, isActive: true })));
+      }
       setBatchMode(false);
       setSelectedEmps(new Set());
       setSelectedEpis(new Set());
@@ -270,19 +382,26 @@ export default function EPIControlPage() {
   const openNew = () => {
     setEditing(null);
     setForm(EMPTY_EPI);
+    setFormEpiTypes(new Set());
+    setFormEpiQuantities({});
+    setFormEpiSearch('');
     setShowModal(true);
   };
 
   const openEdit = (r: EpiRecord) => {
+    const employeeData = currentEmployeeData(r);
     setEditing(r);
     setForm({
-      employeeId: r.employeeId, employeeName: r.employeeName, cargo: r.cargo || '', setor: r.setor || '',
+      employeeId: r.employeeId, employeeName: employeeData.name, cargo: employeeData.cargo, setor: employeeData.setor,
       epiType: r.epiType, epiDescription: r.epiDescription || '', quantity: r.quantity,
       caNumber: r.caNumber || '', brand: r.brand || '', deliveryDate: r.deliveryDate,
       expirationDate: r.expirationDate || '', nextInspectionDate: r.nextInspectionDate || '',
       returnDate: r.returnDate || '', condition: r.condition, signedReceipt: r.signedReceipt,
       observations: r.observations || '',
     });
+    setFormEpiTypes(new Set([r.epiType]));
+    setFormEpiQuantities({ [r.epiType]: r.quantity });
+    setFormEpiSearch('');
     setShowModal(true);
   };
 
@@ -307,13 +426,31 @@ export default function EPIControlPage() {
   const epiTypeOptions = useMemo(() =>
     EPI_TYPES.map(t => ({ value: t, label: t })), []);
 
+  const filteredFormEpiTypes = useMemo(() =>
+    EPI_TYPES.filter(epiType =>
+      !formEpiSearch || epiType.toLowerCase().includes(formEpiSearch.toLowerCase())
+    ), [formEpiSearch]);
+
   const filtered = useMemo(() => records.filter(r => {
+    const employeeData = currentEmployeeData(r);
     const matchSearch = !search ||
-      r.employeeName.toLowerCase().includes(search.toLowerCase()) ||
+      employeeData.name.toLowerCase().includes(search.toLowerCase()) ||
+      employeeData.cargo.toLowerCase().includes(search.toLowerCase()) ||
+      employeeData.setor.toLowerCase().includes(search.toLowerCase()) ||
       r.epiType.toLowerCase().includes(search.toLowerCase());
     const matchCond = !filterCondition || r.condition === filterCondition;
     return matchSearch && matchCond;
-  }), [records, search, filterCondition]);
+  }), [records, search, filterCondition, employeesById]);
+
+  const filteredGroups = useMemo(() => {
+    const groups = new Map<string, EpiRecord[]>();
+    filtered.forEach(record => {
+      const group = groups.get(record.employeeId) || [];
+      group.push(record);
+      groups.set(record.employeeId, group);
+    });
+    return Array.from(groups, ([employeeId, employeeRecords]) => ({ employeeId, records: employeeRecords }));
+  }, [filtered]);
 
   const filteredBatchEmps = useMemo(() =>
     employees.filter(e =>
@@ -328,44 +465,54 @@ export default function EPIControlPage() {
     ), [epiSearch]);
 
   // ─── IMPRESSÃO: Recibo de entrega de EPI ─────────────────────────────────────
-  const printReceipt = (r: EpiRecord) => {
+  const printReceipt = async (r: EpiRecord) => {
+    const printHeader = await loadPrintHeader();
+    const headerHtml = buildPrintHeaderHtml(printHeader);
+    const printSchoolName = printHeader.line4 || printHeader.schoolName || schoolName;
+    const employee = employees.find(e => (e._id || e.id) === r.employeeId);
+    const employeeDataHtml = buildEmployeeDataHtml(employee, r);
     const now = new Date().toLocaleString('pt-BR');
     const today = new Date().toLocaleDateString('pt-BR');
 
     const html = `<!DOCTYPE html><html lang="pt-BR">
 <head><meta charset="utf-8"><title>Recibo de EPI</title>
 <style>
-  @page { size: A4 portrait; margin: 18mm 18mm 22mm; }
+  @page { size: A4 portrait; margin: 7mm 10mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; line-height: 1.6; }
-  .school { text-align: center; font-size: 13px; font-weight: 900; color: #d97706; margin-bottom: 4px; }
-  .doc-title { text-align: center; font-size: 14px; font-weight: 900; text-transform: uppercase;
-    border-bottom: 2px solid #d97706; padding-bottom: 6px; margin-bottom: 14px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-  .field { margin-bottom: 6px; }
+  body { font-family: Arial, sans-serif; font-size: 9px; color: #111; line-height: 1.35; }
+  ${printHeaderCss}
+  .print-header-institutional { padding: 6px 12px; margin-bottom: 6px; gap: 10px; }
+  .print-header-emblem { width: 58px !important; height: 58px !important; max-width: 58px; max-height: 58px; object-fit: contain; }
+  .print-header-line1 { font-size: 12pt; }
+  .print-header-line2 { font-size: 8pt; }
+  .print-header-line3 { font-size: 7pt; line-height: 1.15; }
+  .doc-title { text-align: center; font-size: 11px; font-weight: 900; text-transform: uppercase;
+    border-bottom: 2px solid #d97706; padding-bottom: 3px; margin-bottom: 5px; }
+  .employee-section { margin-bottom: 3px; page-break-inside: avoid; }
+  .employee-section-title { font-size: 7px; font-weight: 900; text-transform: uppercase; color: #92400e; background: #fef3c7; padding: 1px 4px; }
+  .employee-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px 8px; padding: 2px 4px; border: 1px solid #fde68a; }
+  .employee-field { font-size: 7px; overflow-wrap: anywhere; }
+  .employee-field span { font-weight: bold; color: #374151; }
+  .field { margin-bottom: 2px; }
   .label { font-weight: bold; color: #374151; }
-  .body-text { margin: 14px 0; text-align: justify; line-height: 1.8; }
-  .legal { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 12px;
-    margin: 12px 0; font-size: 10px; }
-  .sign-area { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .body-text { margin: 5px 0; text-align: justify; line-height: 1.35; }
+  .legal { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 3px 6px;
+    margin: 4px 0; font-size: 7px; }
+  .sign-area { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    break-inside: avoid; page-break-inside: avoid; }
   .sign-box { text-align: center; }
-  .sign-line { border-top: 1px solid #374151; margin-top: 28px; padding-top: 4px; font-size: 10px; }
-  .footer { margin-top: 16px; border-top: 1px solid #d1d5db; padding-top: 4px;
-    display: flex; justify-content: space-between; font-size: 9px; color: #9ca3af; }
+  .sign-line { border-top: 1px solid #374151; margin-top: 20px; padding-top: 3px; font-size: 8px; }
+  .footer { margin-top: 5px; border-top: 1px solid #d1d5db; padding-top: 2px;
+    display: flex; justify-content: space-between; font-size: 6px; color: #9ca3af; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head><body>
 
-<div class="school">${schoolName}</div>
+${headerHtml}
 <div class="doc-title">Ficha de Entrega de EPI — Comprovante de Recebimento</div>
 
-<div class="grid">
-  <div class="field"><span class="label">Funcionário(a): </span>${r.employeeName}</div>
-  <div class="field"><span class="label">Matrícula/CPF: </span>—</div>
-  <div class="field"><span class="label">Cargo: </span>${r.cargo || '—'}</div>
-  <div class="field"><span class="label">Setor: </span>${r.setor || '—'}</div>
-</div>
+${employeeDataHtml}
 
-<div style="border:1px solid #d1d5db;border-radius:4px;padding:10px;margin-bottom:12px">
+<div style="border:1px solid #d1d5db;border-radius:4px;padding:5px;margin-bottom:4px;page-break-inside:avoid">
   <div class="field"><span class="label">EPI Entregue: </span><strong>${r.epiType}</strong></div>
   ${r.epiDescription ? `<div class="field"><span class="label">Descrição: </span>${r.epiDescription}</div>` : ''}
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
@@ -380,7 +527,7 @@ export default function EPIControlPage() {
 
 <div class="body-text">
   <p>Declaro, para os devidos fins, que recebi o(s) Equipamento(s) de Proteção Individual (EPI) descrito(s) acima, em perfeito estado de conservação, e comprometo-me a:</p><br>
-  <ul style="list-style:disc;padding-left:20px;margin-top:4px">
+  <ul style="list-style:disc;padding-left:16px;margin-top:2px">
     <li>Utilizar o EPI somente para a finalidade a que se destina;</li>
     <li>Responsabilizar-me pela guarda e conservação do equipamento;</li>
     <li>Comunicar ao empregador qualquer alteração que o torne impróprio para uso;</li>
@@ -400,7 +547,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
     <div class="sign-line">Assinatura do(a) Funcionário(a)<br><strong>${r.employeeName}</strong><br>Data: ${today}</div>
   </div>
   <div class="sign-box">
-    <div class="sign-line">Responsável pela Entrega / RH<br><strong>${schoolName}</strong><br>Data: ${today}</div>
+    <div class="sign-line">Responsável pela Entrega / RH<br><strong>${printSchoolName}</strong><br>Data: ${today}</div>
   </div>
 </div>
 
@@ -411,7 +558,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
 </body></html>`;
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;height:297mm;border:0;visibility:hidden;';
     document.body.appendChild(iframe);
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
@@ -423,21 +570,30 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
   };
 
   // ─── IMPRESSÃO: Termo de Recebimento de EPIs ──────────────────────────────────
-  const printTermoRecebimento = (empId: string) => {
-    const empRecords = records.filter(r => r.employeeId === empId && r.isActive !== false);
+  const printTermoRecebimento = async (empId: string, sourceRecords: EpiRecord[] = records) => {
+    const empRecords = sourceRecords.filter(r => r.employeeId === empId && r.isActive !== false);
     if (empRecords.length === 0) {
       toast.error('Nenhum EPI encontrado para este funcionário.');
       return;
     }
+    const printHeader = await loadPrintHeader();
+    const headerHtml = buildPrintHeaderHtml(printHeader);
+    const printSchoolName = printHeader.line4 || printHeader.schoolName || schoolName;
     const emp = empRecords[0];
+    const employee = employees.find(e => (e._id || e.id) === empId);
+    const employeeName = employee?.name || emp.employeeName;
+    const employeeCargo = employee?.cargo || emp.cargo;
+    const employeeSetor = employee?.setor || emp.setor;
+    const employeeDataHtml = buildEmployeeDataHtml(employee, emp);
     const now = new Date().toLocaleString('pt-BR');
     const today = new Date().toLocaleDateString('pt-BR');
     const docNum = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(empRecords.length).padStart(3, '0')}`;
+    const printDensity = empRecords.length > 8 ? 'dense' : empRecords.length > 4 ? 'compact' : '';
 
     const itemRows = empRecords.map((r, i) => `
       <tr>
         <td style="text-align:center">${i + 1}</td>
-        <td><strong>${r.epiType}</strong>${r.epiDescription ? `<br><span style="font-size:8px;color:#555">${r.epiDescription}</span>` : ''}</td>
+        <td><strong>${r.epiType}</strong>${r.epiDescription ? `<br><span style="font-size:8.5px;color:#555">${r.epiDescription}</span>` : ''}</td>
         <td style="text-align:center">${r.caNumber || '—'}</td>
         <td style="text-align:center">${r.brand || '—'}</td>
         <td style="text-align:center">${r.quantity}</td>
@@ -449,49 +605,97 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
     const html = `<!DOCTYPE html><html lang="pt-BR">
 <head><meta charset="utf-8"><title>Termo de Recebimento de EPIs</title>
 <style>
-  @page { size: A4 portrait; margin: 20mm 18mm 22mm; }
+  @page { size: A4 portrait; margin: 6mm 9mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; line-height: 1.6; }
+  body { font-family: Arial, sans-serif; font-size: 9.5px; color: #1f2937; line-height: 1.3; }
+  ${printHeaderCss}
 
-  .header { text-align: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px double #000; }
-  .school-name { font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
-  .school-sub { font-size: 10px; color: #555; margin-top: 2px; }
-  .doc-title { display: inline-block; font-size: 12px; font-weight: 900; margin-top: 10px;
-    text-transform: uppercase; letter-spacing: 0.5px; border: 2px solid #111; padding: 5px 20px; }
-  .doc-meta { font-size: 9px; color: #666; margin-top: 6px; }
+  .print-header-institutional { padding: 5px 10px; margin-bottom: 4px; gap: 8px; }
+  .print-header-emblem { width: 52px !important; height: 52px !important; max-width: 52px; max-height: 52px; object-fit: contain; }
+  .print-header-line1 { font-size: 12pt; }
+  .print-header-line2 { font-size: 8pt; }
+  .print-header-line3 { font-size: 7pt; line-height: 1.15; }
+  .header { text-align: center; margin-bottom: 5px; padding-bottom: 3px; border-bottom: 1px solid #d1d5db; }
+  .school-sub { font-size: 8px; color: #6b7280; text-transform: uppercase; }
+  .doc-title { display: inline-block; font-size: 11px; font-weight: 900; margin-top: 3px;
+    text-transform: uppercase; letter-spacing: 0; border: 1px solid #92400e; color: #78350f;
+    background: #fffbeb; padding: 3px 12px; }
+  .doc-meta { font-size: 8px; color: #6b7280; margin-top: 3px; }
 
-  .section { margin: 12px 0; }
-  .section-title { font-size: 10px; font-weight: 900; text-transform: uppercase;
-    background: #ddd; padding: 3px 8px; margin-bottom: 8px; border-left: 4px solid #555; }
+  .section { margin: 6px 0; }
+  .section-title { font-size: 9px; font-weight: 900; text-transform: uppercase;
+    color: #fff; background: #374151; padding: 3px 7px; margin-bottom: 3px; border-left: 4px solid #d97706; }
+  .employee-section { margin-bottom: 3px; page-break-inside: avoid; }
+  .employee-section-title { font-size: 8px; font-weight: 900; text-transform: uppercase; color: #78350f; background: #fef3c7; padding: 2px 5px; }
+  .employee-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px 9px; padding: 3px 5px; border: 1px solid #e5e7eb; }
+  .employee-field { font-size: 8.5px; overflow-wrap: anywhere; }
+  .employee-field span { font-weight: bold; }
 
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .field { display: flex; gap: 4px; align-items: baseline; }
-  .field-label { font-weight: bold; white-space: nowrap; min-width: 90px; font-size: 10px; }
-  .field-value { flex: 1; border-bottom: 1px solid #555; padding-bottom: 1px; font-size: 10px; }
+  .field-label { font-weight: bold; white-space: nowrap; min-width: 70px; font-size: 8.5px; }
+  .field-value { flex: 1; border-bottom: 1px solid #9ca3af; font-size: 8.5px; }
 
   table { width: 100%; border-collapse: collapse; font-size: 9px; }
-  th { background: #333; color: #fff; padding: 5px 5px; text-align: center; }
-  td { border: 1px solid #bbb; padding: 4px 5px; vertical-align: middle; }
-  tr:nth-child(even) td { background: #f5f5f5; }
+  th { background: #374151; color: #fff; padding: 3px 4px; text-align: center; }
+  td { border: 1px solid #d1d5db; padding: 3px 4px; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f9fafb; }
 
-  .declaration { border: 1px solid #888; padding: 10px 12px; text-align: justify;
-    font-size: 10px; line-height: 1.9; background: #fafafa; }
-  .declaration ol { padding-left: 18px; margin-top: 6px; }
-  .declaration li { margin-bottom: 2px; }
+  .declaration { border: 1px solid #d1d5db; border-left: 3px solid #d97706; padding: 5px 8px;
+    text-align: justify; font-size: 9.5px; line-height: 1.3; background: #f9fafb; }
+  .declaration ol { padding-left: 16px; margin-top: 3px; }
+  .declaration li { margin-bottom: 1px; }
 
-  .sign-area { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+  .sign-area { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; margin-top: 10px;
+    break-inside: avoid; page-break-inside: avoid; }
   .sign-box { text-align: center; }
-  .sign-line { border-top: 1.5px solid #333; padding-top: 6px; font-size: 10px; line-height: 1.8; }
-  .sign-blank { height: 48px; }
+  .sign-line { border-top: 1px solid #374151; padding-top: 3px; font-size: 8.5px; line-height: 1.25; }
+  .sign-blank { height: 24px; }
 
-  .legal { margin-top: 14px; font-size: 9px; color: #666; border-top: 1px dashed #aaa; padding-top: 6px; }
-  .footer { margin-top: 14px; border-top: 1px solid #ccc; padding-top: 6px;
-    display: flex; justify-content: space-between; font-size: 8px; color: #999; }
+  .legal { margin-top: 6px; font-size: 7.5px; line-height: 1.2; color: #6b7280; border-top: 1px dashed #9ca3af; padding-top: 3px; }
+  .footer { margin-top: 4px; border-top: 1px solid #d1d5db; padding-top: 2px;
+    display: flex; justify-content: space-between; font-size: 6.5px; color: #9ca3af; }
+
+  body.compact { font-size: 9px; line-height: 1.22; }
+  body.compact .print-header-institutional { padding: 3px 8px; margin-bottom: 2px; }
+  body.compact .print-header-emblem { width: 46px !important; height: 46px !important; max-width: 46px; max-height: 46px; }
+  body.compact .header { margin-bottom: 3px; padding-bottom: 2px; }
+  body.compact .section { margin: 4px 0; }
+  body.compact .employee-section { margin-bottom: 1px; }
+  body.compact .employee-grid { gap: 0 7px; padding: 2px 4px; }
+  body.compact th, body.compact td { padding: 2px 3px; }
+  body.compact .declaration { padding: 3px 6px; font-size: 9px; line-height: 1.2; }
+  body.compact .sign-area { margin-top: 6px; }
+  body.compact .sign-blank { height: 18px; }
+  body.compact .legal { margin-top: 3px; padding-top: 1px; }
+
+  body.dense { font-size: 8.5px; line-height: 1.15; }
+  body.dense .print-header-institutional { padding: 2px 7px; margin-bottom: 1px; gap: 5px; }
+  body.dense .print-header-emblem { width: 40px !important; height: 40px !important; max-width: 40px; max-height: 40px; }
+  body.dense .print-header-line1 { font-size: 10pt; }
+  body.dense .header { margin-bottom: 2px; padding-bottom: 1px; }
+  body.dense .doc-title { font-size: 9px; margin-top: 1px; padding: 1px 8px; }
+  body.dense .doc-meta { margin-top: 1px; }
+  body.dense .section { margin: 2px 0; }
+  body.dense .section-title { padding: 1px 5px; margin-bottom: 1px; }
+  body.dense .employee-section { margin-bottom: 1px; }
+  body.dense .employee-section-title { padding: 1px 4px; }
+  body.dense .employee-grid { gap: 0 6px; padding: 1px 4px; }
+  body.dense .employee-field { font-size: 7.5px; }
+  body.dense table { font-size: 8px; }
+  body.dense th, body.dense td { padding: 1px 2px; }
+  body.dense .declaration { padding: 2px 5px; font-size: 8px; line-height: 1.12; }
+  body.dense .declaration ol { margin-top: 1px; }
+  body.dense .declaration li { margin-bottom: 0; }
+  body.dense .sign-area { margin-top: 3px; }
+  body.dense .sign-blank { height: 12px; }
+  body.dense .legal { margin-top: 2px; padding-top: 1px; font-size: 7px; }
+  body.dense .footer { margin-top: 1px; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-</style></head><body>
+</style></head><body class="${printDensity}">
 
+${headerHtml}
 <div class="header">
-  <div class="school-name">${schoolName}</div>
   <div class="school-sub">Gestão de Pessoal · Controle de EPIs · NR-6</div>
   <div class="doc-title">Termo de Recebimento de Equipamentos de Proteção Individual</div>
   <div class="doc-meta">Nº ${docNum} &nbsp;|&nbsp; Data de Emissão: ${today}</div>
@@ -499,14 +703,8 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
 
 <div class="section">
   <div class="section-title">I — Identificação do Funcionário</div>
-  <div class="info-grid">
-    <div class="field"><span class="field-label">Nome:</span><span class="field-value">&nbsp;${emp.employeeName}</span></div>
-    <div class="field"><span class="field-label">CPF / Matrícula:</span><span class="field-value">&nbsp;</span></div>
-    <div class="field"><span class="field-label">Cargo:</span><span class="field-value">&nbsp;${emp.cargo || ''}</span></div>
-    <div class="field"><span class="field-label">Setor / Turno:</span><span class="field-value">&nbsp;${emp.setor || ''}</span></div>
-    <div class="field"><span class="field-label">Instituição:</span><span class="field-value">&nbsp;${schoolName}</span></div>
-    <div class="field"><span class="field-label">Data de Admissão:</span><span class="field-value">&nbsp;</span></div>
-  </div>
+  ${employeeDataHtml}
+  <div class="field"><span class="field-label">Instituição:</span><span class="field-value">&nbsp;${printSchoolName}</span></div>
 </div>
 
 <div class="section">
@@ -529,9 +727,9 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
 <div class="section">
   <div class="section-title">III — Declaração de Recebimento e Compromisso</div>
   <div class="declaration">
-    <p>Eu, <strong>${emp.employeeName}</strong>, portador(a) do cargo de <strong>${emp.cargo || '_______________'}</strong>,
-    vinculado(a) ao setor <strong>${emp.setor || '_______________'}</strong> da instituição
-    <strong>${schoolName}</strong>, declaro para os devidos fins legais que recebi, na data indicada no Quadro II acima,
+    <p>Eu, <strong>${employeeName}</strong>, portador(a) do cargo de <strong>${employeeCargo || '_______________'}</strong>,
+    vinculado(a) ao setor <strong>${employeeSetor || '_______________'}</strong> da instituição
+    <strong>${printSchoolName}</strong>, declaro para os devidos fins legais que recebi, na data indicada no Quadro II acima,
     os Equipamentos de Proteção Individual (EPIs) nele discriminados, em perfeitas condições de uso, e me comprometo a:</p>
     <ol>
       <li>Utilizar o EPI fornecido exclusivamente para a finalidade a que se destina, conforme as orientações recebidas;</li>
@@ -548,7 +746,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
   <div class="sign-box">
     <div class="sign-blank"></div>
     <div class="sign-line">
-      <strong>${emp.employeeName}</strong><br>
+      <strong>${employeeName}</strong><br>
       Funcionário(a) — Assinatura e Identificação<br>
       Data: _____ / _____ / _____________
     </div>
@@ -557,7 +755,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
     <div class="sign-blank"></div>
     <div class="sign-line">
       <strong>Gestor(a) / Responsável pelo RH</strong><br>
-      ${schoolName}<br>
+      ${printSchoolName}<br>
       Data: _____ / _____ / _____________
     </div>
   </div>
@@ -576,7 +774,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
 </body></html>`;
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;height:297mm;border:0;visibility:hidden;';
     document.body.appendChild(iframe);
     const doc = iframe.contentWindow?.document;
     if (!doc) return;
@@ -588,14 +786,17 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
   };
 
   // ─── IMPRESSÃO: Lista geral de EPIs ──────────────────────────────────────────
-  const printAllEpis = () => {
+  const printAllEpis = async () => {
+    const printHeader = await loadPrintHeader();
+    const headerHtml = buildPrintHeaderHtml(printHeader);
     const now = new Date().toLocaleString('pt-BR');
     const rows = filtered.map(r => {
       const days = daysUntil(r.expirationDate);
       const condInfo = CONDITION_OPTS.find(c => c.value === r.condition);
+      const employeeData = currentEmployeeData(r);
       return `<tr>
-        <td>${r.employeeName}</td>
-        <td>${r.cargo || '—'} / ${r.setor || '—'}</td>
+        <td>${employeeData.name}</td>
+        <td>${employeeData.cargo || '—'} / ${employeeData.setor || '—'}</td>
         <td>${r.epiType}</td>
         <td>${r.caNumber || '—'}</td>
         <td>${r.quantity}</td>
@@ -613,6 +814,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
   @page { size: A4 landscape; margin: 12mm 10mm 16mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; font-size: 9px; color: #111; }
+  ${printHeaderCss}
   .header { display: flex; justify-content: space-between; align-items: flex-start;
     border-bottom: 3px solid #d97706; padding-bottom: 6px; margin-bottom: 8px; }
   h1 { font-size: 13px; font-weight: 900; color: #d97706; }
@@ -625,9 +827,9 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
     display: flex; justify-content: space-between; font-size: 8px; color: #9ca3af; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head><body>
+${headerHtml}
 <div class="header">
   <div>
-    <div class="sub">${schoolName}</div>
     <h1>Controle de EPIs — Lista Geral</h1>
     <div class="sub">${filtered.length} registro(s) · Gerado em ${now}</div>
   </div>
@@ -727,7 +929,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
               onClick={() => setBatchMode(b => !b)}
               className={`btn flex items-center gap-2 ${batchMode ? 'bg-amber-500 text-white hover:bg-amber-600' : 'btn-outline border-amber-400 text-amber-700 hover:bg-amber-50'}`}
             >
-              <Shield size={14} /> {batchMode ? 'Fechar Lote' : 'Entrega em Lote'}
+              <Shield size={14} /> {batchMode ? 'Fechar' : 'Entrega com Vários EPIs'}
             </button>
             <button onClick={openNew} className="btn btn-primary flex items-center gap-2">
               <Plus size={16} /> Registrar Entrega de EPI
@@ -749,7 +951,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-amber-800 flex items-center gap-2">
               <Shield size={18} className="text-amber-600" />
-              Entrega em Lote de EPIs
+              Entrega de Vários EPIs
             </h2>
             <button
               onClick={() => { setBatchMode(false); setSelectedEmps(new Set()); setSelectedEpis(new Set()); }}
@@ -760,26 +962,11 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Coluna 1: Funcionários */}
+            {/* Coluna 1: Funcionário */}
             <div className="bg-white border border-amber-200 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-sm text-amber-800">
-                  👥 Funcionários ({selectedEmps.size} selecionado{selectedEmps.size !== 1 ? 's' : ''})
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedEmps.size === filteredBatchEmps.length) {
-                      setSelectedEmps(new Set());
-                    } else {
-                      setSelectedEmps(new Set(filteredBatchEmps.map(e => e._id || e.id || '')));
-                    }
-                  }}
-                  className="text-xs text-amber-700 underline"
-                >
-                  {selectedEmps.size === filteredBatchEmps.length ? 'Desmarcar todos' : 'Selecionar todos'}
-                </button>
-              </div>
+              <h3 className="font-semibold text-sm text-amber-800 mb-2">
+                Funcionário (selecione uma pessoa)
+              </h3>
               <input
                 type="text"
                 placeholder="Buscar funcionário..."
@@ -799,15 +986,10 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                       className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${checked ? 'bg-amber-100 border border-amber-300' : 'hover:bg-gray-50'}`}
                     >
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="batchEmployee"
                         checked={checked}
-                        onChange={() => {
-                          setSelectedEmps(prev => {
-                            const next = new Set(prev);
-                            if (next.has(id)) next.delete(id); else next.add(id);
-                            return next;
-                          });
-                        }}
+                        onChange={() => setSelectedEmps(new Set([id]))}
                         className="w-4 h-4 accent-amber-600 flex-shrink-0"
                       />
                       <div className="min-w-0">
@@ -957,8 +1139,10 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
 
               <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-amber-100">
                 <p className="text-sm text-amber-800">
-                  Serão criados{' '}
-                  <strong>{selectedEmps.size} funcionário(s) × {selectedEpis.size} EPI(s) = {selectedEmps.size * selectedEpis.size} registro(s)</strong>
+                  Serão adicionados <strong>{selectedEpis.size} EPI(s)</strong> ao funcionário selecionado.
+                  <span className="block mt-1 font-semibold">
+                    Um único termo com todos esses itens será aberto para impressão após o registro.
+                  </span>
                 </p>
                 <button
                   onClick={() => {
@@ -992,7 +1176,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                   <Save size={16} />
                   {batchMutation.isPending
                     ? 'Registrando...'
-                    : `Registrar ${selectedEmps.size * selectedEpis.size} entrega(s)`}
+                    : `Registrar ${selectedEpis.size} EPI(s) e imprimir termo`}
                 </button>
               </div>
             </div>
@@ -1048,16 +1232,33 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                   <th className="p-3 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody>
-                {filtered.map((r, idx) => {
-                  const condInfo = CONDITION_OPTS.find(c => c.value === r.condition);
-                  const days = daysUntil(r.expirationDate);
-                  const isExpiring = days !== null && days <= 30 && r.condition !== 'devolvido';
-                  const id = r._id || r.id || '';
-                  return (
-                    <tr key={id} className={`border-b hover:bg-gray-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isExpiring ? 'border-l-4 border-l-red-400' : ''}`}>
-                      <td className="p-3 font-semibold">{r.employeeName}</td>
-                      <td className="p-3 text-xs text-gray-600">{r.cargo || '—'}<br/><span className="text-gray-400">{r.setor}</span></td>
+              {filteredGroups.map(group => (
+                <tbody key={group.employeeId} className="border-b-2 border-amber-200">
+                  {group.records.map((r, idx) => {
+                    const employeeData = currentEmployeeData(r);
+                    const condInfo = CONDITION_OPTS.find(c => c.value === r.condition);
+                    const days = daysUntil(r.expirationDate);
+                    const isExpiring = days !== null && days <= 30 && r.condition !== 'devolvido';
+                    const id = r._id || r.id || '';
+                    return (
+                    <tr key={id} className={`hover:bg-gray-50 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${isExpiring ? 'border-l-4 border-l-red-400' : ''}`}>
+                      {idx === 0 && (
+                        <Fragment>
+                          <td rowSpan={group.records.length} className="p-3 font-semibold align-top border-r border-gray-200 bg-amber-50/40">
+                            <div>{employeeData.name}</div>
+                            <button
+                              onClick={() => printTermoRecebimento(group.employeeId)}
+                              className="btn btn-sm bg-amber-100 text-amber-800 hover:bg-amber-200 mt-3 flex items-center gap-1"
+                              title="Imprimir termo de recebimento de todos os EPIs deste funcionário"
+                            >
+                              <Printer size={13} /> Imprimir todos
+                            </button>
+                          </td>
+                          <td rowSpan={group.records.length} className="p-3 text-xs text-gray-600 align-top border-r border-gray-200 bg-amber-50/40">
+                            {employeeData.cargo || '—'}<br/><span className="text-gray-400">{employeeData.setor}</span>
+                          </td>
+                        </Fragment>
+                      )}
                       <td className="p-3">
                         <div className="font-medium">{r.epiType}</div>
                         {r.epiDescription && <div className="text-xs text-gray-500">{r.epiDescription}</div>}
@@ -1082,11 +1283,12 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1 justify-center flex-wrap">
-                          <button onClick={() => printReceipt(r)} className="btn btn-sm bg-amber-100 text-amber-800 hover:bg-amber-200 flex items-center gap-1" title="Imprimir ficha de entrega">
-                            <Printer size={13} />
-                          </button>
-                          <button onClick={() => printTermoRecebimento(r.employeeId)} className="btn btn-sm bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-1" title="Imprimir Termo de Recebimento de EPIs">
-                            <FileText size={13} />
+                          <button
+                            onClick={() => printReceipt(r)}
+                            className="btn btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100 flex items-center gap-1"
+                            title={`Imprimir somente ${r.epiType}`}
+                          >
+                            <Printer size={13} /> Individual
                           </button>
                           <button onClick={() => openEdit(r)} className="btn btn-sm btn-outline flex items-center gap-1" title="Editar">
                             <Pencil size={13} />
@@ -1097,9 +1299,10 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
+                    );
+                  })}
+                </tbody>
+              ))}
             </table>
           </div>
         </div>
@@ -1125,7 +1328,7 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-amber-800 flex items-center gap-2">
                   <Shield size={20} className="text-amber-600" />
-                  {editing ? 'Editar Registro de EPI' : 'Registrar Entrega de EPI'}
+                  {editing ? 'Editar Entrega e Adicionar EPIs' : 'Registrar Entrega de EPIs'}
                 </h3>
                 <button onClick={() => setShowModal(false)} className="btn btn-sm btn-outline"><X size={16} /></button>
               </div>
@@ -1148,14 +1351,67 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                 </div>
 
                 <div className="md:col-span-2">
-                  <SearchableSelect
-                    label="Tipo de EPI"
-                    required
-                    value={form.epiType}
-                    onChange={(val) => setForm(f => ({ ...f, epiType: val }))}
-                    options={epiTypeOptions}
-                    placeholder="Digite ou selecione o tipo de EPI..."
-                  />
+                  <label className="block text-sm font-semibold mb-1">
+                    Itens de EPI * ({formEpiTypes.size} selecionado{formEpiTypes.size !== 1 ? 's' : ''})
+                  </label>
+                  <div className="border border-gray-300 rounded-lg p-3">
+                    <div className="relative mb-2">
+                      <Search size={14} className="absolute left-2 top-2.5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={formEpiSearch}
+                        onChange={e => setFormEpiSearch(e.target.value)}
+                        className="input w-full pl-7 text-sm"
+                        placeholder="Buscar item de EPI..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-52 overflow-y-auto pr-1">
+                      {filteredFormEpiTypes.map(epiType => {
+                        const checked = formEpiTypes.has(epiType);
+                        return (
+                          <div
+                            key={epiType}
+                            className={`flex items-center gap-2 rounded p-2 text-sm ${checked ? 'bg-amber-100 text-amber-900' : 'hover:bg-gray-50'}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => setFormEpiTypes(previous => {
+                                const next = new Set(previous);
+                                if (next.has(epiType)) {
+                                  next.delete(epiType);
+                                } else {
+                                  next.add(epiType);
+                                  setFormEpiQuantities(quantities => ({ ...quantities, [epiType]: quantities[epiType] || 1 }));
+                                }
+                                return next;
+                              })}
+                              className="w-4 h-4 accent-amber-600"
+                            />
+                            <span className="flex-1">{epiType}</span>
+                            {checked && (
+                              <label className="flex items-center gap-1 text-xs font-semibold">
+                                Qtd.
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={formEpiQuantities[epiType] || 1}
+                                  onChange={event => setFormEpiQuantities(quantities => ({
+                                    ...quantities,
+                                    [epiType]: Math.max(1, Number(event.target.value) || 1),
+                                  }))}
+                                  className="input w-16 px-2 py-1 text-center"
+                                />
+                              </label>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Informe a quantidade ao lado de cada item. Os demais dados abaixo serão aplicados a todos.
+                  </p>
                 </div>
 
                 <div>
@@ -1171,11 +1427,6 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
                 <div>
                   <label className="block text-sm font-semibold mb-1">Nº CA (Certificado de Aprovação)</label>
                   <input type="text" value={form.caNumber} onChange={e => setForm(f => ({ ...f, caNumber: e.target.value }))} className="input w-full" placeholder="Ex: 12345" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1">Quantidade</label>
-                  <input type="number" min={1} value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: Number(e.target.value) }))} className="input w-full" />
                 </div>
 
                 <div>
@@ -1220,9 +1471,13 @@ ${r.observations ? `<div class="field"><span class="label">Observações: </span
 
               <div className="flex gap-3 justify-end mt-6">
                 <button onClick={() => setShowModal(false)} className="btn btn-outline">Cancelar</button>
-                <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="btn btn-primary flex items-center gap-2">
+                <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || formEpiTypes.size === 0} className="btn btn-primary flex items-center gap-2">
                   <Save size={16} />
-                  {saveMutation.isPending ? 'Salvando...' : editing ? 'Salvar Alterações' : 'Registrar EPI'}
+                  {saveMutation.isPending
+                    ? 'Salvando...'
+                    : editing
+                    ? `Salvar ${formEpiTypes.size} EPI(s)`
+                    : `Registrar ${formEpiTypes.size} EPI(s)`}
                 </button>
               </div>
             </div>
