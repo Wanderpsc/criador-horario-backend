@@ -3,6 +3,7 @@ import { Calendar, Users, BookOpen, Clock, AlertTriangle, GraduationCap } from '
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/axios';
+import { canUseCertificates } from '../utils/medicalCertificates';
 
 interface TeacherWorkload {
   teacherId: string;
@@ -148,6 +149,20 @@ export default function Dashboard() {
         <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 text-center">Acesso Rápido</p>
         <div className="overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#a855f7 #f3e8ff' }}>
           <div className="flex gap-3 justify-center min-w-max mx-auto">
+            <Link
+              to="/employee-attendance"
+              className="flex flex-col items-center justify-center gap-2 bg-white hover:bg-blue-50 text-blue-700 rounded-2xl px-6 py-4 shadow-md border-2 border-blue-100 transition-all min-w-[100px]"
+            >
+              <Clock size={30} />
+              <span className="text-xs font-black whitespace-nowrap">Ponto de Funcionários</span>
+            </Link>
+            {canUseCertificates(user) && <Link
+              to="/medical-certificates"
+              className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-teal-600 to-blue-600 text-white rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all min-w-[100px]"
+            >
+              <span className="text-3xl">🩺</span>
+              <span className="text-xs font-black whitespace-nowrap">Controle de Atestados</span>
+            </Link>}
             <Link
               to="/display-panel"
               className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[100px]"

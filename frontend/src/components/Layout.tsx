@@ -33,12 +33,14 @@ import {
   ChevronDown,
   Menu,
   X,
+  FileHeart,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import NotificationCenter from './NotificationCenter';
 import { loadPrintHeader } from '../utils/printHeader';
 import { toast } from 'react-hot-toast';
+import { canUseCertificates } from '../utils/medicalCertificates';
 
 export default function Layout() {
   const { user, logout, schoolYear, setSchoolYear } = useAuthStore();
@@ -319,6 +321,15 @@ export default function Layout() {
             highlight: true,
             subtitle: 'Frequência'
           },
+          ...(canUseCertificates(user) ? [{
+            icon: FileHeart,
+            label: 'Controle de Atestados',
+            path: '/medical-certificates',
+            description: 'Afastamentos, CID-10, alertas de retorno e acompanhamento de reposição',
+            color: 'teal',
+            badge: 'NOVO',
+            subtitle: 'Saúde e Afastamentos'
+          }] : []),
           {
             icon: Briefcase,
             label: 'Controle de EPIs',
@@ -341,6 +352,15 @@ export default function Layout() {
           }
         ]
       : []),
+    ...(user?.role === 'admin' && canUseCertificates(user) ? [{
+      icon: FileHeart,
+      label: 'Controle de Atestados',
+      path: '/medical-certificates',
+      description: 'Afastamentos, CID-10, alertas de retorno e acompanhamento de reposição',
+      color: 'teal',
+      badge: 'NOVO',
+      subtitle: 'Saúde e Afastamentos'
+    }] : []),
     ...(user?.role === 'admin' || user?.role === 'super-admin'
       ? [
           { divider: true, label: '🔐 PAINEL ADMINISTRATIVO', path: '#' },

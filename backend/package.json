@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",
+    "test:medical-certificates": "node tests/medicalCertificates.test.cjs",
     "backup": "pwsh -File scripts/backup-database.ps1",
     "restore": "pwsh -File scripts/restore-database.ps1",
     "test:whatsapp": "npx ts-node test-whatsapp.ts",

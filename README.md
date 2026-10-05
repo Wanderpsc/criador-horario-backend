@@ -41,6 +41,21 @@ Além do formato tradicional, agora você pode imprimir com:
 
 ## 🚀 Tecnologias
 
+### Controle de Atestados
+
+- Acesso rápido no painel, ao lado de **Ponto de Funcionários**, e acesso pelo menu.
+- Funcionários e professores vinculados aos cadastros da escola; alunos identificados manualmente por nome, matrícula e turma.
+- Registro de emissão, entrega, início, dias corridos, médico, CRM/UF, unidade emissora, referência do documento e observações.
+- Último dia e retorno previsto calculados incluindo o dia inicial. O retorno previsto é o dia civil seguinte ao fim do afastamento, sem ajustes automáticos por escala, feriados ou calendário letivo.
+- Alertas internos de retorno próximo, no dia e vencido, atualizados a cada minuto enquanto o módulo estiver aberto. Não envia e-mail, WhatsApp ou push. Retorno efetivo confirmado pela gestão; alerta vencido não implica falta injustificada.
+- CID-10 opcional, com descrições de um catálogo local não exaustivo de códigos comuns. Códigos desconhecidos não recebem descrições inferidas; a descrição não substitui avaliação médica.
+- Reposição informada pela gestão, com justificativa obrigatória e saldo automático entre dias definidos e já repostos. Atestados não geram dívida ou descontos automaticamente nem alteram o ponto ou horários.
+- Dados persistidos no MongoDB e isolados por escola. O titular da escola e administradores escolares têm acesso; demais usuários precisam das permissões específicas de acesso/leitura e criação/edição/exclusão em **Configurações → Usuários**. Por padrão, usuários comuns não têm acesso a dados de saúde.
+- O módulo registra a referência administrativa do documento, não armazena anexos. Dados de saúde devem ser minimizados e tratados conforme a LGPD e as regras da instituição.
+
+Validação das regras de datas, CID, alertas, permissões e rotas (banco simulado, sem acesso ao MongoDB de produção):
+`npm --prefix backend run test:medical-certificates`. Requer as dependências já instaladas no backend.
+
 ### Backend
 - Node.js + Express
 - TypeScript

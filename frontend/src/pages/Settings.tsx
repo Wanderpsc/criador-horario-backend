@@ -62,6 +62,7 @@ const permissionLabels: { [key: string]: string } = {
   // Gestão de pessoal (funcionários)
   employees:            '🗂️ Funcionários',
   employeeAttendance:   '⏰ Ponto de Funcionários',
+  medicalCertificates:  '🩺 Controle de Atestados (dados sensíveis)',
   epiControl:           '🦺 Controle de EPIs',
   ferias:               '🌴 Controle de Férias',
   // Sistema
@@ -95,6 +96,7 @@ const RESOURCE_ACTIONS: { [key: string]: string[] } = {
   frequencyReports:     ['access', 'read'],
   employees:            ['access', 'create', 'read', 'update', 'delete'],
   employeeAttendance:   ['access', 'create', 'read', 'update', 'delete'],
+  medicalCertificates:  ['access', 'create', 'read', 'update', 'delete'],
   epiControl:           ['access', 'create', 'read', 'update', 'delete'],
   ferias:               ['access', 'create', 'read', 'update', 'delete'],
   displayPanel:         ['access', 'manage'],
@@ -141,7 +143,7 @@ const PERMISSION_GROUPS = [
   },
   {
     id: 'pessoal', label: '🧑‍💼 GESTÃO DE PESSOAL (FUNCIONÁRIOS)', color: 'violet',
-    resources: ['employees', 'employeeAttendance', 'epiControl', 'ferias'],
+    resources: ['employees', 'employeeAttendance', 'medicalCertificates', 'epiControl', 'ferias'],
   },
   {
     id: 'sistema', label: '⚙️ SISTEMA E CONFIGURAÇÕES', color: 'green',

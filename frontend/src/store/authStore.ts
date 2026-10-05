@@ -8,6 +8,7 @@ interface User {
   role: string;
   schoolId?: string;
   schoolName?: string;
+  permissions?: Record<string, { access?: boolean; read?: boolean; create?: boolean; update?: boolean; delete?: boolean }>;
 }
 
 interface AuthState {

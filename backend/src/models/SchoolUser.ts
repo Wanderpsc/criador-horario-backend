@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IPermissions {
+  medicalCertificates: { access: boolean; create: boolean; read: boolean; update: boolean; delete: boolean };
   dashboard: { access: boolean };
   teachers: { create: boolean; read: boolean; update: boolean; delete: boolean };
   subjects: { create: boolean; read: boolean; update: boolean; delete: boolean };
@@ -40,6 +41,7 @@ export interface ISchoolUser extends Document {
 }
 
 export const defaultUserPermissions: IPermissions = {
+  medicalCertificates: { access: false, create: false, read: false, update: false, delete: false },
   dashboard: { access: true },
   teachers: { create: false, read: true, update: false, delete: false },
   subjects: { create: false, read: true, update: false, delete: false },
@@ -63,6 +65,7 @@ export const defaultUserPermissions: IPermissions = {
 };
 
 export const defaultAdminPermissions: IPermissions = {
+  medicalCertificates: { access: true, create: true, read: true, update: true, delete: true },
   dashboard: { access: true },
   teachers: { create: true, read: true, update: true, delete: true },
   subjects: { create: true, read: true, update: true, delete: true },
@@ -86,6 +89,13 @@ export const defaultAdminPermissions: IPermissions = {
 };
 
 const PermissionsSchema = new Schema({
+  medicalCertificates: {
+    access: { type: Boolean, default: false },
+    create: { type: Boolean, default: false },
+    read: { type: Boolean, default: false },
+    update: { type: Boolean, default: false },
+    delete: { type: Boolean, default: false }
+  },
   dashboard: {
     access: { type: Boolean, default: true }
   },

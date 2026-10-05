@@ -17,7 +17,8 @@ const endpointToResource: { [key: string]: string } = {
   '/api/emergency-schedule': 'emergencySchedule',
   '/api/teacher-attendance': 'teacherAttendance',
   '/api/teacher-frequency-report': 'frequencyReports',
-  '/api/school-users': 'users'
+  '/api/school-users': 'users',
+  '/api/medical-certificates': 'medicalCertificates'
 };
 
 // Mapear método HTTP para ação
@@ -102,7 +103,11 @@ export const auditMiddleware = async (req: AuthRequest, res: Response, next: Nex
 
       // Capturar mudanças para operações de update
       let changes: any = undefined;
-      if (action === 'update' && req.body) {
+      if (resource === 'medicalCertificates') {
+        // Dados de saúde não devem ser copiados para logs de auditoria gerais.
+        changes = undefined;
+        if (status === 'error') errorMessage = `HTTP ${res.statusCode}`;
+      } else if (action === 'update' && req.body) {
         changes = {
           after: req.body
         };

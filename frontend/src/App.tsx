@@ -25,6 +25,7 @@ import MakeupSaturdays from './pages/MakeupSaturdays';
 import ClassPayments from './pages/ClassPayments';
 import Employees from './pages/Employees';
 import EmployeeAttendance from './pages/EmployeeAttendance';
+import MedicalCertificates from './pages/MedicalCertificates';
 import EPIControl from './pages/EPIControl';
 import Ferias from './pages/Ferias';
 import SubstitutePublic from './pages/SubstitutePublic';
@@ -178,6 +179,7 @@ function App() {
           <Route path="calendar" element={<ClientRoute><SchoolCalendar /></ClientRoute>} />
           <Route path="employees" element={<ClientRoute><Employees /></ClientRoute>} />
           <Route path="employee-attendance" element={<ClientRoute><EmployeeAttendance /></ClientRoute>} />
+          <Route path="medical-certificates" element={<MedicalCertificates />} />
           <Route path="epi-control" element={<ClientRoute><EPIControl /></ClientRoute>} />
           <Route path="ferias" element={<ClientRoute><Ferias /></ClientRoute>} />
           <Route path="settings" element={<ClientRoute><Settings /></ClientRoute>} />
