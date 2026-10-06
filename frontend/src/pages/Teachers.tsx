@@ -63,10 +63,13 @@ export default function Teachers() {
   const generatePontoLink = async (teacher: Teacher) => {
     setPontoGenerating(true);
     try {
-      const res = await api.get('/teacher-ponto/teacher-ponto-link');
+      const res = await api.post('/attendance-links', {
+        personType: 'teacher',
+        personId: teacher.id,
+      });
       const token = res.data.token;
       const base = window.location.origin + window.location.pathname;
-      const url = `${base}#/ponto-teacher/${token}?teacherId=${teacher.id}`;
+      const url = `${base}#/ponto-teacher/${token}`;
       setPontoLink(url);
       setPontoTeacherName(teacher.name);
       setPontoCopied(false);

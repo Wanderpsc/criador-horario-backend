@@ -7,6 +7,7 @@ import express from 'express';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import TeacherPontoLink from '../models/TeacherPontoLink';
+import AttendanceLink from '../models/AttendanceLink';
 import TeacherAttendance from '../models/TeacherAttendance';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 import Teacher from '../models/Teacher';
@@ -85,6 +86,34 @@ const DEFAULT_PERIODS = [
   { period: 7, startTime: '13:40', endTime: '14:30' },
   { period: 8, startTime: '14:30', endTime: '15:20' },
 ];
+
+async function resolveIndividualTeacherLink(token: string) {
+  const individualLink = await AttendanceLink.findOne({
+    token,
+    isActive: true,
+    personType: 'teacher',
+  }).lean() as any;
+  if (!individualLink) return null;
+
+  const settings = await TeacherPontoLink.findOne({
+    schoolId: individualLink.schoolId,
+    isActive: true,
+  }).lean() as any;
+
+  return {
+    schoolId: individualLink.schoolId,
+    schoolName: individualLink.schoolName,
+    teacherId: individualLink.personId,
+    isEnabled: settings?.isEnabled !== false,
+    requireGeolocation: settings?.requireGeolocation || false,
+    latitude: settings?.latitude,
+    longitude: settings?.longitude,
+    areaM2: settings?.areaM2 || 1000,
+    requirePhoto: settings?.requirePhoto || false,
+    graceMinutes: settings?.graceMinutes ?? 10,
+    activeTimetableId: settings?.activeTimetableId || '',
+  };
+}
 
 // ─── Detectar sábado letivo com referência de dia ────────────────────────────
 // Retorna { effectiveDayKey, isMakeupSaturday, followWeekday }
@@ -285,7 +314,7 @@ router.get('/teacher-ponto-live', auth, async (req: AuthRequest, res) => {
 // GET /teacher-public/:token — lista professores da escola
 router.get('/teacher-public/:token', async (req, res) => {
   try {
-    const link = await TeacherPontoLink.findOne({ token: req.params.token, isActive: true });
+    const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado ou inativo.' });
 
     // Ponto desativado pelo administrador
@@ -293,7 +322,7 @@ router.get('/teacher-public/:token', async (req, res) => {
       return res.status(403).json({ message: 'O ponto eletrônico está desativado no momento. Contate a administração.' });
     }
 
-    const teachers = await Teacher.find({ schoolId: link.schoolId, isActive: true })
+    const teachers = await Teacher.find({ _id: link.teacherId, schoolId: link.schoolId, isActive: true })
       .select('_id name')
       .sort({ name: 1 })
       .lean();
@@ -317,10 +346,10 @@ router.get('/teacher-public/:token', async (req, res) => {
 // Retorna horário do professor hoje + registro de frequência + auto-marca ausentes expirados
 router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
   try {
-    const link = await TeacherPontoLink.findOne({ token: req.params.token, isActive: true });
+    const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
 
-    const { teacherId } = req.body;
+    const teacherId = link.teacherId;
     if (!teacherId || !mongoose.isValidObjectId(teacherId)) {
       return res.status(400).json({ message: 'teacherId inválido.' });
     }
@@ -409,7 +438,7 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
 // Marca entrada ou saída de um período específico
 router.post('/teacher-public/:token/mark', async (req, res) => {
   try {
-    const link = await TeacherPontoLink.findOne({ token: req.params.token, isActive: true });
+    const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
 
     if (link.isEnabled === false) {
@@ -417,7 +446,6 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     }
 
     const {
-      teacherId,
       period,
       action,     // 'entry' | 'exit'
       lat,
@@ -425,6 +453,7 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
       photoData,
       email,
     } = req.body;
+    const teacherId = link.teacherId;
 
     if (!teacherId || !mongoose.isValidObjectId(teacherId)) {
       return res.status(400).json({ message: 'teacherId inválido.' });

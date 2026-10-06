@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
+import AttendanceReminder from '../components/AttendanceReminder';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -53,8 +54,15 @@ interface PageData {
   // employee
   jornadaTrabalho?: string;
   workSchedule?: {
+    shiftMode?: 'fixed' | 'rotating';
+    shiftType?: 'single' | 'split2' | 'split3';
     entryTime: string;
     exitTime: string;
+    shift2EntryTime?: string;
+    shift2ExitTime?: string;
+    shift3EntryTime?: string;
+    shift3ExitTime?: string;
+    rotatingEntryTime?: string;
     workDays: string[];
     toleranceMinutes: number;
   } | null;
@@ -177,6 +185,20 @@ export default function PontoPublico() {
   }
 
   const isTeacher = data.personType === 'teacher';
+  const reminderItems = isTeacher
+    ? (data.schedule || []).map(cls => ({
+        time: cls.startTime,
+        label: `${cls.subjectName} - ${cls.className}`,
+      }))
+    : [
+        { time: data.workSchedule?.shiftMode === 'rotating' ? data.workSchedule.rotatingEntryTime : data.workSchedule?.entryTime, label: 'Entrada' },
+        { time: data.workSchedule?.exitTime, label: 'Saída' },
+        { time: data.workSchedule?.shift2EntryTime, label: '2ª entrada' },
+        { time: data.workSchedule?.shift2ExitTime, label: '2ª saída' },
+        { time: data.workSchedule?.shift3EntryTime, label: '3ª entrada' },
+        { time: data.workSchedule?.shift3ExitTime, label: '3ª saída' },
+      ]
+        .filter((item): item is { time: string; label: string } => !!item.time);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-start justify-center">
@@ -214,6 +236,14 @@ export default function PontoPublico() {
         </div>
 
         {/* Feedback de sucesso/erro */}
+        <div className="mb-4">
+          <AttendanceReminder
+            personName={data.personName}
+            storageKey={`attendance-reminder-${token}`}
+            reminders={reminderItems}
+          />
+        </div>
+
         {successMsg && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4 flex items-center gap-2 text-green-700">
             <CheckCircle size={18} />

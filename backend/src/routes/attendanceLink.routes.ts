@@ -280,8 +280,15 @@ router.get('/public/:token', async (req, res) => {
       ...baseInfo,
       jornadaTrabalho: (employee as any)?.jornadaTrabalho || '',
       workSchedule: ws ? {
+        shiftMode: ws.shiftMode || 'fixed',
+        shiftType: ws.shiftType || 'single',
         entryTime: ws.entryTime,
         exitTime: ws.exitTime,
+        shift2EntryTime: ws.shift2EntryTime,
+        shift2ExitTime: ws.shift2ExitTime,
+        shift3EntryTime: ws.shift3EntryTime,
+        shift3ExitTime: ws.shift3ExitTime,
+        rotatingEntryTime: ws.rotatingEntryTime,
         workDays: ws.workDays,
         toleranceMinutes: ws.toleranceMinutes ?? 10,
       } : null,
@@ -502,6 +509,12 @@ router.post('/school-link', auth, async (req: AuthRequest, res) => {
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
+});
+
+router.use('/school-public/:token', (_req, res) => {
+  return res.status(410).json({
+    message: 'O link geral foi desativado por segurança. Solicite seu link individual de ponto.',
+  });
 });
 
 // GET /school-public/:token — lista todos funcionários e professores

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
+import AttendanceReminder from '../components/AttendanceReminder';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -133,9 +134,7 @@ export default function PontoPublicoTeacher() {
       .get(`${API}/teacher-ponto/teacher-public/${token}`)
       .then(r => {
         setLinkConfig(r.data);
-        const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
-        const teacherId = params.get('teacherId');
-        const teacher = r.data.teachers.find((item: TeacherInfo) => item._id === teacherId);
+        const teacher = r.data.teachers[0];
         if (teacher) selectTeacher(teacher);
       })
       .catch(e => setLinkError(e.response?.data?.message || 'Link inválido.'))
@@ -372,12 +371,6 @@ export default function PontoPublicoTeacher() {
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
           {/* Header */}
           <div className="bg-green-700 rounded-t-2xl p-5 text-white">
-            <button
-              onClick={() => { setStep('select'); setSelected(null); setScheduleData(null); setMarkResult(null); }}
-              className="flex items-center gap-1 text-white/70 hover:text-white text-xs mb-3"
-            >
-              <ArrowLeft className="w-3 h-3" /> Voltar
-            </button>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 p-2 rounded-full">
@@ -398,6 +391,14 @@ export default function PontoPublicoTeacher() {
               <Clock className="w-4 h-4 text-gray-400" />
               <span>{scheduleData?.dayLabel} · {scheduleData?.today}</span>
             </div>
+
+            <AttendanceReminder
+              personName={selected?.name || 'Professor(a)'}
+              storageKey={`attendance-reminder-teacher-${token}`}
+              reminders={classes
+                .filter(cls => classStatus(cls) === 'pending')
+                .map(cls => ({ time: cls.startTime, label: `${cls.subjectName} - ${cls.className}` }))}
+            />
 
             {/* Sábado letivo aviso */}
             {scheduleData?.isMakeupSaturday && (
@@ -648,10 +649,10 @@ export default function PontoPublicoTeacher() {
           </>
         )}
         <button
-          onClick={() => { setStep('select'); setSelected(null); setScheduleData(null); setMarkResult(null); }}
+          onClick={() => { setStep('schedule'); setMarkResult(null); }}
           className="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-xl text-sm"
         >
-          {markResult?.ok ? 'Registrar outro ponto' : 'Tentar novamente'}
+          Voltar ao meu ponto
         </button>
       </div>
     </div>

@@ -23,7 +23,6 @@ import {
   DollarSign,
   Search,
   Link2,
-  Copy,
   Settings,
   RefreshCw,
   ToggleLeft,
@@ -92,7 +91,6 @@ export default function TeacherAttendance() {
   const [teacherPontoLink, setTeacherPontoLink] = useState<any>(null);
   const [loadingPontoLink, setLoadingPontoLink] = useState(false);
   const [showPontoLinkSection, setShowPontoLinkSection] = useState(false);
-  const [pontoLinkCopied, setPontoLinkCopied] = useState(false);
   const [savingPontoSettings, setSavingPontoSettings] = useState(false);
   const [pontoSettings, setPontoSettings] = useState({
     requireGeolocation: false,
@@ -592,15 +590,6 @@ export default function TeacherAttendance() {
     }
   }
 
-  function copyTeacherPontoLink() {
-    if (!teacherPontoLink?.token) return;
-    const url = `${window.location.origin}${window.location.pathname}#/ponto-teacher/${teacherPontoLink.token}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setPontoLinkCopied(true);
-      setTimeout(() => setPontoLinkCopied(false), 2000);
-    });
-  }
-
   const [togglingPonto, setTogglingPonto] = useState(false);
   const [showPontoReport, setShowPontoReport] = useState(false);
 
@@ -616,10 +605,6 @@ export default function TeacherAttendance() {
       setTogglingPonto(false);
     }
   }
-
-  const teacherPontoUrl = teacherPontoLink?.token
-    ? `${window.location.origin}${window.location.pathname}#/ponto-teacher/${teacherPontoLink.token}`
-    : '';
 
   // Abrir modal de seleção de impressão
 
@@ -1076,28 +1061,8 @@ export default function TeacherAttendance() {
                   </button>
                 </div>
 
-                {/* URL */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">🌐 Link público para professores</label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      readOnly
-                      value={teacherPontoUrl}
-                      className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 font-mono truncate"
-                    />
-                    <button
-                      onClick={copyTeacherPontoLink}
-                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${pontoLinkCopied ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                    >
-                      <Copy size={14} /> {pontoLinkCopied ? 'Copiado!' : 'Copiar'}
-                    </button>
-                    <a href={teacherPontoUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                    >
-                      Abrir
-                    </a>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">Compartilhe com os professores. Podem salvar como atalho no celular (Add to Home Screen).</p>
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                  Por segurança, cada professor possui um link próprio. Gere e compartilhe o link individual na página de Professores.
                 </div>
 
                 {/* Botão relatório de ponto */}

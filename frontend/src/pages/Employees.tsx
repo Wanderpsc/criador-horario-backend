@@ -173,7 +173,6 @@ export default function Employees() {
   const [geralModalOpen, setGeralModalOpen] = useState(false);
   const [geralLink, setGeralLink] = useState('');
   const [geralCopied, setGeralCopied] = useState(false);
-  const [geralGenerating, setGeralGenerating] = useState(false);
   const [geralSettings, setGeralSettings] = useState({
     requireGeolocation: false,
     latitude: '',
@@ -281,12 +280,15 @@ export default function Employees() {
 
   const pontoMutation = useMutation({
     mutationFn: async (employeeId: string) => {
-      const res = await api.post('/attendance-links/school-link');
-      return { token: res.data.token, employeeId };
+      const res = await api.post('/attendance-links', {
+        personType: 'employee',
+        personId: employeeId,
+      });
+      return { token: res.data.token };
     },
-    onSuccess: ({ token, employeeId }) => {
+    onSuccess: ({ token }) => {
       const base = window.location.origin + window.location.pathname;
-      const url = `${base}#/ponto-geral/${token}?personType=employee&personId=${employeeId}`;
+      const url = `${base}#/ponto/${token}`;
       setPontoLink(url);
       setPontoCopied(false);
       setPontoModalOpen(true);
@@ -299,35 +301,6 @@ export default function Employees() {
       setPontoCopied(true);
       setTimeout(() => setPontoCopied(false), 2500);
     });
-  };
-
-  const generateGeralLink = async () => {
-    setGeralGenerating(true);
-    try {
-      const res = await api.post('/attendance-links/school-link');
-      const token = res.data.token;
-      const base = window.location.origin + window.location.pathname;
-      setGeralLink(`${base}#/ponto-geral/${token}`);
-      setGeralCopied(false);
-      // Carregar configurações existentes
-      try {
-        const cfg = await api.get('/attendance-links/school-link');
-        const d = cfg.data;
-        setGeralSettings({
-          requireGeolocation: d.requireGeolocation || false,
-          latitude: d.latitude != null ? String(d.latitude) : '',
-          longitude: d.longitude != null ? String(d.longitude) : '',
-          areaM2: d.areaM2 || 1000,
-          requirePhoto: d.requirePhoto || false,
-          graceMinutes: d.graceMinutes ?? 10,
-        });
-      } catch {}
-      setGeralModalOpen(true);
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Erro ao gerar link geral.');
-    } finally {
-      setGeralGenerating(false);
-    }
   };
 
   const copyGeralLink = () => {
@@ -499,15 +472,6 @@ export default function Employees() {
         >
           <Link2 className="w-4 h-4" />
           {inviteMutation.isPending ? 'Gerando...' : 'Gerar Link de Cadastro'}
-        </button>
-        <button
-          onClick={generateGeralLink}
-          disabled={geralGenerating}
-          className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 text-sm font-medium disabled:opacity-60"
-          title="Link único de ponto eletrônico para todos os funcionários e professores"
-        >
-          <Timer className="w-4 h-4" />
-          {geralGenerating ? 'Gerando...' : 'Link Geral do Ponto'}
         </button>
       </div>
 
@@ -1574,9 +1538,17 @@ export default function Employees() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Cargo / Função</label>
-                    <input value={form.cargo} onChange={e => setFieldUpper('cargo', e.target.value)}
+                    <input
+                      list="employee-role-options"
+                      value={form.cargo}
+                      onChange={e => setFieldUpper('cargo', e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
-                      placeholder="Ex: COORDENADOR, SECRETÁRIO, AUXILIAR..." />
+                      placeholder="Selecione ou informe o cargo"
+                    />
+                    <datalist id="employee-role-options">
+                      <option value="DIRETOR" />
+                      <option value="COORDENADOR" />
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Setor / Departamento</label>
