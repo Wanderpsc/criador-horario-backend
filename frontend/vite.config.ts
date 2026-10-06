@@ -69,6 +69,9 @@ export default defineConfig(({ command, mode }) => {
   ],
   // Base path dinâmico: GitHub Pages usa subdiretório, Surge.sh serve do root
   base: mode === 'github' ? '/criador-horario-backend/' : '/',
+  build: {
+    emptyOutDir: true,
+  },
   // Injeta explicitamente a URL do backend para evitar que variáveis de sessão do sistema sobrescrevam o .env
   envDir: process.cwd(),
   server: {
