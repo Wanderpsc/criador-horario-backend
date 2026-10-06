@@ -280,12 +280,13 @@ export default function Employees() {
   });
 
   const pontoMutation = useMutation({
-    mutationFn: (employeeId: string) =>
-      api.post('/attendance-links', { personType: 'employee', personId: employeeId }),
-    onSuccess: (res) => {
-      const token = res.data.token;
+    mutationFn: async (employeeId: string) => {
+      const res = await api.post('/attendance-links/school-link');
+      return { token: res.data.token, employeeId };
+    },
+    onSuccess: ({ token, employeeId }) => {
       const base = window.location.origin + window.location.pathname;
-      const url = `${base}#/ponto/${token}`;
+      const url = `${base}#/ponto-geral/${token}?personType=employee&personId=${employeeId}`;
       setPontoLink(url);
       setPontoCopied(false);
       setPontoModalOpen(true);

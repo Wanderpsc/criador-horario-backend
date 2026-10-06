@@ -131,7 +131,13 @@ export default function PontoPublicoTeacher() {
     if (!token) return;
     axios
       .get(`${API}/teacher-ponto/teacher-public/${token}`)
-      .then(r => setLinkConfig(r.data))
+      .then(r => {
+        setLinkConfig(r.data);
+        const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        const teacherId = params.get('teacherId');
+        const teacher = r.data.teachers.find((item: TeacherInfo) => item._id === teacherId);
+        if (teacher) selectTeacher(teacher);
+      })
       .catch(e => setLinkError(e.response?.data?.message || 'Link inválido.'))
       .finally(() => setLoadingLink(false));
   }, [token]);

@@ -26,6 +26,7 @@ export interface IEmployeeAttendance extends Document {
   workedMinutes?: number;
   expectedMinutes?: number;
   overtimeMinutes?: number;
+  deficitMinutes?: number;
   earlyDepartureMinutes?: number;
   lateArrivalMinutes?: number;
   // Plantão
@@ -58,6 +59,16 @@ export interface IEmployeeAttendance extends Document {
   latitude?: number;
   longitude?: number;
   locationValid?: boolean;
+  punches?: {
+    type: 'entry' | 'exit';
+    shift: 1 | 2 | 3;
+    time: string;
+    recordedAt: Date;
+    photoData?: string;
+    latitude?: number;
+    longitude?: number;
+    locationValid?: boolean;
+  }[];
   // Retificações feitas pelo administrador
   rectifications?: {
     rectifiedBy: string;
@@ -98,6 +109,7 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
     workedMinutes: { type: Number, default: 0 },
     expectedMinutes: { type: Number, default: 0 },
     overtimeMinutes: { type: Number, default: 0 },
+    deficitMinutes: { type: Number, default: 0 },
     earlyDepartureMinutes: { type: Number, default: 0 },
     lateArrivalMinutes: { type: Number, default: 0 },
     isPlantao: { type: Boolean, default: false },
@@ -122,6 +134,16 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
     latitude:      { type: Number },
     longitude:     { type: Number },
     locationValid: { type: Boolean },
+    punches: [{
+      type:          { type: String, enum: ['entry', 'exit'], required: true },
+      shift:         { type: Number, enum: [1, 2, 3], required: true },
+      time:          { type: String, required: true },
+      recordedAt:    { type: Date, required: true },
+      photoData:     { type: String },
+      latitude:      { type: Number },
+      longitude:     { type: Number },
+      locationValid: { type: Boolean },
+    }],
     rectifications: [{
       rectifiedBy:     { type: String, required: true },
       rectifiedByName: { type: String, required: true },

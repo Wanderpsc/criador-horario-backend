@@ -37,6 +37,13 @@ export default function AddToHomeScreen({ label }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [installed, setInstalled] = useState(false);
   const currentUrl = window.location.href;
+  const rememberDestination = () => {
+    try {
+      localStorage.setItem('ponto.pwaDestination', window.location.hash);
+    } catch (error) {
+      console.warn('Não foi possível salvar o destino personalizado do ponto.', error);
+    }
+  };
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -56,6 +63,7 @@ export default function AddToHomeScreen({ label }: Props) {
   if (isStandalone || installed) return null;
 
   const handleAndroidInstall = async () => {
+    rememberDestination();
     if (deferredPrompt) {
       await deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
@@ -74,7 +82,7 @@ export default function AddToHomeScreen({ label }: Props) {
       {/* ── Botão fixo (canto inferior direito) ──────────────────── */}
       <button
         type="button"
-        onClick={platform === 'ios' || platform === 'desktop' ? () => setShowModal(true) : handleAndroidInstall}
+        onClick={platform === 'ios' || platform === 'desktop' ? () => { rememberDestination(); setShowModal(true); } : handleAndroidInstall}
         className="fixed bottom-5 right-4 z-40 flex items-center gap-2
                    bg-white border border-gray-200 text-gray-700 text-xs font-semibold
                    px-3 py-2 rounded-2xl shadow-lg hover:shadow-xl
@@ -105,16 +113,9 @@ export default function AddToHomeScreen({ label }: Props) {
               </button>
             </div>
 
-            {/* QR Code */}
-            <div className="flex flex-col items-center mb-4 bg-gray-50 rounded-xl p-3">
-              <p className="text-xs text-gray-500 mb-2">
-                Escaneie para abrir em outro dispositivo:
-              </p>
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(currentUrl)}&size=140x140&margin=4`}
-                alt="QR Code do link de ponto"
-                className="w-36 h-36 rounded-lg border border-gray-200"
-              />
+            <div className="mb-4 bg-gray-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Link pessoal protegido</p>
+              <p className="text-[11px] text-gray-500 break-all font-mono">{currentUrl}</p>
             </div>
 
             {/* Instruções por plataforma */}

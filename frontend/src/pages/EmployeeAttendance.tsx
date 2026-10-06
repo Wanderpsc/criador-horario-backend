@@ -85,6 +85,7 @@ interface ReportEmployee {
   totalWorkedMinutes: number;
   totalExpectedMinutes: number;
   totalOvertimeMinutes: number;
+  totalDeficitMinutes: number;
   totalEarlyDepartureMinutes: number;
   totalLateArrivalMinutes: number;
   absenceDates: string[];
@@ -485,6 +486,7 @@ export default function EmployeeAttendancePage() {
       <td>${r.justifiedDays}</td>
       <td>${fmtMin(r.totalWorkedMinutes)}</td>
       <td>${fmtMin(r.totalOvertimeMinutes)}</td>
+      <td>${fmtMin(r.totalDeficitMinutes)}</td>
       <td>${fmtMin(r.totalEarlyDepartureMinutes)}</td>
     </tr>`).join('');
 
@@ -520,7 +522,7 @@ export default function EmployeeAttendancePage() {
     <th>Nome</th><th>Cargo</th><th>Setor</th><th>Dias</th>
     <th>Presentes</th><th>Faltas</th><th>Parcial</th>
     <th>Atestado</th><th>Férias</th><th>Justificadas</th>
-    <th>H. Trabalhadas</th><th>H. Extra</th><th>Saída Antecip.</th>
+    <th>H. Trabalhadas</th><th>H. Extra</th><th>Déficit</th><th>Saída Antecip.</th>
   </tr></thead>
   <tbody>${tableRows}</tbody>
 </table>
@@ -1746,13 +1748,14 @@ ${sections}
           ) : (
             <>
               {/* Cards de resumo geral */}
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
                 {[
                   { label: 'Presenças', value: filteredRpt.reduce((a,r)=>a+r.presentDays,0), color: 'bg-green-50 border-green-300 text-green-800' },
                   { label: 'Faltas', value: filteredRpt.reduce((a,r)=>a+r.absentDays,0), color: 'bg-red-50 border-red-300 text-red-800' },
                   { label: 'Atestados', value: filteredRpt.reduce((a,r)=>a+r.medicalLeaveDays,0), color: 'bg-blue-50 border-blue-300 text-blue-800' },
                   { label: 'Férias', value: filteredRpt.reduce((a,r)=>a+r.vacationDays,0), color: 'bg-purple-50 border-purple-300 text-purple-800' },
                   { label: 'H. Extra', value: fmtMin(filteredRpt.reduce((a,r)=>a+r.totalOvertimeMinutes,0)), color: 'bg-pink-50 border-pink-300 text-pink-800' },
+                  { label: 'Déficit', value: fmtMin(filteredRpt.reduce((a,r)=>a+r.totalDeficitMinutes,0)), color: 'bg-red-50 border-red-300 text-red-800' },
                   { label: 'Atrasos', value: fmtMin(filteredRpt.reduce((a,r)=>a+r.totalLateArrivalMinutes,0)), color: 'bg-orange-50 border-orange-300 text-orange-800' },
                 ].map(c => (
                   <div key={c.label} className={`card border-2 text-center ${c.color}`}>
@@ -1780,6 +1783,7 @@ ${sections}
                         <th className="p-3 text-center">Justif.</th>
                         <th className="p-3 text-center">H. Trab.</th>
                         <th className="p-3 text-center">H. Extra</th>
+                        <th className="p-3 text-center">Déficit</th>
                         <th className="p-3 text-center">S. Antec.</th>
                         <th className="p-3 text-center">Detalhes</th>
                       </tr>
@@ -1802,6 +1806,7 @@ ${sections}
                               <td className="p-3 text-center text-yellow-600">{r.justifiedDays}</td>
                               <td className="p-3 text-center text-xs">{fmtMin(r.totalWorkedMinutes)}</td>
                               <td className="p-3 text-center text-xs text-pink-700">{fmtMin(r.totalOvertimeMinutes)}</td>
+                              <td className="p-3 text-center text-xs text-red-700">{fmtMin(r.totalDeficitMinutes)}</td>
                               <td className="p-3 text-center text-xs text-orange-700">{fmtMin(r.totalEarlyDepartureMinutes)}</td>
                               <td className="p-3 text-center">
                                 <button onClick={() => setExpandedRpt(isExp ? null : r.employeeId)} className="btn btn-sm btn-outline">
@@ -1811,7 +1816,7 @@ ${sections}
                             </tr>
                             {isExp && (
                               <tr key={`${r.employeeId}-exp`} className="bg-purple-50 border-b border-purple-100">
-                                <td colSpan={13} className="p-4">
+                                <td colSpan={14} className="p-4">
                                   <div className="mb-3">
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-sm font-semibold">Frequência:</span>

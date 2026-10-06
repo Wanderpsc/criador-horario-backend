@@ -10,6 +10,7 @@ import axios from 'axios';
 import {
   User, Users, Clock, CheckCircle, XCircle, AlertCircle,
   BookOpen, LogIn, LogOut, Search, ChevronRight, ArrowLeft, MapPin,
+  ShieldCheck, Wifi, Sparkles,
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
@@ -26,18 +27,30 @@ interface Person {
 
 interface ScheduleSlot {
   period: number;
+  subjectId: string;
+  classId: string;
   startTime: string;
   endTime: string;
   subjectName: string;
   className: string;
+  status: 'present' | 'absent' | 'pending';
+  entryTime?: string;
 }
 
 interface Attendance {
   entryTime?: string;
   exitTime?: string;
+  entryTime2?: string;
+  exitTime2?: string;
+  entryTime3?: string;
+  exitTime3?: string;
   workedMinutes?: number;
+  expectedMinutes?: number;
+  overtimeMinutes?: number;
+  deficitMinutes?: number;
   totalPresentClasses?: number;
   totalScheduledClasses?: number;
+  classes?: ScheduleSlot[];
 }
 
 interface PersonInfo {
@@ -47,7 +60,21 @@ interface PersonInfo {
   cargo?: string;
   setor?: string;
   jornadaTrabalho?: string;
-  workSchedule?: { entryTime: string; exitTime: string; workDays: string[]; toleranceMinutes: number } | null;
+  workSchedule?: {
+    shiftMode: 'fixed' | 'rotating';
+    shiftType: 'single' | 'split2' | 'split3';
+    entryTime: string;
+    exitTime: string;
+    shift2EntryTime?: string;
+    shift2ExitTime?: string;
+    shift3EntryTime?: string;
+    shift3ExitTime?: string;
+    rotatingWorkHours?: number;
+    rotatingRestDays?: number;
+    rotatingEntryTime?: string;
+    workDays: string[];
+    toleranceMinutes: number;
+  } | null;
   requiresEmail?: boolean;
   today: string;
   dayLabel: string;
@@ -62,6 +89,32 @@ interface PersonInfo {
 }
 
 type Step = 'select' | 'info' | 'done';
+type PeopleFilter = 'all' | 'teacher' | 'employee';
+
+function TechBackdrop() {
+  return (
+    <>
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-28 -top-28 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute -right-24 top-1/3 h-72 w-72 rounded-full bg-violet-500/25 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.8) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }} />
+      </div>
+    </>
+  );
+}
+
+function SecureFooter() {
+  return (
+    <div className="flex items-center justify-center gap-2 py-4 text-[11px] text-slate-400">
+      <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+      <span>Registro protegido e sincronizado em nuvem</span>
+    </div>
+  );
+}
 
 export default function PontoPublicoGeral() {
   const { token } = useParams<{ token: string }>();
@@ -73,6 +126,7 @@ export default function PontoPublicoGeral() {
   const [loadingPeople, setLoadingPeople] = useState(true);
   const [errorPeople, setErrorPeople] = useState('');
   const [search, setSearch] = useState('');
+  const [peopleFilter, setPeopleFilter] = useState<PeopleFilter>('all');
   const [selected, setSelected] = useState<Person | null>(null);
 
   // Step 2 state
@@ -88,9 +142,7 @@ export default function PontoPublicoGeral() {
   const [geoError, setGeoError] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [requireGeolocation, setRequireGeolocation] = useState(false);
   const [requirePhoto, setRequirePhoto] = useState(false);
-  const [schoolGeoConfig, setSchoolGeoConfig] = useState<{ latitude?: number; longitude?: number; areaM2?: number }>({});
   const [clock, setClock] = useState(() => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
   // Relógio em tempo real
@@ -109,9 +161,14 @@ export default function PontoPublicoGeral() {
       .then(r => {
         setSchoolName(r.data.schoolName);
         setPeople(r.data.people);
-        setRequireGeolocation(r.data.requireGeolocation || false);
         setRequirePhoto(r.data.requirePhoto || false);
-        setSchoolGeoConfig({ latitude: r.data.latitude, longitude: r.data.longitude, areaM2: r.data.areaM2 });
+        const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        const personId = params.get('personId');
+        const personType = params.get('personType');
+        const person = r.data.people.find((item: Person) =>
+          item._id === personId && item.type === personType
+        );
+        if (person) selectPerson(person);
       })
       .catch(e => setErrorPeople(e.response?.data?.message || 'Erro ao carregar lista.'))
       .finally(() => setLoadingPeople(false));
@@ -143,7 +200,7 @@ export default function PontoPublicoGeral() {
   }
 
   // Registrar ponto
-  async function markAttendance(action: 'entry' | 'exit' | 'confirm') {
+  async function markAttendance(action: 'entry' | 'exit' | 'confirm', slot?: ScheduleSlot) {
     if (!selected) return;
 
     // Validar e-mail se necessário
@@ -173,6 +230,8 @@ export default function PontoPublicoGeral() {
         personType: selected.type,
         personId: selected._id,
         action,
+        period: slot?.period,
+        classId: slot?.classId,
         lat,
         lng,
         photoData: photoData || undefined,
@@ -180,26 +239,40 @@ export default function PontoPublicoGeral() {
       });
       setResult(r.data);
       setUpdatedAttendance(r.data.attendance);
-      setStep('done');
+      setPersonInfo(current => current ? {
+        ...current,
+        attendance: r.data.attendance,
+        schedule: current.schedule?.map(item =>
+          slot && item.period === slot.period && item.classId === slot.classId
+            ? { ...item, status: 'present', entryTime: r.data.attendance?.classes?.find((c: ScheduleSlot) => c.period === slot.period && c.classId === slot.classId)?.entryTime }
+            : item
+        ),
+      } : current);
+      setPhotoData(null);
     } catch (e: any) {
       setResult({ message: e.response?.data?.message || 'Erro ao registrar ponto.' });
-      setStep('done');
     } finally {
       setMarking(false);
     }
   }
 
   const filteredPeople = people.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    (peopleFilter === 'all' || p.type === peopleFilter)
+    && p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   // ─── Loading da lista ───────────────────────────────────────────────────────
   if (loadingPeople) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-          <p className="text-gray-500">Carregando...</p>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <TechBackdrop />
+        <div className="relative z-10 text-center">
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-indigo-600 p-[2px] mx-auto mb-4 shadow-2xl shadow-cyan-500/30">
+            <div className="h-full w-full rounded-2xl bg-slate-950 flex items-center justify-center">
+              <Clock className="h-7 w-7 text-cyan-300 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-slate-300 font-medium">Conectando ao ponto...</p>
         </div>
       </div>
     );
@@ -207,8 +280,9 @@ export default function PontoPublicoGeral() {
 
   if (errorPeople) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <TechBackdrop />
+        <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center border border-white/20">
           <XCircle className="w-14 h-14 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Link inválido</h2>
           <p className="text-gray-500 text-sm">{errorPeople}</p>
@@ -220,21 +294,59 @@ export default function PontoPublicoGeral() {
   // ─── Step: selecionar pessoa ────────────────────────────────────────────────
   if (step === 'select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-start justify-center p-4 pt-8">
+      <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8">
+        <TechBackdrop />
         <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl shadow-black/30 w-full max-w-md overflow-hidden border border-white/20">
           {/* Header */}
-          <div className="bg-indigo-600 rounded-t-2xl p-6 text-white text-center">
-            <Clock className="w-10 h-10 mx-auto mb-2 opacity-90" />
-            <h1 className="text-xl font-bold">Ponto Eletrônico</h1>
-            {schoolName && <p className="text-indigo-200 text-sm mt-1">{schoolName}</p>}
-            <p className="text-3xl font-mono font-bold mt-2 tracking-widest">{clock}</p>
+          <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-900 p-6 text-white">
+            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full border border-cyan-300/20" />
+            <div className="absolute -right-5 -top-5 h-24 w-24 rounded-full border border-cyan-300/20" />
+            <div className="relative flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-cyan-300 text-xs font-semibold uppercase tracking-[0.2em]">
+                  <Sparkles className="h-3.5 w-3.5" /> EduSync Ponto
+                </div>
+                <h1 className="text-2xl font-black mt-2">Olá! Registre seu ponto</h1>
+                {schoolName && <p className="text-blue-200 text-sm mt-1">{schoolName}</p>}
+              </div>
+              <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
+                <Clock className="w-7 h-7 text-cyan-300" />
+              </div>
+            </div>
+            <div className="relative mt-5 flex items-end justify-between">
+              <p className="text-4xl font-mono font-black tracking-tight tabular-nums">{clock}</p>
+              <span className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-300/20">
+                <Wifi className="h-3 w-3" /> Online
+              </span>
+            </div>
           </div>
 
           <div className="p-5 space-y-4">
-            <p className="text-gray-600 text-sm text-center font-medium">
-              Selecione seu nome para registrar o ponto
-            </p>
+            <div>
+              <p className="text-slate-800 font-bold">Quem está registrando?</p>
+              <p className="text-slate-500 text-xs mt-0.5">Localize seu nome e confirme sua jornada.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1.5">
+              {([
+                ['all', 'Todos'],
+                ['teacher', 'Professores'],
+                ['employee', 'Equipe'],
+              ] as [PeopleFilter, string][]).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setPeopleFilter(value)}
+                  className={`min-h-10 rounded-xl px-2 text-xs font-bold transition-all ${
+                    peopleFilter === value
+                      ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-slate-200'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
             {/* Busca */}
             <div className="relative">
@@ -244,13 +356,13 @@ export default function PontoPublicoGeral() {
                 placeholder="Buscar pelo nome..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full min-h-12 pl-10 pr-4 border border-slate-200 bg-slate-50 rounded-2xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 autoFocus
               />
             </div>
 
             {/* Lista */}
-            <div className="max-h-[60vh] overflow-y-auto space-y-1 rounded-xl border border-gray-100">
+            <div className="max-h-[48vh] overflow-y-auto space-y-2 pr-1">
               {filteredPeople.length === 0 ? (
                 <p className="text-center text-gray-400 text-sm py-8">Nenhum resultado.</p>
               ) : (
@@ -258,12 +370,12 @@ export default function PontoPublicoGeral() {
                   <button
                     key={p._id}
                     onClick={() => selectPerson(p)}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 transition-colors text-left border-b border-gray-50 last:border-0"
+                    className="w-full min-h-[64px] flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-white hover:bg-indigo-50 active:scale-[0.99] transition-all text-left border border-slate-100 shadow-sm"
                   >
-                    <div className={`p-1.5 rounded-full ${p.type === 'teacher' ? 'bg-purple-100' : 'bg-blue-100'}`}>
+                    <div className={`p-2.5 rounded-xl ${p.type === 'teacher' ? 'bg-purple-100' : 'bg-cyan-100'}`}>
                       {p.type === 'teacher'
                         ? <BookOpen className="w-4 h-4 text-purple-600" />
-                        : <User className="w-4 h-4 text-blue-600" />
+                        : <User className="w-4 h-4 text-cyan-700" />
                       }
                     </div>
                     <div className="flex-1 min-w-0">
@@ -273,7 +385,7 @@ export default function PontoPublicoGeral() {
                         {p.setor ? ` · ${p.setor}` : ''}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                    <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
                   </button>
                 ))
               )}
@@ -284,6 +396,7 @@ export default function PontoPublicoGeral() {
               {people.filter(p => p.type === 'teacher').length} professor(es) ·{' '}
               {people.filter(p => p.type === 'employee').length} funcionário(s)
             </p>
+            <SecureFooter />
           </div>
         </div>
       </div>
@@ -297,22 +410,34 @@ export default function PontoPublicoGeral() {
 
     const hasEntry = !!(att as any)?.entryTime;
     const hasExit  = !!(att as any)?.exitTime;
-    const teacherMarked = isTeacher && att !== null;
+    const shiftType = personInfo?.workSchedule?.shiftType || 'single';
+    const employeeComplete = hasExit
+      && (shiftType === 'single' || !!att?.exitTime2)
+      && (shiftType !== 'split3' || !!att?.exitTime3);
+    const nextEmployeeAction: 'entry' | 'exit' = !hasEntry || (hasExit && !att?.entryTime2) || (!!att?.exitTime2 && !att?.entryTime3)
+      ? 'entry'
+      : 'exit';
+    const fmtMinutes = (minutes?: number) => {
+      const value = Math.max(0, minutes || 0);
+      return `${Math.floor(value / 60)}h ${String(value % 60).padStart(2, '0')}min`;
+    };
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-start justify-center p-4 pt-8">
+      <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8">
+        <TechBackdrop />
         <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl shadow-black/30 w-full max-w-md overflow-hidden border border-white/20">
           {/* Header */}
-          <div className={`rounded-t-2xl p-5 text-white ${isTeacher ? 'bg-purple-600' : 'bg-indigo-600'}`}>
+          <div className={`relative overflow-hidden p-5 text-white ${isTeacher ? 'bg-gradient-to-br from-slate-950 via-purple-950 to-violet-800' : 'bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-800'}`}>
+            <div className="absolute -right-8 -top-12 h-32 w-32 rounded-full border border-white/10" />
             <button
               onClick={() => { setStep('select'); setSelected(null); setPersonInfo(null); setEmailInput(''); setEmailError(''); }}
-              className="flex items-center gap-1 text-white/70 hover:text-white text-xs mb-3"
+              className="relative flex min-h-10 items-center gap-1 text-white/70 hover:text-white text-xs mb-2"
             >
               <ArrowLeft className="w-3 h-3" /> Voltar
             </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-full">
+            <div className="relative flex items-center gap-3">
+              <div className="bg-white/10 p-3 rounded-2xl ring-1 ring-white/15">
                 {isTeacher ? <BookOpen className="w-6 h-6" /> : <User className="w-6 h-6" />}
               </div>
               <div>
@@ -322,6 +447,9 @@ export default function PontoPublicoGeral() {
                   {personInfo?.setor ? ` · ${personInfo.setor}` : ''}
                 </p>
               </div>
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-bold text-emerald-300">
+                <ShieldCheck className="h-3 w-3" /> SEGURO
+              </span>
             </div>
           </div>
 
@@ -333,11 +461,17 @@ export default function PontoPublicoGeral() {
             ) : (
               <>
                 {/* Info do dia */}
-                <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-2 text-sm text-gray-600">
+                <div className="bg-slate-100 rounded-2xl p-3 flex items-center gap-2 text-sm text-slate-600 border border-slate-200">
                   <Clock className="w-4 h-4 text-gray-400" />
                   <span>{personInfo?.dayLabel} · {personInfo?.today}</span>
                   <span className="ml-auto font-mono font-bold text-gray-800 tracking-wider">{clock}</span>
                 </div>
+
+                {result && (
+                  <div className={`rounded-xl p-3 text-sm ${result.message.toLowerCase().includes('erro') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                    {result.message}
+                  </div>
+                )}
 
                 {/* PROFESSOR: aulas do dia */}
                 {isTeacher && (
@@ -347,8 +481,8 @@ export default function PontoPublicoGeral() {
                       <p className="text-sm text-gray-400 text-center py-4">Sem aulas programadas hoje.</p>
                     ) : (
                       <div className="space-y-2">
-                        {personInfo?.schedule?.map((s, i) => (
-                          <div key={i} className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
+                        {personInfo?.schedule?.map(s => (
+                          <div key={`${s.period}-${s.classId}`} className={`flex items-center gap-3 p-3.5 rounded-2xl border shadow-sm ${s.status === 'present' ? 'bg-emerald-50 border-emerald-200' : s.status === 'absent' ? 'bg-red-50 border-red-200' : 'bg-purple-50 border-purple-100'}`}>
                             <div className="bg-purple-200 text-purple-800 text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center">
                               {s.period}
                             </div>
@@ -358,6 +492,17 @@ export default function PontoPublicoGeral() {
                             </div>
                             {(s.startTime || s.endTime) && (
                               <span className="text-xs text-gray-400 flex-shrink-0">{s.startTime}{s.endTime ? `–${s.endTime}` : ''}</span>
+                            )}
+                            {s.status === 'present' ? (
+                              <span className="text-xs font-bold text-green-700">Confirmada {s.entryTime || ''}</span>
+                            ) : (
+                              <button
+                                onClick={() => markAttendance('confirm', s)}
+                                disabled={marking}
+                                className="min-h-11 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 active:scale-[0.98] disabled:opacity-60 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg shadow-purple-500/20"
+                              >
+                                Confirmar aula
+                              </button>
                             )}
                           </div>
                         ))}
@@ -370,10 +515,30 @@ export default function PontoPublicoGeral() {
                 {!isTeacher && (
                   <>
                     {personInfo?.workSchedule?.entryTime && (
-                      <div className="flex justify-between bg-indigo-50 rounded-lg p-3 text-sm">
-                        <span className="text-indigo-700">⏰ Horário previsto:</span>
+                      <div className="bg-indigo-50 rounded-lg p-3 text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-indigo-700">⏰ 1º turno:</span>
+                          <span className="font-bold text-indigo-800">{personInfo.workSchedule.entryTime} – {personInfo.workSchedule.exitTime}</span>
+                        </div>
+                        {shiftType !== 'single' && (
+                          <div className="flex justify-between">
+                            <span className="text-indigo-700">⏰ 2º turno:</span>
+                            <span className="font-bold text-indigo-800">{personInfo.workSchedule.shift2EntryTime} – {personInfo.workSchedule.shift2ExitTime}</span>
+                          </div>
+                        )}
+                        {shiftType === 'split3' && (
+                          <div className="flex justify-between">
+                            <span className="text-indigo-700">⏰ 3º turno:</span>
+                            <span className="font-bold text-indigo-800">{personInfo.workSchedule.shift3EntryTime} – {personInfo.workSchedule.shift3ExitTime}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {personInfo?.workSchedule?.shiftMode === 'rotating' && (
+                      <div className="bg-indigo-50 rounded-lg p-3 text-sm flex justify-between">
+                        <span className="text-indigo-700">⏰ Plantão:</span>
                         <span className="font-bold text-indigo-800">
-                          {personInfo.workSchedule.entryTime} – {personInfo.workSchedule.exitTime}
+                          {personInfo.workSchedule.rotatingWorkHours}h de trabalho · {personInfo.workSchedule.rotatingRestDays} dia(s) de folga
                         </span>
                       </div>
                     )}
@@ -401,27 +566,40 @@ export default function PontoPublicoGeral() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className={`rounded-xl p-3 text-center ${hasEntry ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
-                        <LogIn className={`w-5 h-5 mx-auto mb-1 ${hasEntry ? 'text-green-600' : 'text-gray-300'}`} />
-                        <p className="text-xs text-gray-500">Entrada</p>
-                        <p className={`font-bold text-sm ${hasEntry ? 'text-green-700' : 'text-gray-300'}`}>
-                          {hasEntry ? (att as any).entryTime : '--:--'}
-                        </p>
-                      </div>
-                      <div className={`rounded-xl p-3 text-center ${hasExit ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
-                        <LogOut className={`w-5 h-5 mx-auto mb-1 ${hasExit ? 'text-red-600' : 'text-gray-300'}`} />
-                        <p className="text-xs text-gray-500">Saída</p>
-                        <p className={`font-bold text-sm ${hasExit ? 'text-red-700' : 'text-gray-300'}`}>
-                          {hasExit ? (att as any).exitTime : '--:--'}
-                        </p>
-                      </div>
+                    <div className="space-y-2">
+                      {[
+                        { shift: 1, entry: att?.entryTime, exit: att?.exitTime },
+                        ...(shiftType !== 'single' ? [{ shift: 2, entry: att?.entryTime2, exit: att?.exitTime2 }] : []),
+                        ...(shiftType === 'split3' ? [{ shift: 3, entry: att?.entryTime3, exit: att?.exitTime3 }] : []),
+                      ].map(item => (
+                        <div key={item.shift} className="grid grid-cols-2 gap-3">
+                          <div className={`rounded-xl p-3 text-center ${item.entry ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-100'}`}>
+                            <LogIn className={`w-5 h-5 mx-auto mb-1 ${item.entry ? 'text-green-600' : 'text-gray-300'}`} />
+                            <p className="text-xs text-gray-500">Entrada · {item.shift}º turno</p>
+                            <p className={`font-bold text-sm ${item.entry ? 'text-green-700' : 'text-gray-300'}`}>{item.entry || '--:--'}</p>
+                          </div>
+                          <div className={`rounded-xl p-3 text-center ${item.exit ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
+                            <LogOut className={`w-5 h-5 mx-auto mb-1 ${item.exit ? 'text-red-600' : 'text-gray-300'}`} />
+                            <p className="text-xs text-gray-500">Saída · {item.shift}º turno</p>
+                            <p className={`font-bold text-sm ${item.exit ? 'text-red-700' : 'text-gray-300'}`}>{item.exit || '--:--'}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
+
+                    {att && (
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-blue-50 text-blue-800 rounded-lg p-2">Previsto: <strong>{fmtMinutes(att.expectedMinutes)}</strong></div>
+                        <div className="bg-green-50 text-green-800 rounded-lg p-2">Realizado: <strong>{fmtMinutes(att.workedMinutes)}</strong></div>
+                        <div className="bg-emerald-50 text-emerald-800 rounded-lg p-2">Saldo: <strong>{fmtMinutes(att.overtimeMinutes)}</strong></div>
+                        <div className="bg-red-50 text-red-800 rounded-lg p-2">Déficit: <strong>{fmtMinutes(att.deficitMinutes)}</strong></div>
+                      </div>
+                    )}
                   </>
                 )}
 
                 {/* Foto de confirmação ao vivo */}
-                {!isTeacher && !hasExit && (
+                {(isTeacher || !employeeComplete) && (
                   <div className="space-y-3">
                     {/* Campo de e-mail como credencial */}
                     {personInfo?.requiresEmail && (
@@ -465,46 +643,31 @@ export default function PontoPublicoGeral() {
                 )}
 
                 {/* Botão de ação */}
-                {isTeacher ? (
-                  teacherMarked ? (
-                    <div className="flex items-center gap-2 bg-green-50 text-green-700 p-4 rounded-xl justify-center">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-medium text-sm">Presença já registrada hoje</span>
-                    </div>
-                  ) : (personInfo?.schedule?.length ?? 0) > 0 ? (
-                    <button
-                      onClick={() => markAttendance('confirm')}
-                      disabled={marking}
-                      className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle className="w-5 h-5" />
-                      {marking ? 'Registrando...' : 'Confirmar Presença'}
-                    </button>
-                  ) : null
-                ) : hasExit ? (
+                {isTeacher ? null : employeeComplete ? (
                   <div className="flex items-center gap-2 bg-green-50 text-green-700 p-4 rounded-xl justify-center">
                     <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium text-sm">Ponto completo hoje</span>
+                    <span className="font-medium text-sm">Carga diária registrada</span>
                   </div>
-                ) : hasEntry ? (
+                ) : nextEmployeeAction === 'exit' ? (
                   <button
                     onClick={() => markAttendance('exit')}
                     disabled={marking}
-                    className="w-full bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2"
+                    className="w-full min-h-14 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 active:scale-[0.99] disabled:opacity-60 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
                   >
                     <LogOut className="w-5 h-5" />
-                    {marking ? 'Registrando...' : 'Registrar Saída'}
+                    {marking ? 'Registrando...' : 'Registrar próxima saída'}
                   </button>
                 ) : (
                   <button
                     onClick={() => markAttendance('entry')}
                     disabled={marking}
-                    className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2"
+                    className="w-full min-h-14 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-600 hover:to-indigo-700 active:scale-[0.99] disabled:opacity-60 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
                   >
                     <LogIn className="w-5 h-5" />
-                    {marking ? 'Registrando...' : 'Registrar Entrada'}
+                    {marking ? 'Registrando...' : 'Registrar próxima entrada'}
                   </button>
                 )}
+                <SecureFooter />
               </>
             )}
           </div>
@@ -518,9 +681,10 @@ export default function PontoPublicoGeral() {
   const att2 = updatedAttendance;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <TechBackdrop />
       <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm text-center p-8">
+      <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl w-full max-w-sm text-center p-8 border border-white/20">
         {isSuccess ? (
           <>
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />

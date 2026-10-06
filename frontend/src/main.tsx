@@ -15,6 +15,17 @@ import './index.css';
 
 console.log('🚀 Main.tsx carregado!');
 
+try {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as any).standalone === true;
+  const destination = localStorage.getItem('ponto.pwaDestination');
+  if (isStandalone && !window.location.hash && destination?.startsWith('#/')) {
+    window.location.hash = destination;
+  }
+} catch (error) {
+  console.warn('Não foi possível restaurar o destino personalizado do ponto.', error);
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

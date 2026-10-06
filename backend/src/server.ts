@@ -68,6 +68,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { auditMiddleware } from './middleware/audit';
 import { startNotificationCron } from './services/notification.cron';
 import { startCalendarAlertsCron } from './services/calendar.alerts.cron';
+import { startAttendanceAbsenceCron } from './services/attendance-absence.cron';
 import { COPYRIGHT, SECURITY_INFO } from './config/copyright';
 
 const app = express();
@@ -300,6 +301,9 @@ const server = app.listen(PORT, () => {
   
   // Iniciar cronjob de alertas de calendário
   startCalendarAlertsCron();
+
+  // Fechar faltas de quem não registrou o ponto após o horário previsto
+  startAttendanceAbsenceCron();
 });
 
 // Graceful shutdown

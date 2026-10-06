@@ -15,7 +15,7 @@ interface ClassRecord {
   grade?: string;
   status: 'present' | 'absent' | 'pending';
   entryTime?: string;
-  markedAt?: string;
+  markedAt?: string | Date;
   isPedagogical?: boolean;
 }
 
@@ -77,13 +77,32 @@ export default function PontoReport({ date, attendanceList, schoolData }: Props)
 
   const totals = useMemo(() => {
     let present = 0, absent = 0, pending = 0;
+    let expectedMinutes = 0, workedMinutes = 0;
     filtered.forEach(r => r.classes.forEach(c => {
+      const [startHour, startMinute] = c.startTime.split(':').map(Number);
+      const [endHour, endMinute] = c.endTime.split(':').map(Number);
+      const duration = Number.isFinite(startHour) && Number.isFinite(endHour)
+        ? Math.max(0, endHour * 60 + endMinute - (startHour * 60 + startMinute))
+        : 0;
+      expectedMinutes += duration;
       if (c.status === 'present') present++;
       else if (c.status === 'absent') absent++;
       else pending++;
+      if (c.status === 'present') workedMinutes += duration;
     }));
-    return { present, absent, pending, total: present + absent + pending };
+    return {
+      present,
+      absent,
+      pending,
+      total: present + absent + pending,
+      expectedMinutes,
+      workedMinutes,
+      deficitMinutes: Math.max(0, expectedMinutes - workedMinutes),
+    };
   }, [filtered]);
+
+  const formatMinutes = (minutes: number) =>
+    `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}min`;
 
   function statusBadge(status: string) {
     if (status === 'present') return <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><CheckCircle size={10} />Presente</span>;
@@ -139,6 +158,9 @@ export default function PontoReport({ date, attendanceList, schoolData }: Props)
           <span className="text-green-700 font-semibold">✅ {totals.present} presentes</span>
           <span className="text-red-600 font-semibold">❌ {totals.absent} ausentes</span>
           <span className="text-gray-500 font-semibold">⏳ {totals.pending} pendentes</span>
+          <span className="text-blue-700 font-semibold">Previsto: {formatMinutes(totals.expectedMinutes)}</span>
+          <span className="text-green-700 font-semibold">Realizado: {formatMinutes(totals.workedMinutes)}</span>
+          <span className="text-red-700 font-semibold">Déficit: {formatMinutes(totals.deficitMinutes)}</span>
           {totals.total > 0 && (
             <span className="text-indigo-700 font-bold">
               {Math.round((totals.present / totals.total) * 100)}% frequência
@@ -169,6 +191,9 @@ export default function PontoReport({ date, attendanceList, schoolData }: Props)
                 {filterTeacher && ` · Professor: ${filterTeacher}`}
                 {filterClass && ` · Turma: ${filterClass}`}
                 {filterStatus !== 'all' && ` · Status: ${filterStatus}`}
+              </p>
+              <p className="text-xs font-semibold text-gray-700 mt-1">
+                Carga prevista: {formatMinutes(totals.expectedMinutes)} · Carga realizada: {formatMinutes(totals.workedMinutes)} · Déficit: {formatMinutes(totals.deficitMinutes)}
               </p>
               <p className="text-xs text-gray-400">Gerado em: {new Date().toLocaleString('pt-BR')}</p>
             </div>

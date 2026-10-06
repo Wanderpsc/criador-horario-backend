@@ -83,7 +83,10 @@ function calcDerived(data: any) {
     overtimeMinutes = workedMinutes - expectedMinutes;
   }
 
-  return { workedMinutes, expectedMinutes, overtimeMinutes, earlyDepartureMinutes, lateArrivalMinutes };
+  const isExcused = ['medical_leave', 'vacation', 'justified', 'holiday'].includes(data.status);
+  const deficitMinutes = isExcused ? 0 : Math.max(0, expectedMinutes - workedMinutes);
+
+  return { workedMinutes, expectedMinutes, overtimeMinutes, deficitMinutes, earlyDepartureMinutes, lateArrivalMinutes };
 }
 
 // ── GET / — listar registros por data ou período ──────────────────────────────
@@ -285,6 +288,7 @@ router.get('/report', auth, async (req: AuthRequest, res) => {
           totalWorkedMinutes: 0,
           totalExpectedMinutes: 0,
           totalOvertimeMinutes: 0,
+          totalDeficitMinutes: 0,
           totalEarlyDepartureMinutes: 0,
           totalLateArrivalMinutes: 0,
           absenceDates: [],
@@ -296,6 +300,7 @@ router.get('/report', auth, async (req: AuthRequest, res) => {
       e.totalWorkedMinutes += r.workedMinutes || 0;
       e.totalExpectedMinutes += r.expectedMinutes || 0;
       e.totalOvertimeMinutes += r.overtimeMinutes || 0;
+      e.totalDeficitMinutes += r.deficitMinutes ?? Math.max(0, (r.expectedMinutes || 0) - (r.workedMinutes || 0));
       e.totalEarlyDepartureMinutes += r.earlyDepartureMinutes || 0;
       e.totalLateArrivalMinutes += r.lateArrivalMinutes || 0;
       if (r.status === 'present') e.presentDays++;
