@@ -156,13 +156,18 @@ export default function Dashboard() {
               <Clock size={30} />
               <span className="text-xs font-black whitespace-nowrap">Ponto de Funcionários</span>
             </Link>
-            {canUseCertificates(user) && <Link
+            <Link
               to="/medical-certificates"
-              className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-teal-600 to-blue-600 text-white rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all min-w-[100px]"
+              className={`flex flex-col items-center justify-center gap-2 rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all min-w-[100px] ${
+                canUseCertificates(user)
+                  ? 'bg-gradient-to-br from-teal-600 to-blue-600 text-white'
+                  : 'bg-white text-teal-700 border-2 border-teal-200'
+              }`}
             >
               <span className="text-3xl">🩺</span>
               <span className="text-xs font-black whitespace-nowrap">Controle de Atestados</span>
-            </Link>}
+              {!canUseCertificates(user) && <span className="text-[10px] font-bold">Solicitar permissão</span>}
+            </Link>
             <Link
               to="/display-panel"
               className="flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl px-6 py-4 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 min-w-[100px]"

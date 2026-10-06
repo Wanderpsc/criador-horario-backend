@@ -423,9 +423,6 @@ export default function EPIControlPage() {
       sub: [e.cargo, e.setor].filter(Boolean).join(' · '),
     })), [employees]);
 
-  const epiTypeOptions = useMemo(() =>
-    EPI_TYPES.map(t => ({ value: t, label: t })), []);
-
   const filteredFormEpiTypes = useMemo(() =>
     EPI_TYPES.filter(epiType =>
       !formEpiSearch || epiType.toLowerCase().includes(formEpiSearch.toLowerCase())

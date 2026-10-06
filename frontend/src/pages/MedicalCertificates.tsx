@@ -106,7 +106,8 @@ export default function MedicalCertificates() {
 
   if (!allowed) return <div className="p-8 bg-white rounded-xl"><ShieldCheck className="mb-3" />
     <h1 className="text-xl font-bold">Acesso restrito</h1>
-    <p>Solicite à gestão permissão de acesso e leitura ao Controle de Atestados. Este módulo contém dados sensíveis.</p>
+    <p>Este módulo está disponível, mas contém dados sensíveis.</p>
+    <p className="mt-2">Solicite à gestão que acesse Configurações Gerais, edite seu usuário e habilite Acessar e Visualizar em Controle de Atestados.</p>
   </div>;
 
   const records = recordsQuery.data || [];

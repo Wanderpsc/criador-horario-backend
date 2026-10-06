@@ -171,7 +171,7 @@ export default function Employees() {
 
   // ─── Link Geral do Ponto (escola inteira) ─────────────────────────────────
   const [geralModalOpen, setGeralModalOpen] = useState(false);
-  const [geralLink, setGeralLink] = useState('');
+  const [geralLink] = useState('');
   const [geralCopied, setGeralCopied] = useState(false);
   const [geralSettings, setGeralSettings] = useState({
     requireGeolocation: false,

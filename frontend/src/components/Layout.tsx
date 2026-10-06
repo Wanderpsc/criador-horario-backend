@@ -41,9 +41,10 @@ import NotificationCenter from './NotificationCenter';
 import { loadPrintHeader } from '../utils/printHeader';
 import { toast } from 'react-hot-toast';
 import { canUseCertificates } from '../utils/medicalCertificates';
+import api from '../services/api';
 
 export default function Layout() {
-  const { user, logout, schoolYear, setSchoolYear } = useAuthStore();
+  const { user, token, setAuth, logout, schoolYear, setSchoolYear } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const prevSchoolYear = useRef<number | null>(null);
@@ -74,6 +75,20 @@ export default function Layout() {
     window.addEventListener('printHeaderUpdated', fetchName);
     return () => window.removeEventListener('printHeaderUpdated', fetchName);
   }, []);
+
+  useEffect(() => {
+    if (!token || !user?.schoolId || (user.role !== 'admin' && user.role !== 'user')) return;
+
+    api.get('/school-users/session')
+      .then(({ data }) => {
+        setAuth(token, data.user);
+        localStorage.setItem('school_user', JSON.stringify(data.user));
+      })
+      .catch((error) => {
+        console.error('Não foi possível atualizar as permissões da sessão.', error);
+        toast.error('Não foi possível atualizar suas permissões. Entre novamente no sistema.');
+      });
+  }, [token, user?.schoolId, user?.role, setAuth]);
 
   // Invalidar todo o cache do React Query ao mudar de ano letivo
   // para forçar refetch com o novo schoolYear no interceptor do axios
@@ -321,15 +336,17 @@ export default function Layout() {
             highlight: true,
             subtitle: 'Frequência'
           },
-          ...(canUseCertificates(user) ? [{
+          {
             icon: FileHeart,
             label: 'Controle de Atestados',
             path: '/medical-certificates',
-            description: 'Afastamentos, CID-10, alertas de retorno e acompanhamento de reposição',
+            description: canUseCertificates(user)
+              ? 'Afastamentos, CID-10, alertas de retorno e acompanhamento de reposição'
+              : 'Módulo disponível — solicite à gestão a permissão para acessar dados sensíveis',
             color: 'teal',
-            badge: 'NOVO',
+            badge: canUseCertificates(user) ? 'NOVO' : 'PERMISSÃO',
             subtitle: 'Saúde e Afastamentos'
-          }] : []),
+          },
           {
             icon: Briefcase,
             label: 'Controle de EPIs',
@@ -352,13 +369,15 @@ export default function Layout() {
           }
         ]
       : []),
-    ...(user?.role === 'admin' && canUseCertificates(user) ? [{
+    ...(user?.role === 'admin' && user.schoolId ? [{
       icon: FileHeart,
       label: 'Controle de Atestados',
       path: '/medical-certificates',
-      description: 'Afastamentos, CID-10, alertas de retorno e acompanhamento de reposição',
+      description: canUseCertificates(user)
+        ? 'Afastamentos, CID-10, alertas de retorno e acompanhamento de reposição'
+        : 'Módulo disponível — solicite à gestão a permissão para acessar dados sensíveis',
       color: 'teal',
-      badge: 'NOVO',
+      badge: canUseCertificates(user) ? 'NOVO' : 'PERMISSÃO',
       subtitle: 'Saúde e Afastamentos'
     }] : []),
     ...(user?.role === 'admin' || user?.role === 'super-admin'

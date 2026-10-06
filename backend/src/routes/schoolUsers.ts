@@ -85,6 +85,21 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/session', auth, (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      schoolId: user.schoolId,
+      permissions: user.permissions,
+    },
+  });
+});
+
 // Criar primeiro usuário admin (seed - apenas se não existir nenhum admin)
 router.post('/seed-admin', async (req: Request, res: Response) => {
   try {
