@@ -55,6 +55,9 @@ const classAttendanceSchema = new mongoose.Schema({
   entryTime: { type: String },          // HH:mm quando professor bateu entrada
   exitTime:  { type: String },          // HH:mm quando professor bateu saída
   locationValid: { type: Boolean },
+  latitude: { type: Number },
+  longitude: { type: Number },
+  locationDistanceMeters: { type: Number },
   isPedagogical: { type: Boolean, default: false }, // true = Horário Pedagógico (sem turma)
   photoData: { type: String },          // base64 foto capturada ao marcar
 }, { _id: true });

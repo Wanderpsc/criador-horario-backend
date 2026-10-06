@@ -32,6 +32,12 @@ export interface IUser extends Document {
   numberOfStudents?: number;
   numberOfTeachers?: number;
   educationLevels?: string[]; // Ensino Fundamental, Médio, etc
+  attendanceLocation?: {
+    required: boolean;
+    latitude?: number;
+    longitude?: number;
+    radiusMeters: number;
+  };
   
   // Licenciamento
   school?: mongoose.Types.ObjectId; // ID da escola (para relacionamento)
@@ -117,6 +123,12 @@ const userSchema = new Schema<IUser>(
     numberOfStudents: { type: Number },
     numberOfTeachers: { type: Number },
     educationLevels: [{ type: String }],
+    attendanceLocation: {
+      required: { type: Boolean, default: false },
+      latitude: { type: Number },
+      longitude: { type: Number },
+      radiusMeters: { type: Number, default: 50, min: 10, max: 5000 },
+    },
     
     // Licenciamento
     school: { type: Schema.Types.ObjectId, ref: 'User' },

@@ -19,6 +19,7 @@ import Class from '../models/Class';
 import User from '../models/User';
 import { auth, AuthRequest } from '../middleware/auth';
 import { sendPontoNotificationEmail } from '../services/email.service';
+import { getAttendanceLocation, validateAttendanceLocation } from '../services/attendance-location.service';
 
 const router = express.Router();
 
@@ -89,6 +90,232 @@ async function getActiveTeacherSlots(schoolId: string, teacherId: string, dayKey
     }
   }
   return slots.sort((a, b) => a.period - b.period);
+}
+
+function minutesBetween(entry?: string, exit?: string): number {
+      if (!entry || !exit) return 0;
+      const [entryHour, entryMinute] = entry.split(':').map(Number);
+      const [exitHour, exitMinute] = exit.split(':').map(Number);
+      let difference = exitHour * 60 + exitMinute - (entryHour * 60 + entryMinute);
+      if (difference < 0) difference += 24 * 60;
+      return difference;
+    }
+
+    function clockMinutes(value?: string): number {
+      if (!value) return 0;
+      const [hours, minutes] = value.split(':').map(Number);
+      return hours * 60 + minutes;
+    }
+
+    function expectedEmployeeMinutes(workSchedule: any): number {
+      if (!workSchedule) return 0;
+      if (workSchedule.shiftMode === 'rotating') return (workSchedule.rotatingWorkHours || 0) * 60;
+      const shiftType = workSchedule.shiftType || 'single';
+      return [
+        [workSchedule.entryTime, workSchedule.exitTime],
+        [workSchedule.shift2EntryTime, workSchedule.shift2ExitTime],
+        [workSchedule.shift3EntryTime, workSchedule.shift3ExitTime],
+      ].reduce((total, [entry, exit], index) => {
+        if (index === 1 && !['split2', 'split3'].includes(shiftType)) return total;
+        if (index === 2 && shiftType !== 'split3') return total;
+        return total + minutesBetween(entry, exit);
+      }, 0);
+    }
+
+    async function registerIndividualEmployeePoint(link: any, body: any) {
+      const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId })
+        .select('name cargo setor workSchedule email')
+        .lean() as any;
+      if (!employee) {
+        return { status: 404, body: { message: 'Funcionário não encontrado.' } };
+      }
+
+      const { action, lat, lng, photoData } = body;
+      if (!['entry', 'exit'].includes(action)) {
+        return { status: 400, body: { message: 'Ação de ponto inválida.' } };
+      }
+
+      const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+      if (!locationCheck.valid) {
+        return {
+          status: locationCheck.configured ? 403 : 400,
+          body: {
+            message: locationCheck.message,
+            distance: locationCheck.distanceMeters,
+            radius: locationCheck.radiusMeters,
+          },
+        };
+      }
+
+      const today = todayISO();
+      const dayKey = todayDayKey();
+      const now = nowHHmm();
+      const workSchedule = employee.workSchedule || {};
+      const shiftType = workSchedule.shiftType || 'single';
+      const isRotating = workSchedule.shiftMode === 'rotating';
+      let attendanceDate = today;
+      let attendanceDay = dayKey;
+      let expectedEntryTime = workSchedule.entryTime || '';
+      let expectedExitTime = workSchedule.exitTime || '';
+
+      if (isRotating) {
+        if (!workSchedule.rotatingCycleStart || !workSchedule.rotatingEntryTime || !workSchedule.rotatingWorkHours) {
+          return { status: 400, body: { message: 'A escala rotativa está incompleta. Procure a administração.' } };
+        }
+        const current = nowBRT().getTime();
+        const cycleStart = Date.parse(`${workSchedule.rotatingCycleStart}T${workSchedule.rotatingEntryTime}:00.000Z`);
+        const cycleLength = (workSchedule.rotatingWorkHours + (workSchedule.rotatingRestDays ?? 1) * 24) * 60 * 60 * 1000;
+        if (!Number.isFinite(cycleStart) || current < cycleStart) {
+          return { status: 400, body: { message: 'O ciclo desta escala ainda não começou.' } };
+        }
+        const cycleIndex = Math.floor((current - cycleStart) / cycleLength);
+        const dutyStart = cycleStart + cycleIndex * cycleLength;
+        const dutyEnd = dutyStart + workSchedule.rotatingWorkHours * 60 * 60 * 1000;
+        const start = new Date(dutyStart);
+        const end = new Date(dutyEnd);
+        attendanceDate = start.toISOString().slice(0, 10);
+        attendanceDay = DAYS_EN[start.getUTCDay()];
+        expectedEntryTime = `${String(start.getUTCHours()).padStart(2, '0')}:${String(start.getUTCMinutes()).padStart(2, '0')}`;
+        expectedExitTime = `${String(end.getUTCHours()).padStart(2, '0')}:${String(end.getUTCMinutes()).padStart(2, '0')}`;
+      }
+
+      let attendance = await EmployeeAttendance.findOne({
+        schoolId: link.schoolId,
+        employeeId: link.personId,
+        date: attendanceDate,
+      });
+      const created = !attendance;
+      const expectedMinutes = expectedEmployeeMinutes(workSchedule);
+
+      if (!attendance) {
+        if (action === 'exit') {
+          return { status: 400, body: { message: 'Nenhuma entrada registrada. Registre a entrada primeiro.' } };
+        }
+        attendance = new EmployeeAttendance({
+          schoolId: link.schoolId,
+          employeeId: link.personId,
+          employeeName: employee.name,
+          cargo: employee.cargo || link.cargo || '',
+          setor: employee.setor || link.setor || '',
+          date: attendanceDate,
+          dayOfWeek: attendanceDay,
+          shift: isRotating ? 'plantao' : 'integral',
+          status: 'partial',
+          shiftType,
+          expectedEntryTime,
+          expectedExitTime,
+          expectedEntryTime2: workSchedule.shift2EntryTime || '',
+          expectedExitTime2: workSchedule.shift2ExitTime || '',
+          expectedEntryTime3: workSchedule.shift3EntryTime || '',
+          expectedExitTime3: workSchedule.shift3ExitTime || '',
+          expectedMinutes,
+          deficitMinutes: expectedMinutes,
+          markedById: 'self',
+          markedByName: employee.name,
+          punches: [],
+        });
+      }
+
+      const record = attendance as any;
+      let shiftNumber: 1 | 2 | 3;
+      let field: 'entryTime' | 'exitTime' | 'entryTime2' | 'exitTime2' | 'entryTime3' | 'exitTime3';
+      if (action === 'entry') {
+        if (!record.entryTime) {
+          shiftNumber = 1;
+          field = 'entryTime';
+        } else if (record.exitTime && ['split2', 'split3'].includes(shiftType) && !record.entryTime2) {
+          shiftNumber = 2;
+          field = 'entryTime2';
+        } else if (record.exitTime2 && shiftType === 'split3' && !record.entryTime3) {
+          shiftNumber = 3;
+          field = 'entryTime3';
+        } else {
+          return { status: 400, body: { message: 'Já existe uma entrada aberta ou todos os turnos foram registrados.' } };
+        }
+      } else if (record.entryTime3 && !record.exitTime3) {
+        shiftNumber = 3;
+        field = 'exitTime3';
+      } else if (record.entryTime2 && !record.exitTime2) {
+        shiftNumber = 2;
+        field = 'exitTime2';
+      } else if (record.entryTime && !record.exitTime) {
+        shiftNumber = 1;
+        field = 'exitTime';
+      } else {
+        return { status: 400, body: { message: 'Nenhuma entrada aberta para registrar a saída.' } };
+      }
+
+      if (!Array.isArray(record.punches)) record.punches = [];
+      record[field] = now;
+      record.punches.push({
+        type: action,
+        shift: shiftNumber,
+        time: now,
+        recordedAt: new Date(),
+        photoData: photoData || undefined,
+        latitude: lat,
+        longitude: lng,
+        locationValid: locationCheck.valid,
+        locationDistanceMeters: locationCheck.distanceMeters,
+      });
+
+      const complete = Boolean(
+        record.exitTime
+        && (shiftType === 'single' || record.exitTime2)
+        && (shiftType !== 'split3' || record.exitTime3)
+      );
+      let workedMinutes = minutesBetween(record.entryTime, record.exitTime)
+        + minutesBetween(record.entryTime2, record.exitTime2)
+        + minutesBetween(record.entryTime3, record.exitTime3);
+      if (isRotating && record.entryTime && record.exitTime) {
+        const entryPunch = record.punches.find((punch: any) => punch.type === 'entry' && punch.shift === 1);
+        const exitPunch = [...record.punches].reverse().find((punch: any) => punch.type === 'exit' && punch.shift === 1);
+        if (entryPunch?.recordedAt && exitPunch?.recordedAt) {
+          workedMinutes = Math.max(0, Math.round(
+            (new Date(exitPunch.recordedAt).getTime() - new Date(entryPunch.recordedAt).getTime()) / 60000
+          ));
+        }
+      }
+
+      const tolerance = workSchedule.toleranceMinutes ?? 10;
+      record.workedMinutes = workedMinutes;
+      record.expectedMinutes = expectedMinutes;
+      record.deficitMinutes = Math.max(0, expectedMinutes - workedMinutes);
+      record.overtimeMinutes = Math.max(0, workedMinutes - expectedMinutes);
+      record.lateArrivalMinutes = record.entryTime && expectedEntryTime
+        ? Math.max(0, clockMinutes(record.entryTime) - clockMinutes(expectedEntryTime) - tolerance)
+        : 0;
+      const finalExpectedExit = shiftType === 'split3'
+        ? workSchedule.shift3ExitTime
+        : shiftType === 'split2'
+          ? workSchedule.shift2ExitTime
+          : expectedExitTime;
+      const finalExit = shiftType === 'split3' ? record.exitTime3 : shiftType === 'split2' ? record.exitTime2 : record.exitTime;
+      record.earlyDepartureMinutes = complete && finalExit && finalExpectedExit
+        ? Math.max(0, clockMinutes(finalExpectedExit) - clockMinutes(finalExit))
+        : 0;
+      record.status = complete ? 'present' : 'partial';
+      record.photoData = photoData || record.photoData;
+      record.latitude = lat;
+      record.longitude = lng;
+      record.locationValid = locationCheck.valid;
+      record.locationDistanceMeters = locationCheck.distanceMeters;
+
+      await attendance.save();
+      return {
+        status: created ? 201 : 200,
+        body: {
+          message: `${action === 'entry' ? 'Entrada' : 'Saída'} do ${shiftNumber}º turno registrada com sucesso.`,
+          attendance,
+          action,
+          shift: shiftNumber,
+          workedMinutes,
+          expectedMinutes,
+          deficitMinutes: record.deficitMinutes,
+          overtimeMinutes: record.overtimeMinutes,
+          complete,
+        },
+      };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -270,12 +497,22 @@ router.get('/public/:token', async (req, res) => {
       .select('jornadaTrabalho cargaHorariaSemanal setor cargo workSchedule')
       .lean();
 
-    const attendance = await EmployeeAttendance.findOne({
+    const ws = (employee as any)?.workSchedule;
+    const attendanceFilter: any = {
+      schoolId: link.schoolId,
       employeeId: link.personId,
       date: today,
-    }).lean();
-
-    const ws = (employee as any)?.workSchedule;
+    };
+    if (ws?.shiftMode === 'rotating') {
+      delete attendanceFilter.date;
+      attendanceFilter.$or = [
+        { date: today },
+        { status: 'partial' },
+      ];
+    }
+    const attendance = await EmployeeAttendance.findOne(attendanceFilter)
+      .sort({ date: -1 })
+      .lean();
     return res.json({
       ...baseInfo,
       jornadaTrabalho: (employee as any)?.jornadaTrabalho || '',
@@ -314,6 +551,15 @@ router.post('/public/:token/mark', async (req, res) => {
 
     // ── PROFESSOR: confirmar presença em todas as aulas do dia ─────────────
     if (link.personType === 'teacher') {
+      const { lat, lng, photoData } = req.body;
+      const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+      if (!locationCheck.valid) {
+        return res.status(locationCheck.configured ? 403 : 400).json({
+          message: locationCheck.message,
+          distance: locationCheck.distanceMeters,
+          radius: locationCheck.radiusMeters,
+        });
+      }
       // Buscar slots do professor hoje
       const timetables = await GeneratedTimetable.find({ school: link.schoolId }).lean();
       const teacherSlots: any[] = [];
@@ -353,6 +599,11 @@ router.post('/public/:token/mark', async (req, res) => {
         grade: (classes.find((c: any) => String(c._id) === s.classId) as any)?.grade || '',
         status: 'present',
         markedAt: new Date(),
+        locationValid: locationCheck.valid,
+        latitude: lat,
+        longitude: lng,
+        locationDistanceMeters: locationCheck.distanceMeters,
+        photoData: photoData || undefined,
       }));
 
       const existing = await TeacherAttendance.findOne({ teacherId: link.personId, date: today });
@@ -364,6 +615,11 @@ router.post('/public/:token/mark', async (req, res) => {
           if (cls.status === 'pending') {
             cls.status = 'present';
             cls.markedAt = new Date();
+            cls.locationValid = locationCheck.valid;
+            cls.latitude = lat;
+            cls.longitude = lng;
+            cls.locationDistanceMeters = locationCheck.distanceMeters;
+            if (photoData) cls.photoData = photoData;
             changed = true;
           }
         }
@@ -390,98 +646,8 @@ router.post('/public/:token/mark', async (req, res) => {
       return res.json({ message: 'Presença confirmada.', attendance });
     }
 
-    // ── FUNCIONÁRIO: marcar entrada ou saída ───────────────────────────────
-    const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId })
-      .select('workSchedule jornadaTrabalho cargo setor')
-      .lean();
-    const ws = (employee as any)?.workSchedule;
-
-    // Helper para verificar geolocalização (AttendanceLink individual não tem geo — apenas link geral)
-    const { lat, lng, photoData } = req.body;
-
-    const existing = await EmployeeAttendance.findOne({ employeeId: link.personId, date: today });
-
-    if (existing) {
-      // Segundo toque = saída (se ainda não tem saída)
-      if (!action || action === 'exit') {
-        if ((existing as any).exitTime) {
-          return res.status(400).json({
-            message: 'Saída já registrada hoje.',
-            attendance: existing,
-          });
-        }
-        (existing as any).exitTime = now;
-        (existing as any).status = 'present';
-
-        // Calcular minutos trabalhados
-        if ((existing as any).entryTime) {
-          const [eh, em] = (existing as any).entryTime.split(':').map(Number);
-          const [xh, xm] = now.split(':').map(Number);
-          const worked = (xh * 60 + xm) - (eh * 60 + em);
-          (existing as any).workedMinutes = worked;
-
-          // Calcular déficit/saldo usando workSchedule
-          if (ws?.entryTime && ws?.exitTime) {
-            const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-            const expected = toMin(ws.exitTime) - toMin(ws.entryTime);
-            (existing as any).expectedMinutes = expected;
-            (existing as any).expectedEntryTime = ws.entryTime;
-            (existing as any).expectedExitTime = ws.exitTime;
-            // Atraso na entrada
-            const entryMin = toMin((existing as any).entryTime);
-            const expectedEntry = toMin(ws.entryTime);
-            const tolerance = ws.toleranceMinutes ?? 10;
-            const late = entryMin - expectedEntry - tolerance;
-            (existing as any).lateArrivalMinutes = late > 0 ? late : 0;
-            // Saída antecipada
-            const exitMin = toMin(now);
-            const expectedExit = toMin(ws.exitTime);
-            const early = expectedExit - exitMin;
-            (existing as any).earlyDepartureMinutes = early > 0 ? early : 0;
-            // Hora extra
-            const overtime = worked - expected;
-            (existing as any).overtimeMinutes = overtime > 0 ? overtime : 0;
-          }
-        }
-        if (photoData) (existing as any).photoData = photoData;
-        if (lat != null) (existing as any).latitude = lat;
-        if (lng != null) (existing as any).longitude = lng;
-        await existing.save();
-        return res.json({ message: 'Saída registrada com sucesso.', attendance: existing });
-      }
-    }
-
-    if (action === 'exit') {
-      return res.status(400).json({ message: 'Nenhuma entrada registrada hoje. Registre a entrada primeiro.' });
-    }
-
-    // Primeiro toque = entrada
-    const toMin2 = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-    const lateArr = (ws?.entryTime) ? Math.max(0, toMin2(now) - toMin2(ws.entryTime) - (ws.toleranceMinutes ?? 10)) : 0;
-
-    const attendance = new EmployeeAttendance({
-      schoolId: link.schoolId,
-      employeeId: link.personId,
-      employeeName: link.personName,
-      cargo: link.cargo || (employee as any)?.cargo || '',
-      setor: link.setor || (employee as any)?.setor || '',
-      date: today,
-      dayOfWeek: dayKey,
-      shift: 'integral',
-      status: 'present',
-      entryTime: now,
-      expectedEntryTime: ws?.entryTime || '',
-      expectedExitTime: ws?.exitTime || '',
-      expectedMinutes: (ws?.entryTime && ws?.exitTime) ? toMin2(ws.exitTime) - toMin2(ws.entryTime) : 0,
-      lateArrivalMinutes: lateArr,
-      markedById: 'self',
-      markedByName: link.personName,
-      photoData: photoData || undefined,
-      latitude: lat != null ? lat : undefined,
-      longitude: lng != null ? lng : undefined,
-    });
-    await attendance.save();
-    return res.json({ message: 'Entrada registrada com sucesso.', attendance });
+    const result = await registerIndividualEmployeePoint(link, req.body);
+    return res.status(result.status).json(result.body);
 
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -1067,14 +1233,26 @@ router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
     const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes } = req.body;
     const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });
     if (!link) return res.status(404).json({ message: 'Link geral não encontrado.' });
-    if (requireGeolocation !== undefined) link.requireGeolocation = requireGeolocation;
-    if (latitude !== undefined) link.latitude = latitude;
-    if (longitude !== undefined) link.longitude = longitude;
-    if (areaM2 !== undefined) link.areaM2 = areaM2;
     if (requirePhoto !== undefined) link.requirePhoto = requirePhoto;
     if (graceMinutes !== undefined) link.graceMinutes = graceMinutes;
     await link.save();
-    res.json(link);
+    const radiusMeters = areaM2 ? Math.sqrt(Number(areaM2) / Math.PI) : 50;
+    await User.findByIdAndUpdate(schoolId, {
+      attendanceLocation: {
+        required: !!requireGeolocation,
+        latitude,
+        longitude,
+        radiusMeters,
+      },
+    });
+    res.json({
+      ...link.toObject(),
+      requireGeolocation: !!requireGeolocation,
+      latitude,
+      longitude,
+      areaM2: Math.PI * radiusMeters ** 2,
+      radiusMeters,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -1086,7 +1264,15 @@ router.get('/school-link', auth, async (req: AuthRequest, res) => {
     const schoolId = req.user!.schoolId || req.user!.id;
     const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });
     if (!link) return res.status(404).json({ message: 'Nenhum link encontrado.' });
-    res.json(link);
+    const location = await getAttendanceLocation(schoolId);
+    res.json({
+      ...link.toObject(),
+      requireGeolocation: location.required,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      areaM2: Math.PI * location.radiusMeters ** 2,
+      radiusMeters: location.radiusMeters,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }

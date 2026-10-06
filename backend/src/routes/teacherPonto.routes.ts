@@ -17,6 +17,7 @@ import Schedule from '../models/Schedule';
 import SchoolDay from '../models/SchoolDay';
 import User from '../models/User';
 import { auth, AuthRequest } from '../middleware/auth';
+import { getAttendanceLocation, validateAttendanceLocation } from '../services/attendance-location.service';
 
 const router = express.Router();
 
@@ -95,20 +96,24 @@ async function resolveIndividualTeacherLink(token: string) {
   }).lean() as any;
   if (!individualLink) return null;
 
-  const settings = await TeacherPontoLink.findOne({
-    schoolId: individualLink.schoolId,
-    isActive: true,
-  }).lean() as any;
+  const [settings, location] = await Promise.all([
+    TeacherPontoLink.findOne({
+      schoolId: individualLink.schoolId,
+      isActive: true,
+    }).lean() as any,
+    getAttendanceLocation(individualLink.schoolId),
+  ]);
 
   return {
     schoolId: individualLink.schoolId,
     schoolName: individualLink.schoolName,
     teacherId: individualLink.personId,
     isEnabled: settings?.isEnabled !== false,
-    requireGeolocation: settings?.requireGeolocation || false,
-    latitude: settings?.latitude,
-    longitude: settings?.longitude,
-    areaM2: settings?.areaM2 || 1000,
+    requireGeolocation: location.required,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    areaM2: Math.PI * location.radiusMeters ** 2,
+    radiusMeters: location.radiusMeters,
     requirePhoto: settings?.requirePhoto || false,
     graceMinutes: settings?.graceMinutes ?? 10,
     activeTimetableId: settings?.activeTimetableId || '',
@@ -239,7 +244,17 @@ router.get('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const existing = await TeacherPontoLink.findOne({ schoolId, isActive: true });
-    if (existing) return res.json(existing);
+    if (existing) {
+      const location = await getAttendanceLocation(schoolId);
+      return res.json({
+        ...existing.toObject(),
+        requireGeolocation: location.required,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        areaM2: Math.PI * location.radiusMeters ** 2,
+        radiusMeters: location.radiusMeters,
+      });
+    }
 
     // auto-create
     const schoolUser = await User.findById(schoolId).select('schoolName name');
@@ -247,7 +262,15 @@ router.get('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
     const token = crypto.randomBytes(24).toString('hex');
     const link = new TeacherPontoLink({ schoolId, schoolName, token, isActive: true, createdBy: req.user!.id });
     await link.save();
-    res.status(201).json(link);
+    const location = await getAttendanceLocation(schoolId);
+    res.status(201).json({
+      ...link.toObject(),
+      requireGeolocation: location.required,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      areaM2: Math.PI * location.radiusMeters ** 2,
+      radiusMeters: location.radiusMeters,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -260,11 +283,27 @@ router.put('/teacher-ponto-link/settings', auth, async (req: AuthRequest, res) =
     const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes, activeTimetableId } = req.body;
     const link = await TeacherPontoLink.findOneAndUpdate(
       { schoolId, isActive: true },
-      { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes, activeTimetableId: activeTimetableId || '' },
+      { requirePhoto, graceMinutes, activeTimetableId: activeTimetableId || '' },
       { new: true }
     );
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
-    res.json(link);
+    const radiusMeters = areaM2 ? Math.sqrt(Number(areaM2) / Math.PI) : 50;
+    await User.findByIdAndUpdate(schoolId, {
+      attendanceLocation: {
+        required: !!requireGeolocation,
+        latitude,
+        longitude,
+        radiusMeters,
+      },
+    });
+    res.json({
+      ...link.toObject(),
+      requireGeolocation: !!requireGeolocation,
+      latitude,
+      longitude,
+      areaM2: Math.PI * radiusMeters ** 2,
+      radiusMeters,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -478,22 +517,13 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
       }
     }
 
-    // Geolocation check
-    let locationValid = true;
-    if (link.requireGeolocation && link.latitude != null && link.longitude != null) {
-      if (lat == null || lng == null) {
-        return res.status(400).json({ message: 'Localização obrigatória. Ative o GPS.' });
-      }
-      const radius = Math.sqrt((link.areaM2 || 1000) / Math.PI);
-      const dist = haversineDistance(link.latitude, link.longitude, lat, lng);
-      locationValid = dist <= radius;
-      if (!locationValid) {
-        return res.status(403).json({
-          message: `Fora da área permitida (${Math.round(dist)}m de distância, limite: ${Math.round(radius)}m).`,
-          distance: Math.round(dist),
-          radius: Math.round(radius),
-        });
-      }
+    const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+    if (!locationCheck.valid) {
+      return res.status(locationCheck.configured ? 403 : 400).json({
+        message: locationCheck.message,
+        distance: locationCheck.distanceMeters,
+        radius: locationCheck.radiusMeters,
+      });
     }
 
     // Photo check
@@ -560,7 +590,10 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     cls.entryTime     = now;
     cls.status        = 'present';
     cls.markedAt      = new Date();
-    cls.locationValid = locationValid;
+    cls.locationValid = locationCheck.valid;
+    if (lat != null) cls.latitude = lat;
+    if (lng != null) cls.longitude = lng;
+    if (locationCheck.distanceMeters != null) cls.locationDistanceMeters = locationCheck.distanceMeters;
     if (photoData) cls.photoData = photoData;
 
     await attendance.save();

@@ -4,6 +4,8 @@ import Teacher from '../models/Teacher';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
 import TeacherSubject from '../models/TeacherSubject';
+import TeacherAttendance from '../models/TeacherAttendance';
+import ClassPayment from '../models/ClassPayment';
 
 /**
  * Processa um sábado de reposição após sua realização
@@ -208,7 +210,7 @@ export async function generateSaturdayScheduleFromDebts(
       makeupClassesLength: schedule.makeupClasses?.length || 0,
       absentTeacherNames: schedule.absentTeacherNames
     });
-    
+
     if (schedule.makeupClasses && schedule.makeupClasses.length > 0) {
       // Apenas incluir makeupClasses ainda não abatidos
       const pending = schedule.makeupClasses.filter((mc: any) => !mc.isRepaid);
@@ -218,6 +220,45 @@ export async function generateSaturdayScheduleFromDebts(
       console.log(`      ⚠️ Sem makeupClasses para adicionar`);
     }
   });
+
+  const [attendanceRecords, paidClasses] = await Promise.all([
+    TeacherAttendance.find({
+      schoolId,
+      'classes.status': 'absent',
+    }).sort({ date: 1 }).lean() as any,
+    ClassPayment.find({
+      schoolId,
+      status: 'paid',
+    }).select('absentTeacherId date period classId subjectId').lean() as any,
+  ]);
+  const paidKeys = new Set((paidClasses as any[]).map(payment =>
+    `${payment.absentTeacherId}|${payment.date}|${payment.period}|${payment.classId}|${payment.subjectId}`
+  ));
+  const existingKeys = new Set(allMakeupClasses.map(makeup =>
+    `${makeup.originalTeacherId}|${makeup.absenceDate || ''}|${makeup.period || ''}|${makeup.classId}|${makeup.subjectId}`
+  ));
+
+  for (const attendance of attendanceRecords as any[]) {
+    for (const classRecord of attendance.classes || []) {
+      if (classRecord.status !== 'absent' || classRecord.isPedagogical) continue;
+      const key = `${attendance.teacherId}|${attendance.date}|${classRecord.period}|${classRecord.classId}|${classRecord.subjectId}`;
+      if (paidKeys.has(key) || existingKeys.has(key)) continue;
+      existingKeys.add(key);
+      allMakeupClasses.push({
+        _id: `attendance:${attendance._id}:${classRecord._id}`,
+        originalTeacherId: attendance.teacherId,
+        originalTeacherName: attendance.teacherName,
+        absenceDate: attendance.date,
+        period: classRecord.period,
+        subjectId: classRecord.subjectId,
+        subjectName: classRecord.subjectName,
+        classId: classRecord.classId,
+        className: classRecord.className,
+        gradeName: classRecord.grade || '',
+        source: 'teacher-attendance',
+      });
+    }
+  }
 
   console.log(`📊 ${allMakeupClasses.length} aula(s) de reposição encontrada(s)`);
   

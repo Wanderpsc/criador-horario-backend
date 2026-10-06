@@ -59,6 +59,7 @@ export interface IEmployeeAttendance extends Document {
   latitude?: number;
   longitude?: number;
   locationValid?: boolean;
+  locationDistanceMeters?: number;
   punches?: {
     type: 'entry' | 'exit';
     shift: 1 | 2 | 3;
@@ -68,6 +69,7 @@ export interface IEmployeeAttendance extends Document {
     latitude?: number;
     longitude?: number;
     locationValid?: boolean;
+    locationDistanceMeters?: number;
   }[];
   // Retificações feitas pelo administrador
   rectifications?: {
@@ -134,6 +136,7 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
     latitude:      { type: Number },
     longitude:     { type: Number },
     locationValid: { type: Boolean },
+    locationDistanceMeters: { type: Number },
     punches: [{
       type:          { type: String, enum: ['entry', 'exit'], required: true },
       shift:         { type: Number, enum: [1, 2, 3], required: true },
@@ -143,6 +146,7 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
       latitude:      { type: Number },
       longitude:     { type: Number },
       locationValid: { type: Boolean },
+      locationDistanceMeters: { type: Number },
     }],
     rectifications: [{
       rectifiedBy:     { type: String, required: true },

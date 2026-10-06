@@ -119,7 +119,7 @@ router.put('/profile', auth, async (req: any, res: Response) => {
       });
     }
 
-    const { schoolName, workingDays, academicYear } = req.body;
+    const { schoolName, workingDays, academicYear, attendanceLocation } = req.body;
 
     // Validações
     if (!schoolName) {
@@ -135,6 +135,31 @@ router.put('/profile', auth, async (req: any, res: Response) => {
     const updateData: any = { schoolName };
     if (workingDays) updateData.workingDays = workingDays;
     if (academicYear) updateData.academicYear = academicYear;
+    if (attendanceLocation) {
+      const latitude = attendanceLocation.latitude === '' || attendanceLocation.latitude == null
+        ? Number.NaN
+        : Number(attendanceLocation.latitude);
+      const longitude = attendanceLocation.longitude === '' || attendanceLocation.longitude == null
+        ? Number.NaN
+        : Number(attendanceLocation.longitude);
+      const radiusMeters = Number(attendanceLocation.radiusMeters);
+      if (attendanceLocation.required && (!Number.isFinite(latitude) || !Number.isFinite(longitude))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Informe ou capture a latitude e a longitude do local de trabalho.',
+        });
+      }
+      if ((Number.isFinite(latitude) && (latitude < -90 || latitude > 90))
+        || (Number.isFinite(longitude) && (longitude < -180 || longitude > 180))) {
+        return res.status(400).json({ success: false, message: 'Coordenadas geográficas inválidas.' });
+      }
+      updateData.attendanceLocation = {
+        required: !!attendanceLocation.required,
+        latitude: Number.isFinite(latitude) ? latitude : undefined,
+        longitude: Number.isFinite(longitude) ? longitude : undefined,
+        radiusMeters: Number.isFinite(radiusMeters) ? Math.min(5000, Math.max(10, radiusMeters)) : 50,
+      };
+    }
 
     // Atualiza a escola
     const updatedSchool = await User.findByIdAndUpdate(

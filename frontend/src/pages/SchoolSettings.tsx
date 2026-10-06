@@ -1,4 +1,4 @@
-import { Building, Save, User, Printer, Upload, X, Eye } from 'lucide-react';
+import { Building, Save, User, Printer, Upload, X, Eye, MapPin, LocateFixed } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -15,8 +15,15 @@ export default function SchoolSettings() {
   const [formData, setFormData] = useState({
     schoolName: '',
     workingDays: 5,
-    academicYear: new Date().getFullYear()
+    academicYear: new Date().getFullYear(),
+    attendanceLocation: {
+      required: false,
+      latitude: '',
+      longitude: '',
+      radiusMeters: 50,
+    },
   });
+  const [capturingLocation, setCapturingLocation] = useState(false);
 
   const [responsibleData, setResponsibleData] = useState<ResponsibleData>({
     responsibleName: '',
@@ -59,7 +66,13 @@ export default function SchoolSettings() {
         setFormData({
           schoolName: data.schoolName || '',
           workingDays: data.workingDays || 5,
-          academicYear: data.academicYear || new Date().getFullYear()
+          academicYear: data.academicYear || new Date().getFullYear(),
+          attendanceLocation: {
+            required: data.attendanceLocation?.required || false,
+            latitude: data.attendanceLocation?.latitude != null ? String(data.attendanceLocation.latitude) : '',
+            longitude: data.attendanceLocation?.longitude != null ? String(data.attendanceLocation.longitude) : '',
+            radiusMeters: data.attendanceLocation?.radiusMeters || 50,
+          },
         });
         // Carregar dados do responsável
         setResponsibleData({
@@ -168,6 +181,36 @@ export default function SchoolSettings() {
     }
   };
 
+  const captureAttendanceLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Este navegador não oferece acesso à localização.');
+      return;
+    }
+    setCapturingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        setFormData(current => ({
+          ...current,
+          attendanceLocation: {
+            ...current.attendanceLocation,
+            required: true,
+            latitude: position.coords.latitude.toFixed(7),
+            longitude: position.coords.longitude.toFixed(7),
+          },
+        }));
+        toast.success(`Localização capturada com precisão de ${Math.round(position.coords.accuracy)}m.`);
+        setCapturingLocation(false);
+      },
+      error => {
+        toast.error(error.code === error.PERMISSION_DENIED
+          ? 'Permissão de localização negada.'
+          : 'Não foi possível obter a localização da escola.');
+        setCapturingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
   const handleSaveResponsible = async () => {
     setLoading(true);
     try {
@@ -232,6 +275,102 @@ export default function SchoolSettings() {
               max="2030"
               required
             />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <MapPin className="mt-0.5 h-6 w-6 flex-shrink-0 text-blue-600" />
+            <div>
+              <h2 className="font-bold text-gray-900">Central da localização geográfica</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Esta é a localização única usada para validar o ponto de professores e funcionários.
+                Faça a captura estando fisicamente na escola.
+              </p>
+            </div>
+          </div>
+
+          <label className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-800">
+            <input
+              type="checkbox"
+              checked={formData.attendanceLocation.required}
+              onChange={event => setFormData(current => ({
+                ...current,
+                attendanceLocation: { ...current.attendanceLocation, required: event.target.checked },
+              }))}
+              className="h-4 w-4 rounded"
+            />
+            Exigir presença no local de trabalho para registrar o ponto
+          </label>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Latitude</label>
+              <input
+                type="number"
+                step="any"
+                value={formData.attendanceLocation.latitude}
+                onChange={event => setFormData(current => ({
+                  ...current,
+                  attendanceLocation: { ...current.attendanceLocation, latitude: event.target.value },
+                }))}
+                className="input"
+                placeholder="-3.7172000"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                value={formData.attendanceLocation.longitude}
+                onChange={event => setFormData(current => ({
+                  ...current,
+                  attendanceLocation: { ...current.attendanceLocation, longitude: event.target.value },
+                }))}
+                className="input"
+                placeholder="-38.5433000"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Raio permitido (metros)</label>
+              <input
+                type="number"
+                min="10"
+                max="5000"
+                value={formData.attendanceLocation.radiusMeters}
+                onChange={event => setFormData(current => ({
+                  ...current,
+                  attendanceLocation: {
+                    ...current.attendanceLocation,
+                    radiusMeters: Number(event.target.value),
+                  },
+                }))}
+                className="input"
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={captureAttendanceLocation}
+              disabled={capturingLocation}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <LocateFixed className="h-4 w-4" />
+              {capturingLocation ? 'Capturando...' : 'Capturar localização atual da escola'}
+            </button>
+            {formData.attendanceLocation.latitude && formData.attendanceLocation.longitude && (
+              <a
+                href={`https://www.google.com/maps?q=${formData.attendanceLocation.latitude},${formData.attendanceLocation.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-blue-700 hover:underline"
+              >
+                Conferir no mapa
+              </a>
+            )}
           </div>
         </div>
 

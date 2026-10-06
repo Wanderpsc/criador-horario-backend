@@ -37,8 +37,15 @@ interface TeacherAttendance {
 interface EmployeeAttendance {
   entryTime?: string;
   exitTime?: string;
+  entryTime2?: string;
+  exitTime2?: string;
+  entryTime3?: string;
+  exitTime3?: string;
   status: string;
   workedMinutes?: number;
+  expectedMinutes?: number;
+  deficitMinutes?: number;
+  overtimeMinutes?: number;
 }
 
 interface PageData {
@@ -373,6 +380,30 @@ export default function PontoPublico() {
                       </span>
                       <span className="font-bold text-gray-700">{empAtt.exitTime || '—'}</span>
                     </div>
+                    {empAtt.entryTime2 && (
+                      <>
+                        <div className="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-xl">
+                          <span className="text-sm font-medium text-gray-600">2ª entrada</span>
+                          <span className="font-bold text-green-700">{empAtt.entryTime2}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                          <span className="text-sm font-medium text-gray-600">2ª saída</span>
+                          <span className="font-bold text-gray-700">{empAtt.exitTime2 || '—'}</span>
+                        </div>
+                      </>
+                    )}
+                    {empAtt.entryTime3 && (
+                      <>
+                        <div className="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-xl">
+                          <span className="text-sm font-medium text-gray-600">3ª entrada</span>
+                          <span className="font-bold text-green-700">{empAtt.entryTime3}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                          <span className="text-sm font-medium text-gray-600">3ª saída</span>
+                          <span className="font-bold text-gray-700">{empAtt.exitTime3 || '—'}</span>
+                        </div>
+                      </>
+                    )}
                     {empAtt.workedMinutes !== undefined && empAtt.workedMinutes > 0 && (
                       <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-xl">
                         <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -396,6 +427,13 @@ export default function PontoPublico() {
                     {empAtt.overtimeMinutes > 0 && (
                       <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm">
                         <span className="font-semibold text-green-700">✅ Hora extra: {minutesToHHmm(empAtt.overtimeMinutes)}</span>
+                      </div>
+                    )}
+                    {empAtt.deficitMinutes !== undefined && empAtt.deficitMinutes > 0 && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm">
+                        <span className="font-semibold text-red-700">
+                          Saldo deficitário atual: {minutesToHHmm(empAtt.deficitMinutes)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -428,7 +466,7 @@ export default function PontoPublico() {
               )}
               {geoError && (
                 <div className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg p-2">
-                  ⚠️ {geoError} — o ponto será registrado sem validação de localização.
+                  ⚠️ {geoError} — se a escola exigir localização, o registro será bloqueado.
                 </div>
               )}
             </div>
@@ -436,10 +474,22 @@ export default function PontoPublico() {
             {/* Botões entrada / saída */}
             {(() => {
               const att = data.attendance as EmployeeAttendance | null;
-              const hasEntry = !!(att as any)?.entryTime;
-              const hasExit = !!(att as any)?.exitTime;
+              const shiftType = data.workSchedule?.shiftType || 'single';
+              const complete = !!att?.exitTime
+                && (shiftType === 'single' || !!att.exitTime2)
+                && (shiftType !== 'split3' || !!att.exitTime3);
+              const nextAction: 'entry' | 'exit' = !att?.entryTime
+                || (!!att.exitTime && ['split2', 'split3'].includes(shiftType) && !att.entryTime2)
+                || (!!att.exitTime2 && shiftType === 'split3' && !att.entryTime3)
+                ? 'entry'
+                : 'exit';
+              const nextShift = !att?.entryTime || !att?.exitTime
+                ? 1
+                : !att?.entryTime2 || !att?.exitTime2
+                  ? 2
+                  : 3;
 
-              if (hasExit) {
+              if (complete) {
                 return (
                   <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center text-green-700 font-medium">
                     <CheckCircle className="mx-auto mb-2" size={28} />
@@ -448,7 +498,7 @@ export default function PontoPublico() {
                 );
               }
 
-              if (!hasEntry) {
+              if (nextAction === 'entry') {
                 return (
                   <button
                     onClick={() => handleMark('entry')}
@@ -456,7 +506,7 @@ export default function PontoPublico() {
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
                   >
                     <LogIn size={22} />
-                    {marking ? 'Registrando...' : 'Registrar Entrada'}
+                    {marking ? 'Registrando...' : `Registrar ${nextShift}ª Entrada`}
                   </button>
                 );
               }
@@ -468,7 +518,7 @@ export default function PontoPublico() {
                   className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
                 >
                   <LogOut size={22} />
-                  {marking ? 'Registrando...' : 'Registrar Saída'}
+                  {marking ? 'Registrando...' : `Registrar ${nextShift}ª Saída`}
                 </button>
               );
             })()}
