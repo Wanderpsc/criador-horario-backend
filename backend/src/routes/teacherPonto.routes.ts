@@ -733,7 +733,9 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
 
     // Único toque: registrar presença imediatamente
     if (cls.entryTime || cls.status === 'present') {
-      return res.status(400).json({ message: 'Presença já registrada para este período.' });
+      return res.status(409).json({
+        message: 'Presença já registrada para este período. Somente a administração pode fazer alterações.',
+      });
     }
 
     const beforeWindow = cls.startTime && toMin(now) < toMin(cls.startTime) - graceMinutes;

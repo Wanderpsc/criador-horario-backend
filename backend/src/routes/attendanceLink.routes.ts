@@ -17,6 +17,7 @@ import GeneratedTimetable from '../models/GeneratedTimetable';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
 import User from '../models/User';
+import SchoolDay from '../models/SchoolDay';
 import { auth, AuthRequest } from '../middleware/auth';
 import { sendPontoNotificationEmail } from '../services/email.service';
 import { getAttendanceLocation, validateAttendanceLocation } from '../services/attendance-location.service';
@@ -122,6 +123,100 @@ function minutesBetween(entry?: string, exit?: string): number {
       }, 0);
     }
 
+    interface EmployeePunchState {
+      nextAction: 'entry' | 'exit' | null;
+      shiftNumber: 1 | 2 | 3 | null;
+      complete: boolean;
+      allowedNow: boolean;
+      availableAt?: string;
+      isExtraDay: boolean;
+      message: string;
+    }
+
+    function getEmployeePunchState(
+      attendance: any,
+      workSchedule: any,
+      currentTime: string,
+      isExtraDay: boolean
+    ): EmployeePunchState {
+      const shiftType = isExtraDay ? 'single' : (workSchedule.shiftType || 'single');
+      let nextAction: 'entry' | 'exit' | null = null;
+      let shiftNumber: 1 | 2 | 3 | null = null;
+      let availableAt: string | undefined;
+
+      if (!attendance?.entryTime) {
+        nextAction = 'entry';
+        shiftNumber = 1;
+        availableAt = isExtraDay ? undefined : workSchedule.entryTime;
+      } else if (!attendance.exitTime) {
+        nextAction = 'exit';
+        shiftNumber = 1;
+      } else if (['split2', 'split3'].includes(shiftType) && !attendance.entryTime2) {
+        nextAction = 'entry';
+        shiftNumber = 2;
+        availableAt = workSchedule.shift2EntryTime;
+      } else if (['split2', 'split3'].includes(shiftType) && !attendance.exitTime2) {
+        nextAction = 'exit';
+        shiftNumber = 2;
+      } else if (shiftType === 'split3' && !attendance.entryTime3) {
+        nextAction = 'entry';
+        shiftNumber = 3;
+        availableAt = workSchedule.shift3EntryTime;
+      } else if (shiftType === 'split3' && !attendance.exitTime3) {
+        nextAction = 'exit';
+        shiftNumber = 3;
+      }
+
+      if (!nextAction || !shiftNumber) {
+        return {
+          nextAction: null,
+          shiftNumber: null,
+          complete: true,
+          allowedNow: false,
+          isExtraDay,
+          message: 'Todos os registros de hoje foram concluídos. Somente a administração pode fazer alterações.',
+        };
+      }
+
+      const tolerance = workSchedule.toleranceMinutes ?? 10;
+      const allowedNow = nextAction === 'exit'
+        || !availableAt
+        || clockMinutes(currentTime) >= clockMinutes(availableAt) - tolerance;
+
+      return {
+        nextAction,
+        shiftNumber,
+        complete: false,
+        allowedNow,
+        availableAt,
+        isExtraDay,
+        message: allowedNow
+          ? `${nextAction === 'entry' ? 'Entrada' : 'Saída'} do ${shiftNumber}º turno disponível.`
+          : `A ${shiftNumber}ª entrada será liberada às ${availableAt}.`,
+      };
+    }
+
+    async function isEmployeeExtraDay(
+      schoolId: string,
+      workSchedule: any,
+      date: string,
+      dayKey: string
+    ): Promise<boolean> {
+      if (workSchedule.shiftMode === 'rotating') return false;
+      const workDays = workSchedule.workDays?.length
+        ? workSchedule.workDays
+        : ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+      const schoolDay = await SchoolDay.findOne({
+        schoolId,
+        date: {
+          $gte: new Date(`${date}T00:00:00.000Z`),
+          $lte: new Date(`${date}T23:59:59.999Z`),
+        },
+        dayType: { $in: ['holiday', 'recess'] },
+      }).select('_id').lean();
+      return !workDays.includes(dayKey) || Boolean(schoolDay);
+    }
+
     async function registerIndividualEmployeePoint(link: any, body: any) {
       const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId })
         .select('name cargo setor workSchedule email')
@@ -161,6 +256,8 @@ function minutesBetween(entry?: string, exit?: string): number {
       const workSchedule = employee.workSchedule || {};
       const shiftType = workSchedule.shiftType || 'single';
       const isRotating = workSchedule.shiftMode === 'rotating';
+      const isExtraDay = await isEmployeeExtraDay(link.schoolId, workSchedule, today, dayKey);
+      const effectiveShiftType = isExtraDay ? 'single' : shiftType;
       let attendanceDate = today;
       let attendanceDay = dayKey;
       let expectedEntryTime = workSchedule.entryTime || '';
@@ -201,7 +298,23 @@ function minutesBetween(entry?: string, exit?: string): number {
         };
       }
       const created = !attendance;
-      const expectedMinutes = expectedEmployeeMinutes(workSchedule);
+      const expectedMinutes = isExtraDay ? 0 : expectedEmployeeMinutes(workSchedule);
+      const punchState = getEmployeePunchState(attendance, workSchedule, now, isExtraDay);
+      if (punchState.complete) {
+        return { status: 409, body: { message: punchState.message, punchState } };
+      }
+      if (action !== punchState.nextAction) {
+        return {
+          status: 409,
+          body: {
+            message: `O próximo registro permitido é a ${punchState.nextAction === 'entry' ? 'entrada' : 'saída'} do ${punchState.shiftNumber}º turno.`,
+            punchState,
+          },
+        };
+      }
+      if (!punchState.allowedNow) {
+        return { status: 403, body: { message: punchState.message, punchState } };
+      }
 
       if (!attendance) {
         if (action === 'exit') {
@@ -217,13 +330,13 @@ function minutesBetween(entry?: string, exit?: string): number {
           dayOfWeek: attendanceDay,
           shift: isRotating ? 'plantao' : 'integral',
           status: 'partial',
-          shiftType,
-          expectedEntryTime,
-          expectedExitTime,
-          expectedEntryTime2: workSchedule.shift2EntryTime || '',
-          expectedExitTime2: workSchedule.shift2ExitTime || '',
-          expectedEntryTime3: workSchedule.shift3EntryTime || '',
-          expectedExitTime3: workSchedule.shift3ExitTime || '',
+          shiftType: effectiveShiftType,
+          expectedEntryTime: isExtraDay ? '' : expectedEntryTime,
+          expectedExitTime: isExtraDay ? '' : expectedExitTime,
+          expectedEntryTime2: isExtraDay ? '' : workSchedule.shift2EntryTime || '',
+          expectedExitTime2: isExtraDay ? '' : workSchedule.shift2ExitTime || '',
+          expectedEntryTime3: isExtraDay ? '' : workSchedule.shift3EntryTime || '',
+          expectedExitTime3: isExtraDay ? '' : workSchedule.shift3ExitTime || '',
           expectedMinutes,
           deficitMinutes: expectedMinutes,
           markedById: 'self',
@@ -239,10 +352,10 @@ function minutesBetween(entry?: string, exit?: string): number {
         if (!record.entryTime) {
           shiftNumber = 1;
           field = 'entryTime';
-        } else if (record.exitTime && ['split2', 'split3'].includes(shiftType) && !record.entryTime2) {
+        } else if (record.exitTime && ['split2', 'split3'].includes(effectiveShiftType) && !record.entryTime2) {
           shiftNumber = 2;
           field = 'entryTime2';
-        } else if (record.exitTime2 && shiftType === 'split3' && !record.entryTime3) {
+        } else if (record.exitTime2 && effectiveShiftType === 'split3' && !record.entryTime3) {
           shiftNumber = 3;
           field = 'entryTime3';
         } else {
@@ -277,8 +390,8 @@ function minutesBetween(entry?: string, exit?: string): number {
 
       const complete = Boolean(
         record.exitTime
-        && (shiftType === 'single' || record.exitTime2)
-        && (shiftType !== 'split3' || record.exitTime3)
+        && (effectiveShiftType === 'single' || record.exitTime2)
+        && (effectiveShiftType !== 'split3' || record.exitTime3)
       );
       let workedMinutes = minutesBetween(record.entryTime, record.exitTime)
         + minutesBetween(record.entryTime2, record.exitTime2)
@@ -298,19 +411,19 @@ function minutesBetween(entry?: string, exit?: string): number {
       record.expectedMinutes = expectedMinutes;
       record.deficitMinutes = Math.max(0, expectedMinutes - workedMinutes);
       record.overtimeMinutes = Math.max(0, workedMinutes - expectedMinutes);
-      record.lateArrivalMinutes = record.entryTime && expectedEntryTime
+      record.lateArrivalMinutes = !isExtraDay && record.entryTime && expectedEntryTime
         ? Math.max(0, clockMinutes(record.entryTime) - clockMinutes(expectedEntryTime) - tolerance)
         : 0;
-      const finalExpectedExit = shiftType === 'split3'
+      const finalExpectedExit = effectiveShiftType === 'split3'
         ? workSchedule.shift3ExitTime
-        : shiftType === 'split2'
+        : effectiveShiftType === 'split2'
           ? workSchedule.shift2ExitTime
           : expectedExitTime;
-      const finalExit = shiftType === 'split3' ? record.exitTime3 : shiftType === 'split2' ? record.exitTime2 : record.exitTime;
-      record.earlyDepartureMinutes = complete && finalExit && finalExpectedExit
+      const finalExit = effectiveShiftType === 'split3' ? record.exitTime3 : effectiveShiftType === 'split2' ? record.exitTime2 : record.exitTime;
+      record.earlyDepartureMinutes = !isExtraDay && complete && finalExit && finalExpectedExit
         ? Math.max(0, clockMinutes(finalExpectedExit) - clockMinutes(finalExit))
         : 0;
-      record.status = complete ? 'present' : 'partial';
+      record.status = complete ? (isExtraDay ? 'overtime_only' : 'present') : 'partial';
       record.photoData = photoData || record.photoData;
       record.latitude = lat;
       record.longitude = lng;
@@ -318,6 +431,7 @@ function minutesBetween(entry?: string, exit?: string): number {
       record.locationDistanceMeters = locationCheck.distanceMeters;
 
       await attendance.save();
+      const nextPunchState = getEmployeePunchState(record, workSchedule, now, isExtraDay);
       return {
         status: created ? 201 : 200,
         body: {
@@ -330,6 +444,7 @@ function minutesBetween(entry?: string, exit?: string): number {
           deficitMinutes: record.deficitMinutes,
           overtimeMinutes: record.overtimeMinutes,
           complete,
+          punchState: nextPunchState,
         },
       };
 }
@@ -494,6 +609,8 @@ router.get('/public/:token', async (req, res) => {
     const attendance = await EmployeeAttendance.findOne(attendanceFilter)
       .sort({ date: -1 })
       .lean();
+    const isExtraDay = await isEmployeeExtraDay(link.schoolId, ws || {}, today, dayKey);
+    const punchState = getEmployeePunchState(attendance, ws || {}, nowHHmm(), isExtraDay);
     return res.json({
       ...baseInfo,
       requiresEmail: Boolean((employee as any)?.email),
@@ -512,6 +629,7 @@ router.get('/public/:token', async (req, res) => {
         toleranceMinutes: ws.toleranceMinutes ?? 10,
       } : null,
       attendance: attendance || null,
+      punchState,
     });
 
   } catch (err: any) {

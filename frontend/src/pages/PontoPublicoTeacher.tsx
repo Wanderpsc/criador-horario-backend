@@ -403,6 +403,10 @@ export default function PontoPublicoTeacher() {
   // ─── Step: horário + ações ──────────────────────────────────────────────────
   if (step === 'schedule') {
     const classes = scheduleData?.attendance?.classes || [];
+    const expectedLastEndTime = scheduleData?.attendance?.expectedLastEndTime;
+    const canRegisterSchoolExit = Boolean(
+      expectedLastEndTime && toMin(nowHHmm()) >= toMin(expectedLastEndTime)
+    );
     const statusColor: Record<string, string> = {
       pending: 'bg-gray-100 text-gray-500',
       present: 'bg-green-100 text-green-700',
@@ -495,13 +499,17 @@ export default function PontoPublicoTeacher() {
                 >
                   <LogIn className="w-4 h-4" /> Registrar entrada na escola
                 </button>
-              ) : (
+              ) : canRegisterSchoolExit ? (
                 <button
                   onClick={() => initiateSchoolPresence('exit')}
                   className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" /> Registrar saída da escola
                 </button>
+              ) : (
+                <div className="rounded-xl border border-blue-200 bg-white/80 p-3 text-center text-sm text-blue-800">
+                  A entrada já está bloqueada. A saída será liberada às <strong>{expectedLastEndTime}</strong>.
+                </div>
               )}
               {scheduleData?.attendance?.expectedLastEndTime && !scheduleData.attendance.schoolPresenceComplete && (
                 <p className="text-[11px] text-blue-600 mt-2 text-center">
