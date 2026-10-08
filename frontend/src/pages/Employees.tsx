@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { getAttendancePosition } from '../utils/geolocation';
 import {
   Users, Plus, Search, Pencil, Trash2, Printer, X, ChevronDown, ChevronUp,
   User, Phone, MapPin, Briefcase, FileText, BookOpen, Eye, Link2, Copy, CheckCheck,
@@ -1261,10 +1262,10 @@ export default function Employees() {
                       type="button"
                       onClick={() => {
                         if (!navigator.geolocation) return;
-                        navigator.geolocation.getCurrentPosition(p => {
+                        getAttendancePosition().then(p => {
                           setGeralSettings(s => ({ ...s, latitude: String(p.coords.latitude), longitude: String(p.coords.longitude) }));
-                          toast.success('Coordenadas capturadas!');
-                        }, () => toast.error('Não foi possível obter localização.'));
+                          toast.success(`Coordenadas capturadas com precisão de ${Math.round(p.coords.accuracy)}m.`);
+                        }).catch(() => toast.error('Não foi possível obter localização. Verifique as permissões e ative o GPS.'));
                       }}
                       className="w-full text-xs bg-blue-50 border border-blue-200 text-blue-700 rounded-lg px-2 py-1.5 hover:bg-blue-100"
                     >

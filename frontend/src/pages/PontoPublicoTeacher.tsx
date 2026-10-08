@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { getAttendancePosition } from '../utils/geolocation';
 import {
   BookOpen, Clock, CheckCircle, XCircle,
   LogIn, LogOut, Search, ChevronRight, ArrowLeft, MapPin,
@@ -250,8 +251,7 @@ export default function PontoPublicoTeacher() {
 
     if (linkConfig?.requireGeolocation && navigator.geolocation) {
       try {
-        const pos = await new Promise<GeolocationPosition>((res, rej) =>
-          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+        const pos = await getAttendancePosition();
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
         setGeoPos({ lat, lng });

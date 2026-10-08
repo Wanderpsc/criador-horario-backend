@@ -1123,23 +1123,36 @@ router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
     const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes } = req.body;
     const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });
     if (!link) return res.status(404).json({ message: 'Link geral não encontrado.' });
+    const parsedLatitude = latitude === '' || latitude == null ? Number.NaN : Number(latitude);
+    const parsedLongitude = longitude === '' || longitude == null ? Number.NaN : Number(longitude);
+    const parsedAreaM2 = Number(areaM2);
+    if (requireGeolocation && (!Number.isFinite(parsedLatitude) || !Number.isFinite(parsedLongitude))) {
+      return res.status(400).json({ message: 'Capture ou informe as coordenadas do local de trabalho.' });
+    }
+    if ((Number.isFinite(parsedLatitude) && (parsedLatitude < -90 || parsedLatitude > 90))
+      || (Number.isFinite(parsedLongitude) && (parsedLongitude < -180 || parsedLongitude > 180))) {
+      return res.status(400).json({ message: 'Coordenadas geográficas inválidas.' });
+    }
+    if (!Number.isFinite(parsedAreaM2) || parsedAreaM2 < 100) {
+      return res.status(400).json({ message: 'A área permitida deve ser de pelo menos 100m².' });
+    }
     if (requirePhoto !== undefined) link.requirePhoto = requirePhoto;
     if (graceMinutes !== undefined) link.graceMinutes = graceMinutes;
     await link.save();
-    const radiusMeters = areaM2 ? Math.sqrt(Number(areaM2) / Math.PI) : 50;
+    const radiusMeters = Math.min(5000, Math.max(10, Math.sqrt(parsedAreaM2 / Math.PI)));
     await User.findByIdAndUpdate(schoolId, {
       attendanceLocation: {
         required: !!requireGeolocation,
-        latitude,
-        longitude,
+        latitude: Number.isFinite(parsedLatitude) ? parsedLatitude : undefined,
+        longitude: Number.isFinite(parsedLongitude) ? parsedLongitude : undefined,
         radiusMeters,
       },
     });
     res.json({
       ...link.toObject(),
       requireGeolocation: !!requireGeolocation,
-      latitude,
-      longitude,
+      latitude: Number.isFinite(parsedLatitude) ? parsedLatitude : undefined,
+      longitude: Number.isFinite(parsedLongitude) ? parsedLongitude : undefined,
       areaM2: Math.PI * radiusMeters ** 2,
       radiusMeters,
     });

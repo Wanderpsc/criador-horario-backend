@@ -70,10 +70,10 @@
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/icon.svg">
-  <link rel="apple-touch-icon" href="/icon-192.svg">
+  <link rel="apple-touch-icon" href="/icon-192.svg?v=20261008">
   
   <!-- PWA Manifest -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/manifest.json?v=20261008">
   
   <!-- GitHub Pages SPA Redirect Handler -->
   <script type="text/javascript">
@@ -92,36 +92,6 @@
     }(window.location))
   </script>
   
-  <!-- Remove o service worker legado e os caches que podem manter versões antigas. -->
-  <script>
-    (function clearLegacyAppCache() {
-      var cleanupVersion = 'edusync-cache-cleanup-v3';
-      var hadController = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
-      var unregisterWorkers = 'serviceWorker' in navigator
-        ? navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            return Promise.all(registrations.map(function(registration) {
-              return registration.unregister();
-            }));
-          })
-        : Promise.resolve();
-      var deleteCaches = 'caches' in window
-        ? caches.keys().then(function(cacheNames) {
-            return Promise.all(cacheNames.map(function(cacheName) {
-              return caches.delete(cacheName);
-            }));
-          })
-        : Promise.resolve();
-
-      Promise.all([unregisterWorkers, deleteCaches]).then(function() {
-        if (hadController && sessionStorage.getItem(cleanupVersion) !== 'done') {
-          sessionStorage.setItem(cleanupVersion, 'done');
-          window.location.reload();
-        }
-      }).catch(function(error) {
-        console.warn('Não foi possível limpar o cache legado.', error);
-      });
-    }());
-  </script>
 </head>
 <body>
   <div id="root"></div>

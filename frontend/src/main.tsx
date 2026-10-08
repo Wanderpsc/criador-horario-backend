@@ -15,6 +15,13 @@ import './index.css';
 
 console.log('🚀 Main.tsx carregado!');
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .catch(error => console.error('Não foi possível ativar a instalação do aplicativo.', error));
+  });
+}
+
 try {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || (window.navigator as any).standalone === true;

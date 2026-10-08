@@ -1,94 +1,59 @@
-/**
- * Service Worker para PWA
- * © 2025 Wander Pires Silva Coelho
- */
-
-const CACHE_NAME = 'edusync-pro-v2';
-const BASE_PATH = '/criador-horario-backend';
-const urlsToCache = [
-  `${BASE_PATH}/`,
-  `${BASE_PATH}/index.html`,
-  `${BASE_PATH}/manifest.json`
+const CACHE_NAME = 'edusync-ponto-v20261008';
+const APP_SHELL = [
+  '/',
+  '/manifest.json',
+  '/icon.svg',
+  '/icon-192.svg',
+  '/icon-512.svg',
 ];
 
-// Instalação do Service Worker
 self.addEventListener('install', (event) => {
-  console.log('⚙️ Service Worker: Instalando...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('✅ Service Worker: Cache aberto');
-        return cache.addAll(urlsToCache).catch(err => {
-          console.warn('⚠️ Erro ao adicionar arquivos ao cache:', err);
-        });
-      })
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-// Ativação do Service Worker
 self.addEventListener('activate', (event) => {
-  console.log('⚙️ Service Worker: Ativando...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('🗑️ Service Worker: Removendo cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys()
+      .then(cacheNames => Promise.all(
+        cacheNames
+          .filter(cacheName => cacheName !== CACHE_NAME)
+          .map(cacheName => caches.delete(cacheName))
+      ))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Interceptar requisições
 self.addEventListener('fetch', (event) => {
-  // Não interceptar requisições de API (cross-origin para o Render)
-  const url = new URL(event.request.url);
-  const isApiRequest = url.hostname !== self.location.hostname;
-  if (isApiRequest) {
-    // Para API: sempre rede, sem cache
-    event.respondWith(fetch(event.request).catch(() => {
-      return new Response(JSON.stringify({ error: 'offline' }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }));
+  const request = event.request;
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put('/', copy));
+          return response;
+        })
+        .catch(() => caches.match('/'))
+    );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        // Cache hit: servir do cache e atualizar em background
-        if (cachedResponse) {
-          // Atualizar cache em background (stale-while-revalidate)
-          fetch(event.request.clone()).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          }).catch(() => {/* ignora erro de rede no background */});
-          return cachedResponse;
-        }
-
-        // Sem cache: buscar da rede
-        return fetch(event.request.clone()).then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
-          }
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-          return networkResponse;
-        }).catch(() => {
-          // Falha de rede sem cache: retorna página offline genérica para navegação
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response('', { status: 503 });
-        });
-      })
+    caches.match(request).then(cached => cached || fetch(request).then(response => {
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+      }
+      return response;
+    }))
   );
 });

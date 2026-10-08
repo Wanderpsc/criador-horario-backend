@@ -21,18 +21,6 @@
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
   
-  <!-- Service Worker Registration - DESABILITADO TEMPORARIAMENTE -->
-  <script>
-    // Limpar Service Workers antigos
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister();
-          console.log('🗑️ Service Worker removido:', registration.scope);
-        }
-      });
-    }
-  </script>
   <script type="module" crossorigin src="/assets/index-Fabibk1m.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-BuWRdrrJ.css">
 </head>

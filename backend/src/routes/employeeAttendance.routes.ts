@@ -540,7 +540,7 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         cargo: emp.cargo,
         setor: emp.setor,
         date,
-        status: hasWorkToday ? 'absent' : 'holiday',
+        status: 'absent',
         shift: emp.jornadaTrabalho?.toLowerCase().includes('manhã') ? 'manha' :
                emp.jornadaTrabalho?.toLowerCase().includes('tarde') ? 'tarde' :
                emp.jornadaTrabalho?.toLowerCase().includes('noturno') ? 'noturno' : 'integral',

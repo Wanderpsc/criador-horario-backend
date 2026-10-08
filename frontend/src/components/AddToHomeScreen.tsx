@@ -46,16 +46,19 @@ export default function AddToHomeScreen({ label }: Props) {
   };
 
   useEffect(() => {
+    rememberDestination();
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
+    const handleInstalled = () => setInstalled(true);
     window.addEventListener('beforeinstallprompt', handler);
-
-    window.addEventListener('appinstalled', () => setInstalled(true));
+    window.addEventListener('appinstalled', handleInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', handleInstalled);
     };
   }, []);
 

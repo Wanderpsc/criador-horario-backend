@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { getAttendancePosition } from '../utils/geolocation';
 import { useAuthStore } from '../store/authStore';
 import {
   Clock, Printer, ChevronDown, ChevronUp,
@@ -2274,14 +2275,14 @@ ${sections}
             <button type="button"
               onClick={() => {
                 if (!navigator.geolocation) { alert('Geolocalização não suportada neste navegador.'); return; }
-                navigator.geolocation.getCurrentPosition(pos => {
+                getAttendancePosition().then(pos => {
                   setGeoSettings(s => ({
                     ...s,
                     latitude: String(pos.coords.latitude),
                     longitude: String(pos.coords.longitude),
                   }));
-                  toast.success('Coordenadas do local atual registradas!');
-                }, () => toast.error('Não foi possível obter a localização. Verifique as permissões do navegador.'));
+                  toast.success(`Coordenadas registradas com precisão de ${Math.round(pos.coords.accuracy)}m.`);
+                }).catch(() => toast.error('Não foi possível obter a localização. Verifique as permissões e ative o GPS.'));
               }}
               className="btn btn-sm btn-secondary flex items-center gap-2">
               📡 Capturar coordenadas da minha localização atual
