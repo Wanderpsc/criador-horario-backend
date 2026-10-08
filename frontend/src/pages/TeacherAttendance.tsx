@@ -44,6 +44,11 @@ interface ClassAttendance {
   markedAt?: Date;
   paidAt?: Date | string;
   classPaymentId?: string;
+  markedByElectronicPoint?: boolean;
+  entryTime?: string;
+  isRejected?: boolean;
+  rejectionReason?: string;
+  rejectedByName?: string;
 }
 
 interface AttendanceRecord {
@@ -58,6 +63,15 @@ interface AttendanceRecord {
   totalAbsentClasses: number;
   totalPendingClasses: number;
   attendanceRate: number;
+  schoolEntryTime?: string;
+  schoolExitTime?: string;
+  schoolPresenceComplete?: boolean;
+  schoolPresenceMarkedById?: string;
+  schoolPresenceMarkedByName?: string;
+  schoolPresenceManualReason?: string;
+  schoolPresenceRejected?: boolean;
+  schoolPresenceRejectionReason?: string;
+  schoolPresenceRejectedByName?: string;
 }
 
 interface AttendanceReport {
@@ -358,7 +372,7 @@ export default function TeacherAttendance() {
         status,
         scheduleId: scheduledData?.scheduleId // ✅ Adicionar scheduleId específico
       };
-      
+
       // Se é sábado letivo, enviar o dia da semana correspondente
       if (isSaturday && saturdayWeekday) {
         payload.followWeekday = saturdayWeekday;
@@ -395,6 +409,83 @@ export default function TeacherAttendance() {
     }
   };
 
+  const handleRejectElectronicClass = async (teacherId: string, period: number) => {
+    const reason = window.prompt('Informe o motivo para recusar este ponto eletrônico de aula:')?.trim();
+    if (!reason) return;
+    if (reason.length < 10) {
+      toast.error('Informe um motivo com pelo menos 10 caracteres.');
+      return;
+    }
+    try {
+      await api.put('/teacher-attendance/class-status/reject', {
+        teacherId,
+        date: selectedDate,
+        period,
+        reason,
+      });
+      toast.success('Ponto da aula recusado e convertido em ausência.');
+      queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      refetchAttendance();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao recusar o ponto da aula.');
+    }
+  };
+
+  const handleManualSchoolPresence = async (teacher: AttendanceRecord) => {
+    const entryTime = window.prompt(
+      `Horário de entrada de ${teacher.teacherName}:`,
+      teacher.schoolEntryTime || ''
+    )?.trim();
+    if (!entryTime) return;
+    const exitTime = window.prompt(
+      'Horário de saída (deixe vazio se ainda não ocorreu):',
+      teacher.schoolExitTime || ''
+    );
+    if (exitTime === null) return;
+    const reason = window.prompt('Motivo do lançamento manual:')?.trim();
+    if (!reason) return;
+    if (reason.length < 10) {
+      toast.error('Informe um motivo com pelo menos 10 caracteres.');
+      return;
+    }
+    try {
+      await api.put('/teacher-attendance/school-presence/manual', {
+        teacherId: teacher.teacherId,
+        date: selectedDate,
+        entryTime,
+        exitTime: exitTime.trim(),
+        reason,
+        classes: teacher.classes,
+      });
+      toast.success('Presença escolar lançada manualmente.');
+      queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      refetchAttendance();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao lançar presença escolar.');
+    }
+  };
+
+  const handleRejectSchoolPresence = async (teacher: AttendanceRecord) => {
+    const reason = window.prompt('Informe o motivo para recusar esta permanência escolar:')?.trim();
+    if (!reason) return;
+    if (reason.length < 10) {
+      toast.error('Informe um motivo com pelo menos 10 caracteres.');
+      return;
+    }
+    try {
+      await api.put('/teacher-attendance/school-presence/reject', {
+        teacherId: teacher.teacherId,
+        date: selectedDate,
+        reason,
+      });
+      toast.success('Permanência escolar recusada.');
+      queryClient.invalidateQueries({ queryKey: ['attendance-records'] });
+      refetchAttendance();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao recusar permanência escolar.');
+    }
+  };
+
   // Marcar todas as aulas do professor
   const handleMarkAllClasses = async (
     teacher: AttendanceRecord,
@@ -404,7 +495,10 @@ export default function TeacherAttendance() {
       const updatedClasses = teacher.classes.map(cls => ({
         ...cls,
         status,
-        markedAt: new Date()
+        markedAt: new Date(),
+        markedByElectronicPoint: false,
+        isRejected: false,
+        rejectionReason: '',
       }));
 
       await api.post('/teacher-attendance/daily-record', {
@@ -979,7 +1073,7 @@ export default function TeacherAttendance() {
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 p-6 rounded-lg no-print">
         <h1 className="text-3xl font-bold flex items-center gap-3 text-blue-900">
           <CheckCircle className="text-blue-600" size={32} />
-          Controle de Frequência por Aula
+          Controle de Frequência de Professores
         </h1>
         <p className="text-blue-700 mt-2">
           Registre a presença de cada professor por aula individual do dia
@@ -1543,6 +1637,52 @@ export default function TeacherAttendance() {
                   {/* Lista de Aulas (expandível) */}
                   {isExpanded && (
                     <div className="border-t-2 border-gray-200 bg-white p-4">
+                      <div className="mb-4 rounded-xl border-2 border-indigo-200 bg-indigo-50 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-bold text-indigo-900">🏫 Presença e permanência na escola</p>
+                            <p className="text-sm text-indigo-700">
+                              Entrada: <strong>{teacher.schoolEntryTime || '—'}</strong>
+                              {' · '}
+                              Saída: <strong>{teacher.schoolExitTime || '—'}</strong>
+                            </p>
+                            {teacher.schoolPresenceComplete && (
+                              <span className="text-xs font-semibold text-emerald-700">Permanência completa</span>
+                            )}
+                            {teacher.schoolPresenceMarkedByName && (
+                              <span className="block text-xs text-indigo-500">
+                                Registrado por: {teacher.schoolPresenceMarkedByName}
+                              </span>
+                            )}
+                            {teacher.schoolPresenceRejected && (
+                              <div className="mt-2 rounded-lg border border-red-300 bg-red-100 p-2 text-xs text-red-800">
+                                <strong>Permanência recusada por {teacher.schoolPresenceRejectedByName || 'Administrador'}.</strong>
+                                <span className="block">Motivo: {teacher.schoolPresenceRejectionReason}</span>
+                              </div>
+                            )}
+                          </div>
+                          {user?.role === 'school' && (
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                onClick={() => handleManualSchoolPresence(teacher)}
+                                className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                              >
+                                ✏️ Lançar manualmente
+                              </button>
+                              {teacher.schoolPresenceMarkedById === 'self'
+                                && !teacher.schoolPresenceRejected
+                                && teacher.schoolEntryTime && (
+                                <button
+                                  onClick={() => handleRejectSchoolPresence(teacher)}
+                                  className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+                                >
+                                  Recusar permanência
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                       {teacher.classes.length === 0 ? (
                         <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                           <AlertCircle className="mx-auto text-gray-400 mb-2" size={40} />
@@ -1623,6 +1763,17 @@ export default function TeacherAttendance() {
                                   <GraduationCap size={14} className="text-purple-600" />
                                   <p className="text-xs text-gray-600">{cls.className}</p>
                                 </div>
+                                {cls.markedByElectronicPoint && !cls.isRejected && (
+                                  <span className="inline-block mt-1 rounded bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                                    Confirmado eletronicamente
+                                  </span>
+                                )}
+                                {cls.isRejected && (
+                                  <div className="mt-2 rounded border border-red-300 bg-red-100 p-2 text-[10px] text-red-800">
+                                    <strong>Ponto recusado.</strong>
+                                    <span className="block">Motivo: {cls.rejectionReason}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -1650,6 +1801,17 @@ export default function TeacherAttendance() {
                                 Ausente
                               </button>
                             </div>
+                            {user?.role === 'school'
+                              && cls.status === 'present'
+                              && !cls.isRejected
+                              && (cls.markedByElectronicPoint || cls.entryTime) && (
+                              <button
+                                onClick={() => handleRejectElectronicClass(teacher.teacherId, cls.period)}
+                                className="w-full mt-2 px-2 py-1.5 bg-red-50 text-red-700 border border-red-300 rounded text-xs font-medium hover:bg-red-100 transition-all flex items-center justify-center gap-1"
+                              >
+                                <XCircle size={12} /> Recusar eletrônico
+                              </button>
+                            )}
                             
                             {/* Pagamento - apenas para aulas ausentes */}
                             {cls.status === 'absent' && (

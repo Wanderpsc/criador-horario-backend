@@ -533,6 +533,30 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       const totalPastPredicted = totalPredicted - totalFuturePredicted;
       const totalDeficit = totalPastPredicted > totalGiven ? totalPastPredicted - totalGiven : 0;
       const totalSurplus = totalGiven > totalPastPredicted ? totalGiven - totalPastPredicted : 0;
+      const electronicClassRecords = attendanceRecords.flatMap((record: any) =>
+        (record.classes || [])
+          .filter((cls: any) => cls.status === 'present' && (cls.markedByElectronicPoint || cls.entryTime))
+          .map((cls: any) => ({
+            date: record.date,
+            period: cls.period,
+            subjectName: cls.subjectName,
+            className: cls.className,
+            entryTime: cls.entryTime,
+            punctualityStatus: cls.punctualityStatus || 'on_time',
+            lateMinutes: cls.lateMinutes || 0,
+            requiresReview: Boolean(cls.requiresReview),
+            exceptionReason: cls.exceptionReason || '',
+            justification: cls.justification || '',
+          }))
+      );
+      const exceptionRecords = electronicClassRecords.filter(record => record.requiresReview);
+      const schoolPresenceDays = attendanceRecords.filter((record: any) => record.schoolPresenceComplete).length;
+      const schoolEntryOnlyDays = attendanceRecords.filter((record: any) =>
+        record.schoolEntryTime && !record.schoolPresenceComplete
+      ).length;
+      const schoolLateArrivalDays = attendanceRecords.filter((record: any) =>
+        (record.schoolArrivalDelayMinutes || 0) > 0
+      ).length;
 
       // Incluir professor no relatório se tiver dados (TeacherSubject OU frequência)
       if (subjectClassDetails.length > 0 || attendanceRecords.length > 0) {
@@ -545,6 +569,16 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
           totalDeficit,
           totalSurplus,
           totalPaidAbsences,
+          electronicPointSummary: {
+            confirmedClasses: electronicClassRecords.length,
+            punctualClasses: electronicClassRecords.filter(record => record.punctualityStatus === 'on_time').length,
+            lateClasses: electronicClassRecords.filter(record => record.punctualityStatus === 'late').length,
+            exceptionClasses: exceptionRecords.length,
+            schoolPresenceDays,
+            schoolEntryOnlyDays,
+            schoolLateArrivalDays,
+            exceptionRecords,
+          },
           subjectClassDetails
         });
       }

@@ -130,9 +130,17 @@ function minutesBetween(entry?: string, exit?: string): number {
         return { status: 404, body: { message: 'Funcionário não encontrado.' } };
       }
 
-      const { action, lat, lng, photoData } = body;
+      const { action, lat, lng, photoData, email: providedEmail } = body;
       if (!['entry', 'exit'].includes(action)) {
         return { status: 400, body: { message: 'Ação de ponto inválida.' } };
+      }
+
+      const registeredEmail = employee.email?.trim().toLowerCase() || '';
+      if (registeredEmail && !providedEmail) {
+        return { status: 400, body: { message: 'Confirme o e-mail cadastrado para registrar o ponto.' } };
+      }
+      if (registeredEmail && providedEmail.trim().toLowerCase() !== registeredEmail) {
+        return { status: 403, body: { message: 'E-mail não confere com o cadastro.' } };
       }
 
       const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
@@ -184,6 +192,14 @@ function minutesBetween(entry?: string, exit?: string): number {
         employeeId: link.personId,
         date: attendanceDate,
       });
+      if (attendance?.isRejected) {
+        return {
+          status: 403,
+          body: {
+            message: 'Este ponto foi recusado pela administração. Procure a central para regularização manual.',
+          },
+        };
+      }
       const created = !attendance;
       const expectedMinutes = expectedEmployeeMinutes(workSchedule);
 
@@ -375,7 +391,22 @@ router.post('/', auth, async (req: AuthRequest, res) => {
       createdBy: req.user!.id,
     });
 
-    await link.save();
+    try {
+      await link.save();
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        const concurrentLink = await AttendanceLink.findOne({
+          schoolId,
+          personType,
+          personId,
+          isActive: true,
+        });
+        if (concurrentLink) {
+          return res.status(200).json({ ...concurrentLink.toObject(), alreadyExisted: true });
+        }
+      }
+      throw error;
+    }
     res.status(201).json(link);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -422,6 +453,11 @@ router.get('/public/:token', async (req, res) => {
     const link = await AttendanceLink.findOne({ token: req.params.token });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
+    if (link.personType === 'teacher') {
+      return res.status(410).json({
+        message: 'Use o ponto individual do professor, que registra entrada na escola e presença por aula.',
+      });
+    }
 
     const today = todayISO();
     const dayKey = todayDayKey();
@@ -430,7 +466,6 @@ router.get('/public/:token', async (req, res) => {
     const baseInfo = {
       schoolName: link.schoolName,
       personType: link.personType,
-      personId: link.personId,
       personName: link.personName,
       cargo: link.cargo,
       setor: link.setor,
@@ -438,63 +473,9 @@ router.get('/public/:token', async (req, res) => {
       dayLabel,
     };
 
-    // ── PROFESSOR ──────────────────────────────────────────────────────────
-    if (link.personType === 'teacher') {
-      // Buscar horário gerado do professor para hoje
-      const timetables = await GeneratedTimetable.find({
-        school: link.schoolId,
-      }).lean();
-
-      // Filtrar slots do professor neste dia
-      const teacherSlots: any[] = [];
-      for (const tt of timetables) {
-        for (const slot of (tt as any).slots) {
-          if (String(slot.teacherId) === String(link.personId) && slot.day === dayKey) {
-            teacherSlots.push({ ...slot, classId: tt.classId });
-          }
-        }
-      }
-
-      // Enriquecer com nomes de disciplinas e turmas
-      const subjectIds = [...new Set(teacherSlots.map((s: any) => s.subjectId))];
-      const classIds = [...new Set(teacherSlots.map((s: any) => s.classId))];
-
-      const [subjects, classes] = await Promise.all([
-        Subject.find({ _id: { $in: subjectIds } }).select('_id name').lean(),
-        Class.find({ _id: { $in: classIds } }).select('_id name grade').lean(),
-      ]);
-
-      const subjectMap = Object.fromEntries(subjects.map((s: any) => [String(s._id), s.name]));
-      const classMap = Object.fromEntries(classes.map((c: any) => [String(c._id), `${c.name}${c.grade ? ' – ' + c.grade : ''}`]));
-
-      const schedule = teacherSlots
-        .sort((a: any, b: any) => a.period - b.period)
-        .map((s: any) => ({
-          period: s.period,
-          startTime: s.startTime || '',
-          endTime: s.endTime || '',
-          subjectName: subjectMap[s.subjectId] || s.subjectId,
-          className: classMap[s.classId] || s.classId,
-          subjectId: s.subjectId,
-          classId: s.classId,
-        }));
-
-      // Situação de frequência hoje
-      const attendance = await TeacherAttendance.findOne({
-        teacherId: link.personId,
-        date: today,
-      }).lean();
-
-      return res.json({
-        ...baseInfo,
-        schedule,
-        attendance: attendance || null,
-      });
-    }
-
     // ── FUNCIONÁRIO ────────────────────────────────────────────────────────
     const employee = await Employee.findOne({ _id: link.personId, schoolId: link.schoolId })
-      .select('jornadaTrabalho cargaHorariaSemanal setor cargo workSchedule')
+      .select('jornadaTrabalho cargaHorariaSemanal setor cargo workSchedule email')
       .lean();
 
     const ws = (employee as any)?.workSchedule;
@@ -515,6 +496,7 @@ router.get('/public/:token', async (req, res) => {
       .lean();
     return res.json({
       ...baseInfo,
+      requiresEmail: Boolean((employee as any)?.email),
       jornadaTrabalho: (employee as any)?.jornadaTrabalho || '',
       workSchedule: ws ? {
         shiftMode: ws.shiftMode || 'fixed',
@@ -543,107 +525,10 @@ router.post('/public/:token/mark', async (req, res) => {
     const link = await AttendanceLink.findOne({ token: req.params.token });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
-
-    const today = todayISO();
-    const dayKey = todayDayKey();
-    const now = nowHHmm();
-    const { action } = req.body; // 'entry' | 'exit' | 'confirm' (professor)
-
-    // ── PROFESSOR: confirmar presença em todas as aulas do dia ─────────────
     if (link.personType === 'teacher') {
-      const { lat, lng, photoData } = req.body;
-      const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
-      if (!locationCheck.valid) {
-        return res.status(locationCheck.configured ? 403 : 400).json({
-          message: locationCheck.message,
-          distance: locationCheck.distanceMeters,
-          radius: locationCheck.radiusMeters,
-        });
-      }
-      // Buscar slots do professor hoje
-      const timetables = await GeneratedTimetable.find({ school: link.schoolId }).lean();
-      const teacherSlots: any[] = [];
-      for (const tt of timetables) {
-        for (const slot of (tt as any).slots) {
-          if (String(slot.teacherId) === String(link.personId) && slot.day === dayKey) {
-            teacherSlots.push({ ...slot, classId: tt.classId });
-          }
-        }
-      }
-
-      if (teacherSlots.length === 0) {
-        return res.status(400).json({ message: 'Nenhuma aula programada para hoje.' });
-      }
-
-      // Enriquecer
-      const subjectIds = [...new Set(teacherSlots.map((s: any) => s.subjectId))];
-      const classIds = [...new Set(teacherSlots.map((s: any) => s.classId))];
-      const [subjects, classes] = await Promise.all([
-        Subject.find({ _id: { $in: subjectIds } }).select('_id name').lean(),
-        Class.find({ _id: { $in: classIds } }).select('_id name grade').lean(),
-      ]);
-      const subjectMap = Object.fromEntries(subjects.map((s: any) => [String(s._id), s.name]));
-      const classMap = Object.fromEntries(classes.map((c: any) => [String(c._id), `${c.name}${c.grade ? ' – ' + c.grade : ''}`]));
-
-      const teacher = await Teacher.findById(link.personId).select('name').lean();
-      const teacherName = (teacher as any)?.name || link.personName;
-
-      const classesArr = teacherSlots.sort((a: any, b: any) => a.period - b.period).map((s: any) => ({
-        period: s.period,
-        startTime: s.startTime || '',
-        endTime: s.endTime || '',
-        subjectId: s.subjectId,
-        subjectName: subjectMap[s.subjectId] || s.subjectId,
-        classId: s.classId,
-        className: classMap[s.classId] || s.classId,
-        grade: (classes.find((c: any) => String(c._id) === s.classId) as any)?.grade || '',
-        status: 'present',
-        markedAt: new Date(),
-        locationValid: locationCheck.valid,
-        latitude: lat,
-        longitude: lng,
-        locationDistanceMeters: locationCheck.distanceMeters,
-        photoData: photoData || undefined,
-      }));
-
-      const existing = await TeacherAttendance.findOne({ teacherId: link.personId, date: today });
-
-      if (existing) {
-        // Marcar aulas pendentes como presentes
-        let changed = false;
-        for (const cls of (existing as any).classes) {
-          if (cls.status === 'pending') {
-            cls.status = 'present';
-            cls.markedAt = new Date();
-            cls.locationValid = locationCheck.valid;
-            cls.latitude = lat;
-            cls.longitude = lng;
-            cls.locationDistanceMeters = locationCheck.distanceMeters;
-            if (photoData) cls.photoData = photoData;
-            changed = true;
-          }
-        }
-        if (changed) {
-          (existing as any).totalPresentClasses = (existing as any).classes.filter((c: any) => c.status === 'present').length;
-          await existing.save();
-        }
-        return res.json({ message: 'Presença confirmada.', attendance: existing });
-      }
-
-      // Criar novo registro
-      const attendance = new TeacherAttendance({
-        teacherId: link.personId,
-        teacherName,
-        schoolId: link.schoolId,
-        date: today,
-        dayOfWeek: dayKey,
-        classes: classesArr,
-        totalScheduledClasses: classesArr.length,
-        totalPresentClasses: classesArr.length,
-        totalAbsentClasses: 0,
+      return res.status(410).json({
+        message: 'A confirmação geral foi desativada. Registre a presença individualmente em cada aula.',
       });
-      await attendance.save();
-      return res.json({ message: 'Presença confirmada.', attendance });
     }
 
     const result = await registerIndividualEmployeePoint(link, req.body);
@@ -1134,9 +1019,14 @@ router.post('/school-public/:token/mark', async (req, res) => {
     const punches = (existing as any).punches || [];
     let punchType: 'entry' | 'exit';
     let shiftNumber: 1 | 2 | 3;
-    let targetField: 'exitTime' | 'entryTime2' | 'exitTime2' | 'entryTime3' | 'exitTime3';
+    let targetField: 'entryTime' | 'exitTime' | 'entryTime2' | 'exitTime2' | 'entryTime3' | 'exitTime3';
 
-    if (!(existing as any).exitTime) {
+    if (!(existing as any).entryTime) {
+      if (action === 'exit') {
+        return res.status(400).json({ message: 'Nenhuma entrada registrada hoje. Registre a entrada primeiro.' });
+      }
+      punchType = 'entry'; shiftNumber = 1; targetField = 'entryTime';
+    } else if (!(existing as any).exitTime) {
       punchType = 'exit'; shiftNumber = 1; targetField = 'exitTime';
     } else if (['split2', 'split3'].includes(shiftType) && !(existing as any).entryTime2) {
       punchType = 'entry'; shiftNumber = 2; targetField = 'entryTime2';

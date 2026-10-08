@@ -263,7 +263,7 @@ export default function Layout() {
           },
           { 
             icon: CheckCircle, 
-            label: 'Controle de Frequência', 
+            label: 'Controle de Frequência de Professores',
             path: '/teacher-attendance',
             description: '✅ Registre presença e acompanhe carga horária dos professores',
             color: 'green',
@@ -273,7 +273,7 @@ export default function Layout() {
           },
           { 
             icon: BarChart3, 
-            label: 'Relatórios de Frequência', 
+            label: 'Relatórios de Frequência de Professores',
             path: '/teacher-frequency-report',
             description: '📊 Visualize déficits e saldos de aulas por professor',
             color: 'blue',

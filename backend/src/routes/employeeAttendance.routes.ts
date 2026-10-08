@@ -60,6 +60,13 @@ function calcDerived(data: any) {
     expectedMinutes += timeToMinutes(expectedExitTime3) - timeToMinutes(expectedEntryTime3);
   }
 
+  const hasActualTime = Boolean(
+    entryTime || exitTime || entryTime2 || exitTime2 || entryTime3 || exitTime3 || plantaoStart || plantaoEnd
+  );
+  if (['present', 'remote'].includes(data.status) && !hasActualTime) {
+    workedMinutes = expectedMinutes;
+  }
+
   // Atraso baseado no 1º turno
   if (entryTime && expectedEntryTime) {
     const diff = timeToMinutes(entryTime) - timeToMinutes(expectedEntryTime);
@@ -136,6 +143,13 @@ router.post('/bulk', auth, async (req: AuthRequest, res) => {
         date,
         dayOfWeek,
         ...derived,
+        markedById: req.user!.id,
+        markedByName: (req.user as any).name || (req.user as any).schoolName || 'Administração',
+        isRejected: false,
+        rejectionReason: '',
+        rejectedAt: null,
+        rejectedById: '',
+        rejectedByName: '',
       };
       const doc = await EmployeeAttendance.findOneAndUpdate(
         { schoolId, employeeId: rec.employeeId, date },
@@ -224,6 +238,13 @@ router.put('/:id/rectify', auth, async (req: AuthRequest, res) => {
     if (entryTime !== undefined) doc.entryTime = entryTime;
     if (exitTime  !== undefined) doc.exitTime  = exitTime;
     if (status    !== undefined) doc.status    = status;
+    doc.isRejected = false;
+    doc.rejectionReason = '';
+    doc.rejectedAt = undefined;
+    doc.rejectedById = '';
+    doc.rejectedByName = '';
+    doc.markedById = req.user!.id;
+    doc.markedByName = rectEntry.rectifiedByName;
 
     // Recalcular derivados
     const derived = calcDerived({ ...doc.toObject(), entryTime: doc.entryTime, exitTime: doc.exitTime });
@@ -235,6 +256,71 @@ router.put('/:id/rectify', auth, async (req: AuthRequest, res) => {
 
     await doc.save();
     res.json(doc);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── PUT /:id/reject — recusar ponto eletrônico suspeito ─────────────────────
+router.put('/:id/reject', auth, async (req: AuthRequest, res) => {
+  try {
+    if (!isValidId(req.params.id)) return res.status(400).json({ message: 'ID inválido.' });
+    if (req.user!.role !== 'school') {
+      return res.status(403).json({ message: 'Acesso negado. Somente o administrador pode recusar pontos.' });
+    }
+
+    const reason = String(req.body.reason || '').trim();
+    if (reason.length < 10) {
+      return res.status(400).json({ message: 'Informe um motivo com pelo menos 10 caracteres.' });
+    }
+
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const doc = await EmployeeAttendance.findOne({ _id: req.params.id, schoolId });
+    if (!doc) return res.status(404).json({ message: 'Registro não encontrado.' });
+    if (doc.markedById !== 'self' && !(doc.punches && doc.punches.length > 0)) {
+      return res.status(400).json({ message: 'Este registro não foi realizado pelo ponto eletrônico.' });
+    }
+    if (doc.isRejected) {
+      return res.status(409).json({ message: 'Este ponto eletrônico já foi recusado.' });
+    }
+
+    const rejectedAt = new Date();
+    const rejectedByName = (req.user as any).name || (req.user as any).schoolName || 'Administrador';
+    if (!doc.rejections) doc.rejections = [];
+    doc.rejections.push({
+      rejectedById: req.user!.id,
+      rejectedByName,
+      rejectedAt,
+      reason,
+      originalStatus: doc.status,
+      originalEntryTime: doc.entryTime,
+      originalExitTime: doc.exitTime,
+      originalWorkedMinutes: doc.workedMinutes,
+    });
+
+    doc.isRejected = true;
+    doc.rejectionReason = reason;
+    doc.rejectedAt = rejectedAt;
+    doc.rejectedById = req.user!.id;
+    doc.rejectedByName = rejectedByName;
+    doc.status = 'absent';
+    doc.entryTime = '';
+    doc.exitTime = '';
+    doc.entryTime2 = '';
+    doc.exitTime2 = '';
+    doc.entryTime3 = '';
+    doc.exitTime3 = '';
+    doc.workedMinutes = 0;
+    doc.overtimeMinutes = 0;
+    doc.lateArrivalMinutes = 0;
+    doc.earlyDepartureMinutes = 0;
+    doc.deficitMinutes = doc.expectedMinutes || 0;
+    doc.observations = `Ponto eletrônico recusado pela administração: ${reason}`;
+    doc.markedById = req.user!.id;
+    doc.markedByName = rejectedByName;
+
+    await doc.save();
+    res.json({ message: 'Ponto recusado e convertido em falta.', record: doc });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -268,6 +354,51 @@ router.get('/report', auth, async (req: AuthRequest, res) => {
     }
 
     const records = await EmployeeAttendance.find(filter).sort({ employeeName: 1, date: 1 });
+
+    const referenceDate = typeof endDate === 'string'
+      ? endDate
+      : new Date().toISOString().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(referenceDate)) {
+      return res.status(400).json({ message: 'Data final inválida.' });
+    }
+
+    const reference = new Date(`${referenceDate}T12:00:00.000Z`);
+    const weekStartDate = new Date(reference);
+    const daysSinceMonday = (reference.getUTCDay() + 6) % 7;
+    weekStartDate.setUTCDate(reference.getUTCDate() - daysSinceMonday);
+
+    const weekStart = weekStartDate.toISOString().slice(0, 10);
+    const monthStart = `${referenceDate.slice(0, 7)}-01`;
+    const yearStart = `${referenceDate.slice(0, 4)}-01-01`;
+    const totalsStart = [weekStart, yearStart].sort()[0];
+    const totalsFilter: any = {
+      schoolId,
+      date: { $gte: totalsStart, $lte: referenceDate },
+    };
+    if (employeeId) totalsFilter.employeeId = employeeId;
+    const totalsRecords = await EmployeeAttendance.find(totalsFilter)
+      .select('employeeId date workedMinutes')
+      .lean();
+
+    const workedByPeriod: Record<string, {
+      daily: number;
+      weekly: number;
+      monthly: number;
+      annual: number;
+    }> = {};
+    for (const record of totalsRecords) {
+      const totals = workedByPeriod[record.employeeId] ||= {
+        daily: 0,
+        weekly: 0,
+        monthly: 0,
+        annual: 0,
+      };
+      const minutes = record.workedMinutes || 0;
+      if (record.date === referenceDate) totals.daily += minutes;
+      if (record.date >= weekStart) totals.weekly += minutes;
+      if (record.date >= monthStart) totals.monthly += minutes;
+      if (record.date >= yearStart) totals.annual += minutes;
+    }
 
     // Agrupar por funcionário
     const byEmployee: Record<string, any> = {};
@@ -312,7 +443,22 @@ router.get('/report', auth, async (req: AuthRequest, res) => {
       e.records.push(r);
     }
 
-    res.json(Object.values(byEmployee));
+    res.json(Object.values(byEmployee).map((employee: any) => {
+      const totals = workedByPeriod[employee.employeeId] || {
+        daily: 0,
+        weekly: 0,
+        monthly: 0,
+        annual: 0,
+      };
+      return {
+        ...employee,
+        dailyWorkedMinutes: totals.daily,
+        weeklyWorkedMinutes: totals.weekly,
+        monthlyWorkedMinutes: totals.monthly,
+        annualWorkedMinutes: totals.annual,
+        workloadReferenceDate: referenceDate,
+      };
+    }));
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
@@ -362,7 +508,7 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
           cargo: emp.cargo,
           setor: emp.setor,
           date,
-          status: null,
+          status: isWorkDay ? 'absent' : 'holiday',
           shift: 'plantao',
           shiftMode: 'rotating',
           rotatingWorkHours: cycleHours,
@@ -383,7 +529,8 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
       }
 
       // ── Escala Fixa ───────────────────────────────────────────────────────
-      const hasWorkToday = ws?.workDays?.includes(dayKey);
+      const workDays = ws?.workDays || ['monday','tuesday','wednesday','thursday','friday'];
+      const hasWorkToday = workDays.includes(dayKey);
       const expectedEntryTime = hasWorkToday && ws?.entryTime ? ws.entryTime : '';
       const expectedExitTime  = hasWorkToday && ws?.exitTime  ? ws.exitTime  : '';
 
@@ -393,7 +540,7 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         cargo: emp.cargo,
         setor: emp.setor,
         date,
-        status: null,
+        status: hasWorkToday ? 'absent' : 'holiday',
         shift: emp.jornadaTrabalho?.toLowerCase().includes('manhã') ? 'manha' :
                emp.jornadaTrabalho?.toLowerCase().includes('tarde') ? 'tarde' :
                emp.jornadaTrabalho?.toLowerCase().includes('noturno') ? 'noturno' : 'integral',
@@ -401,7 +548,7 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         expectedEntryTime,
         expectedExitTime,
         toleranceMinutes: ws?.toleranceMinutes ?? 10,
-        workDays: ws?.workDays || ['monday','tuesday','wednesday','thursday','friday'],
+        workDays,
         shiftType: (ws as any)?.shiftType || 'single',
         expectedEntryTime2: hasWorkToday && (ws as any)?.shift2EntryTime ? (ws as any).shift2EntryTime : '',
         expectedExitTime2:  hasWorkToday && (ws as any)?.shift2ExitTime  ? (ws as any).shift2ExitTime  : '',
@@ -415,6 +562,39 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         exitTime3: '',
       };
     });
+
+    const todayBrt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if ((date as string) <= todayBrt) {
+      const absentRows = rows.filter((row: any) => row.status === 'absent' && !row._id);
+      if (absentRows.length > 0) {
+        await EmployeeAttendance.bulkWrite(absentRows.map((row: any) => {
+          const derived = calcDerived(row);
+          const expectedMinutes = row.shiftMode === 'rotating'
+            ? (row.rotatingWorkHours || 0) * 60
+            : derived.expectedMinutes;
+          return {
+            updateOne: {
+              filter: { schoolId, employeeId: row.employeeId, date },
+              update: {
+                $setOnInsert: {
+                  ...row,
+                  schoolId,
+                  date,
+                  dayOfWeek: dayKey,
+                  ...derived,
+                  expectedMinutes,
+                  deficitMinutes: expectedMinutes,
+                  markedById: 'system',
+                  markedByName: 'Inicialização diária',
+                  observations: 'Aguardando registro eletrônico ou lançamento manual da frequência.',
+                },
+              },
+              upsert: true,
+            },
+          };
+        }));
+      }
+    }
 
     res.json({ rows, date });
   } catch (err: any) {

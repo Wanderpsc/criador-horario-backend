@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
 import {
   Clock, Printer, ChevronDown, ChevronUp,
-  RefreshCw, Save, Search, Bell, BarChart2, Pencil, X, History,
+  RefreshCw, Save, Search, Bell, BarChart2, Pencil, X, History, XCircle,
 } from 'lucide-react';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -68,6 +68,13 @@ interface AttendanceRow {
   observations?: string;
   notificationGenerated?: boolean;
   rectifications?: Rectification[];
+  markedById?: string;
+  markedByName?: string;
+  punches?: unknown[];
+  isRejected?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
+  rejectedByName?: string;
 }
 
 interface ReportEmployee {
@@ -88,6 +95,11 @@ interface ReportEmployee {
   totalDeficitMinutes: number;
   totalEarlyDepartureMinutes: number;
   totalLateArrivalMinutes: number;
+  dailyWorkedMinutes: number;
+  weeklyWorkedMinutes: number;
+  monthlyWorkedMinutes: number;
+  annualWorkedMinutes: number;
+  workloadReferenceDate: string;
   absenceDates: string[];
   records: AttendanceRow[];
 }
@@ -236,6 +248,27 @@ export default function EmployeeAttendancePage() {
       toast.error(err.response?.data?.message || 'Erro ao retificar.');
     } finally {
       setRectifying(false);
+    }
+  };
+
+  const rejectElectronicPoint = async (row: AttendanceRow) => {
+    if (!row._id) return;
+    const reason = window.prompt(
+      `Informe o motivo para recusar o ponto eletrônico de ${row.employeeName}:`
+    )?.trim();
+    if (!reason) return;
+    if (reason.length < 10) {
+      toast.error('Informe um motivo com pelo menos 10 caracteres.');
+      return;
+    }
+    try {
+      await api.put(`/employee-attendance/${row._id}/reject`, { reason });
+      toast.success('Ponto recusado e convertido em falta.');
+      qc.invalidateQueries({ queryKey: ['emp-attendance-day'] });
+      qc.invalidateQueries({ queryKey: ['emp-attendance-report'] });
+      refetchDay();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Erro ao recusar o ponto.');
     }
   };
 
@@ -485,6 +518,10 @@ export default function EmployeeAttendancePage() {
       <td>${r.vacationDays}</td>
       <td>${r.justifiedDays}</td>
       <td>${fmtMin(r.totalWorkedMinutes)}</td>
+      <td>${fmtMin(r.dailyWorkedMinutes)}</td>
+      <td>${fmtMin(r.weeklyWorkedMinutes)}</td>
+      <td>${fmtMin(r.monthlyWorkedMinutes)}</td>
+      <td>${fmtMin(r.annualWorkedMinutes)}</td>
       <td>${fmtMin(r.totalOvertimeMinutes)}</td>
       <td>${fmtMin(r.totalDeficitMinutes)}</td>
       <td>${fmtMin(r.totalEarlyDepartureMinutes)}</td>
@@ -522,7 +559,8 @@ export default function EmployeeAttendancePage() {
     <th>Nome</th><th>Cargo</th><th>Setor</th><th>Dias</th>
     <th>Presentes</th><th>Faltas</th><th>Parcial</th>
     <th>Atestado</th><th>Férias</th><th>Justificadas</th>
-    <th>H. Trabalhadas</th><th>H. Extra</th><th>Déficit</th><th>Saída Antecip.</th>
+    <th>H. Período</th><th>H. Dia</th><th>H. Semana</th><th>H. Mês</th><th>H. Ano</th>
+    <th>H. Extra</th><th>Déficit</th><th>Saída Antecip.</th>
   </tr></thead>
   <tbody>${tableRows}</tbody>
 </table>
@@ -1104,6 +1142,11 @@ ${sections}
                           >
                             <td className="p-3">
                               <div className="font-semibold">{row.employeeName}</div>
+                              {row.isRejected && (
+                                <span className="inline-block mt-1 rounded bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                                  PONTO RECUSADO
+                                </span>
+                              )}
                               {/* Badge de referência do plantão */}
                               {row.shiftMode === 'rotating' ? (
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
@@ -1264,6 +1307,18 @@ ${sections}
                                     <Pencil size={11} /> Retificar
                                   </button>
                                 )}
+                                {user?.role === 'school'
+                                  && row._id
+                                  && !row.isRejected
+                                  && (row.markedById === 'self' || (row.punches?.length ?? 0) > 0) && (
+                                  <button
+                                    onClick={() => rejectElectronicPoint(row)}
+                                    className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 border border-red-300 rounded px-2 py-0.5 hover:bg-red-50 transition-colors"
+                                    title="Recusar frequência eletrônica suspeita"
+                                  >
+                                    <XCircle size={11} /> Recusar ponto
+                                  </button>
+                                )}
                                 {(row.rectifications && row.rectifications.length > 0) && (
                                   <span className="text-xs text-amber-600 font-medium flex items-center gap-0.5">
                                     <History size={10} /> Retificado
@@ -1276,6 +1331,12 @@ ${sections}
                           {isExpanded && (
                             <tr key={`${row.employeeId}-exp`} className="bg-blue-50 border-b border-blue-100">
                               <td colSpan={10} className="p-4">
+                                {row.isRejected && (
+                                  <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+                                    <strong>Ponto eletrônico recusado por {row.rejectedByName || 'Administrador'}.</strong>
+                                    <span className="block mt-1">Motivo: {row.rejectionReason}</span>
+                                  </div>
+                                )}
 
                                 {/* ── HORÁRIO DE REFERÊNCIA DO PLANTÃO ───────────────────── */}
                                 <div className="bg-white border-2 border-blue-300 rounded-xl p-4 mb-4">
@@ -1781,7 +1842,11 @@ ${sections}
                         <th className="p-3 text-center">Atestado</th>
                         <th className="p-3 text-center">Férias</th>
                         <th className="p-3 text-center">Justif.</th>
-                        <th className="p-3 text-center">H. Trab.</th>
+                        <th className="p-3 text-center">H. Período</th>
+                        <th className="p-3 text-center">H. Dia</th>
+                        <th className="p-3 text-center">H. Semana</th>
+                        <th className="p-3 text-center">H. Mês</th>
+                        <th className="p-3 text-center">H. Ano</th>
                         <th className="p-3 text-center">H. Extra</th>
                         <th className="p-3 text-center">Déficit</th>
                         <th className="p-3 text-center">S. Antec.</th>
@@ -1805,6 +1870,10 @@ ${sections}
                               <td className="p-3 text-center text-purple-600">{r.vacationDays}</td>
                               <td className="p-3 text-center text-yellow-600">{r.justifiedDays}</td>
                               <td className="p-3 text-center text-xs">{fmtMin(r.totalWorkedMinutes)}</td>
+                              <td className="p-3 text-center text-xs">{fmtMin(r.dailyWorkedMinutes)}</td>
+                              <td className="p-3 text-center text-xs">{fmtMin(r.weeklyWorkedMinutes)}</td>
+                              <td className="p-3 text-center text-xs">{fmtMin(r.monthlyWorkedMinutes)}</td>
+                              <td className="p-3 text-center text-xs">{fmtMin(r.annualWorkedMinutes)}</td>
                               <td className="p-3 text-center text-xs text-pink-700">{fmtMin(r.totalOvertimeMinutes)}</td>
                               <td className="p-3 text-center text-xs text-red-700">{fmtMin(r.totalDeficitMinutes)}</td>
                               <td className="p-3 text-center text-xs text-orange-700">{fmtMin(r.totalEarlyDepartureMinutes)}</td>
@@ -1816,7 +1885,7 @@ ${sections}
                             </tr>
                             {isExp && (
                               <tr key={`${r.employeeId}-exp`} className="bg-purple-50 border-b border-purple-100">
-                                <td colSpan={14} className="p-4">
+                                <td colSpan={18} className="p-4">
                                   <div className="mb-3">
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-sm font-semibold">Frequência:</span>

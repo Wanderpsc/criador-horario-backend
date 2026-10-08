@@ -56,6 +56,7 @@ interface PageData {
   setor?: string;
   today: string;
   dayLabel: string;
+  requiresEmail?: boolean;
   // teacher
   schedule?: TeacherClass[];
   // employee
@@ -102,6 +103,7 @@ export default function PontoPublico() {
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [geoPos, setGeoPos] = useState<{ lat: number; lng: number } | null>(null);
   const [geoError, setGeoError] = useState<string>('');
+  const [email, setEmail] = useState('');
   const [clock, setClock] = useState(() => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
   // Relógio em tempo real
@@ -154,6 +156,7 @@ export default function PontoPublico() {
         lat,
         lng,
         photoData: photoData || undefined,
+        email: email.trim() || undefined,
       });
       setSuccessMsg(res.data.message || 'Ponto registrado!');
       setPhotoData(null);
@@ -264,6 +267,25 @@ export default function PontoPublico() {
           </div>
         )}
 
+        {data.requiresEmail && (
+          <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Confirme seu e-mail cadastrado
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={event => setEmail(event.target.value)}
+              autoComplete="email"
+              placeholder="seu-email@exemplo.com"
+              className="input w-full"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              O e-mail confirma que este link individual está sendo usado pelo titular.
+            </p>
+          </div>
+        )}
+
         {/* ── PROFESSOR ───────────────────────────────────────────────────── */}
         {isTeacher && (
           <>
@@ -321,7 +343,7 @@ export default function PontoPublico() {
             {data.schedule && data.schedule.length > 0 && (
               <button
                 onClick={() => handleMark('confirm')}
-                disabled={marking}
+                disabled={marking || (data.requiresEmail && !email.trim())}
                 className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
               >
                 <CheckCircle size={22} />
@@ -502,7 +524,7 @@ export default function PontoPublico() {
                 return (
                   <button
                     onClick={() => handleMark('entry')}
-                    disabled={marking}
+                    disabled={marking || (data.requiresEmail && !email.trim())}
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
                   >
                     <LogIn size={22} />
@@ -514,7 +536,7 @@ export default function PontoPublico() {
               return (
                 <button
                   onClick={() => handleMark('exit')}
-                  disabled={marking}
+                  disabled={marking || (data.requiresEmail && !email.trim())}
                   className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
                 >
                   <LogOut size={22} />

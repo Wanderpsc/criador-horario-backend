@@ -81,6 +81,21 @@ export interface IEmployeeAttendance extends Document {
     originalExitTime?: string;
     originalStatus?: string;
   }[];
+  isRejected?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: Date;
+  rejectedById?: string;
+  rejectedByName?: string;
+  rejections?: {
+    rejectedById: string;
+    rejectedByName: string;
+    rejectedAt: Date;
+    reason: string;
+    originalStatus: string;
+    originalEntryTime?: string;
+    originalExitTime?: string;
+    originalWorkedMinutes?: number;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -156,6 +171,21 @@ const employeeAttendanceSchema = new Schema<IEmployeeAttendance>(
       originalEntryTime: { type: String },
       originalExitTime:  { type: String },
       originalStatus:    { type: String },
+    }],
+    isRejected: { type: Boolean, default: false },
+    rejectionReason: { type: String, default: '' },
+    rejectedAt: { type: Date },
+    rejectedById: { type: String },
+    rejectedByName: { type: String },
+    rejections: [{
+      rejectedById: { type: String, required: true },
+      rejectedByName: { type: String, required: true },
+      rejectedAt: { type: Date, required: true },
+      reason: { type: String, required: true },
+      originalStatus: { type: String, required: true },
+      originalEntryTime: { type: String },
+      originalExitTime: { type: String },
+      originalWorkedMinutes: { type: Number },
     }],
   },
   { timestamps: true }

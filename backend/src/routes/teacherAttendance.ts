@@ -441,8 +441,16 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       console.log('🔍 [class-status] Índice da aula:', classIndex);
       
       if (classIndex !== -1) {
-        attendance.classes[classIndex].status = status;
-        attendance.classes[classIndex].markedAt = new Date();
+        const targetClass = attendance.classes[classIndex] as any;
+        targetClass.status = status;
+        targetClass.markedAt = new Date();
+        targetClass.markedByElectronicPoint = false;
+        targetClass.requiresReview = false;
+        targetClass.isRejected = false;
+        targetClass.rejectionReason = '';
+        targetClass.rejectedAt = undefined;
+        targetClass.rejectedById = '';
+        targetClass.rejectedByName = '';
         await attendance.save();
         console.log('✅ [class-status] Status atualizado com sucesso');
       } else {
@@ -595,7 +603,8 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
               className: classInfo?.name || 'Turma não encontrada',
               grade: (classInfo as any)?.grade || (classInfo as any)?.gradeId?.toString() || '',
               status: slot.period === period ? status : 'pending',
-              markedAt: slot.period === period ? new Date() : undefined
+              markedAt: slot.period === period ? new Date() : undefined,
+              markedByElectronicPoint: false,
             };
           } catch (slotError: any) {
             console.error(`❌ [class-status] Erro ao processar slot:`, slotError);
@@ -649,6 +658,186 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       error: error.message,
       details: error.stack
     });
+  }
+});
+
+// Recusar uma confirmação eletrônica de aula mantendo o histórico de auditoria
+router.put('/class-status/reject', auth, async (req: AuthRequest, res) => {
+  try {
+    if (req.user!.role !== 'school') {
+      return res.status(403).json({ message: 'Acesso negado. Somente o administrador pode recusar pontos.' });
+    }
+
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { teacherId, date, period } = req.body;
+    const reason = String(req.body.reason || '').trim();
+    if (!teacherId || !date || period === undefined) {
+      return res.status(400).json({ message: 'Professor, data e período são obrigatórios.' });
+    }
+    if (reason.length < 10) {
+      return res.status(400).json({ message: 'Informe um motivo com pelo menos 10 caracteres.' });
+    }
+
+    const attendance = await TeacherAttendance.findOne({ schoolId, teacherId, date });
+    if (!attendance) return res.status(404).json({ message: 'Registro de frequência não encontrado.' });
+
+    const targetClass = (attendance.classes as any[]).find(cls => cls.period === Number(period));
+    if (!targetClass) return res.status(404).json({ message: 'Aula não encontrada.' });
+    if (!targetClass.markedByElectronicPoint && !targetClass.entryTime) {
+      return res.status(400).json({ message: 'Esta aula não foi confirmada pelo ponto eletrônico.' });
+    }
+    if (targetClass.isRejected) {
+      return res.status(409).json({ message: 'Este ponto de aula já foi recusado.' });
+    }
+
+    const rejectedAt = new Date();
+    const rejectedByName = (req.user as any).name || (req.user as any).schoolName || 'Administrador';
+    if (!targetClass.rejectionHistory) targetClass.rejectionHistory = [];
+    targetClass.rejectionHistory.push({
+      rejectedById: req.user!.id,
+      rejectedByName,
+      rejectedAt,
+      reason,
+      originalStatus: targetClass.status,
+      originalEntryTime: targetClass.entryTime,
+      originalPunctualityStatus: targetClass.punctualityStatus,
+      originalJustification: targetClass.justification,
+    });
+    targetClass.status = 'absent';
+    targetClass.isRejected = true;
+    targetClass.rejectionReason = reason;
+    targetClass.rejectedAt = rejectedAt;
+    targetClass.rejectedById = req.user!.id;
+    targetClass.rejectedByName = rejectedByName;
+    targetClass.requiresReview = true;
+    targetClass.exceptionReason = `Ponto eletrônico recusado pela administração: ${reason}`;
+
+    await attendance.save();
+    res.json({ message: 'Ponto da aula recusado e convertido em ausência.', attendance });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Registrar manualmente a entrada/saída escolar do professor na central
+router.put('/school-presence/manual', auth, async (req: AuthRequest, res) => {
+  try {
+    if (req.user!.role !== 'school') {
+      return res.status(403).json({ message: 'Acesso negado. Somente o administrador pode lançar a presença escolar.' });
+    }
+
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { teacherId, date, entryTime, exitTime, classes = [] } = req.body;
+    const reason = String(req.body.reason || '').trim();
+    if (!teacherId || !date || !entryTime) {
+      return res.status(400).json({ message: 'Professor, data e horário de entrada são obrigatórios.' });
+    }
+    if (reason.length < 10) {
+      return res.status(400).json({ message: 'Informe um motivo com pelo menos 10 caracteres.' });
+    }
+    if (![entryTime, exitTime].filter(Boolean).every(value => /^\d{2}:\d{2}$/.test(value))) {
+      return res.status(400).json({ message: 'Horário inválido.' });
+    }
+
+    const teacher = await Teacher.findOne({ _id: teacherId, schoolId }).select('name');
+    if (!teacher) return res.status(404).json({ message: 'Professor não encontrado.' });
+
+    const administratorName = (req.user as any).name || (req.user as any).schoolName || 'Administrador';
+    const dayOfWeek = new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
+    const attendance = await TeacherAttendance.findOneAndUpdate(
+      { schoolId, teacherId, date },
+      {
+        $set: {
+          schoolEntryTime: entryTime,
+          schoolExitTime: exitTime || '',
+          schoolEntryAt: new Date(`${date}T${entryTime}:00`),
+          schoolExitAt: exitTime ? new Date(`${date}T${exitTime}:00`) : null,
+          schoolPresenceComplete: Boolean(exitTime),
+          schoolPresenceMarkedById: req.user!.id,
+          schoolPresenceMarkedByName: administratorName,
+          schoolPresenceManualReason: reason,
+          schoolPresenceRejected: false,
+          schoolPresenceRejectionReason: '',
+          schoolPresenceRejectedAt: null,
+          schoolPresenceRejectedById: '',
+          schoolPresenceRejectedByName: '',
+        },
+        $setOnInsert: {
+          schoolId,
+          teacherId,
+          teacherName: teacher.name,
+          date,
+          dayOfWeek,
+          classes,
+          schoolYear: Number(String(date).slice(0, 4)),
+        },
+      },
+      { upsert: true, new: true, runValidators: true }
+    );
+
+    res.json({
+      message: exitTime
+        ? 'Entrada e saída escolar lançadas manualmente.'
+        : 'Entrada escolar lançada manualmente.',
+      attendance,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Recusar a comprovação eletrônica de permanência escolar
+router.put('/school-presence/reject', auth, async (req: AuthRequest, res) => {
+  try {
+    if (req.user!.role !== 'school') {
+      return res.status(403).json({ message: 'Acesso negado. Somente o administrador pode recusar a permanência.' });
+    }
+
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const { teacherId, date } = req.body;
+    const reason = String(req.body.reason || '').trim();
+    if (!teacherId || !date) {
+      return res.status(400).json({ message: 'Professor e data são obrigatórios.' });
+    }
+    if (reason.length < 10) {
+      return res.status(400).json({ message: 'Informe um motivo com pelo menos 10 caracteres.' });
+    }
+
+    const attendance = await TeacherAttendance.findOne({ schoolId, teacherId, date });
+    if (!attendance) return res.status(404).json({ message: 'Registro não encontrado.' });
+    if ((attendance as any).schoolPresenceMarkedById !== 'self') {
+      return res.status(400).json({ message: 'A permanência não foi registrada pelo dispositivo do professor.' });
+    }
+    if ((attendance as any).schoolPresenceRejected) {
+      return res.status(409).json({ message: 'Esta permanência já foi recusada.' });
+    }
+
+    const rejectedAt = new Date();
+    const rejectedByName = (req.user as any).name || (req.user as any).schoolName || 'Administrador';
+    if (!(attendance as any).schoolPresenceRejectionHistory) {
+      (attendance as any).schoolPresenceRejectionHistory = [];
+    }
+    (attendance as any).schoolPresenceRejectionHistory.push({
+      rejectedById: req.user!.id,
+      rejectedByName,
+      rejectedAt,
+      reason,
+      originalEntryTime: (attendance as any).schoolEntryTime,
+      originalExitTime: (attendance as any).schoolExitTime,
+    });
+    (attendance as any).schoolPresenceRejected = true;
+    (attendance as any).schoolPresenceRejectionReason = reason;
+    (attendance as any).schoolPresenceRejectedAt = rejectedAt;
+    (attendance as any).schoolPresenceRejectedById = req.user!.id;
+    (attendance as any).schoolPresenceRejectedByName = rejectedByName;
+    (attendance as any).schoolEntryTime = '';
+    (attendance as any).schoolExitTime = '';
+    (attendance as any).schoolPresenceComplete = false;
+
+    await attendance.save();
+    res.json({ message: 'Permanência escolar recusada.', attendance });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

@@ -57,6 +57,27 @@ interface TeacherReport {
   totalDeficit: number;
   totalSurplus: number;
   totalPaidAbsences?: number;
+  electronicPointSummary?: {
+    confirmedClasses: number;
+    punctualClasses: number;
+    lateClasses: number;
+    exceptionClasses: number;
+    schoolPresenceDays: number;
+    schoolEntryOnlyDays: number;
+    schoolLateArrivalDays: number;
+    exceptionRecords: Array<{
+      date: string;
+      period: number;
+      subjectName: string;
+      className: string;
+      entryTime: string;
+      punctualityStatus: string;
+      lateMinutes: number;
+      requiresReview: boolean;
+      exceptionReason: string;
+      justification: string;
+    }>;
+  };
   subjectClassDetails: SubjectClassDetail[];
   // Pagamento de Aulas
   coveredBySubstitute?: Array<{
@@ -122,6 +143,18 @@ interface TeacherSubjectWorkload {
   totalAnnualHours: number;
   totalMonthlyHours: number;
 }
+
+const escapeHtml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+const csvCell = (value: string | number) => {
+  const text = String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
 
 const TeacherFrequencyReport: React.FC = () => {
   const { user } = useAuthStore();
@@ -629,7 +662,30 @@ const fmtDate = (dateStr: string) => {
           + 'Previsto: <strong>' + report.totalPredictedClasses + '</strong> | '
           + 'Dado: <strong style="color:#16a34a;">' + report.totalGivenClasses + '</strong>'
           + buildDeficitLabel(report)
-          + '</span></div>'
+          + '</span>'
+          + (report.electronicPointSummary
+            ? '<div style="margin-top:5px;font-size:9pt;color:#475569;">Ponto eletrônico: '
+              + '<strong>' + report.electronicPointSummary.confirmedClasses + '</strong> aula(s) · '
+              + '<span style="color:#15803d;">' + report.electronicPointSummary.punctualClasses + ' pontual(is)</span> · '
+              + '<span style="color:#c2410c;">' + report.electronicPointSummary.lateClasses + ' atrasada(s)</span> · '
+              + '<span style="color:#b45309;">' + report.electronicPointSummary.exceptionClasses + ' com ressalva</span> · '
+              + report.electronicPointSummary.schoolPresenceDays + ' dia(s) com permanência comprovada</div>'
+            : '')
+          + '</div>'
+          + ((report.electronicPointSummary?.exceptionRecords.length ?? 0) > 0
+            ? '<div style="margin:6px 0 10px;padding:8px 10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:5px;font-size:8.5pt;">'
+              + '<strong style="color:#92400e;">Pontos com ressalva:</strong>'
+              + report.electronicPointSummary!.exceptionRecords.map(record =>
+                '<div style="margin-top:5px;color:#78350f;">'
+                + '<strong>' + new Date(record.date + 'T12:00:00').toLocaleDateString('pt-BR')
+                + ' · ' + record.period + 'º período · ' + record.entryTime + '</strong> — '
+                + escapeHtml(record.subjectName) + ' / ' + escapeHtml(record.className)
+                + '<br/>Motivo: ' + escapeHtml(record.exceptionReason)
+                + '<br/>Justificativa: ' + escapeHtml(record.justification)
+                + '</div>'
+              ).join('')
+              + '</div>'
+            : '')
           + '<table style="width:100%;border-collapse:collapse;font-size:9pt;">'
           + '<thead><tr style="background:#e0e7ff;">'
           + '<th style="border:1px solid #c7d2fe;padding:5px 8px;text-align:left;">Disciplina</th>'
@@ -798,19 +854,31 @@ const fmtDate = (dateStr: string) => {
       return;
     }
 
-    const headers = ['Professor', 'Carga Horária Semanal', 'Aulas Previstas', 'Aulas Dadas', 'Déficit', 'Saldo'];
+    const headers = [
+      'Professor', 'Carga Horária Semanal', 'Aulas Previstas', 'Aulas Dadas', 'Déficit', 'Saldo',
+      'Aulas Confirmadas Eletronicamente', 'Aulas Pontuais', 'Aulas Atrasadas',
+      'Aulas com Ressalva', 'Dias com Permanência Comprovada', 'Detalhes das Ressalvas'
+    ];
     const rows = filteredReports.map(r => [
       r.teacherName,
       r.weeklyWorkload,
       r.totalPredictedClasses,
       r.totalGivenClasses,
       r.totalDeficit,
-      r.totalSurplus
+      r.totalSurplus,
+      r.electronicPointSummary?.confirmedClasses || 0,
+      r.electronicPointSummary?.punctualClasses || 0,
+      r.electronicPointSummary?.lateClasses || 0,
+      r.electronicPointSummary?.exceptionClasses || 0,
+      r.electronicPointSummary?.schoolPresenceDays || 0,
+      (r.electronicPointSummary?.exceptionRecords || []).map(record =>
+        `${record.date} ${record.period}º período: ${record.exceptionReason} Justificativa: ${record.justification}`
+      ).join(' | ')
     ]);
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map(row => row.map(csvCell).join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -899,7 +967,7 @@ const fmtDate = (dateStr: string) => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart3 className="w-8 h-8" />
-            Relatório de Frequência
+            Relatórios de Frequência de Professores
           </h1>
           <p className="text-gray-600 mt-1">Déficits e Saldos de Aulas por Professor</p>
         </div>
@@ -1163,6 +1231,41 @@ const fmtDate = (dateStr: string) => {
                       )}
                     </div>
                   </div>
+
+                  {report.electronicPointSummary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-2 mb-4">
+                      {[
+                        { label: 'Ponto eletrônico', value: report.electronicPointSummary.confirmedClasses, color: 'border-blue-200 bg-blue-50 text-blue-800' },
+                        { label: 'Pontuais', value: report.electronicPointSummary.punctualClasses, color: 'border-green-200 bg-green-50 text-green-800' },
+                        { label: 'Atrasadas', value: report.electronicPointSummary.lateClasses, color: 'border-orange-200 bg-orange-50 text-orange-800' },
+                        { label: 'Com ressalva', value: report.electronicPointSummary.exceptionClasses, color: 'border-amber-200 bg-amber-50 text-amber-800' },
+                        { label: 'Permanência comprovada', value: report.electronicPointSummary.schoolPresenceDays, color: 'border-indigo-200 bg-indigo-50 text-indigo-800' },
+                        { label: 'Só entrada', value: report.electronicPointSummary.schoolEntryOnlyDays, color: 'border-slate-200 bg-slate-50 text-slate-700' },
+                        { label: 'Chegadas atrasadas', value: report.electronicPointSummary.schoolLateArrivalDays, color: 'border-red-200 bg-red-50 text-red-800' },
+                      ].map(item => (
+                        <div key={item.label} className={`rounded-lg border p-2 text-center ${item.color}`}>
+                          <p className="text-lg font-black">{item.value}</p>
+                          <p className="text-[11px] font-semibold">{item.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {(report.electronicPointSummary?.exceptionRecords.length ?? 0) > 0 && (
+                    <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                      <p className="font-bold text-amber-900 text-sm mb-2">Pontos registrados com ressalva</p>
+                      <div className="space-y-2">
+                        {report.electronicPointSummary!.exceptionRecords.map((record, index) => (
+                          <div key={`${record.date}-${record.period}-${index}`} className="rounded-lg bg-white border border-amber-200 p-2 text-xs text-amber-950">
+                            <strong>{new Date(`${record.date}T12:00:00`).toLocaleDateString('pt-BR')} · {record.period}º período · {record.entryTime}</strong>
+                            <span className="block">{record.subjectName} · {record.className}</span>
+                            <span className="block text-amber-700">{record.exceptionReason}</span>
+                            <span className="block mt-1"><strong>Justificativa:</strong> {record.justification}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Detalhes por Disciplina/Turma */}
                   <div className="overflow-x-auto">

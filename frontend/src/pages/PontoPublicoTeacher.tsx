@@ -9,8 +9,8 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import {
   BookOpen, Clock, CheckCircle, XCircle,
-  LogIn, Search, ChevronRight, ArrowLeft, MapPin,
-  AlertTriangle, GraduationCap,
+  LogIn, LogOut, Search, ChevronRight, ArrowLeft, MapPin,
+  AlertTriangle, GraduationCap, Building2,
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
@@ -48,6 +48,12 @@ interface ClassRecord {
   entryTime?: string;
   exitTime?: string;
   markedAt?: string;
+  markedByElectronicPoint?: boolean;
+  punctualityStatus?: 'on_time' | 'late' | 'early' | 'outside_schedule';
+  lateMinutes?: number;
+  requiresReview?: boolean;
+  exceptionReason?: string;
+  justification?: string;
 }
 
 interface ScheduleData {
@@ -62,6 +68,12 @@ interface ScheduleData {
   attendance: {
     _id?: string;
     classes: ClassRecord[];
+    schoolEntryTime?: string;
+    schoolExitTime?: string;
+    expectedFirstStartTime?: string;
+    expectedLastEndTime?: string;
+    schoolArrivalDelayMinutes?: number;
+    schoolPresenceComplete?: boolean;
   } | null;
 }
 
@@ -77,6 +89,7 @@ interface LinkConfig {
 }
 
 type Step = 'select' | 'schedule' | 'confirm' | 'done';
+type PointAction = 'class' | 'school-entry' | 'school-exit';
 
 function nowHHmm() {
   const d = new Date();
@@ -102,6 +115,9 @@ export default function PontoPublicoTeacher() {
 
   // Confirm step
   const [activePeriod, setActivePeriod] = useState<number | null>(null);
+  const [pointAction, setPointAction] = useState<PointAction>('class');
+  const [needsJustification, setNeedsJustification] = useState(false);
+  const [justification, setJustification] = useState('');
   const [warningSlot, setWarningSlot]   = useState<ClassRecord | null>(null); // off-schedule warning
   const [showWarning, setShowWarning]   = useState(false);
 
@@ -171,12 +187,7 @@ export default function PontoPublicoTeacher() {
   }
 
   function isEnterable(cls: ClassRecord): boolean {
-    if (cls.status === 'present' || cls.status === 'absent' || cls.entryTime) return false;
-    const grace = linkConfig?.graceMinutes ?? 10;
-    if (cls.endTime) {
-      return toMin(nowHHmm()) <= toMin(cls.endTime) + grace;
-    }
-    return true;
+    return cls.status !== 'present' && !cls.entryTime;
   }
 
   function isScheduledNow(cls: ClassRecord): boolean {
@@ -187,7 +198,10 @@ export default function PontoPublicoTeacher() {
   }
 
   function initiateAction(cls: ClassRecord) {
+    setPointAction('class');
     setActivePeriod(cls.period);
+    setNeedsJustification(!isScheduledNow(cls));
+    setJustification('');
     setPhotoData(null);
     setGeoPos(null);
     setGeoError('');
@@ -207,8 +221,20 @@ export default function PontoPublicoTeacher() {
     setStep('confirm');
   }
 
+  function initiateSchoolPresence(action: 'entry' | 'exit') {
+    setPointAction(action === 'entry' ? 'school-entry' : 'school-exit');
+    setActivePeriod(null);
+    setNeedsJustification(false);
+    setJustification('');
+    setPhotoData(null);
+    setGeoPos(null);
+    setGeoError('');
+    setEmailError('');
+    setStep('confirm');
+  }
+
   async function executeAction() {
-    if (activePeriod === null || !selected) return;
+    if (!selected || (pointAction === 'class' && activePeriod === null)) return;
 
     // Email check
     if (scheduleData?.requiresEmail && !emailInput.trim()) {
@@ -236,15 +262,26 @@ export default function PontoPublicoTeacher() {
     }
 
     try {
-      const r = await axios.post(`${API}/teacher-ponto/teacher-public/${token}/mark`, {
-        teacherId: selected._id,
-        period: activePeriod,
-        action: 'entry',
-        lat,
-        lng,
-        photoData: photoData || undefined,
-        email: emailInput.trim() || undefined,
-      });
+      const endpoint = pointAction === 'class'
+        ? `${API}/teacher-ponto/teacher-public/${token}/mark`
+        : `${API}/teacher-ponto/teacher-public/${token}/school-presence`;
+      const r = await axios.post(endpoint, pointAction === 'class'
+        ? {
+            period: activePeriod,
+            action: 'entry',
+            lat,
+            lng,
+            photoData: photoData || undefined,
+            email: emailInput.trim() || undefined,
+            justification: needsJustification ? justification.trim() : undefined,
+          }
+        : {
+            action: pointAction === 'school-entry' ? 'entry' : 'exit',
+            lat,
+            lng,
+            photoData: photoData || undefined,
+            email: emailInput.trim() || undefined,
+          });
       setMarkResult({ ok: true, message: r.data.message });
       // Update attendance in-place
       if (r.data.attendance) {
@@ -255,8 +292,16 @@ export default function PontoPublicoTeacher() {
       setTimeout(() => {
         setMarkResult(null);
         setActivePeriod(null);
+        setJustification('');
+        setNeedsJustification(false);
       }, 3000);
     } catch (e: any) {
+      if (e.response?.data?.requiresJustification) {
+        setNeedsJustification(true);
+        setMarkResult({ ok: false, message: e.response.data.message });
+        setStep('confirm');
+        return;
+      }
       setMarkResult({ ok: false, message: e.response?.data?.message || 'Erro ao registrar ponto.' });
       setStep('done');
     } finally {
@@ -392,6 +437,12 @@ export default function PontoPublicoTeacher() {
               <span>{scheduleData?.dayLabel} · {scheduleData?.today}</span>
             </div>
 
+            {markResult && !markResult.ok && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {markResult.message}
+              </div>
+            )}
+
             <AttendanceReminder
               personName={selected?.name || 'Professor(a)'}
               storageKey={`attendance-reminder-teacher-${token}`}
@@ -399,6 +450,61 @@ export default function PontoPublicoTeacher() {
                 .filter(cls => classStatus(cls) === 'pending')
                 .map(cls => ({ time: cls.startTime, label: `${cls.subjectName} - ${cls.className}` }))}
             />
+
+            <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="rounded-xl bg-blue-600 p-2 text-white">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-bold text-blue-950">Permanência na escola</p>
+                  <p className="text-xs text-blue-700">Entrada na primeira jornada e saída após o último horário</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div className="rounded-xl bg-white/80 border border-blue-100 p-2">
+                  <span className="text-gray-500">Entrada</span>
+                  <p className="font-bold text-blue-800">
+                    {scheduleData?.attendance?.schoolEntryTime || 'Não registrada'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-white/80 border border-blue-100 p-2">
+                  <span className="text-gray-500">Saída</span>
+                  <p className="font-bold text-blue-800">
+                    {scheduleData?.attendance?.schoolExitTime || 'Não registrada'}
+                  </p>
+                </div>
+              </div>
+              {scheduleData?.attendance?.schoolArrivalDelayMinutes ? (
+                <p className="text-xs text-orange-700 mb-3">
+                  Chegada com {scheduleData.attendance.schoolArrivalDelayMinutes} minuto(s) de atraso.
+                </p>
+              ) : null}
+              {scheduleData?.attendance?.schoolPresenceComplete ? (
+                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                  <CheckCircle className="w-4 h-4" /> Permanência diária comprovada
+                </div>
+              ) : !scheduleData?.attendance?.schoolEntryTime ? (
+                <button
+                  onClick={() => initiateSchoolPresence('entry')}
+                  className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 flex items-center justify-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" /> Registrar entrada na escola
+                </button>
+              ) : (
+                <button
+                  onClick={() => initiateSchoolPresence('exit')}
+                  className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" /> Registrar saída da escola
+                </button>
+              )}
+              {scheduleData?.attendance?.expectedLastEndTime && !scheduleData.attendance.schoolPresenceComplete && (
+                <p className="text-[11px] text-blue-600 mt-2 text-center">
+                  Último horário previsto: {scheduleData.attendance.expectedLastEndTime}
+                </p>
+              )}
+            </div>
 
             {/* Sábado letivo aviso */}
             {scheduleData?.isMakeupSaturday && (
@@ -440,7 +546,7 @@ export default function PontoPublicoTeacher() {
                 <p className="text-xs font-semibold text-gray-500 uppercase">Aulas de hoje</p>
                 {classes.map(cls => {
                   const st = classStatus(cls);
-                  const canMark = st === 'pending' && isEnterable(cls);
+                  const canMark = isEnterable(cls);
 
                   return (
                     <div
@@ -478,6 +584,12 @@ export default function PontoPublicoTeacher() {
                             <span><Clock className="inline w-3 h-3 mr-0.5" />{cls.startTime}–{cls.endTime}</span>
                             {cls.entryTime && <span className="text-green-600"><LogIn className="inline w-3 h-3 mr-0.5" />{cls.entryTime}</span>}
                           </div>
+                          {cls.requiresReview && (
+                            <div className="mt-2 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-[11px] text-orange-800">
+                              <strong>Com ressalva:</strong> {cls.exceptionReason}
+                              {cls.justification && <span className="block mt-0.5">Justificativa: {cls.justification}</span>}
+                            </div>
+                          )}
                         </div>
 
                         {/* Action button */}
@@ -513,7 +625,7 @@ export default function PontoPublicoTeacher() {
                   ? 'já encerrou.'
                   : 'ainda não começou.'
                 }{' '}
-                Confirma mesmo assim?
+                Para concluir, será obrigatório escrever uma justificativa. O ponto ficará registrado com ressalva nos relatórios.
               </p>
               <div className="flex gap-3">
                 <button
@@ -539,6 +651,7 @@ export default function PontoPublicoTeacher() {
   // ─── Step: confirmação (foto + geo + email) ─────────────────────────────────
   if (step === 'confirm') {
     const cls = scheduleData?.attendance?.classes.find(c => c.period === activePeriod);
+    const isSchoolPresence = pointAction !== 'class';
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-start justify-center p-4 pt-8">
@@ -552,11 +665,22 @@ export default function PontoPublicoTeacher() {
               <ArrowLeft className="w-3 h-3" /> Voltar
             </button>
             <p className="font-bold">
-              📝 Registrar Presença
+              {pointAction === 'school-entry'
+                ? '🏫 Registrar entrada na escola'
+                : pointAction === 'school-exit'
+                  ? '🏫 Registrar saída da escola'
+                  : '📝 Registrar presença na aula'}
             </p>
-            {cls && (
+            {!isSchoolPresence && cls && (
               <p className="text-green-200 text-sm mt-1">
                 Período {cls.period} · {cls.subjectName} · {cls.className}
+              </p>
+            )}
+            {isSchoolPresence && (
+              <p className="text-green-200 text-sm mt-1">
+                {pointAction === 'school-entry'
+                  ? 'Comprovação de chegada para a jornada de hoje'
+                  : 'Comprovação de permanência até o último horário'}
               </p>
             )}
           </div>
@@ -590,6 +714,23 @@ export default function PontoPublicoTeacher() {
               </div>
             )}
 
+            {pointAction === 'class' && needsJustification && (
+              <div>
+                <label className="block text-xs font-semibold text-orange-800 mb-1">
+                  Justificativa do registro fora do horário <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={justification}
+                  onChange={event => setJustification(event.target.value)}
+                  minLength={10}
+                  rows={3}
+                  placeholder="Explique por que não está na turma no horário previsto..."
+                  className="w-full border border-orange-300 bg-orange-50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+                <p className="text-[11px] text-orange-700 mt-1">Mínimo de 10 caracteres. A justificativa constará no relatório.</p>
+              </div>
+            )}
+
             {/* Photo */}
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
@@ -620,10 +761,21 @@ export default function PontoPublicoTeacher() {
             {/* Confirm button */}
             <button
               onClick={executeAction}
-              disabled={marking || (linkConfig?.requirePhoto && !photoData)}
+              disabled={
+                marking
+                || (linkConfig?.requirePhoto && !photoData)
+                || (pointAction === 'class' && needsJustification && justification.trim().length < 10)
+              }
               className="w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 text-white bg-green-600 hover:bg-green-700 disabled:opacity-60"
             >
-              <LogIn className="w-5 h-5" />{marking ? 'Registrando...' : 'Confirmar Presença'}
+              {pointAction === 'school-exit' ? <LogOut className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+              {marking
+                ? 'Registrando...'
+                : pointAction === 'school-entry'
+                  ? 'Confirmar entrada na escola'
+                  : pointAction === 'school-exit'
+                    ? 'Confirmar saída da escola'
+                    : 'Confirmar presença na aula'}
             </button>
           </div>
         </div>

@@ -51,5 +51,9 @@ const attendanceLinkSchema = new Schema<IAttendanceLink>(
 
 attendanceLinkSchema.index({ token: 1 }, { unique: true });
 attendanceLinkSchema.index({ schoolId: 1, personType: 1, personId: 1 });
+attendanceLinkSchema.index(
+  { schoolId: 1, personType: 1, personId: 1, isActive: 1 },
+  { unique: true, partialFilterExpression: { isActive: true } }
+);
 
 export default mongoose.model<IAttendanceLink>('AttendanceLink', attendanceLinkSchema);

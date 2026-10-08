@@ -473,6 +473,158 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
   }
 });
 
+// POST /teacher-public/:token/school-presence
+// Registra a chegada à escola e a saída após o último horário previsto.
+router.post('/teacher-public/:token/school-presence', async (req, res) => {
+  try {
+    const link = await resolveIndividualTeacherLink(req.params.token);
+    if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    if (link.isEnabled === false) {
+      return res.status(403).json({ message: 'O ponto eletrônico está desativado.' });
+    }
+
+    const { action, lat, lng, photoData, email } = req.body;
+    if (!['entry', 'exit'].includes(action)) {
+      return res.status(400).json({ message: 'Ação de presença escolar inválida.' });
+    }
+
+    const teacherId = link.teacherId;
+    const teacher = await Teacher.findOne({ _id: teacherId, schoolId: link.schoolId })
+      .select('name email').lean() as any;
+    if (!teacher) return res.status(404).json({ message: 'Professor não encontrado.' });
+
+    const registeredEmail = teacher.email?.trim().toLowerCase() || '';
+    const providedEmail = String(email || '').trim().toLowerCase();
+    if (registeredEmail && !providedEmail) {
+      return res.status(400).json({ message: 'Este professor requer confirmação por e-mail.' });
+    }
+    if (registeredEmail && providedEmail !== registeredEmail) {
+      return res.status(403).json({ message: 'E-mail não confere com o cadastrado.' });
+    }
+
+    const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+    if (!locationCheck.valid) {
+      return res.status(locationCheck.configured ? 403 : 400).json({
+        message: locationCheck.message,
+        distance: locationCheck.distanceMeters,
+        radius: locationCheck.radiusMeters,
+      });
+    }
+    if (link.requirePhoto && !photoData) {
+      return res.status(400).json({ message: 'Foto obrigatória.' });
+    }
+
+    const today = todayISO();
+    const dayKey = todayDayKey();
+    const now = nowHHmm();
+    const { effectiveDayKey } = await getEffectiveDayKey(link.schoolId, today, dayKey);
+    const slots = await getTeacherSlotsForDay(
+      link.schoolId,
+      teacherId,
+      effectiveDayKey,
+      link.activeTimetableId || undefined
+    );
+    if (slots.length === 0) {
+      return res.status(400).json({ message: 'Nenhuma aula prevista para este professor hoje.' });
+    }
+
+    const firstStartTime = slots
+      .map(slot => slot.startTime)
+      .filter(Boolean)
+      .sort((a, b) => toMin(a) - toMin(b))[0];
+    const lastEndTime = slots
+      .map(slot => slot.endTime)
+      .filter(Boolean)
+      .sort((a, b) => toMin(b) - toMin(a))[0];
+    if (!firstStartTime || !lastEndTime) {
+      return res.status(400).json({ message: 'O horário atual não possui início e término válidos.' });
+    }
+
+    let attendance = await TeacherAttendance.findOne({
+      teacherId,
+      schoolId: link.schoolId,
+      date: today,
+    });
+    if ((attendance as any)?.schoolPresenceRejected) {
+      return res.status(403).json({
+        message: 'A permanência escolar foi recusada. Procure a central para regularização manual.',
+      });
+    }
+    if (!attendance) {
+      attendance = new TeacherAttendance({
+        teacherId,
+        teacherName: teacher.name,
+        schoolId: link.schoolId,
+        date: today,
+        dayOfWeek: effectiveDayKey,
+        classes: slots.map(slot => ({
+          period: slot.period,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          subjectId: slot.subjectId,
+          subjectName: slot.subjectName,
+          classId: slot.classId,
+          className: slot.className,
+          grade: slot.grade,
+          status: 'pending',
+          isPedagogical: slot.isPedagogical || false,
+        })),
+        schoolYear: new Date().getFullYear(),
+      });
+    }
+
+    (attendance as any).expectedFirstStartTime = firstStartTime;
+    (attendance as any).expectedLastEndTime = lastEndTime;
+
+    if (action === 'entry') {
+      if ((attendance as any).schoolEntryTime) {
+        return res.status(409).json({ message: 'A entrada na escola já foi registrada hoje.' });
+      }
+      (attendance as any).schoolEntryTime = now;
+      (attendance as any).schoolEntryAt = new Date();
+      (attendance as any).schoolArrivalDelayMinutes = Math.max(
+        0,
+        toMin(now) - toMin(firstStartTime) - (link.graceMinutes ?? 10)
+      );
+      (attendance as any).schoolEntryLocationValid = locationCheck.valid;
+      (attendance as any).schoolPresenceMarkedById = 'self';
+      (attendance as any).schoolPresenceMarkedByName = teacher.name;
+      if (photoData) (attendance as any).schoolEntryPhotoData = photoData;
+    } else {
+      if (!(attendance as any).schoolEntryTime) {
+        return res.status(400).json({ message: 'Registre primeiro a entrada na escola.' });
+      }
+      if ((attendance as any).schoolExitTime) {
+        return res.status(409).json({ message: 'A saída da escola já foi registrada hoje.' });
+      }
+      if (toMin(now) < toMin(lastEndTime)) {
+        return res.status(400).json({
+          message: `A saída só poderá ser registrada após o último horário, às ${lastEndTime}.`,
+        });
+      }
+      (attendance as any).schoolExitTime = now;
+      (attendance as any).schoolExitAt = new Date();
+      (attendance as any).schoolEarlyDepartureMinutes = 0;
+      (attendance as any).schoolExitLocationValid = locationCheck.valid;
+      (attendance as any).schoolPresenceComplete = true;
+      (attendance as any).schoolPresenceMarkedById = 'self';
+      (attendance as any).schoolPresenceMarkedByName = teacher.name;
+      if (photoData) (attendance as any).schoolExitPhotoData = photoData;
+    }
+
+    await attendance.save();
+    return res.json({
+      message: action === 'entry'
+        ? `Entrada na escola registrada às ${now}.`
+        : `Saída da escola registrada às ${now}. Permanência diária comprovada.`,
+      attendance,
+    });
+  } catch (err: any) {
+    console.error('[teacher-ponto] school-presence error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // POST /teacher-public/:token/mark
 // Marca entrada ou saída de um período específico
 router.post('/teacher-public/:token/mark', async (req, res) => {
@@ -491,6 +643,7 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
       lng,
       photoData,
       email,
+      justification,
     } = req.body;
     const teacherId = link.teacherId;
 
@@ -582,9 +735,14 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
       return res.status(400).json({ message: 'Presença já registrada para este período.' });
     }
 
-    // Check grace: não pode registrar após o fim do período + tolerância
-    if (cls.endTime && toMin(now) > toMin(cls.endTime) + graceMinutes) {
-      return res.status(400).json({ message: 'Prazo de registro encerrado para este período.' });
+    const beforeWindow = cls.startTime && toMin(now) < toMin(cls.startTime) - graceMinutes;
+    const afterWindow = cls.endTime && toMin(now) > toMin(cls.endTime) + graceMinutes;
+    const outsideSchedule = Boolean(beforeWindow || afterWindow);
+    if (outsideSchedule && (!justification || String(justification).trim().length < 10)) {
+      return res.status(400).json({
+        message: 'Informe uma justificativa com pelo menos 10 caracteres para registrar fora do horário da aula.',
+        requiresJustification: true,
+      });
     }
 
     cls.entryTime     = now;
@@ -595,9 +753,33 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     if (lng != null) cls.longitude = lng;
     if (locationCheck.distanceMeters != null) cls.locationDistanceMeters = locationCheck.distanceMeters;
     if (photoData) cls.photoData = photoData;
+    cls.markedByElectronicPoint = true;
+    cls.lateMinutes = cls.startTime
+      ? Math.max(0, toMin(now) - toMin(cls.startTime) - graceMinutes)
+      : 0;
+    cls.punctualityStatus = beforeWindow
+      ? 'early'
+      : afterWindow
+        ? 'outside_schedule'
+        : cls.lateMinutes > 0
+          ? 'late'
+          : 'on_time';
+    cls.requiresReview = outsideSchedule;
+    cls.exceptionReason = beforeWindow
+      ? 'Registro realizado antes da janela da aula.'
+      : afterWindow
+        ? 'Registro realizado após a janela da aula.'
+        : '';
+    cls.justification = outsideSchedule ? String(justification).trim() : '';
 
     await attendance.save();
-    res.json({ message: 'Presença registrada com sucesso.', attendance });
+    res.json({
+      message: outsideSchedule
+        ? 'Presença registrada com ressalva e encaminhada aos relatórios.'
+        : 'Presença registrada com sucesso.',
+      attendance,
+      requiresReview: outsideSchedule,
+    });
   } catch (err: any) {
     console.error('[teacher-ponto] mark error:', err);
     res.status(500).json({ message: err.message });

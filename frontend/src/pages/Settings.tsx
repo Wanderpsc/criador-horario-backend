@@ -57,8 +57,8 @@ const permissionLabels: { [key: string]: string } = {
   makeupSaturdays:      '📆 Sábados de Reposição',
   anoLetivo:            '🎓 Ano Letivo',
   // Docente
-  teacherAttendance:    '✅ Frequência de Professores',
-  frequencyReports:     '📊 Relatórios de Frequência',
+  teacherAttendance:    '✅ Controle de Frequência de Professores',
+  frequencyReports:     '📊 Relatórios de Frequência de Professores',
   // Gestão de pessoal (funcionários)
   employees:            '🗂️ Funcionários',
   employeeAttendance:   '⏰ Ponto de Funcionários',

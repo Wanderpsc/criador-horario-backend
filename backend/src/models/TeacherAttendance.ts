@@ -60,6 +60,30 @@ const classAttendanceSchema = new mongoose.Schema({
   locationDistanceMeters: { type: Number },
   isPedagogical: { type: Boolean, default: false }, // true = Horário Pedagógico (sem turma)
   photoData: { type: String },          // base64 foto capturada ao marcar
+  markedByElectronicPoint: { type: Boolean, default: false },
+  punctualityStatus: {
+    type: String,
+    enum: ['on_time', 'late', 'early', 'outside_schedule'],
+  },
+  lateMinutes: { type: Number, default: 0 },
+  requiresReview: { type: Boolean, default: false },
+  exceptionReason: { type: String, default: '' },
+  justification: { type: String, default: '' },
+  isRejected: { type: Boolean, default: false },
+  rejectionReason: { type: String, default: '' },
+  rejectedAt: { type: Date },
+  rejectedById: { type: String },
+  rejectedByName: { type: String },
+  rejectionHistory: [{
+    rejectedById: { type: String, required: true },
+    rejectedByName: { type: String, required: true },
+    rejectedAt: { type: Date, required: true },
+    reason: { type: String, required: true },
+    originalStatus: { type: String, required: true },
+    originalEntryTime: { type: String },
+    originalPunctualityStatus: { type: String },
+    originalJustification: { type: String },
+  }],
 }, { _id: true });
 
 const teacherAttendanceSchema = new mongoose.Schema({
@@ -116,7 +140,36 @@ const teacherAttendanceSchema = new mongoose.Schema({
   schoolYear: {
     type: Number,
     index: true
-  }
+  },
+  schoolEntryTime: { type: String },
+  schoolExitTime: { type: String },
+  schoolEntryAt: { type: Date },
+  schoolExitAt: { type: Date },
+  expectedFirstStartTime: { type: String },
+  expectedLastEndTime: { type: String },
+  schoolArrivalDelayMinutes: { type: Number, default: 0 },
+  schoolEarlyDepartureMinutes: { type: Number, default: 0 },
+  schoolPresenceComplete: { type: Boolean, default: false },
+  schoolEntryLocationValid: { type: Boolean },
+  schoolExitLocationValid: { type: Boolean },
+  schoolEntryPhotoData: { type: String },
+  schoolExitPhotoData: { type: String },
+  schoolPresenceMarkedById: { type: String },
+  schoolPresenceMarkedByName: { type: String },
+  schoolPresenceManualReason: { type: String, default: '' },
+  schoolPresenceRejected: { type: Boolean, default: false },
+  schoolPresenceRejectionReason: { type: String, default: '' },
+  schoolPresenceRejectedAt: { type: Date },
+  schoolPresenceRejectedById: { type: String },
+  schoolPresenceRejectedByName: { type: String },
+  schoolPresenceRejectionHistory: [{
+    rejectedById: { type: String, required: true },
+    rejectedByName: { type: String, required: true },
+    rejectedAt: { type: Date, required: true },
+    reason: { type: String, required: true },
+    originalEntryTime: { type: String },
+    originalExitTime: { type: String },
+  }],
 }, {
   timestamps: true
 });
