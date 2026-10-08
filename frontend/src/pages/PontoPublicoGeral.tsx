@@ -214,11 +214,13 @@ export default function PontoPublicoGeral() {
     setMarking(true);
     let lat: number | undefined;
     let lng: number | undefined;
+    let accuracy: number | undefined;
     if (navigator.geolocation) {
       try {
         const pos = await getAttendancePosition();
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
         setGeoPos({ lat, lng });
         setGeoError('');
       } catch {
@@ -234,6 +236,7 @@ export default function PontoPublicoGeral() {
         classId: slot?.classId,
         lat,
         lng,
+        accuracy,
         photoData: photoData || undefined,
         email: emailInput.trim() || undefined,
       });

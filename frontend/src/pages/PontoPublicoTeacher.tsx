@@ -248,12 +248,14 @@ export default function PontoPublicoTeacher() {
 
     let lat: number | undefined;
     let lng: number | undefined;
+    let accuracy: number | undefined;
 
     if (linkConfig?.requireGeolocation && navigator.geolocation) {
       try {
         const pos = await getAttendancePosition();
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
         setGeoPos({ lat, lng });
         setGeoError('');
       } catch {
@@ -271,6 +273,7 @@ export default function PontoPublicoTeacher() {
             action: 'entry',
             lat,
             lng,
+            accuracy,
             photoData: photoData || undefined,
             email: emailInput.trim() || undefined,
             justification: needsJustification ? justification.trim() : undefined,
@@ -279,6 +282,7 @@ export default function PontoPublicoTeacher() {
             action: pointAction === 'school-entry' ? 'entry' : 'exit',
             lat,
             lng,
+            accuracy,
             photoData: photoData || undefined,
             email: emailInput.trim() || undefined,
           });

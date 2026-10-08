@@ -138,11 +138,13 @@ export default function PontoPublico() {
     // Geolocalização (tenta sempre obter, backend valida se requireGeolocation)
     let lat: number | undefined;
     let lng: number | undefined;
+    let accuracy: number | undefined;
     if (navigator.geolocation) {
       try {
         const pos = await getAttendancePosition();
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
         setGeoPos({ lat, lng });
         setGeoError('');
       } catch {
@@ -155,6 +157,7 @@ export default function PontoPublico() {
         action,
         lat,
         lng,
+        accuracy,
         photoData: photoData || undefined,
         email: email.trim() || undefined,
       });

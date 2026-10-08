@@ -52,7 +52,15 @@ export default defineConfig(({ command, mode }) => {
         }
         
         // Copia arquivos PWA para o dist
-        const pwaFiles = ['manifest.json', 'sw.js', 'icon.svg', 'icon-192.svg', 'icon-512.svg'];
+        const pwaFiles = [
+          'manifest.json',
+          'sw.js',
+          'icon.svg',
+          'icon-192.svg',
+          'icon-512.svg',
+          'icon-192.png',
+          'icon-512.png',
+        ];
         pwaFiles.forEach(file => {
           try {
             copyFileSync(

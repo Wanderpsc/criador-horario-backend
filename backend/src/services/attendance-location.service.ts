@@ -55,7 +55,8 @@ export async function getAttendanceLocation(schoolId: string): Promise<Attendanc
 export async function validateAttendanceLocation(
   schoolId: string,
   latitude?: number,
-  longitude?: number
+  longitude?: number,
+  accuracyMeters?: number
 ): Promise<AttendanceLocationValidation> {
   const config = await getAttendanceLocation(schoolId);
   const configured = config.latitude != null && config.longitude != null;
@@ -79,6 +80,14 @@ export async function validateAttendanceLocation(
       message: 'Localização obrigatória. Ative o GPS e permita o acesso à localização.',
     };
   }
+  if (accuracyMeters != null && (!Number.isFinite(accuracyMeters) || accuracyMeters > 100)) {
+    return {
+      ...config,
+      configured: true,
+      valid: false,
+      message: `O GPS está impreciso (${Math.round(accuracyMeters)}m). Vá para uma área aberta, ative a localização precisa e tente novamente.`,
+    };
+  }
 
   const distance = distanceMeters(config.latitude!, config.longitude!, latitude, longitude);
   return {
@@ -88,6 +97,6 @@ export async function validateAttendanceLocation(
     distanceMeters: Math.round(distance),
     message: distance <= config.radiusMeters
       ? undefined
-      : `Fora do local de trabalho (${Math.round(distance)}m de distância, limite de ${Math.round(config.radiusMeters)}m).`,
+      : `Fora do local de trabalho (${Math.round(distance)}m de distância, limite de ${Math.round(config.radiusMeters)}m). Se você está no local correto, peça à escola para recapturar as coordenadas do ponto.`,
   };
 }

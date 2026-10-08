@@ -483,7 +483,7 @@ router.post('/teacher-public/:token/school-presence', async (req, res) => {
       return res.status(403).json({ message: 'O ponto eletrônico está desativado.' });
     }
 
-    const { action, lat, lng, photoData, email } = req.body;
+    const { action, lat, lng, accuracy, photoData, email } = req.body;
     if (!['entry', 'exit'].includes(action)) {
       return res.status(400).json({ message: 'Ação de presença escolar inválida.' });
     }
@@ -502,7 +502,7 @@ router.post('/teacher-public/:token/school-presence', async (req, res) => {
       return res.status(403).json({ message: 'E-mail não confere com o cadastrado.' });
     }
 
-    const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+    const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng, accuracy);
     if (!locationCheck.valid) {
       return res.status(locationCheck.configured ? 403 : 400).json({
         message: locationCheck.message,
@@ -641,6 +641,7 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
       action,     // 'entry' | 'exit'
       lat,
       lng,
+      accuracy,
       photoData,
       email,
       justification,
@@ -670,7 +671,7 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
       }
     }
 
-    const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+    const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng, accuracy);
     if (!locationCheck.valid) {
       return res.status(locationCheck.configured ? 403 : 400).json({
         message: locationCheck.message,

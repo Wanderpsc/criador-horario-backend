@@ -7,6 +7,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import EmployeeAttendance from '../models/EmployeeAttendance';
 import Employee from '../models/Employee';
+import SchoolDay from '../models/SchoolDay';
 import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -471,9 +472,16 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
     const { date } = req.query;
     if (!date) return res.status(400).json({ message: 'Data obrigatória.' });
 
-    const [employees, existingRecords] = await Promise.all([
+    const dateStart = new Date(`${date as string}T00:00:00.000Z`);
+    const dateEnd = new Date(`${date as string}T23:59:59.999Z`);
+    const [employees, existingRecords, schoolDay] = await Promise.all([
       Employee.find({ schoolId, isActive: true }).sort({ name: 1 }),
       EmployeeAttendance.find({ schoolId, date: date as string }),
+      SchoolDay.findOne({
+        schoolId,
+        date: { $gte: dateStart, $lte: dateEnd },
+        dayType: { $in: ['holiday', 'recess'] },
+      }).lean(),
     ]);
 
     // Determinar o dia da semana para a data pedida
@@ -482,13 +490,26 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
     const dayKey = dayNames[dateObj.getDay()];
 
     const recordMap = new Map(existingRecords.map(r => [r.employeeId, r]));
+    const incorrectlyMarkedHolidayIds: mongoose.Types.ObjectId[] = [];
 
     const rows = employees.map(emp => {
-      const existing = recordMap.get(emp._id.toString());
-      if (existing) return existing;
-
       const ws = (emp as any).workSchedule;
       const shiftMode = ws?.shiftMode || 'fixed';
+      const existing = recordMap.get(emp._id.toString());
+      if (existing) {
+        const hasPunch = Boolean(
+          existing.entryTime || existing.exitTime
+          || existing.entryTime2 || existing.exitTime2
+          || existing.entryTime3 || existing.exitTime3
+          || existing.plantaoStart || existing.plantaoEnd
+          || existing.punches?.length
+        );
+        if (shiftMode === 'fixed' && existing.status === 'holiday' && !schoolDay && !hasPunch) {
+          existing.status = 'absent';
+          incorrectlyMarkedHolidayIds.push(existing._id);
+        }
+        return existing;
+      }
 
       // ── Escala Rotativa (24×1, 36×1, 72×1) ──────────────────────────────
       if (shiftMode === 'rotating' && ws?.rotatingWorkHours && ws?.rotatingCycleStart) {
@@ -562,6 +583,13 @@ router.get('/init-day', auth, async (req: AuthRequest, res) => {
         exitTime3: '',
       };
     });
+
+    if (incorrectlyMarkedHolidayIds.length > 0) {
+      await EmployeeAttendance.updateMany(
+        { _id: { $in: incorrectlyMarkedHolidayIds }, schoolId },
+        { $set: { status: 'absent' } }
+      );
+    }
 
     const todayBrt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
     if ((date as string) <= todayBrt) {

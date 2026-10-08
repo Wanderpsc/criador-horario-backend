@@ -130,7 +130,7 @@ function minutesBetween(entry?: string, exit?: string): number {
         return { status: 404, body: { message: 'Funcionário não encontrado.' } };
       }
 
-      const { action, lat, lng, photoData, email: providedEmail } = body;
+      const { action, lat, lng, accuracy, photoData, email: providedEmail } = body;
       if (!['entry', 'exit'].includes(action)) {
         return { status: 400, body: { message: 'Ação de ponto inválida.' } };
       }
@@ -143,7 +143,7 @@ function minutesBetween(entry?: string, exit?: string): number {
         return { status: 403, body: { message: 'E-mail não confere com o cadastro.' } };
       }
 
-      const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng);
+      const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng, accuracy);
       if (!locationCheck.valid) {
         return {
           status: locationCheck.configured ? 403 : 400,

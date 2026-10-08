@@ -1,10 +1,12 @@
-const CACHE_NAME = 'edusync-ponto-v20261008';
+const CACHE_NAME = 'edusync-ponto-v20261008-2';
 const APP_SHELL = [
   '/',
   '/manifest.json',
   '/icon.svg',
   '/icon-192.svg',
   '/icon-512.svg',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
 
 self.addEventListener('install', (event) => {
