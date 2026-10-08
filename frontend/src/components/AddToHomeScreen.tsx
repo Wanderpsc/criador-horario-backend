@@ -82,18 +82,28 @@ export default function AddToHomeScreen({ label }: Props) {
 
   return (
     <>
-      {/* ── Botão fixo (canto inferior direito) ──────────────────── */}
+      {/* ── Instalador fixo e visível no celular ─────────────────── */}
       <button
         type="button"
         onClick={platform === 'ios' || platform === 'desktop' ? () => { rememberDestination(); setShowModal(true); } : handleAndroidInstall}
-        className="fixed bottom-5 right-4 z-40 flex items-center gap-2
-                   bg-white border border-gray-200 text-gray-700 text-xs font-semibold
-                   px-3 py-2 rounded-2xl shadow-lg hover:shadow-xl
-                   active:scale-95 transition-all duration-150 select-none"
-        title="Salvar atalho na tela inicial"
+        className="fixed left-4 right-4 z-40 mx-auto flex max-w-md items-center gap-3
+                   rounded-2xl border border-white/30 bg-gradient-to-r from-blue-700 to-indigo-700
+                   px-4 py-3 text-left text-white shadow-2xl shadow-blue-950/30
+                   hover:from-blue-800 hover:to-indigo-800 active:scale-[0.98]
+                   transition-all duration-150 select-none"
+        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        title="Instalar aplicativo de ponto no celular"
       >
-        <Smartphone className="w-4 h-4 flex-shrink-0 text-indigo-600" />
-        <span>Salvar atalho</span>
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/20">
+          <Smartphone className="h-6 w-6 text-white" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold">Instalar aplicativo</span>
+          <span className="block text-xs text-blue-100">Fixar este ponto na tela inicial do celular</span>
+        </span>
+        <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-blue-700">
+          Instalar
+        </span>
       </button>
 
       {/* ── Modal de instruções ───────────────────────────────────────── */}
