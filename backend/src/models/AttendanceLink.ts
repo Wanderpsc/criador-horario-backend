@@ -20,6 +20,15 @@ export interface IAttendanceLink extends Document {
   setor?: string;   // somente para employee
   isActive: boolean;
   createdBy: string;
+  deviceSecretHash?: string;
+  deviceBoundAt?: Date;
+  deviceLastSeenAt?: Date;
+  deviceVersion: number;
+  enrollmentTokenHash?: string;
+  enrollmentExpiresAt?: Date;
+  deviceRevokedAt?: Date;
+  deviceResetBy?: string;
+  deviceResetAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +54,15 @@ const attendanceLinkSchema = new Schema<IAttendanceLink>(
     setor: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     createdBy: { type: String, default: '' },
+    deviceSecretHash: { type: String, select: false },
+    deviceBoundAt: { type: Date },
+    deviceLastSeenAt: { type: Date },
+    deviceVersion: { type: Number, default: 0 },
+    enrollmentTokenHash: { type: String, select: false },
+    enrollmentExpiresAt: { type: Date },
+    deviceRevokedAt: { type: Date },
+    deviceResetBy: { type: String },
+    deviceResetAt: { type: Date },
   },
   { timestamps: true }
 );

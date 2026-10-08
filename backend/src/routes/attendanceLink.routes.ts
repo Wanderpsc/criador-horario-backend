@@ -18,9 +18,16 @@ import Subject from '../models/Subject';
 import Class from '../models/Class';
 import User from '../models/User';
 import SchoolDay from '../models/SchoolDay';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, schoolAdminOnly } from '../middleware/auth';
 import { sendPontoNotificationEmail } from '../services/email.service';
 import { getAttendanceLocation, validateAttendanceLocation } from '../services/attendance-location.service';
+import {
+  compareEnrollmentToken,
+  createDeviceSecret,
+  hashDeviceValue,
+  validateAttendancePhoto,
+  verifyAttendanceDevice,
+} from '../services/attendance-device.service';
 
 const router = express.Router();
 
@@ -37,6 +44,7 @@ const DAYS_PT: Record<string, string> = {
 };
 
 const DAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DEVICE_ENROLLMENT_MINUTES = 10;
 
 // Retorna o instante atual ajustado para o fuso BRT (UTC-3)
 // Usando deslocamento fixo pois o servidor (Render) roda em UTC
@@ -237,6 +245,11 @@ function minutesBetween(entry?: string, exit?: string): number {
       if (registeredEmail && providedEmail.trim().toLowerCase() !== registeredEmail) {
         return { status: 403, body: { message: 'E-mail não confere com o cadastro.' } };
       }
+      const pointConfig = await SchoolPontoLink.findOne({ schoolId: link.schoolId, isActive: true })
+        .select('requirePhoto')
+        .lean() as any;
+      const photoError = validateAttendancePhoto(photoData, Boolean(pointConfig?.requirePhoto));
+      if (photoError) return { status: 400, body: { message: photoError } };
 
       const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng, accuracy);
       if (!locationCheck.valid) {
@@ -453,8 +466,23 @@ function minutesBetween(entry?: string, exit?: string): number {
 // ROTAS ADMIN (requerem autenticação)
 // ─────────────────────────────────────────────────────────────────────────────
 
+async function issueDeviceEnrollment(link: any) {
+  const activationToken = createDeviceSecret();
+  const enrollmentExpiresAt = new Date(Date.now() + DEVICE_ENROLLMENT_MINUTES * 60 * 1000);
+  await AttendanceLink.updateOne(
+    { _id: link._id, isActive: true },
+    {
+      $set: {
+        enrollmentTokenHash: hashDeviceValue(activationToken),
+        enrollmentExpiresAt,
+      },
+    }
+  );
+  return { activationToken, enrollmentExpiresAt };
+}
+
 // POST / — criar link de ponto para um professor ou funcionário
-router.post('/', auth, async (req: AuthRequest, res) => {
+router.post('/', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const { personType, personId } = req.body;
@@ -489,7 +517,13 @@ router.post('/', auth, async (req: AuthRequest, res) => {
     // Verificar se já existe link ativo para esta pessoa
     const existing = await AttendanceLink.findOne({ schoolId, personType, personId, isActive: true });
     if (existing) {
-      return res.status(200).json({ ...existing.toObject(), alreadyExisted: true });
+      const enrollment = existing.deviceBoundAt ? {} : await issueDeviceEnrollment(existing);
+      return res.status(200).json({
+        ...existing.toObject(),
+        ...enrollment,
+        deviceRegistered: Boolean(existing.deviceBoundAt),
+        alreadyExisted: true,
+      });
     }
 
     const token = crypto.randomBytes(24).toString('hex');
@@ -517,19 +551,30 @@ router.post('/', auth, async (req: AuthRequest, res) => {
           isActive: true,
         });
         if (concurrentLink) {
-          return res.status(200).json({ ...concurrentLink.toObject(), alreadyExisted: true });
+          const enrollment = concurrentLink.deviceBoundAt ? {} : await issueDeviceEnrollment(concurrentLink);
+          return res.status(200).json({
+            ...concurrentLink.toObject(),
+            ...enrollment,
+            deviceRegistered: Boolean(concurrentLink.deviceBoundAt),
+            alreadyExisted: true,
+          });
         }
       }
       throw error;
     }
-    res.status(201).json(link);
+    const enrollment = await issueDeviceEnrollment(link);
+    res.status(201).json({
+      ...link.toObject(),
+      ...enrollment,
+      deviceRegistered: false,
+    });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
 });
 
 // GET / — listar todos os links da escola
-router.get('/', auth, async (req: AuthRequest, res) => {
+router.get('/', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const { personType } = req.query;
@@ -543,7 +588,42 @@ router.get('/', auth, async (req: AuthRequest, res) => {
 });
 
 // DELETE /:id — desativar link
-router.delete('/:id', auth, async (req: AuthRequest, res) => {
+router.post('/:id/device-reset', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
+  try {
+    const schoolId = req.user!.schoolId || req.user!.id;
+    const link = await AttendanceLink.findOneAndUpdate(
+      { _id: req.params.id, schoolId, isActive: true },
+      {
+        $unset: {
+          deviceSecretHash: 1,
+          deviceBoundAt: 1,
+          deviceLastSeenAt: 1,
+          enrollmentTokenHash: 1,
+          enrollmentExpiresAt: 1,
+        },
+        $inc: { deviceVersion: 1 },
+        $set: {
+          deviceRevokedAt: new Date(),
+          deviceResetAt: new Date(),
+          deviceResetBy: req.user!.id,
+        },
+      },
+      { new: true }
+    );
+    if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    const enrollment = await issueDeviceEnrollment(link);
+    return res.json({
+      message: 'Dispositivo anterior revogado. Envie o novo link de ativação ao titular.',
+      ...enrollment,
+      deviceRegistered: false,
+      token: link.token,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.delete('/:id', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const link = await AttendanceLink.findOneAndUpdate(
@@ -562,12 +642,80 @@ router.delete('/:id', auth, async (req: AuthRequest, res) => {
 // ROTAS PÚBLICAS (sem autenticação)
 // ─────────────────────────────────────────────────────────────────────────────
 
+router.post('/public/:token/device/bind', async (req, res) => {
+  try {
+    const activationToken = String(req.body?.activationToken || '').trim();
+    const link = await AttendanceLink.findOne({ token: req.params.token, isActive: true })
+      .select('+deviceSecretHash +enrollmentTokenHash enrollmentExpiresAt deviceVersion');
+    if (!link) return res.status(404).json({ message: 'Link não encontrado ou inativo.' });
+    if ((link as any).deviceSecretHash) {
+      return res.status(409).json({
+        code: 'DEVICE_ALREADY_REGISTERED',
+        message: 'Este ponto já possui um dispositivo cadastrado. Solicite a redefinição à administração.',
+      });
+    }
+    if (!(link as any).enrollmentTokenHash
+      || !link.enrollmentExpiresAt
+      || link.enrollmentExpiresAt.getTime() <= Date.now()) {
+      return res.status(410).json({
+        code: 'DEVICE_BINDING_EXPIRED',
+        message: 'O link de ativação expirou. Solicite um novo link à administração.',
+      });
+    }
+    if (!compareEnrollmentToken(activationToken, (link as any).enrollmentTokenHash)) {
+      return res.status(403).json({
+        code: 'DEVICE_BINDING_INVALID',
+        message: 'Código de ativação inválido.',
+      });
+    }
+
+    const deviceSecret = createDeviceSecret();
+    const result = await AttendanceLink.updateOne(
+      {
+        _id: link._id,
+        isActive: true,
+        deviceSecretHash: { $exists: false },
+        enrollmentTokenHash: (link as any).enrollmentTokenHash,
+        deviceVersion: link.deviceVersion,
+      },
+      {
+        $set: {
+          deviceSecretHash: hashDeviceValue(deviceSecret),
+          deviceBoundAt: new Date(),
+          deviceLastSeenAt: new Date(),
+        },
+        $unset: {
+          enrollmentTokenHash: 1,
+          enrollmentExpiresAt: 1,
+          deviceRevokedAt: 1,
+        },
+      }
+    );
+    if (result.modifiedCount !== 1) {
+      return res.status(409).json({
+        code: 'DEVICE_ALREADY_REGISTERED',
+        message: 'Outro dispositivo concluiu o cadastro. Solicite ajuda à administração.',
+      });
+    }
+    return res.status(201).json({
+      message: 'Dispositivo cadastrado com sucesso.',
+      deviceSecret,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // GET /public/:token — identifica a pessoa e retorna a situação de hoje
 router.get('/public/:token', async (req, res) => {
   try {
     const link = await AttendanceLink.findOne({ token: req.params.token });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
+    const deviceCheck = await verifyAttendanceDevice(req, String(link._id));
+    if (!deviceCheck.valid) {
+      return res.status(deviceCheck.code === 'DEVICE_NOT_REGISTERED' ? 428 : 403).json(deviceCheck);
+    }
     if (link.personType === 'teacher') {
       return res.status(410).json({
         message: 'Use o ponto individual do professor, que registra entrada na escola e presença por aula.',
@@ -643,6 +791,10 @@ router.post('/public/:token/mark', async (req, res) => {
     const link = await AttendanceLink.findOne({ token: req.params.token });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
+    const deviceCheck = await verifyAttendanceDevice(req, String(link._id));
+    if (!deviceCheck.valid) {
+      return res.status(deviceCheck.code === 'DEVICE_NOT_REGISTERED' ? 428 : 403).json(deviceCheck);
+    }
     if (link.personType === 'teacher') {
       return res.status(410).json({
         message: 'A confirmação geral foi desativada. Registre a presença individualmente em cada aula.',
@@ -662,7 +814,7 @@ router.post('/public/:token/mark', async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // POST /school-link — criar ou retornar link geral da escola
-router.post('/school-link', auth, async (req: AuthRequest, res) => {
+router.post('/school-link', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const schoolUser = await User.findById(schoolId).select('schoolName name');
@@ -1235,7 +1387,7 @@ router.post('/school-public/:token/mark', async (req, res) => {
 });
 
 // PUT /school-link/settings — atualizar configurações de geolocalização e foto
-router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
+router.put('/school-link/settings', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes } = req.body;
@@ -1280,7 +1432,7 @@ router.put('/school-link/settings', auth, async (req: AuthRequest, res) => {
 });
 
 // GET /school-link — retornar link ativo da escola (com configurações)
-router.get('/school-link', auth, async (req: AuthRequest, res) => {
+router.get('/school-link', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const link = await SchoolPontoLink.findOne({ schoolId, isActive: true });

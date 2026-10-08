@@ -11,6 +11,12 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getAttendancePosition } from '../utils/geolocation';
 import {
+  clearActivationTokenFromAddress,
+  getActivationTokenFromHash,
+  getAttendanceDeviceHeaders,
+  saveAttendanceDeviceSecret,
+} from '../utils/attendanceDevice';
+import {
   User, Clock, CheckCircle, XCircle, AlertCircle,
   BookOpen, LogIn, LogOut, Calendar, MapPin,
 } from 'lucide-react';
@@ -129,7 +135,8 @@ export default function PontoPublico() {
   const load = async () => {
     if (!token) { setPageStatus('error'); setErrorMsg('Token inválido.'); return; }
     try {
-      const res = await axios.get(`${API_URL}/attendance-links/public/${token}`);
+      const headers = await getAttendanceDeviceHeaders(token);
+      const res = await axios.get(`${API_URL}/attendance-links/public/${token}`, { headers });
       setData(res.data);
       setPageStatus('ok');
     } catch (err: any) {
@@ -139,7 +146,28 @@ export default function PontoPublico() {
     }
   };
 
-  useEffect(() => { load(); }, [token]);
+  useEffect(() => {
+    async function activateAndLoad() {
+      if (!token) return;
+      const activationToken = getActivationTokenFromHash();
+      if (activationToken) {
+        try {
+          const response = await axios.post(
+            `${API_URL}/attendance-links/public/${token}/device/bind`,
+            { activationToken }
+          );
+          await saveAttendanceDeviceSecret(token, response.data.deviceSecret);
+          clearActivationTokenFromAddress();
+        } catch (error: any) {
+          setPageStatus('error');
+          setErrorMsg(error.response?.data?.message || 'Não foi possível cadastrar este dispositivo.');
+          return;
+        }
+      }
+      await load();
+    }
+    activateAndLoad();
+  }, [token]);
 
   const handleMark = async (action: 'entry' | 'exit' | 'confirm') => {
     setMarking(true);
@@ -164,6 +192,7 @@ export default function PontoPublico() {
     }
 
     try {
+      const headers = token ? await getAttendanceDeviceHeaders(token) : {};
       const res = await axios.post(`${API_URL}/attendance-links/public/${token}/mark`, {
         action,
         lat,
@@ -171,7 +200,7 @@ export default function PontoPublico() {
         accuracy,
         photoData: photoData || undefined,
         email: email.trim() || undefined,
-      });
+      }, { headers });
       setSuccessMsg(res.data.message || 'Ponto registrado!');
       setPhotoData(null);
       // Recarregar dados após marcação

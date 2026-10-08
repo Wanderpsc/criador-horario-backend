@@ -59,6 +59,8 @@ export default function Teachers() {
   const [pontoCopied, setPontoCopied] = useState(false);
   const [pontoTeacherName, setPontoTeacherName] = useState('');
   const [pontoGenerating, setPontoGenerating] = useState(false);
+  const [pontoLinkId, setPontoLinkId] = useState('');
+  const [pontoDeviceRegistered, setPontoDeviceRegistered] = useState(false);
 
   const generatePontoLink = async (teacher: Teacher) => {
     setPontoGenerating(true);
@@ -67,10 +69,14 @@ export default function Teachers() {
         personType: 'teacher',
         personId: teacher.id,
       });
-      const token = res.data.token;
+      const data = res.data;
       const base = window.location.origin + window.location.pathname;
-      const url = `${base}#/ponto-teacher/${token}`;
+      const url = data.activationToken
+        ? `${base}#/ponto-teacher/${data.token}?activation=${encodeURIComponent(data.activationToken)}`
+        : `${base}#/ponto-teacher/${data.token}`;
       setPontoLink(url);
+      setPontoLinkId(data._id || data.id || '');
+      setPontoDeviceRegistered(Boolean(data.deviceRegistered));
       setPontoTeacherName(teacher.name);
       setPontoCopied(false);
       setPontoModalOpen(true);
@@ -86,6 +92,21 @@ export default function Teachers() {
       setPontoCopied(true);
       setTimeout(() => setPontoCopied(false), 2500);
     });
+  };
+
+  const resetPontoDevice = async () => {
+    if (!pontoLinkId) return;
+    if (!window.confirm('Revogar o aparelho atual e gerar uma nova ativação? O aparelho anterior perderá o acesso imediatamente.')) return;
+    try {
+      const response = await api.post(`/attendance-links/${pontoLinkId}/device-reset`);
+      const base = window.location.origin + window.location.pathname;
+      setPontoLink(`${base}#/ponto-teacher/${response.data.token}?activation=${encodeURIComponent(response.data.activationToken)}`);
+      setPontoDeviceRegistered(false);
+      setPontoCopied(false);
+      toast.success('Aparelho anterior revogado. Envie o novo link de ativação.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao redefinir aparelho.');
+    }
   };
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TeacherForm>({
     defaultValues: {
@@ -884,8 +905,9 @@ export default function Teachers() {
             </div>
             <div className="p-5 space-y-4">
               <p className="text-sm text-gray-600">
-                Envie o link abaixo para <strong>{pontoTeacherName}</strong> confirmar presença diariamente.
-                O link é <strong>permanente</strong> — use sempre o mesmo.
+                {pontoDeviceRegistered
+                  ? <>O aparelho de <strong>{pontoTeacherName}</strong> já está cadastrado. O link permanente funciona somente nele.</>
+                  : <>Envie o link de ativação abaixo para <strong>{pontoTeacherName}</strong>. Ele expira em <strong>10 minutos</strong> e cadastra somente o primeiro aparelho autorizado.</>}
               </p>
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <span className="text-xs text-gray-700 break-all flex-1 font-mono">{pontoLink}</span>
@@ -898,12 +920,20 @@ export default function Teachers() {
                 </button>
               </div>
               <div className="rounded-lg bg-purple-50 border border-purple-200 p-3 text-xs text-purple-700 space-y-1">
-                <p>📚 <strong>Como usar:</strong></p>
-                <p>1. Envie este link ao professor (salvar no celular ou via QR Code)</p>
-                <p>2. A cada dia, o professor acessa o link e confirma presença nas aulas</p>
-                <p>3. A frequência é lançada automaticamente no sistema</p>
+                <p>🔐 <strong>Segurança do aparelho:</strong></p>
+                <p>1. O professor deve abrir a ativação no celular que usará para o ponto.</p>
+                <p>2. Outros aparelhos serão recusados, mesmo que tenham o link.</p>
+                <p>3. Em caso de perda ou troca, use “Redefinir aparelho”.</p>
               </div>
               <div className="flex gap-2 justify-end">
+                {pontoDeviceRegistered && (
+                  <button
+                    onClick={resetPontoDevice}
+                    className="px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm hover:bg-red-50 font-medium"
+                  >
+                    Redefinir aparelho
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     const text = `Olá ${pontoTeacherName}! Acesse o link abaixo para confirmar sua presença diária:\n${pontoLink}`;

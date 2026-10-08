@@ -120,3 +120,12 @@ export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) =
   }
   next();
 };
+
+export const schoolAdminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'school' && req.user?.role !== 'admin') {
+    return res.status(403).json({
+      message: 'Acesso negado. Apenas a administração da escola pode gerenciar links e dispositivos de ponto.',
+    });
+  }
+  next();
+};

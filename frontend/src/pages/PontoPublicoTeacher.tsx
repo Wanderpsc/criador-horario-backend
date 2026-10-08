@@ -9,6 +9,12 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getAttendancePosition } from '../utils/geolocation';
 import {
+  clearActivationTokenFromAddress,
+  getActivationTokenFromHash,
+  getAttendanceDeviceHeaders,
+  saveAttendanceDeviceSecret,
+} from '../utils/attendanceDevice';
+import {
   BookOpen, Clock, CheckCircle, XCircle,
   LogIn, LogOut, Search, ChevronRight, ArrowLeft, MapPin,
   AlertTriangle, GraduationCap, Building2,
@@ -147,15 +153,30 @@ export default function PontoPublicoTeacher() {
   // Load link config
   useEffect(() => {
     if (!token) return;
-    axios
-      .get(`${API}/teacher-ponto/teacher-public/${token}`)
-      .then(r => {
+    const attendanceToken = token;
+    async function activateAndLoad() {
+      const activationToken = getActivationTokenFromHash();
+      try {
+        if (activationToken) {
+          const activation = await axios.post(
+            `${API}/attendance-links/public/${attendanceToken}/device/bind`,
+            { activationToken }
+          );
+          await saveAttendanceDeviceSecret(attendanceToken, activation.data.deviceSecret);
+          clearActivationTokenFromAddress();
+        }
+        const headers = await getAttendanceDeviceHeaders(attendanceToken);
+        const r = await axios.get(`${API}/teacher-ponto/teacher-public/${attendanceToken}`, { headers });
         setLinkConfig(r.data);
         const teacher = r.data.teachers[0];
         if (teacher) selectTeacher(teacher);
-      })
-      .catch(e => setLinkError(e.response?.data?.message || 'Link inválido.'))
-      .finally(() => setLoadingLink(false));
+      } catch (e: any) {
+        setLinkError(e.response?.data?.message || 'Link inválido.');
+      } finally {
+        setLoadingLink(false);
+      }
+    }
+    activateAndLoad();
   }, [token]);
 
   async function selectTeacher(teacher: TeacherInfo) {
@@ -169,9 +190,10 @@ export default function PontoPublicoTeacher() {
     setGeoPos(null);
     setGeoError('');
     try {
+      const headers = token ? await getAttendanceDeviceHeaders(token) : {};
       const r = await axios.post(`${API}/teacher-ponto/teacher-public/${token}/teacher-schedule`, {
         teacherId: teacher._id,
-      });
+      }, { headers });
       setScheduleData(r.data);
     } catch (e: any) {
       setMarkResult({ ok: false, message: e.response?.data?.message || 'Erro ao carregar horário.' });
@@ -264,6 +286,7 @@ export default function PontoPublicoTeacher() {
     }
 
     try {
+      const headers = token ? await getAttendanceDeviceHeaders(token) : {};
       const endpoint = pointAction === 'class'
         ? `${API}/teacher-ponto/teacher-public/${token}/mark`
         : `${API}/teacher-ponto/teacher-public/${token}/school-presence`;
@@ -285,7 +308,7 @@ export default function PontoPublicoTeacher() {
             accuracy,
             photoData: photoData || undefined,
             email: emailInput.trim() || undefined,
-          });
+          }, { headers });
       setMarkResult({ ok: true, message: r.data.message });
       // Update attendance in-place
       if (r.data.attendance) {

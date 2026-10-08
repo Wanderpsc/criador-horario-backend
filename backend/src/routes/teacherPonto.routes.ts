@@ -16,8 +16,12 @@ import Class from '../models/Class';
 import Schedule from '../models/Schedule';
 import SchoolDay from '../models/SchoolDay';
 import User from '../models/User';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, schoolAdminOnly } from '../middleware/auth';
 import { getAttendanceLocation, validateAttendanceLocation } from '../services/attendance-location.service';
+import {
+  validateAttendancePhoto,
+  verifyAttendanceDevice,
+} from '../services/attendance-device.service';
 
 const router = express.Router();
 
@@ -105,6 +109,7 @@ async function resolveIndividualTeacherLink(token: string) {
   ]);
 
   return {
+    attendanceLinkId: String(individualLink._id),
     schoolId: individualLink.schoolId,
     schoolName: individualLink.schoolName,
     teacherId: individualLink.personId,
@@ -240,7 +245,7 @@ async function getTeacherSlotsForDay(
 // ─────────────────────────────────────────────────────────────────────────────
 
 // GET /teacher-ponto-link — retorna ou cria o link da escola
-router.get('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
+router.get('/teacher-ponto-link', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const existing = await TeacherPontoLink.findOne({ schoolId, isActive: true });
@@ -277,7 +282,7 @@ router.get('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
 });
 
 // PUT /teacher-ponto-link/settings — atualiza configurações do link
-router.put('/teacher-ponto-link/settings', auth, async (req: AuthRequest, res) => {
+router.put('/teacher-ponto-link/settings', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const { requireGeolocation, latitude, longitude, areaM2, requirePhoto, graceMinutes, activeTimetableId } = req.body;
@@ -310,7 +315,7 @@ router.put('/teacher-ponto-link/settings', auth, async (req: AuthRequest, res) =
 });
 
 // PUT /teacher-ponto-link/toggle — liga ou desliga o ponto sem perder dados
-router.put('/teacher-ponto-link/toggle', auth, async (req: AuthRequest, res) => {
+router.put('/teacher-ponto-link/toggle', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const link = await TeacherPontoLink.findOne({ schoolId, isActive: true });
@@ -324,7 +329,7 @@ router.put('/teacher-ponto-link/toggle', auth, async (req: AuthRequest, res) => 
 });
 
 // DELETE /teacher-ponto-link — desativa link e gera novo token
-router.delete('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
+router.delete('/teacher-ponto-link', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     await TeacherPontoLink.updateMany({ schoolId }, { isActive: false });
@@ -335,7 +340,7 @@ router.delete('/teacher-ponto-link', auth, async (req: AuthRequest, res) => {
 });
 
 // GET /teacher-ponto-live — retorna todos os registros de hoje para admin (tempo real)
-router.get('/teacher-ponto-live', auth, async (req: AuthRequest, res) => {
+router.get('/teacher-ponto-live', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
   try {
     const schoolId = req.user!.schoolId || req.user!.id;
     const today = todayISO();
@@ -355,6 +360,10 @@ router.get('/teacher-public/:token', async (req, res) => {
   try {
     const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado ou inativo.' });
+    const deviceCheck = await verifyAttendanceDevice(req, link.attendanceLinkId);
+    if (!deviceCheck.valid) {
+      return res.status(deviceCheck.code === 'DEVICE_NOT_REGISTERED' ? 428 : 403).json(deviceCheck);
+    }
 
     // Ponto desativado pelo administrador
     if (link.isEnabled === false) {
@@ -370,8 +379,6 @@ router.get('/teacher-public/:token', async (req, res) => {
       schoolName: link.schoolName,
       teachers: (teachers as any[]).map(t => ({ _id: t._id, name: t.name })),
       requireGeolocation: link.requireGeolocation,
-      latitude: link.latitude,
-      longitude: link.longitude,
       areaM2: link.areaM2 || 1000,
       requirePhoto: link.requirePhoto,
       graceMinutes: link.graceMinutes ?? 10,
@@ -387,6 +394,10 @@ router.post('/teacher-public/:token/teacher-schedule', async (req, res) => {
   try {
     const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    const deviceCheck = await verifyAttendanceDevice(req, link.attendanceLinkId);
+    if (!deviceCheck.valid) {
+      return res.status(deviceCheck.code === 'DEVICE_NOT_REGISTERED' ? 428 : 403).json(deviceCheck);
+    }
 
     const teacherId = link.teacherId;
     if (!teacherId || !mongoose.isValidObjectId(teacherId)) {
@@ -479,6 +490,10 @@ router.post('/teacher-public/:token/school-presence', async (req, res) => {
   try {
     const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    const deviceCheck = await verifyAttendanceDevice(req, link.attendanceLinkId);
+    if (!deviceCheck.valid) {
+      return res.status(deviceCheck.code === 'DEVICE_NOT_REGISTERED' ? 428 : 403).json(deviceCheck);
+    }
     if (link.isEnabled === false) {
       return res.status(403).json({ message: 'O ponto eletrônico está desativado.' });
     }
@@ -510,9 +525,8 @@ router.post('/teacher-public/:token/school-presence', async (req, res) => {
         radius: locationCheck.radiusMeters,
       });
     }
-    if (link.requirePhoto && !photoData) {
-      return res.status(400).json({ message: 'Foto obrigatória.' });
-    }
+    const photoError = validateAttendancePhoto(photoData, link.requirePhoto);
+    if (photoError) return res.status(400).json({ message: photoError });
 
     const today = todayISO();
     const dayKey = todayDayKey();
@@ -631,6 +645,10 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
   try {
     const link = await resolveIndividualTeacherLink(req.params.token);
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
+    const deviceCheck = await verifyAttendanceDevice(req, link.attendanceLinkId);
+    if (!deviceCheck.valid) {
+      return res.status(deviceCheck.code === 'DEVICE_NOT_REGISTERED' ? 428 : 403).json(deviceCheck);
+    }
 
     if (link.isEnabled === false) {
       return res.status(403).json({ message: 'O ponto eletrônico está desativado. Não é possível registrar.' });
@@ -681,9 +699,8 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     }
 
     // Photo check
-    if (link.requirePhoto && !photoData) {
-      return res.status(400).json({ message: 'Foto obrigatória.' });
-    }
+    const photoError = validateAttendancePhoto(photoData, link.requirePhoto);
+    if (photoError) return res.status(400).json({ message: photoError });
 
     const today  = todayISO();
     const dayKey = todayDayKey();
