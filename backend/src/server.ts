@@ -109,7 +109,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Attendance-Device'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 0, // sem cache de preflight — evita TV Box guardar resultado antigo com falha
   optionsSuccessStatus: 200, // 204 quebra browsers antigos (TV Box, SmartTV)
