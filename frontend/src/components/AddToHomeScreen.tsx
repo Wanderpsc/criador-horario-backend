@@ -4,12 +4,13 @@
  * Componente: botão "Adicionar à Tela Inicial" para links de ponto
  */
 import { useState, useEffect } from 'react';
-import { Smartphone, Share2, X, Plus, Chrome, Monitor } from 'lucide-react';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { Smartphone, Share2, X, Plus, Chrome, ShieldCheck } from 'lucide-react';
+import {
+  BeforeInstallPromptEvent,
+  clearCapturedPwaInstallPrompt,
+  getCapturedPwaInstallPrompt,
+  subscribeToPwaInstallPrompt,
+} from '../utils/pwaInstallPrompt';
 
 function detectPlatform(): 'ios' | 'android' | 'desktop' {
   const ua = navigator.userAgent;
@@ -33,10 +34,11 @@ interface Props {
 export default function AddToHomeScreen({ label }: Props) {
   const [platform]         = useState<'ios' | 'android' | 'desktop'>(detectPlatform);
   const [isStandalone]     = useState(isInStandaloneMode);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
+    getCapturedPwaInstallPrompt
+  );
   const [showModal, setShowModal] = useState(false);
   const [installed, setInstalled] = useState(false);
-  const currentUrl = window.location.href;
   const rememberDestination = () => {
     try {
       localStorage.setItem('ponto.pwaDestination', window.location.hash);
@@ -48,16 +50,14 @@ export default function AddToHomeScreen({ label }: Props) {
   useEffect(() => {
     rememberDestination();
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    };
+    const unsubscribe = subscribeToPwaInstallPrompt(() => {
+      setDeferredPrompt(getCapturedPwaInstallPrompt());
+    });
     const handleInstalled = () => setInstalled(true);
-    window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', handleInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
+      unsubscribe();
       window.removeEventListener('appinstalled', handleInstalled);
     };
   }, []);
@@ -71,6 +71,7 @@ export default function AddToHomeScreen({ label }: Props) {
       await deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
       if (choice.outcome === 'accepted') setInstalled(true);
+      clearCapturedPwaInstallPrompt();
       setDeferredPrompt(null);
     } else {
       // Navegador não suporta beforeinstallprompt — mostra instruções
@@ -126,9 +127,14 @@ export default function AddToHomeScreen({ label }: Props) {
               </button>
             </div>
 
-            <div className="mb-4 bg-gray-50 rounded-xl p-3">
-              <p className="text-xs font-semibold text-gray-600 mb-1">Link pessoal protegido</p>
-              <p className="text-[11px] text-gray-500 break-all font-mono">{currentUrl}</p>
+            <div className="mb-4 bg-emerald-50 text-emerald-900 rounded-xl p-3 flex items-start gap-2">
+              <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold mb-1">Instalação protegida neste aparelho</p>
+                <p className="text-[11px]">
+                  Este ponto é pessoal. Não copie nem compartilhe o link com outro celular.
+                </p>
+              </div>
             </div>
 
             {/* Instruções por plataforma */}
@@ -220,20 +226,6 @@ export default function AddToHomeScreen({ label }: Props) {
               </div>
             )}
 
-            {/* Copiar link */}
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(currentUrl).then(() => {
-                  alert('Link copiado! Cole no navegador do celular do professor.');
-                });
-              }}
-              className="mt-4 w-full flex items-center justify-center gap-2 border border-gray-300
-                         rounded-xl py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
-            >
-              <Monitor className="w-4 h-4" />
-              Copiar link para compartilhar
-            </button>
           </div>
         </div>
       )}

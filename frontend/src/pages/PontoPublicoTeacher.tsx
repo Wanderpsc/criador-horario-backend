@@ -12,6 +12,7 @@ import {
   activateAttendanceDevice,
   getActivationTokenFromHash,
   getAttendanceDeviceHeaders,
+  isEmbeddedMobileBrowser,
 } from '../utils/attendanceDevice';
 import {
   BookOpen, Clock, CheckCircle, XCircle,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
+import ActivationBrowserGate from '../components/ActivationBrowserGate';
 import AttendanceReminder from '../components/AttendanceReminder';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -118,6 +120,7 @@ export default function PontoPublicoTeacher() {
 
   const [scheduleData, setScheduleData]     = useState<ScheduleData | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [requiresExternalBrowser, setRequiresExternalBrowser] = useState(false);
 
   // Confirm step
   const [activePeriod, setActivePeriod] = useState<number | null>(null);
@@ -155,6 +158,11 @@ export default function PontoPublicoTeacher() {
     const attendanceToken = token;
     async function activateAndLoad() {
       const activationToken = getActivationTokenFromHash();
+      if (activationToken && isEmbeddedMobileBrowser()) {
+        setRequiresExternalBrowser(true);
+        setLoadingLink(false);
+        return;
+      }
       try {
         if (activationToken) {
           await activateAttendanceDevice(API, attendanceToken, activationToken);
@@ -172,6 +180,10 @@ export default function PontoPublicoTeacher() {
     }
     activateAndLoad();
   }, [token]);
+
+  if (requiresExternalBrowser) {
+    return <ActivationBrowserGate />;
+  }
 
   async function selectTeacher(teacher: TeacherInfo) {
     setSelected(teacher);

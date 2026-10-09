@@ -52,6 +52,11 @@ export function getActivationTokenFromHash(): string {
   return new URLSearchParams(query).get('activation') || '';
 }
 
+export function isEmbeddedMobileBrowser(): boolean {
+  const userAgent = navigator.userAgent;
+  return /;\s*wv\)|\bwv\b|WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\/|GSA\//i.test(userAgent);
+}
+
 export function clearActivationTokenFromAddress(): void {
   const cleanHash = window.location.hash.split('?')[0];
   window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${cleanHash}`);

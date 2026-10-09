@@ -14,6 +14,7 @@ import {
   activateAttendanceDevice,
   getActivationTokenFromHash,
   getAttendanceDeviceHeaders,
+  isEmbeddedMobileBrowser,
 } from '../utils/attendanceDevice';
 import {
   User, Clock, CheckCircle, XCircle, AlertCircle,
@@ -22,6 +23,7 @@ import {
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
 import AttendanceReminder from '../components/AttendanceReminder';
+import ActivationBrowserGate from '../components/ActivationBrowserGate';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -111,7 +113,7 @@ function minutesToHHmm(min: number): string {
 export default function PontoPublico() {
   const { token } = useParams<{ token: string }>();
 
-  const [pageStatus, setPageStatus] = useState<'loading' | 'error' | 'ok'>('loading');
+  const [pageStatus, setPageStatus] = useState<'loading' | 'external-browser' | 'error' | 'ok'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [data, setData] = useState<PageData | null>(null);
   const [marking, setMarking] = useState(false);
@@ -150,6 +152,10 @@ export default function PontoPublico() {
       if (!token) return;
       const activationToken = getActivationTokenFromHash();
       if (activationToken) {
+        if (isEmbeddedMobileBrowser()) {
+          setPageStatus('external-browser');
+          return;
+        }
         try {
           await activateAttendanceDevice(API_URL, token, activationToken);
         } catch (error: any) {
@@ -162,6 +168,10 @@ export default function PontoPublico() {
     }
     activateAndLoad();
   }, [token]);
+
+  if (pageStatus === 'external-browser') {
+    return <ActivationBrowserGate />;
+  }
 
   const handleMark = async (action: 'entry' | 'exit' | 'confirm') => {
     setMarking(true);

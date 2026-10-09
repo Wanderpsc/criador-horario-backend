@@ -11,9 +11,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
 import { useAuthStore } from './store/authStore';
+import { initializePwaInstallPromptCapture } from './utils/pwaInstallPrompt';
 import './index.css';
 
 console.log('🚀 Main.tsx carregado!');
+
+initializePwaInstallPromptCapture();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
