@@ -3,7 +3,6 @@
   "name": "Ponto EduSync-PRO",
   "short_name": "Ponto EduSync",
   "description": "Aplicativo de ponto eletrônico para funcionários e professores",
-  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
