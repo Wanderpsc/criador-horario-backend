@@ -45,6 +45,7 @@ const DAYS_PT: Record<string, string> = {
 
 const DAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const DEVICE_ENROLLMENT_MINUTES = 10;
+const DEVICE_INSTALLATION_TRANSFER_MINUTES = 30;
 
 // Retorna o instante atual ajustado para o fuso BRT (UTC-3)
 // Usando deslocamento fixo pois o servidor (Render) roda em UTC
@@ -645,10 +646,43 @@ router.delete('/:id', auth, schoolAdminOnly, async (req: AuthRequest, res) => {
 router.post('/public/:token/device/bind', async (req, res) => {
   try {
     const activationToken = String(req.body?.activationToken || '').trim();
+    const installationTransfer = req.body?.installationTransfer === true;
     const link = await AttendanceLink.findOne({ token: req.params.token, isActive: true })
       .select('+deviceSecretHash +enrollmentTokenHash enrollmentExpiresAt deviceVersion');
     if (!link) return res.status(404).json({ message: 'Link não encontrado ou inativo.' });
     if ((link as any).deviceSecretHash) {
+      if (installationTransfer
+        && (link as any).enrollmentTokenHash
+        && link.enrollmentExpiresAt
+        && link.enrollmentExpiresAt.getTime() > Date.now()
+        && compareEnrollmentToken(activationToken, (link as any).enrollmentTokenHash)) {
+        const deviceSecret = createDeviceSecret();
+        const result = await AttendanceLink.updateOne(
+          {
+            _id: link._id,
+            isActive: true,
+            deviceSecretHash: (link as any).deviceSecretHash,
+            enrollmentTokenHash: (link as any).enrollmentTokenHash,
+            deviceVersion: link.deviceVersion,
+          },
+          {
+            $set: {
+              deviceSecretHash: hashDeviceValue(deviceSecret),
+              deviceLastSeenAt: new Date(),
+            },
+            $unset: {
+              enrollmentTokenHash: 1,
+              enrollmentExpiresAt: 1,
+            },
+          }
+        );
+        if (result.modifiedCount === 1) {
+          return res.status(201).json({
+            message: 'Autorização transferida para o aplicativo instalado.',
+            deviceSecret,
+          });
+        }
+      }
       return res.status(409).json({
         code: 'DEVICE_ALREADY_REGISTERED',
         message: 'Este ponto já possui um dispositivo cadastrado. Solicite a redefinição à administração.',
@@ -683,10 +717,11 @@ router.post('/public/:token/device/bind', async (req, res) => {
           deviceSecretHash: hashDeviceValue(deviceSecret),
           deviceBoundAt: new Date(),
           deviceLastSeenAt: new Date(),
+          enrollmentExpiresAt: new Date(
+            Date.now() + DEVICE_INSTALLATION_TRANSFER_MINUTES * 60 * 1000
+          ),
         },
         $unset: {
-          enrollmentTokenHash: 1,
-          enrollmentExpiresAt: 1,
           deviceRevokedAt: 1,
         },
       }

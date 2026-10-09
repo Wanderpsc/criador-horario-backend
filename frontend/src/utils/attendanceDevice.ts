@@ -66,6 +66,11 @@ export function clearActivationTokenFromAddress(): void {
   window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${cleanHash}`);
 }
 
+export function isAttendancePwaStandalone(): boolean {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as any).standalone === true;
+}
+
 export function activateAttendanceDevice(
   apiUrl: string,
   token: string,
@@ -76,12 +81,19 @@ export function activateAttendanceDevice(
   if (pendingActivation) return pendingActivation;
 
   const activation = (async () => {
+    const standalone = isAttendancePwaStandalone();
+    const existingSecret = await getAttendanceDeviceSecret(token);
+    if (existingSecret) {
+      if (standalone) clearActivationTokenFromAddress();
+      return;
+    }
+
     const response = await axios.post(
       `${apiUrl}/attendance-links/public/${token}/device/bind`,
-      { activationToken }
+      { activationToken, installationTransfer: standalone }
     );
     await saveAttendanceDeviceSecret(token, response.data.deviceSecret);
-    clearActivationTokenFromAddress();
+    if (standalone) clearActivationTokenFromAddress();
   })();
 
   pendingActivations.set(activationKey, activation);
