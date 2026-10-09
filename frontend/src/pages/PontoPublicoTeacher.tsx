@@ -9,10 +9,9 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getAttendancePosition } from '../utils/geolocation';
 import {
-  clearActivationTokenFromAddress,
+  activateAttendanceDevice,
   getActivationTokenFromHash,
   getAttendanceDeviceHeaders,
-  saveAttendanceDeviceSecret,
 } from '../utils/attendanceDevice';
 import {
   BookOpen, Clock, CheckCircle, XCircle,
@@ -158,12 +157,7 @@ export default function PontoPublicoTeacher() {
       const activationToken = getActivationTokenFromHash();
       try {
         if (activationToken) {
-          const activation = await axios.post(
-            `${API}/attendance-links/public/${attendanceToken}/device/bind`,
-            { activationToken }
-          );
-          await saveAttendanceDeviceSecret(attendanceToken, activation.data.deviceSecret);
-          clearActivationTokenFromAddress();
+          await activateAttendanceDevice(API, attendanceToken, activationToken);
         }
         const headers = await getAttendanceDeviceHeaders(attendanceToken);
         const r = await axios.get(`${API}/teacher-ponto/teacher-public/${attendanceToken}`, { headers });

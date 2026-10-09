@@ -1,6 +1,9 @@
+import axios from 'axios';
+
 const DATABASE_NAME = 'edusync-attendance-device';
 const STORE_NAME = 'credentials';
 const DATABASE_VERSION = 1;
+const pendingActivations = new Map<string, Promise<void>>();
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -52,4 +55,30 @@ export function getActivationTokenFromHash(): string {
 export function clearActivationTokenFromAddress(): void {
   const cleanHash = window.location.hash.split('?')[0];
   window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${cleanHash}`);
+}
+
+export function activateAttendanceDevice(
+  apiUrl: string,
+  token: string,
+  activationToken: string
+): Promise<void> {
+  const activationKey = `${token}:${activationToken}`;
+  const pendingActivation = pendingActivations.get(activationKey);
+  if (pendingActivation) return pendingActivation;
+
+  const activation = (async () => {
+    const response = await axios.post(
+      `${apiUrl}/attendance-links/public/${token}/device/bind`,
+      { activationToken }
+    );
+    await saveAttendanceDeviceSecret(token, response.data.deviceSecret);
+    clearActivationTokenFromAddress();
+  })();
+
+  pendingActivations.set(activationKey, activation);
+  void activation.then(
+    () => pendingActivations.delete(activationKey),
+    () => pendingActivations.delete(activationKey)
+  );
+  return activation;
 }

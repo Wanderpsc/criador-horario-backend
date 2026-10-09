@@ -96,14 +96,17 @@ export default function Teachers() {
 
   const resetPontoDevice = async () => {
     if (!pontoLinkId) return;
-    if (!window.confirm('Revogar o aparelho atual e gerar uma nova ativação? O aparelho anterior perderá o acesso imediatamente.')) return;
+    const confirmation = pontoDeviceRegistered
+      ? 'Revogar o aparelho atual e gerar um novo link de ativação? O aparelho anterior perderá o acesso imediatamente.'
+      : 'Invalidar o link atual e gerar um novo link de ativação?';
+    if (!window.confirm(confirmation)) return;
     try {
       const response = await api.post(`/attendance-links/${pontoLinkId}/device-reset`);
       const base = window.location.origin + window.location.pathname;
       setPontoLink(`${base}#/ponto-teacher/${response.data.token}?activation=${encodeURIComponent(response.data.activationToken)}`);
       setPontoDeviceRegistered(false);
       setPontoCopied(false);
-      toast.success('Aparelho anterior revogado. Envie o novo link de ativação.');
+      toast.success('Novo link de ativação gerado. Envie somente este link.');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Erro ao redefinir aparelho.');
     }
@@ -925,15 +928,17 @@ export default function Teachers() {
                 <p>2. Outros aparelhos serão recusados, mesmo que tenham o link.</p>
                 <p>3. Em caso de perda ou troca, use “Redefinir aparelho”.</p>
               </div>
-              <div className="flex gap-2 justify-end">
-                {pontoDeviceRegistered && (
-                  <button
-                    onClick={resetPontoDevice}
-                    className="px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm hover:bg-red-50 font-medium"
-                  >
-                    Redefinir aparelho
-                  </button>
-                )}
+              <div className="flex flex-wrap gap-2 justify-end">
+                <button
+                  onClick={resetPontoDevice}
+                  className={`px-4 py-2 border rounded-lg text-sm font-medium ${
+                    pontoDeviceRegistered
+                      ? 'border-red-300 text-red-700 hover:bg-red-50'
+                      : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                  }`}
+                >
+                  {pontoDeviceRegistered ? 'Redefinir aparelho e link' : 'Gerar novo link de ativação'}
+                </button>
                 <button
                   onClick={() => {
                     const text = `Olá ${pontoTeacherName}! Acesse o link abaixo para confirmar sua presença diária:\n${pontoLink}`;

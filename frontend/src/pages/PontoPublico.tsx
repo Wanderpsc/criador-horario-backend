@@ -11,10 +11,9 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { getAttendancePosition } from '../utils/geolocation';
 import {
-  clearActivationTokenFromAddress,
+  activateAttendanceDevice,
   getActivationTokenFromHash,
   getAttendanceDeviceHeaders,
-  saveAttendanceDeviceSecret,
 } from '../utils/attendanceDevice';
 import {
   User, Clock, CheckCircle, XCircle, AlertCircle,
@@ -152,12 +151,7 @@ export default function PontoPublico() {
       const activationToken = getActivationTokenFromHash();
       if (activationToken) {
         try {
-          const response = await axios.post(
-            `${API_URL}/attendance-links/public/${token}/device/bind`,
-            { activationToken }
-          );
-          await saveAttendanceDeviceSecret(token, response.data.deviceSecret);
-          clearActivationTokenFromAddress();
+          await activateAttendanceDevice(API_URL, token, activationToken);
         } catch (error: any) {
           setPageStatus('error');
           setErrorMsg(error.response?.data?.message || 'Não foi possível cadastrar este dispositivo.');
