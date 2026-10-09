@@ -54,7 +54,11 @@ export function getActivationTokenFromHash(): string {
 
 export function isEmbeddedMobileBrowser(): boolean {
   const userAgent = navigator.userAgent;
-  return /;\s*wv\)|\bwv\b|WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\/|GSA\//i.test(userAgent);
+  const isIOS = /iPad|iPhone|iPod/i.test(userAgent);
+  const isSafari = /Safari/i.test(userAgent)
+    && !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA\//i.test(userAgent);
+  const isEmbedded = /;\s*wv\)|\bwv\b|WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\/|GSA\//i.test(userAgent);
+  return isEmbedded || (isIOS && !isSafari);
 }
 
 export function clearActivationTokenFromAddress(): void {

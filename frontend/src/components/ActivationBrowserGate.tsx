@@ -1,6 +1,8 @@
-import { Chrome, ExternalLink, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Chrome, Copy, ExternalLink, ShieldAlert } from 'lucide-react';
 
 export default function ActivationBrowserGate() {
+  const [copied, setCopied] = useState(false);
   const isAndroid = /Android/i.test(navigator.userAgent);
   const currentUrl = window.location.href;
   const chromeIntent = `intent://navigate?url=${encodeURIComponent(currentUrl)}#Intent;scheme=googlechrome;package=com.android.chrome;end`;
@@ -29,13 +31,29 @@ export default function ActivationBrowserGate() {
             </p>
           </>
         ) : (
-          <div className="bg-blue-50 text-blue-900 rounded-xl p-4 text-sm text-left">
-            <p className="font-semibold flex items-center gap-2 mb-2">
-              <ExternalLink className="w-4 h-4" />
-              No iPhone
+          <>
+            <div className="bg-blue-50 text-blue-900 rounded-xl p-4 text-sm text-left">
+              <p className="font-semibold flex items-center gap-2 mb-2">
+                <ExternalLink className="w-4 h-4" />
+                No iPhone
+              </p>
+              <p>Este link precisa ser aberto no Safari antes da ativação e da instalação.</p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await navigator.clipboard.writeText(currentUrl);
+                setCopied(true);
+              }}
+              className="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2"
+            >
+              {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              {copied ? 'Copiado — cole no Safari' : 'Copiar para abrir no Safari'}
+            </button>
+            <p className="text-xs text-gray-500 mt-3">
+              Copie e cole no Safari deste mesmo iPhone. Não envie para outra pessoa.
             </p>
-            <p>Use o menu desta tela e escolha “Abrir no Safari”. Depois, toque em “Instalar aplicativo”.</p>
-          </div>
+          </>
         )}
 
         <p className="text-xs font-semibold text-red-600 mt-5">

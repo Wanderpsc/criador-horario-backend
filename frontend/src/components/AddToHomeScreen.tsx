@@ -112,7 +112,8 @@ export default function AddToHomeScreen({ label }: Props) {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60"
           onClick={() => setShowModal(false)}>
           <div
-            className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm mx-0 sm:mx-4 p-5 shadow-2xl"
+            className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm mx-0 sm:mx-4 p-5 shadow-2xl
+                       max-h-[calc(100dvh-1rem)] overflow-y-auto"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -140,6 +141,10 @@ export default function AddToHomeScreen({ label }: Props) {
             {/* Instruções por plataforma */}
             {platform === 'ios' && (
               <div className="space-y-3">
+                <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
+                  <strong>No iPhone a instalação não é automática.</strong> Esta janela mostra os passos
+                  exigidos pela Apple. Execute-os no Safari para criar o ícone.
+                </div>
                 <p className="text-sm font-semibold text-gray-700 text-center">
                   No iPhone / iPad (Safari):
                 </p>
@@ -167,6 +172,9 @@ export default function AddToHomeScreen({ label }: Props) {
                     </span>
                   </li>
                 </ol>
+                <p className="text-xs text-gray-500 text-center">
+                  Depois disso, feche o Safari e abra o ponto pelo novo ícone na tela inicial.
+                </p>
               </div>
             )}
 
@@ -226,6 +234,13 @@ export default function AddToHomeScreen({ label }: Props) {
               </div>
             )}
 
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="mt-5 w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+            >
+              Fechar instruções
+            </button>
           </div>
         </div>
       )}
