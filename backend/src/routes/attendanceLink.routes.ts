@@ -43,6 +43,30 @@ const DAYS_PT: Record<string, string> = {
   saturday: 'Sábado',
 };
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function resolvePontoEmail(registeredEmail: unknown, providedEmail: unknown) {
+  const registered = String(registeredEmail || '').trim().toLowerCase();
+  const provided = String(providedEmail || '').trim().toLowerCase();
+  if (!provided || !EMAIL_PATTERN.test(provided)) {
+    return {
+      error: {
+        status: 400,
+        message: 'Informe um e-mail válido para receber a confirmação do ponto.',
+      },
+    };
+  }
+  if (registered && provided !== registered) {
+    return {
+      error: {
+        status: 403,
+        message: 'E-mail não confere com o cadastro. Verifique e tente novamente.',
+      },
+    };
+  }
+  return { email: registered || provided };
+}
+
 const DAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const DEVICE_ENROLLMENT_MINUTES = 10;
 const DEVICE_INSTALLATION_TRANSFER_MINUTES = 30;
@@ -239,13 +263,14 @@ function minutesBetween(entry?: string, exit?: string): number {
         return { status: 400, body: { message: 'Ação de ponto inválida.' } };
       }
 
-      const registeredEmail = employee.email?.trim().toLowerCase() || '';
-      if (registeredEmail && !providedEmail) {
-        return { status: 400, body: { message: 'Confirme o e-mail cadastrado para registrar o ponto.' } };
+      const emailResult = resolvePontoEmail(employee.email, providedEmail);
+      if (emailResult.error) {
+        return {
+          status: emailResult.error.status,
+          body: { message: emailResult.error.message },
+        };
       }
-      if (registeredEmail && providedEmail.trim().toLowerCase() !== registeredEmail) {
-        return { status: 403, body: { message: 'E-mail não confere com o cadastro.' } };
-      }
+      const notificationEmail = emailResult.email!;
       const pointConfig = await SchoolPontoLink.findOne({ schoolId: link.schoolId, isActive: true })
         .select('requirePhoto')
         .lean() as any;
@@ -445,6 +470,17 @@ function minutesBetween(entry?: string, exit?: string): number {
       record.locationDistanceMeters = locationCheck.distanceMeters;
 
       await attendance.save();
+      sendPontoNotificationEmail({
+        personName: employee.name,
+        personEmail: notificationEmail,
+        schoolName: link.schoolName || 'Escola',
+        action,
+        time: now,
+        date: new Date().toLocaleDateString('pt-BR'),
+        locationValid: locationCheck.valid,
+        lateArrivalMinutes: action === 'entry' ? record.lateArrivalMinutes : undefined,
+        earlyDepartureMinutes: action === 'exit' ? record.earlyDepartureMinutes : undefined,
+      }).catch(() => {});
       const nextPunchState = getEmployeePunchState(record, workSchedule, now, isExtraDay);
       return {
         status: created ? 201 : 200,
@@ -1045,13 +1081,11 @@ router.post('/school-public/:token/mark', async (req, res) => {
       if (!teacher) return res.status(404).json({ message: 'Professor não encontrado.' });
 
       const { lat, lng, photoData, email: providedEmail } = req.body;
-      const registeredEmail = teacher.email?.trim().toLowerCase() || '';
-      if (registeredEmail && !providedEmail) {
-        return res.status(400).json({ message: 'Este professor requer confirmação por e-mail.' });
+      const emailResult = resolvePontoEmail(teacher.email, providedEmail);
+      if (emailResult.error) {
+        return res.status(emailResult.error.status).json({ message: emailResult.error.message });
       }
-      if (registeredEmail && providedEmail.trim().toLowerCase() !== registeredEmail) {
-        return res.status(403).json({ message: 'E-mail não confere com o cadastro. Verifique e tente novamente.' });
-      }
+      const notificationEmail = emailResult.email!;
 
       let locationValid: boolean | undefined;
       if (link.requireGeolocation) {
@@ -1157,6 +1191,15 @@ router.post('/school-public/:token/mark', async (req, res) => {
       classRecord.locationValid = locationValid;
       if (photoData) classRecord.photoData = photoData;
       await attendance.save();
+      sendPontoNotificationEmail({
+        personName: teacherName,
+        personEmail: notificationEmail,
+        schoolName: link.schoolName || 'Escola',
+        action: 'confirm',
+        time: now,
+        date: new Date().toLocaleDateString('pt-BR'),
+        locationValid,
+      }).catch(() => {});
       return res.status(201).json({
         message: `Aula do período ${period} confirmada às ${now}.`,
         attendance,
@@ -1174,14 +1217,11 @@ router.post('/school-public/:token/mark', async (req, res) => {
     const { lat, lng, photoData, email: providedEmail } = req.body;
 
     // Verificação de e-mail (credencial anti-fraude)
-    const registeredEmail: string | undefined = (employee as any).email;
-    if (registeredEmail && providedEmail) {
-      if (providedEmail.trim().toLowerCase() !== registeredEmail.trim().toLowerCase()) {
-        return res.status(403).json({ message: 'E-mail não confere com o cadastro. Verifique e tente novamente.' });
-      }
-    } else if (registeredEmail && !providedEmail) {
-      return res.status(400).json({ message: 'Este funcionário requer confirmação por e-mail. Informe seu e-mail cadastrado.' });
+    const emailResult = resolvePontoEmail((employee as any).email, providedEmail);
+    if (emailResult.error) {
+      return res.status(emailResult.error.status).json({ message: emailResult.error.message });
     }
+    const notificationEmail = emailResult.email!;
 
     // Validação de geolocalização
     if (link.requireGeolocation) {
@@ -1305,19 +1345,17 @@ router.post('/school-public/:token/mark', async (req, res) => {
       });
       await attendance.save();
       // Notificação por e-mail (não-bloqueante)
-      if (registeredEmail) {
-        const school = await User.findById(link.schoolId).select('name').lean();
-        sendPontoNotificationEmail({
-          personName: (employee as any).name,
-          personEmail: registeredEmail,
-          schoolName: (school as any)?.name || 'Escola',
-          action: 'entry',
-          time: now,
-          date: new Date().toLocaleDateString('pt-BR'),
-          locationValid: lat != null ? true : undefined,
-          lateArrivalMinutes: lateArr,
-        }).catch(() => {});
-      }
+      const school = await User.findById(link.schoolId).select('name').lean();
+      sendPontoNotificationEmail({
+        personName: (employee as any).name,
+        personEmail: notificationEmail,
+        schoolName: (school as any)?.name || link.schoolName || 'Escola',
+        action: 'entry',
+        time: now,
+        date: new Date().toLocaleDateString('pt-BR'),
+        locationValid: lat != null ? true : undefined,
+        lateArrivalMinutes: lateArr,
+      }).catch(() => {});
       return res.status(201).json({ message: `Entrada registrada às ${now}`, attendance, action: 'entry' });
     }
 
@@ -1395,18 +1433,16 @@ router.post('/school-public/:token/mark', async (req, res) => {
       (existing as any).earlyDepartureMinutes = Math.max(0, toMin3(lastExpectedExit) - toMin3(now));
     }
     await existing.save();
-    if (registeredEmail) {
-      const school = await User.findById(link.schoolId).select('name').lean();
-      sendPontoNotificationEmail({
-        personName: (employee as any).name,
-        personEmail: registeredEmail,
-        schoolName: (school as any)?.name || 'Escola',
-        action: punchType,
-        time: now,
-        date: new Date().toLocaleDateString('pt-BR'),
-        earlyDepartureMinutes: punchType === 'exit' ? (existing as any).earlyDepartureMinutes : undefined,
-      }).catch(() => {});
-    }
+    const school = await User.findById(link.schoolId).select('name').lean();
+    sendPontoNotificationEmail({
+      personName: (employee as any).name,
+      personEmail: notificationEmail,
+      schoolName: (school as any)?.name || link.schoolName || 'Escola',
+      action: punchType,
+      time: now,
+      date: new Date().toLocaleDateString('pt-BR'),
+      earlyDepartureMinutes: punchType === 'exit' ? (existing as any).earlyDepartureMinutes : undefined,
+    }).catch(() => {});
     const label = punchType === 'entry' ? 'Entrada' : 'Saída';
     return res.json({
       message: `${label} do ${shiftNumber}º turno registrada às ${now}.`,

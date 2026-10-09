@@ -174,6 +174,10 @@ export default function PontoPublico() {
   }
 
   const handleMark = async (action: 'entry' | 'exit' | 'confirm') => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setMarkError('Informe um e-mail válido para receber a confirmação do ponto.');
+      return;
+    }
     setMarking(true);
     setMarkError('');
     setSuccessMsg('');
@@ -314,10 +318,10 @@ export default function PontoPublico() {
           </div>
         )}
 
-        {data.requiresEmail && (isTeacher || data.punchState?.allowedNow) && (
+        {(isTeacher || !data.punchState?.complete) && (
           <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Confirme seu e-mail cadastrado
+              E-mail para confirmação do ponto
             </label>
             <input
               type="email"
@@ -328,7 +332,8 @@ export default function PontoPublico() {
               className="input w-full"
             />
             <p className="text-xs text-gray-500 mt-2">
-              O e-mail confirma que este link individual está sendo usado pelo titular.
+              Você receberá neste endereço a confirmação após cada registro.
+              {data.requiresEmail && ' O endereço deve conferir com o cadastro.'}
             </p>
           </div>
         )}
@@ -390,7 +395,7 @@ export default function PontoPublico() {
             {data.schedule && data.schedule.length > 0 && (
               <button
                 onClick={() => handleMark('confirm')}
-                disabled={marking || (data.requiresEmail && !email.trim())}
+                disabled={marking || !email.trim()}
                 className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
               >
                 <CheckCircle size={22} />
@@ -576,7 +581,7 @@ export default function PontoPublico() {
                 return (
                   <button
                     onClick={() => handleMark('entry')}
-                    disabled={marking || (data.requiresEmail && !email.trim())}
+                    disabled={marking || !email.trim()}
                     className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
                   >
                     <LogIn size={22} />
@@ -588,7 +593,7 @@ export default function PontoPublico() {
               return (
                 <button
                   onClick={() => handleMark('exit')}
-                  disabled={marking || (data.requiresEmail && !email.trim())}
+                  disabled={marking || !email.trim()}
                   className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
                 >
                   <LogOut size={22} />

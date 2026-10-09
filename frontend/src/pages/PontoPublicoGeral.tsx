@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import LiveCamera from '../components/LiveCamera';
 import AddToHomeScreen from '../components/AddToHomeScreen';
+import AttendanceReminder from '../components/AttendanceReminder';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -204,9 +205,8 @@ export default function PontoPublicoGeral() {
   async function markAttendance(action: 'entry' | 'exit' | 'confirm', slot?: ScheduleSlot) {
     if (!selected) return;
 
-    // Validar e-mail se necessário
-    if (personInfo?.requiresEmail && !emailInput.trim()) {
-      setEmailError('Informe seu e-mail cadastrado para confirmar identidade.');
+    if (!emailInput.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) {
+      setEmailError('Informe um e-mail válido para receber a confirmação do ponto.');
       return;
     }
     setEmailError('');
@@ -424,6 +424,26 @@ export default function PontoPublicoGeral() {
       const value = Math.max(0, minutes || 0);
       return `${Math.floor(value / 60)}h ${String(value % 60).padStart(2, '0')}min`;
     };
+    const reminderItems = isTeacher
+      ? (personInfo?.schedule || [])
+          .filter(slot => slot.status === 'pending')
+          .map(slot => ({
+            time: slot.startTime,
+            label: `${slot.subjectName} - ${slot.className}`,
+          }))
+      : [
+          {
+            time: personInfo?.workSchedule?.shiftMode === 'rotating'
+              ? personInfo.workSchedule.rotatingEntryTime
+              : personInfo?.workSchedule?.entryTime,
+            label: 'Entrada',
+          },
+          { time: personInfo?.workSchedule?.exitTime, label: 'Saída' },
+          { time: personInfo?.workSchedule?.shift2EntryTime, label: '2ª entrada' },
+          { time: personInfo?.workSchedule?.shift2ExitTime, label: '2ª saída' },
+          { time: personInfo?.workSchedule?.shift3EntryTime, label: '3ª entrada' },
+          { time: personInfo?.workSchedule?.shift3ExitTime, label: '3ª saída' },
+        ].filter((item): item is { time: string; label: string } => Boolean(item.time));
 
     return (
       <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8">
@@ -469,6 +489,14 @@ export default function PontoPublicoGeral() {
                   <span>{personInfo?.dayLabel} · {personInfo?.today}</span>
                   <span className="ml-auto font-mono font-bold text-gray-800 tracking-wider">{clock}</span>
                 </div>
+
+                {selected && (
+                  <AttendanceReminder
+                    personName={personInfo?.personName || selected.name}
+                    storageKey={`attendance-reminder-school-${token}-${selected._id}`}
+                    reminders={reminderItems}
+                  />
+                )}
 
                 {result && (
                   <div className={`rounded-xl p-3 text-sm ${result.message.toLowerCase().includes('erro') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
@@ -546,11 +574,10 @@ export default function PontoPublicoGeral() {
                       </div>
                     )}
 
-                    {/* Credencial de e-mail — exibida se o cadastro tiver e-mail */}
-                    {personInfo?.requiresEmail && !hasExit && (
+                    {!hasExit && (
                       <div className="space-y-1">
                         <label className="block text-xs font-semibold text-gray-700">
-                          ✉️ Confirme seu e-mail cadastrado
+                          ✉️ E-mail para confirmação do ponto
                           <span className="text-red-500 ml-1">*</span>
                         </label>
                         <input
@@ -564,7 +591,8 @@ export default function PontoPublicoGeral() {
                           <p className="text-xs text-red-600">{emailError}</p>
                         )}
                         <p className="text-xs text-gray-400">
-                          O e-mail é usado para verificar sua identidade e enviar notificação do ponto.
+                          Você receberá a confirmação após o registro.
+                          {personInfo?.requiresEmail && ' O endereço deve conferir com o cadastro.'}
                         </p>
                       </div>
                     )}
@@ -604,22 +632,25 @@ export default function PontoPublicoGeral() {
                 {/* Foto de confirmação ao vivo */}
                 {(isTeacher || !employeeComplete) && (
                   <div className="space-y-3">
-                    {/* Campo de e-mail como credencial */}
-                    {personInfo?.requiresEmail && (
+                    {isTeacher && (
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                          ✉️ Confirme sua identidade
+                          ✉️ E-mail para confirmação do ponto
                           <span className="text-red-500 ml-1">*obrigatório</span>
                         </label>
                         <input
                           type="email"
-                          placeholder="Seu e-mail cadastrado"
+                          placeholder="seu@email.com"
+                          autoComplete="email"
                           value={emailInput}
                           onChange={e => { setEmailInput(e.target.value); setEmailError(''); }}
                           className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${emailError ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
                         />
                         {emailError && <p className="text-xs text-red-600 mt-1">{emailError}</p>}
-                        <p className="text-xs text-gray-400 mt-1">Apenas você pode bater o seu ponto. O e-mail confere com o cadastro.</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Você receberá a confirmação após o registro.
+                          {personInfo?.requiresEmail && ' O endereço deve conferir com o cadastro.'}
+                        </p>
                       </div>
                     )}
                     <p className="text-xs font-semibold text-gray-600 flex items-center gap-1">

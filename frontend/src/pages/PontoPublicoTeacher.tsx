@@ -265,9 +265,8 @@ export default function PontoPublicoTeacher() {
   async function executeAction() {
     if (!selected || (pointAction === 'class' && activePeriod === null)) return;
 
-    // Email check
-    if (scheduleData?.requiresEmail && !emailInput.trim()) {
-      setEmailError('Informe seu e-mail cadastrado.');
+    if (!emailInput.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) {
+      setEmailError('Informe um e-mail válido para receber a confirmação.');
       return;
     }
     setEmailError('');
@@ -734,26 +733,25 @@ export default function PontoPublicoTeacher() {
               <span className="ml-auto font-mono font-bold text-gray-800 tracking-wider">{clock}</span>
             </div>
 
-            {/* Email credential */}
-            {scheduleData?.requiresEmail && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  ✉️ Confirme seu e-mail cadastrado
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={e => { setEmailInput(e.target.value); setEmailError(''); }}
-                  placeholder="seu@email.com"
-                  className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 ${emailError ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
-                />
-                {emailError && <p className="text-xs text-red-600 mt-1">{emailError}</p>}
-                <p className="text-xs text-gray-400 mt-1">
-                  Apenas você pode bater o seu ponto. O e-mail confere com o cadastro.
-                </p>
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                ✉️ E-mail para confirmação do ponto
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <input
+                type="email"
+                value={emailInput}
+                onChange={e => { setEmailInput(e.target.value); setEmailError(''); }}
+                placeholder="seu@email.com"
+                autoComplete="email"
+                className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 ${emailError ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+              />
+              {emailError && <p className="text-xs text-red-600 mt-1">{emailError}</p>}
+              <p className="text-xs text-gray-400 mt-1">
+                Você receberá a confirmação após o registro.
+                {scheduleData?.requiresEmail && ' O endereço deve conferir com o cadastro.'}
+              </p>
+            </div>
 
             {pointAction === 'class' && needsJustification && (
               <div>

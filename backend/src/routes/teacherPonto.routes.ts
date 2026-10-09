@@ -17,6 +17,7 @@ import Schedule from '../models/Schedule';
 import SchoolDay from '../models/SchoolDay';
 import User from '../models/User';
 import { auth, AuthRequest, schoolAdminOnly } from '../middleware/auth';
+import { sendPontoNotificationEmail } from '../services/email.service';
 import { getAttendanceLocation, validateAttendanceLocation } from '../services/attendance-location.service';
 import {
   validateAttendancePhoto,
@@ -37,6 +38,30 @@ const DAYS_PT: Record<string, string> = {
   friday: 'Sexta-feira',
   saturday: 'Sábado',
 };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function resolvePontoEmail(registeredEmail: unknown, providedEmail: unknown) {
+  const registered = String(registeredEmail || '').trim().toLowerCase();
+  const provided = String(providedEmail || '').trim().toLowerCase();
+  if (!provided || !EMAIL_PATTERN.test(provided)) {
+    return {
+      error: {
+        status: 400,
+        message: 'Informe um e-mail válido para receber a confirmação do ponto.',
+      },
+    };
+  }
+  if (registered && provided !== registered) {
+    return {
+      error: {
+        status: 403,
+        message: 'E-mail não confere com o cadastrado. Verifique e tente novamente.',
+      },
+    };
+  }
+  return { email: registered || provided };
+}
 
 // Mapa inglês → formato curto em português (como armazenado nos slots do GeneratedTimetable)
 const EN_TO_PT_SHORT: Record<string, string> = {
@@ -508,14 +533,11 @@ router.post('/teacher-public/:token/school-presence', async (req, res) => {
       .select('name email').lean() as any;
     if (!teacher) return res.status(404).json({ message: 'Professor não encontrado.' });
 
-    const registeredEmail = teacher.email?.trim().toLowerCase() || '';
-    const providedEmail = String(email || '').trim().toLowerCase();
-    if (registeredEmail && !providedEmail) {
-      return res.status(400).json({ message: 'Este professor requer confirmação por e-mail.' });
+    const emailResult = resolvePontoEmail(teacher.email, email);
+    if (emailResult.error) {
+      return res.status(emailResult.error.status).json({ message: emailResult.error.message });
     }
-    if (registeredEmail && providedEmail !== registeredEmail) {
-      return res.status(403).json({ message: 'E-mail não confere com o cadastrado.' });
-    }
+    const notificationEmail = emailResult.email!;
 
     const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng, accuracy);
     if (!locationCheck.valid) {
@@ -627,6 +649,17 @@ router.post('/teacher-public/:token/school-presence', async (req, res) => {
     }
 
     await attendance.save();
+    sendPontoNotificationEmail({
+      personName: teacher.name,
+      personEmail: notificationEmail,
+      schoolName: link.schoolName || 'Escola',
+      action,
+      time: now,
+      date: new Date().toLocaleDateString('pt-BR'),
+      locationValid: locationCheck.valid,
+      lateArrivalMinutes: action === 'entry' ? (attendance as any).schoolArrivalDelayMinutes : undefined,
+      earlyDepartureMinutes: action === 'exit' ? (attendance as any).schoolEarlyDepartureMinutes : undefined,
+    }).catch(() => {});
     return res.json({
       message: action === 'entry'
         ? `Entrada na escola registrada às ${now}.`
@@ -678,16 +711,11 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     if (!teacher) return res.status(404).json({ message: 'Professor não encontrado.' });
 
     // Email verification (same as employee ponto)
-    const registeredEmail: string = teacher.email?.trim().toLowerCase() || '';
-    const providedEmail: string   = (email || '').trim().toLowerCase();
-    if (registeredEmail) {
-      if (!providedEmail) {
-        return res.status(400).json({ message: 'Este professor requer confirmação por e-mail.' });
-      }
-      if (providedEmail !== registeredEmail) {
-        return res.status(403).json({ message: 'E-mail não confere com o cadastrado. Verifique e tente novamente.' });
-      }
+    const emailResult = resolvePontoEmail(teacher.email, email);
+    if (emailResult.error) {
+      return res.status(emailResult.error.status).json({ message: emailResult.error.message });
     }
+    const notificationEmail = emailResult.email!;
 
     const locationCheck = await validateAttendanceLocation(link.schoolId, lat, lng, accuracy);
     if (!locationCheck.valid) {
@@ -793,6 +821,16 @@ router.post('/teacher-public/:token/mark', async (req, res) => {
     cls.justification = outsideSchedule ? String(justification).trim() : '';
 
     await attendance.save();
+    sendPontoNotificationEmail({
+      personName: teacher.name,
+      personEmail: notificationEmail,
+      schoolName: link.schoolName || 'Escola',
+      action: 'confirm',
+      time: now,
+      date: new Date().toLocaleDateString('pt-BR'),
+      locationValid: locationCheck.valid,
+      lateArrivalMinutes: cls.lateMinutes,
+    }).catch(() => {});
     res.json({
       message: outsideSchedule
         ? 'Presença registrada com ressalva e encaminhada aos relatórios.'

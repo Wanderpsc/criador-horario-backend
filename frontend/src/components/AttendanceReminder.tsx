@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlarmClock, Bell, BellOff } from 'lucide-react';
 
 interface AttendanceReminderItem {
@@ -18,10 +18,12 @@ function notificationSupported() {
 
 export default function AttendanceReminder({ personName, reminders, storageKey }: AttendanceReminderProps) {
   const [enabled, setEnabled] = useState(() =>
-    notificationSupported()
+    localStorage.getItem(storageKey) === 'enabled'
+      && notificationSupported()
       && Notification.permission === 'granted'
-      && localStorage.getItem(storageKey) === 'enabled'
   );
+  const [notice, setNotice] = useState('');
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const uniqueReminders = useMemo(() => {
     const seen = new Set<string>();
@@ -33,7 +35,7 @@ export default function AttendanceReminder({ personName, reminders, storageKey }
   }, [reminders]);
 
   useEffect(() => {
-    if (!enabled || !notificationSupported() || Notification.permission !== 'granted') return;
+    if (!enabled) return;
 
     const timers = uniqueReminders.flatMap(reminder => {
       const [hours, minutes] = reminder.time.split(':').map(Number);
@@ -43,10 +45,28 @@ export default function AttendanceReminder({ personName, reminders, storageKey }
       if (delay <= 0) return [];
 
       return [window.setTimeout(() => {
-        new Notification('Hora de registrar o ponto', {
-          body: `${personName}: ${reminder.label} às ${reminder.time}.`,
-          tag: `attendance-${storageKey}-${reminder.time}-${reminder.label}`,
-        });
+        if (notificationSupported() && Notification.permission === 'granted') {
+          new Notification('Hora de registrar o ponto', {
+            body: `${personName}: ${reminder.label} às ${reminder.time}.`,
+            tag: `attendance-${storageKey}-${reminder.time}-${reminder.label}`,
+          });
+          return;
+        }
+
+        navigator.vibrate?.([300, 150, 300]);
+        const audioContext = audioContextRef.current;
+        if (audioContext) {
+          void audioContext.resume().then(() => {
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.frequency.value = 880;
+            gain.gain.value = 0.15;
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.8);
+          });
+        }
       }, delay)];
     });
 
@@ -54,18 +74,27 @@ export default function AttendanceReminder({ personName, reminders, storageKey }
   }, [enabled, personName, storageKey, uniqueReminders]);
 
   async function toggleReminder() {
-    if (!notificationSupported()) return;
     if (enabled) {
       localStorage.removeItem(storageKey);
       setEnabled(false);
+      setNotice('');
       return;
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      localStorage.setItem(storageKey, 'enabled');
-      setEnabled(true);
+    if (typeof AudioContext !== 'undefined' && !audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
     }
+
+    if (notificationSupported() && Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+
+    const usesSystemNotification = notificationSupported() && Notification.permission === 'granted';
+    setNotice(usesSystemNotification
+      ? 'Notificações ativadas neste celular.'
+      : 'Alarme ativado nesta página. Mantenha-a aberta para ouvir o aviso.');
+    localStorage.setItem(storageKey, 'enabled');
+    setEnabled(true);
   }
 
   if (uniqueReminders.length === 0) return null;
@@ -80,22 +109,23 @@ export default function AttendanceReminder({ personName, reminders, storageKey }
             {uniqueReminders.map(item => `${item.label}: ${item.time}`).join(' · ')}
           </p>
           {!notificationSupported() && (
-            <p className="mt-2 text-xs text-amber-700">Este navegador não oferece notificações locais.</p>
+            <p className="mt-2 text-xs text-amber-700">
+              Neste navegador, o aviso usará som e vibração enquanto esta página estiver aberta.
+            </p>
           )}
         </div>
-        {notificationSupported() && (
-          <button
-            type="button"
-            onClick={toggleReminder}
-            className={`flex min-h-9 flex-shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold ${
-              enabled ? 'bg-amber-600 text-white' : 'border border-amber-300 bg-white text-amber-800'
-            }`}
-          >
-            {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-            {enabled ? 'Ativo' : 'Ativar'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={toggleReminder}
+          className={`flex min-h-9 flex-shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold ${
+            enabled ? 'bg-amber-600 text-white' : 'border border-amber-300 bg-white text-amber-800'
+          }`}
+        >
+          {enabled ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+          {enabled ? 'Ativo' : 'Ativar'}
+        </button>
       </div>
+      {notice && <p className="mt-2 text-[11px] text-amber-700">{notice}</p>}
       {enabled && (
         <p className="mt-2 text-[11px] text-amber-700">
           Mantenha esta página aberta no celular para receber o aviso.
