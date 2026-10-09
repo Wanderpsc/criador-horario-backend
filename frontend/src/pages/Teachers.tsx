@@ -72,7 +72,7 @@ export default function Teachers() {
       const data = res.data;
       const base = window.location.origin + window.location.pathname;
       const url = data.activationToken
-        ? `${base}#/ponto-teacher/${data.token}?activation=${encodeURIComponent(data.activationToken)}`
+        ? `${base}?activation=${encodeURIComponent(data.activationToken)}#/ponto-teacher/${data.token}`
         : `${base}#/ponto-teacher/${data.token}`;
       setPontoLink(url);
       setPontoLinkId(data._id || data.id || '');
@@ -103,7 +103,7 @@ export default function Teachers() {
     try {
       const response = await api.post(`/attendance-links/${pontoLinkId}/device-reset`);
       const base = window.location.origin + window.location.pathname;
-      setPontoLink(`${base}#/ponto-teacher/${response.data.token}?activation=${encodeURIComponent(response.data.activationToken)}`);
+      setPontoLink(`${base}?activation=${encodeURIComponent(response.data.activationToken)}#/ponto-teacher/${response.data.token}`);
       setPontoDeviceRegistered(false);
       setPontoCopied(false);
       toast.success('Novo link de ativação gerado. Envie somente este link.');

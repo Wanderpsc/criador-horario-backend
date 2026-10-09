@@ -48,6 +48,8 @@ export async function getAttendanceDeviceHeaders(token: string): Promise<Record<
 }
 
 export function getActivationTokenFromHash(): string {
+  const searchToken = new URLSearchParams(window.location.search).get('activation');
+  if (searchToken) return searchToken;
   const query = window.location.hash.split('?')[1] || '';
   return new URLSearchParams(query).get('activation') || '';
 }
@@ -63,7 +65,14 @@ export function isEmbeddedMobileBrowser(): boolean {
 
 export function clearActivationTokenFromAddress(): void {
   const cleanHash = window.location.hash.split('?')[0];
-  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${cleanHash}`);
+  const search = new URLSearchParams(window.location.search);
+  search.delete('activation');
+  const cleanSearch = search.toString();
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}${cleanSearch ? `?${cleanSearch}` : ''}${cleanHash}`
+  );
 }
 
 export function isAttendancePwaStandalone(): boolean {
