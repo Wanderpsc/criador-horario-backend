@@ -71,7 +71,7 @@ export default function AddToHomeScreen({ label, context = 'attendance' }: Props
   }, [context]);
 
   // Já instalado como PWA — não precisa mostrar botão
-  if (isStandalone || installed) return null;
+  if (isStandalone) return null;
 
   const handleAndroidInstall = async () => {
     if (!rememberDestination()) return;
@@ -124,12 +124,12 @@ export default function AddToHomeScreen({ label, context = 'attendance' }: Props
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-bold">
-            {isSubstitute ? 'Criar atalho deste link' : 'Instalar aplicativo'}
+            {installed ? 'Instalação iniciada' : isSubstitute ? 'Criar atalho deste link' : 'Instalar aplicativo'}
           </span>
-          <span className="block text-xs text-blue-100">{installDescription}</span>
+          <span className="block text-xs text-blue-100">{installed ? 'Ícone não apareceu? Toque para instalar de novo' : installDescription}</span>
         </span>
         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-blue-700">
-          {isSubstitute ? 'Atalho' : 'Instalar'}
+          {installed ? 'De novo' : isSubstitute ? 'Atalho' : 'Instalar'}
         </span>
       </button>
 
@@ -156,6 +156,12 @@ export default function AddToHomeScreen({ label, context = 'attendance' }: Props
               </button>
             </div>
 
+            {installed && (
+              <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-blue-900">
+                Se o ícone ainda não apareceu na tela inicial, siga os passos abaixo para
+                instalar de novo.
+              </div>
+            )}
             {isSubstitute && (
               <div className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
                 <strong>Abrir ou copiar o link não instala o ícone.</strong> Confirme a opção
