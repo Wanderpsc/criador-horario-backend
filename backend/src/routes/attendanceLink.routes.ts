@@ -68,8 +68,8 @@ function resolvePontoEmail(registeredEmail: unknown, providedEmail: unknown) {
 }
 
 const DAYS_EN = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const DEVICE_ENROLLMENT_MINUTES = 10;
-const DEVICE_INSTALLATION_TRANSFER_MINUTES = 30;
+const DEVICE_ENROLLMENT_MINUTES = 7 * 24 * 60; // 7 dias para abrir o link de ativacao
+const DEVICE_INSTALLATION_TRANSFER_MINUTES = 7 * 24 * 60; // 7 dias para instalar o aplicativo no celular
 
 // Retorna o instante atual ajustado para o fuso BRT (UTC-3)
 // Usando deslocamento fixo pois o servidor (Render) roda em UTC
@@ -705,10 +705,6 @@ router.post('/public/:token/device/bind', async (req, res) => {
             $set: {
               deviceSecretHash: hashDeviceValue(deviceSecret),
               deviceLastSeenAt: new Date(),
-            },
-            $unset: {
-              enrollmentTokenHash: 1,
-              enrollmentExpiresAt: 1,
             },
           }
         );
@@ -1477,6 +1473,10 @@ router.put('/school-link/settings', auth, schoolAdminOnly, async (req: AuthReque
     if (!Number.isFinite(parsedAreaM2) || parsedAreaM2 < 100) {
       return res.status(400).json({ message: 'A área permitida deve ser de pelo menos 100m².' });
     }
+    link.requireGeolocation = !!requireGeolocation;
+    link.latitude = Number.isFinite(parsedLatitude) ? parsedLatitude : undefined;
+    link.longitude = Number.isFinite(parsedLongitude) ? parsedLongitude : undefined;
+    link.areaM2 = parsedAreaM2;
     if (requirePhoto !== undefined) link.requirePhoto = requirePhoto;
     if (graceMinutes !== undefined) link.graceMinutes = graceMinutes;
     await link.save();

@@ -10,6 +10,10 @@ let initialized = false;
 export function initializePwaInstallPromptCapture(): void {
   if (initialized) return;
   initialized = true;
+  window.addEventListener('pwa-install-context-changed', () => {
+    capturedPrompt = null;
+    window.dispatchEvent(new Event(PROMPT_READY_EVENT));
+  });
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     capturedPrompt = event as BeforeInstallPromptEvent;

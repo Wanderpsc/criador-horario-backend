@@ -5,6 +5,8 @@
  */
 import { useState, useEffect } from 'react';
 import { Smartphone, Share2, X, Plus, Chrome, ShieldCheck } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { isEmbeddedMobileBrowser } from '../utils/attendanceDevice';
 import {
   BeforeInstallPromptEvent,
   clearCapturedPwaInstallPrompt,
@@ -29,9 +31,12 @@ function isInStandaloneMode(): boolean {
 interface Props {
   /** Rótulo do atalho (ex: "Ponto - Prof. João") */
   label?: string;
+  /** Contexto exibido nas instruções e no botão de instalação */
+  context?: 'attendance' | 'substitute';
 }
 
-export default function AddToHomeScreen({ label }: Props) {
+export default function AddToHomeScreen({ label, context = 'attendance' }: Props) {
+  const isSubstitute = context === 'substitute';
   const [platform]         = useState<'ios' | 'android' | 'desktop'>(detectPlatform);
   const [isStandalone]     = useState(isInStandaloneMode);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
@@ -41,9 +46,12 @@ export default function AddToHomeScreen({ label }: Props) {
   const [installed, setInstalled] = useState(false);
   const rememberDestination = () => {
     try {
-      localStorage.setItem('ponto.pwaDestination', window.location.hash);
+      localStorage.setItem(isSubstitute ? 'substitute.pwaDestination' : 'ponto.pwaDestination', window.location.hash);
+      return true;
     } catch (error) {
-      console.warn('Não foi possível salvar o destino personalizado do ponto.', error);
+      console.error('Não foi possível salvar o destino personalizado do atalho.', error);
+      toast.error('Não foi possível salvar o link neste navegador. Permita o armazenamento antes de criar o atalho.');
+      return false;
     }
   };
 
@@ -60,50 +68,68 @@ export default function AddToHomeScreen({ label }: Props) {
       unsubscribe();
       window.removeEventListener('appinstalled', handleInstalled);
     };
-  }, []);
+  }, [context]);
 
   // Já instalado como PWA — não precisa mostrar botão
   if (isStandalone || installed) return null;
 
   const handleAndroidInstall = async () => {
-    rememberDestination();
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice.outcome === 'accepted') setInstalled(true);
-      clearCapturedPwaInstallPrompt();
-      setDeferredPrompt(null);
+    if (!rememberDestination()) return;
+    if (deferredPrompt && !isEmbeddedMobileBrowser()) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === 'accepted') setInstalled(true);
+        else setShowModal(true);
+      } catch (error) {
+        console.error('Não foi possível abrir a confirmação de instalação.', error);
+        toast.error('O navegador não abriu a instalação. Siga as instruções para adicionar o atalho.');
+        setShowModal(true);
+      } finally {
+        clearCapturedPwaInstallPrompt();
+        setDeferredPrompt(null);
+      }
     } else {
       // Navegador não suporta beforeinstallprompt — mostra instruções
       setShowModal(true);
     }
   };
 
-  const shortLabel = label || 'Ponto';
+  const shortLabel = label || (isSubstitute ? 'Cadastro de substituto' : 'Ponto');
+  const installDescription = isSubstitute
+    ? 'Fixar o cadastro de substituto na tela inicial'
+    : 'Fixar este ponto na tela inicial do celular';
+  const protectedResource = isSubstitute ? 'cadastro' : 'ponto';
 
   return (
     <>
       {/* ── Instalador fixo e visível no celular ─────────────────── */}
       <button
         type="button"
-        onClick={platform === 'ios' || platform === 'desktop' ? () => { rememberDestination(); setShowModal(true); } : handleAndroidInstall}
+        onClick={platform === 'ios' || platform === 'desktop'
+          ? () => { if (rememberDestination()) setShowModal(true); }
+          : handleAndroidInstall}
         className="fixed left-4 right-4 z-40 mx-auto flex max-w-md items-center gap-3
                    rounded-2xl border border-white/30 bg-gradient-to-r from-blue-700 to-indigo-700
                    px-4 py-3 text-left text-white shadow-2xl shadow-blue-950/30
                    hover:from-blue-800 hover:to-indigo-800 active:scale-[0.98]
                    transition-all duration-150 select-none"
         style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-        title="Instalar aplicativo de ponto no celular"
+        title={isSubstitute ? 'Criar atalho para este link na tela inicial' : `Instalar atalho de ${protectedResource} no celular`}
       >
         <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white/20">
-          <Smartphone className="h-6 w-6 text-white" />
+          {isSubstitute
+            ? <img src="/substitute-icon.svg" alt="" className="h-11 w-11 rounded-xl" />
+            : <Smartphone className="h-6 w-6 text-white" />}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold">Instalar aplicativo</span>
-          <span className="block text-xs text-blue-100">Fixar este ponto na tela inicial do celular</span>
+          <span className="block text-sm font-bold">
+            {isSubstitute ? 'Criar atalho deste link' : 'Instalar aplicativo'}
+          </span>
+          <span className="block text-xs text-blue-100">{installDescription}</span>
         </span>
         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-blue-700">
-          Instalar
+          {isSubstitute ? 'Atalho' : 'Instalar'}
         </span>
       </button>
 
@@ -120,7 +146,9 @@ export default function AddToHomeScreen({ label }: Props) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Smartphone className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-bold text-gray-800">Salvar atalho na tela inicial</h3>
+                <h3 className="font-bold text-gray-800">
+                  {isSubstitute ? 'Criar atalho para este link' : 'Salvar atalho na tela inicial'}
+                </h3>
               </div>
               <button onClick={() => setShowModal(false)}
                 className="p-1 rounded-full hover:bg-gray-100">
@@ -128,12 +156,30 @@ export default function AddToHomeScreen({ label }: Props) {
               </button>
             </div>
 
+            {isSubstitute && (
+              <div className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+                <strong>Abrir ou copiar o link não instala o ícone.</strong> Confirme a opção
+                de adicionar à tela inicial no navegador. O ícone verde abre diretamente
+                este link de substituição.
+              </div>
+            )}
+            {isEmbeddedMobileBrowser() && (
+              <div className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+                Abra este mesmo link no {platform === 'ios' ? 'Safari' : 'Chrome'}, fora
+                do WhatsApp ou de outro aplicativo, para adicionar o ícone à tela inicial.
+              </div>
+            )}
+
             <div className="mb-4 bg-emerald-50 text-emerald-900 rounded-xl p-3 flex items-start gap-2">
               <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold mb-1">Instalação protegida neste aparelho</p>
+                <p className="text-xs font-semibold mb-1">
+                  {isSubstitute ? 'Link da sua escola' : 'Instalação protegida neste aparelho'}
+                </p>
                 <p className="text-[11px]">
-                  Este ponto é pessoal. Não copie nem compartilhe o link com outro celular.
+                  {isSubstitute
+                    ? 'Este link é de uso da sua escola. Não compartilhe com pessoas não autorizadas.'
+                    : 'Este ponto é pessoal. Não copie nem compartilhe o link com outro celular.'}
                 </p>
               </div>
             </div>
@@ -173,7 +219,7 @@ export default function AddToHomeScreen({ label }: Props) {
                   </li>
                 </ol>
                 <p className="text-xs text-gray-500 text-center">
-                  Depois disso, feche o Safari e abra o ponto pelo novo ícone na tela inicial.
+                  Depois disso, feche o Safari e abra o {protectedResource} pelo novo ícone na tela inicial.
                 </p>
               </div>
             )}
@@ -193,7 +239,7 @@ export default function AddToHomeScreen({ label }: Props) {
                   <li className="flex items-start gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">2</span>
                     <span className="text-sm text-gray-600">
-                      Toque em <strong>"Adicionar à tela inicial"</strong>
+                      Toque em <strong>"Adicionar à tela inicial"</strong> ou <strong>"Instalar aplicativo"</strong>
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -221,7 +267,7 @@ export default function AddToHomeScreen({ label }: Props) {
                   <li className="flex items-start gap-3">
                     <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">2</span>
                     <span className="text-sm text-gray-600">
-                      Selecione <strong>"Instalar EduSync-PRO"</strong> ou <strong>"Criar atalho…"</strong>
+                      Selecione <strong>"Instalar {isSubstitute ? 'Substituição de Professor' : 'EduSync-PRO'}"</strong> ou <strong>"Criar atalho…"</strong>
                     </span>
                   </li>
                   <li className="flex items-start gap-3">

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'edusync-ponto-v20261009-2';
+const CACHE_NAME = 'edusync-ponto-v20261111';
 const APP_SHELL = [
   '/',
   '/manifest.json',

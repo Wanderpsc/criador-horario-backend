@@ -10,6 +10,7 @@ import {
   User, BookOpen, Clock, CheckCircle, AlertCircle,
   ChevronRight, ArrowUpCircle, RotateCcw, TrendingUp,
 } from 'lucide-react';
+import AddToHomeScreen from '../components/AddToHomeScreen';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
@@ -297,7 +298,11 @@ export default function SubstitutePublic() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 p-4 pb-28">
+      <AddToHomeScreen
+        context="substitute"
+        label={`Substituto${linkData?.schoolName ? ' · ' + linkData.schoolName : ''}`}
+      />
       <div className="max-w-xl mx-auto space-y-6">
 
         {/* Cabeçalho */}

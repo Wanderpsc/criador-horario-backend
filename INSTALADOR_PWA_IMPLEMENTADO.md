@@ -1,5 +1,28 @@
 # 📱 Instalador PWA - EduSync-PRO
 
+## Atalho de substituição de professor
+
+O link público `/#/substitute/:token`, gerado em Pagamentos de Aulas, usa
+uma identidade de instalação própria: **Substituição de Professor**, com ícone
+verde de professor e setas de troca. Os ícones PNG de 192 e 512 pixels e o
+ícone Apple são distintos dos usados pelo aplicativo de ponto.
+
+- Abrir ou copiar o link não instala automaticamente um ícone. Toque em
+  **Criar atalho deste link** e confirme a instalação no navegador.
+- Android: abra no Chrome; confirme a instalação ou use o menu
+  **Adicionar à tela inicial / Instalar aplicativo**.
+- iPhone: abra no Safari, toque em **Compartilhar → Adicionar à Tela de Início**.
+- Se abriu pelo WhatsApp ou outro navegador interno, abra o mesmo link no
+  navegador do celular antes de criar o atalho.
+- O destino de substituição é salvo separadamente do ponto. No Android, a
+  inicialização `/?shortcut=substitute` restaura o último link de substituição
+  aberto nesse navegador; no iPhone, o atalho pode manter a URL adicionada.
+- O atalho não torna o link permanente: a escola precisa enviar um novo link
+  quando o anterior expirar. Abra o novo link; no iPhone, pode ser necessário
+  recriar o atalho se ele conservar a URL anterior.
+- Um ícone antigo não necessariamente muda após atualizar o site. Crie o
+  atalho novamente para usar o novo ícone.
+
 ## ✅ Implementação Completa
 
 O instalador de PWA (Progressive Web App) foi implementado com sucesso na página de login do sistema.
@@ -202,3 +225,27 @@ Todos os direitos reservados.
 ✅ **Deploy Realizado**  
 ✅ **Testado em Produção**  
 🎉 **Pronto para Uso!**
+
+## Identidades separadas de aplicativo (atualização 2026-11-11)
+
+O site passa a ter três identidades de PWA, para que a instalação seja sempre
+a mesma em todos os celulares:
+
+- **EduSync-PRO (gestão)** — `manifest.json`, com `start_url` fixo em `/#/login`.
+- **Ponto Eletrônico** — rotas `#/ponto/`, `#/ponto-geral/` e `#/ponto-teacher/`.
+  No Android usa `ponto-manifest.json` (abre em `/?app=ponto` e restaura o último
+  link de ponto salvo no navegador). No iPhone o manifest é gerado na hora com o
+  link exato no `start_url` (parâmetro `dest`), porque o app instalado no iPhone
+  não compartilha armazenamento com o Safari.
+- **Substituição de Professor** — mesma regra, com `shortcut=substitute`.
+
+Validades no backend (`attendanceLink.routes.ts`):
+
+- Link de ativação do ponto: **7 dias** para o funcionário abrir no celular
+  (antes eram 10 minutos, o que causava "link de ativação expirou").
+- Transferência da autorização para o aplicativo instalado: **7 dias**, e pode
+  se repetir dentro da janela (antes era uma única vez em 30 minutos, o que
+  causava "dispositivo já cadastrado" no iPhone).
+
+Se mesmo assim um celular ficar travado em "dispositivo já cadastrado", o
+administrador usa **Redefinir dispositivo** no painel e envia o novo link.

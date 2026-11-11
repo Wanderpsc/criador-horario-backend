@@ -92,16 +92,18 @@ export function activateAttendanceDevice(
   const activation = (async () => {
     const standalone = isAttendancePwaStandalone();
     const existingSecret = await getAttendanceDeviceSecret(token);
-    if (existingSecret) {
-      if (standalone) clearActivationTokenFromAddress();
-      return;
+    try {
+      const response = await axios.post(
+        `${apiUrl}/attendance-links/public/${token}/device/bind`,
+        { activationToken, installationTransfer: standalone }
+      );
+      await saveAttendanceDeviceSecret(token, response.data.deviceSecret);
+    } catch (error) {
+      const alreadyRegistered = axios.isAxiosError(error)
+        && error.response?.status === 409
+        && error.response.data?.code === 'DEVICE_ALREADY_REGISTERED';
+      if (!existingSecret || !alreadyRegistered) throw error;
     }
-
-    const response = await axios.post(
-      `${apiUrl}/attendance-links/public/${token}/device/bind`,
-      { activationToken, installationTransfer: standalone }
-    );
-    await saveAttendanceDeviceSecret(token, response.data.deviceSecret);
     if (standalone) clearActivationTokenFromAddress();
   })();
 
