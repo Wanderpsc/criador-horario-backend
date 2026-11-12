@@ -13,10 +13,11 @@ interface AuthRequest extends Request {
 
 const router = express.Router();
 
-// GET /api/panel-ticker/:schoolId - Obter letreiro ativo da escola (protegido)
+// GET /api/panel-ticker/:schoolId - Obter letreiro da escola LOGADA
+// (o :schoolId da URL é ignorado por segurança — cada escola só vê o próprio letreiro)
 router.get('/:schoolId', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = String(req.user?.schoolId || req.user?.id);
     const ticker = await PanelTicker.findOne({ schoolId });
     res.json({ data: ticker || { schoolId, message: '', active: false } });
   } catch (error: any) {
@@ -24,10 +25,10 @@ router.get('/:schoolId', auth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PUT /api/panel-ticker/:schoolId - Criar ou atualizar letreiro (protegido)
+// PUT /api/panel-ticker/:schoolId - Criar ou atualizar letreiro da escola LOGADA
 router.put('/:schoolId', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = String(req.user?.schoolId || req.user?.id);
     const { message, active } = req.body;
 
     const ticker = await PanelTicker.findOneAndUpdate(

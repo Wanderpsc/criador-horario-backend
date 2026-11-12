@@ -4,7 +4,7 @@ Write-Host "🔍 VERIFICAÇÃO DE CARGAS HORÁRIAS" -ForegroundColor Cyan
 Write-Host "=" * 60
 
 # Conectar ao MongoDB e buscar dados
-$mongoUri = "mongodb+srv://wanderpsc:Wander2211@cluster0.n6lso.mongodb.net/school-timetable?retryWrites=true&w=majority"
+$mongoUri = $env:MONGODB_URI
 
 # Buscar todas as turmas
 Write-Host "`n📊 Buscando turmas..." -ForegroundColor Yellow

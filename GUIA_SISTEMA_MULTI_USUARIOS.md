@@ -34,7 +34,7 @@ Body (JSON):
   "schoolId": "SEU_ID_DA_ESCOLA",
   "name": "Administrador",
   "email": "escola@ceti.com",
-  "password": "Ceti@2026"
+  "password": "<senha-redigida>"
 }
 ```
 
@@ -53,7 +53,7 @@ npm run seed-admin
 1. Acesse: https://wanderpsc.github.io/criador-horario-backend/school-user-login
 2. Use as credenciais:
    - **Login:** `escola@ceti.com`
-   - **Senha:** `Ceti@2026`
+   - **Senha:** `<senha-redigida>`
 
 ---
 
@@ -317,7 +317,7 @@ GET    /api/audit-logs/user/:userId      - Logs de um usuário
 
 1. ✅ Acesse: https://wanderpsc.github.io/criador-horario-backend/school-user-login
 2. ✅ Crie o primeiro admin via API ou script
-3. ✅ Faça login com escola@ceti.com / Ceti@2026
+3. ✅ Faça login com escola@ceti.com / <senha-redigida>
 4. ✅ Acesse /settings e crie os 5 usuários
 5. ✅ Configure permissões individuais
 6. ✅ Teste o sistema fazendo login com cada usuário

@@ -23,7 +23,7 @@ async function findSchool() {
       
       // Criar script para buscar no MongoDB
       const mongoose = require('mongoose');
-      const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://wanderpscCoelho:NLYqQ49Z3w21qnSn@escola.zsq6z.mongodb.net/school-timetable?retryWrites=true&w=majority&appName=Escola';
+      const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGODB_URI;
       
       await mongoose.connect(MONGODB_URI);
       const db = mongoose.connection.db;

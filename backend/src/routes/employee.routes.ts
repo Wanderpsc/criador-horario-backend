@@ -2,7 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Employee from '../models/Employee';
 import Ferias from '../models/Ferias';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -72,7 +72,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     const schoolId = req.user!.schoolId || req.user!.id;
     // Remove campos de enum com string vazia para evitar falha de validação do Mongoose
     const enumFields = ['tipoContrato', 'sexo', 'estadoCivil'];
-    const updateData = { ...req.body };
+    const updateData = stripTenantKeys({ ...req.body });
     for (const field of enumFields) {
       if (updateData[field] === '' || updateData[field] === null || updateData[field] === undefined) {
         delete updateData[field];

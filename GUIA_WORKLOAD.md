@@ -185,7 +185,7 @@ npm run dev
 ### Erro de autenticação
 **Solução:** Verifique credenciais do CETI:
 - Email: escola@ceti.com  
-- Senha: Ceti2025@
+- Senha: <senha-redigida>
 
 ## 📞 Suporte
 

@@ -8,6 +8,7 @@ import SchoolUser from '../models/SchoolUser';
 import { sendPasswordResetEmail } from '../services/emailService';
 import { AutoBackupService } from '../services/auto-backup.service';
 import { auth, AuthRequest } from '../middleware/auth';
+import { getJwtSecret } from '../config/jwt';
 
 const router = express.Router();
 
@@ -61,8 +62,26 @@ router.post('/register-school', async (req: any, res: any) => {
       return res.status(400).json({ message: 'Email já cadastrado' });
     }
 
+    // SEGURANÇA: remover campos sensíveis que o cliente não pode definir
+    // (impede auto-aprovação, licença infinita ou créditos no cadastro)
+    const {
+      role: _role,
+      approvedByAdmin: _approved,
+      approvedAt: _approvedAt,
+      approvedBy: _approvedBy,
+      paymentStatus: _payment,
+      registrationStatus: _registration,
+      licenseExpiryDate: _license,
+      licenseKey: _licenseKey,
+      credits: _credits,
+      resetPasswordToken: _resetToken,
+      resetPasswordExpire: _resetExpire,
+      isActive: _isActive,
+      ...safeSchoolData
+    } = schoolData;
+
     const user = new User({
-      ...schoolData,
+      ...safeSchoolData,
       email,
       password, // Será hasheada pelo pre-save hook
       role: 'school',
@@ -127,7 +146,7 @@ router.post('/register',
       // Gerar token JWT
       const token = jwt.sign(
         { id: user._id, role: user.role },
-        (process.env.JWT_SECRET || 'secret') as jwt.Secret,
+        getJwtSecret() as jwt.Secret,
         { expiresIn: '7d' }
       );
 
@@ -168,24 +187,27 @@ router.post('/login',
       const emailLower = email.toLowerCase();
       console.log('🔍 Procurando usuário:', emailLower);
 
-      // 1️⃣ PRIORIDADE: Verificar primeiro na collection schoolusers (funcionários)
-      console.log('👥 Verificando schoolusers...');
-      const schoolUser = await SchoolUser.findOne({ email: emailLower });
-      
+      // 1️⃣ Verificar na collection schoolusers (funcionários).
+      // E-mails são únicos POR ESCOLA, então pode haver mais de um candidato:
+      // testar a senha em cada um. Se nenhuma bater, cair para a conta
+      // principal (users) — assim um funcionário homônimo nunca bloqueia
+      // o login da escola.
+      const schoolUserCandidates = await SchoolUser.find({ email: emailLower });
+      let schoolUser: typeof schoolUserCandidates[number] | null = null;
+      for (const candidate of schoolUserCandidates) {
+        if (await bcrypt.compare(password, candidate.password)) {
+          schoolUser = candidate;
+          break;
+        }
+      }
+
       if (schoolUser) {
         console.log('✅ Usuário encontrado em schoolusers (role: ' + schoolUser.role + ')');
-        
-        // Verificar senha
-        const isMatch = await bcrypt.compare(password, schoolUser.password);
-        if (!isMatch) {
-          console.log('❌ Senha incorreta');
-          return res.status(401).json({ message: 'Credenciais inválidas' });
-        }
 
         // Verificar se está ativo
         if (!schoolUser.isActive) {
           console.log('⚠️ Usuário inativo');
-          return res.status(403).json({ 
+          return res.status(403).json({
             message: 'Sua conta está inativa. Entre em contato com o administrador.',
             status: 'inactive'
           });
@@ -203,7 +225,7 @@ router.post('/login',
             role: schoolUser.role, 
             schoolId: schoolUser.schoolId 
           },
-          (process.env.JWT_SECRET || 'secret') as jwt.Secret,
+          getJwtSecret() as jwt.Secret,
           { expiresIn: '7d' }
         );
 
@@ -270,14 +292,14 @@ router.post('/login',
       // Gerar token JWT
       const token = jwt.sign(
         { id: user._id, role: user.role },
-        (process.env.JWT_SECRET || 'secret') as jwt.Secret,
+        getJwtSecret() as jwt.Secret,
         { expiresIn: '7d' }
       );
 
       console.log('✅ Login bem-sucedido (school)');
       
-      // Criar backup automático para clientes (não admin)
-      if (user.role !== 'admin') {
+      // Criar backup automático para escolas (não admin da plataforma)
+      if (user.role === 'school') {
         AutoBackupService.createLoginBackup(user._id.toString())
           .catch(err => console.error('❌ Erro ao criar backup automático:', err));
       }
@@ -310,7 +332,7 @@ router.post('/accept-terms', async (req: any, res: any) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
     
     const { termsVersion, privacyVersion, copyrightAcknowledged } = req.body;
     
@@ -474,7 +496,7 @@ router.post('/change-password', async (req: any, res: any) => {
     let decoded: any;
     
     try {
-      decoded = jwt.verify(token, (process.env.JWT_SECRET || 'secret') as jwt.Secret);
+      decoded = jwt.verify(token, getJwtSecret() as jwt.Secret);
       console.log('🔓 Token decodificado:', { id: decoded.id, userId: decoded.userId, role: decoded.role });
     } catch (error) {
       console.log('❌ Token inválido');

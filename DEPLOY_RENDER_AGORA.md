@@ -60,12 +60,12 @@ PORT=10000
 ### 🔒 Copie do seu .env local:
 
 ```env
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 
 JWT_SECRET=wanderpsc2025horarioescolar_secret_key_change_in_production
 
 EMAIL_USER=wanderpsc@gmail.com
-EMAIL_PASSWORD=yvquefknpprdohwk
+EMAIL_PASSWORD=<senha-redigida>
 
 MERCADO_PAGO_ACCESS_TOKEN=APP_USR-8624658040903889-010322-4f9240f477d96f3a7539c751a2cf3d53-58356
 ```

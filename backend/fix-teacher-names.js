@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority')
+mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ Conectado ao MongoDB\n');
     

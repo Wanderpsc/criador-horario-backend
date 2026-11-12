@@ -65,7 +65,7 @@ No Render, na seção **"Environment Variables"**, adicione:
 ```env
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 JWT_SECRET=seu_segredo_jwt_muito_forte_e_aleatorio_12345678
 FRONTEND_URL=https://criador-horario-aula.surge.sh
 ```
@@ -150,7 +150,7 @@ Quando aparecer: **"Live"** com bolinha verde ✅
 
 2. **Faça login:**
    - Email: `admin@edusync-pro.com`
-   - Senha: `admin123`
+   - Senha: `<senha-redigida>`
 
 3. **Teste funcionalidades:**
    - ✅ Login funcionando

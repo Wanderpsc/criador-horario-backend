@@ -6,7 +6,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import EpiControl from '../models/EpiControl';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 
 const router = express.Router();
 const isValidId = (id: string) => mongoose.isValidObjectId(id);
@@ -62,7 +62,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     const schoolId = req.user!.schoolId || req.user!.id;
     const doc = await EpiControl.findOneAndUpdate(
       { _id: req.params.id, schoolId },
-      { $set: req.body },
+      { $set: stripTenantKeys(req.body) },
       { new: true, runValidators: true }
     );
     if (!doc) return res.status(404).json({ message: 'Registro não encontrado.' });

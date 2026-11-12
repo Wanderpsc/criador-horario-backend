@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('./dist/models/User').default;
 
-const MONGODB_URI = 'mongodb+srv://wanderpscCoelho:NLYqQ49Z3w21qnSn@escola.zsq6z.mongodb.net/school-timetable?retryWrites=true&w=majority&appName=Escola';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 async function checkSchool() {
   try {

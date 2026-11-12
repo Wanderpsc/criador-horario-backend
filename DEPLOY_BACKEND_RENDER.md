@@ -72,13 +72,13 @@ Role até **"Environment Variables"** e adicione:
 NODE_ENV=production
 PORT=10000
 
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2026@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 
 JWT_SECRET=wanderpsc2025horarioescolar_secret_key_change_in_production
 JWT_EXPIRE=7d
 
 EMAIL_USER=wanderpsc@gmail.com
-EMAIL_PASSWORD=yvquefknpprdohwk
+EMAIL_PASSWORD=<senha-redigida>
 
 FRONTEND_URL=https://edusync-pro.surge.sh
 CORS_ORIGIN=https://edusync-pro.surge.sh

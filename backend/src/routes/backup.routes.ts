@@ -5,7 +5,7 @@
  */
 
 import express from 'express';
-import { auth as requireAuth } from '../middleware/auth';
+import { auth as requireAuth, isPlatformAdmin } from '../middleware/auth';
 import { AutoBackupService } from '../services/auto-backup.service';
 import Backup from '../models/Backup';
 
@@ -17,7 +17,7 @@ const router = express.Router();
  */
 router.get('/', requireAuth, async (req: any, res: any) => {
   try {
-    const userId = (req.user.role === 'admin' || req.user.role === 'super-admin') ? undefined : req.user.id;
+    const userId = isPlatformAdmin(req.user) ? undefined : (req.user.schoolId || req.user.id);
     const status = req.query.status as string | undefined;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
 
@@ -48,7 +48,7 @@ router.get('/', requireAuth, async (req: any, res: any) => {
  */
 router.get('/statistics', requireAuth, async (req: any, res: any) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas administradores podem acessar estatísticas.',
@@ -89,7 +89,7 @@ router.get('/:id', requireAuth, async (req: any, res: any) => {
     }
 
     // Verificar permissão
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin' && backup.userId._id.toString() !== req.user.id) {
+    if (!isPlatformAdmin(req.user) && backup.userId._id.toString() !== (req.user.schoolId || req.user.id)) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado',
@@ -116,7 +116,7 @@ router.get('/:id', requireAuth, async (req: any, res: any) => {
  */
 router.post('/restore/:id', requireAuth, async (req: any, res: any) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas administradores podem restaurar backups.',
@@ -146,10 +146,10 @@ router.post('/restore/:id', requireAuth, async (req: any, res: any) => {
  */
 router.post('/manual', requireAuth, async (req: any, res: any) => {
   try {
-    let targetUserId = req.user.id;
-    
+    let targetUserId = req.user.schoolId || req.user.id;
+
     // Se admin forneceu clientId, criar backup do cliente
-    if ((req.user.role === 'admin' || req.user.role === 'super-admin') && req.body.clientId) {
+    if (isPlatformAdmin(req.user) && req.body.clientId) {
       targetUserId = req.body.clientId;
     }
 
@@ -175,7 +175,7 @@ router.post('/manual', requireAuth, async (req: any, res: any) => {
  */
 router.post('/client/:clientId', requireAuth, async (req: any, res: any) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({
         success: false,
         message: 'Acesso negado. Apenas administradores podem criar backups de clientes.',
@@ -208,7 +208,7 @@ router.delete('/:id', requireAuth, async (req: any, res: any) => {
     console.log('[Backup Routes] User:', req.user);
     console.log('[Backup Routes] Backup ID:', req.params.id);
     
-    if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       console.log('[Backup Routes] Acesso negado - usuário não é admin');
       return res.status(403).json({
         success: false,

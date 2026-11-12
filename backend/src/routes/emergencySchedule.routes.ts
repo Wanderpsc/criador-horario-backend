@@ -301,10 +301,11 @@ router.post('/', auth, async (req, res) => {
       makeupClasses: makeupClasses?.length || 0
     });
 
-    // Criar registros de débito
+    // Criar registros de débito (sempre marcados com a escola do token)
     for (const debt of teacherDebts) {
       const debtRecord = new TeacherDebtRecord({
         ...debt,
+        schoolId,
         emergencyScheduleId: emergencySchedule._id.toString()
       });
       await debtRecord.save();
@@ -389,7 +390,7 @@ router.get('/debts/:teacherId', auth, async (req, res) => {
 
     // ✅ Verificar se o professor pertence à mesma escola
     const Teacher = require('../models/Teacher').default;
-    const teacher = await Teacher.findOne({ _id: teacherId, school: schoolId });
+    const teacher = await Teacher.findOne({ _id: teacherId, schoolId });
     
     if (!teacher) {
       return res.status(404).json({
@@ -443,7 +444,7 @@ router.patch('/debts/:debtId/pay', auth, async (req, res) => {
 
     // ✅ Verificar se o professor do débito pertence à mesma escola
     const Teacher = require('../models/Teacher').default;
-    const teacher = await Teacher.findOne({ _id: debt.teacherId, school: schoolId });
+    const teacher = await Teacher.findOne({ _id: debt.teacherId, schoolId });
     
     if (!teacher) {
       return res.status(403).json({
@@ -528,7 +529,7 @@ router.post('/teacher-debts/:teacherId/pay', auth, async (req, res) => {
 
     // ✅ Verificar se o professor pertence à mesma escola
     const Teacher = require('../models/Teacher').default;
-    const teacher = await Teacher.findOne({ _id: teacherId, school: schoolId });
+    const teacher = await Teacher.findOne({ _id: teacherId, schoolId });
     
     if (!teacher) {
       return res.status(404).json({

@@ -10,7 +10,7 @@
 
 const { MongoClient, ObjectId } = require('mongodb');
 
-const MONGODB_URI = 'mongodb+srv://wanderpsc:Wpsc2026@cluster0.auovj2m.mongodb.net/school-timetable';
+const MONGODB_URI = process.env.MONGODB_URI;
 const SCHOOL_ID   = '6948aa5c54a857ec2cf21a84';
 
 async function main() {

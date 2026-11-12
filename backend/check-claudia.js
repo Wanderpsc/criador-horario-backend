@@ -27,7 +27,7 @@ const Class = mongoose.model('Class', ClassSchema);
 
 async function checkClaudia() {
   try {
-    await mongoose.connect('mongodb+srv://wanderpsc:Wander2211@cluster0.n6lso.mongodb.net/school-timetable', {
+    await mongoose.connect(process.env.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000
     });
     

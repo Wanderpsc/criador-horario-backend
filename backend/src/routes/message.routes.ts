@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { AuthRequest, auth } from '../middleware/auth';
+import { AuthRequest, auth, isPlatformAdmin } from '../middleware/auth';
 import Message from '../models/Message';
 import User from '../models/User';
 
@@ -18,7 +18,7 @@ router.get('/conversations', auth, async (req: AuthRequest, res: Response) => {
     }
 
     const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = isPlatformAdmin(req.user);
 
     let conversations;
 
@@ -129,7 +129,7 @@ router.get('/conversation/:id', auth, async (req: AuthRequest, res: Response) =>
 
     const { id } = req.params;
     const userId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = isPlatformAdmin(req.user);
 
     const messages = await Message.find({ conversationId: id })
       .populate('from', 'schoolName email role')
@@ -173,7 +173,7 @@ router.post('/send', auth, async (req: AuthRequest, res: Response) => {
 
     const { message, subject, toUserId } = req.body;
     const fromUserId = req.user.id;
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = isPlatformAdmin(req.user);
 
     if (!message) {
       return res.status(400).json({ message: 'Mensagem é obrigatória' });
@@ -256,7 +256,7 @@ router.post('/:id/internal-note', auth, async (req: AuthRequest, res: Response) 
 
     const { id } = req.params;
     const { note } = req.body;
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = isPlatformAdmin(req.user);
 
     if (!isAdmin) {
       return res.status(403).json({ message: 'Apenas administradores podem adicionar notas internas' });

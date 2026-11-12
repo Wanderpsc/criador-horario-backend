@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 import EmployeeAttendance from '../models/EmployeeAttendance';
 import Employee from '../models/Employee';
 import SchoolDay from '../models/SchoolDay';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 
 const router = express.Router();
 const isValidId = (id: string) => mongoose.isValidObjectId(id);
@@ -194,7 +194,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
 
     const doc = await EmployeeAttendance.findOneAndUpdate(
       { _id: req.params.id, schoolId },
-      { $set: { ...req.body, ...derived } },
+      { $set: { ...stripTenantKeys(req.body), ...derived } },
       { new: true, runValidators: true }
     );
     if (!doc) return res.status(404).json({ message: 'Registro não encontrado.' });

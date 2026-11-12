@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import Schedule from '../models/Schedule';
 import { generateTimetable } from '../services/timetableGenerator';
 import Timetable from '../models/Timetable';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -162,7 +162,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     const scopedUserIds = getScopedUserIds(req);
     const schedule = await Schedule.findOneAndUpdate(
       { _id: req.params.id, userId: { $in: scopedUserIds } },
-      { ...req.body, periods },
+      { ...stripTenantKeys(req.body), periods },
       { new: true, runValidators: true }
     );
     if (!schedule) {

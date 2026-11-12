@@ -38,7 +38,7 @@ const Subject = mongoose.model('Subject', SubjectSchema);
 const Class = mongoose.model('Class', ClassSchema);
 const Grade = mongoose.model('Grade', GradeSchema);
 
-mongoose.connect('mongodb+srv://wanderpsc:Wander2211@cluster0.n6lso.mongodb.net/school-timetable')
+mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ Conectado ao MongoDB'))
   .catch(err => console.error('❌ Erro ao conectar:', err));
 

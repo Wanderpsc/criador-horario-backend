@@ -12,10 +12,14 @@ import ClassPayment from '../models/ClassPayment';
  * - Marca débitos como pagos para professores presentes
  * - Cria novos débitos acumulados para professores ausentes
  */
-export async function processSaturdayAfterRealization(saturdayId: string) {
+export async function processSaturdayAfterRealization(saturdayId: string, schoolId?: string) {
   console.log('🔄 Processando sábado após realização:', saturdayId);
 
-  const saturday = await MakeupSaturday.findById(saturdayId);
+  // SEGURANÇA (multi-tenant): quando o schoolId é informado, só processa
+  // sábados da própria escola
+  const saturday = schoolId
+    ? await MakeupSaturday.findOne({ _id: saturdayId, schoolId })
+    : await MakeupSaturday.findById(saturdayId);
   if (!saturday) {
     throw new Error('Sábado de reposição não encontrado');
   }
@@ -82,6 +86,7 @@ export async function processSaturdayAfterRealization(saturdayId: string) {
     for (const slot of teacherSlots) {
       // Criar novo débito acumulado
       const accumulatedDebt = new TeacherDebtRecord({
+        schoolId: (saturday as any).schoolId,
         teacherId: slot.teacherId,
         classId: slot.classId,
         subjectId: slot.subjectId,
@@ -125,8 +130,23 @@ export async function processSaturdayAfterRealization(saturdayId: string) {
 
 /**
  * Busca todos os débitos pendentes de um professor (incluindo acumulados)
+ * SEGURANÇA (multi-tenant): quando o schoolId é informado, confirma que o
+ * professor pertence à escola antes de listar os débitos.
  */
-export async function getTeacherPendingDebts(teacherId: string) {
+export async function getTeacherPendingDebts(teacherId: string, schoolId?: string) {
+  if (schoolId) {
+    const teacherInSchool = await Teacher.findOne({ _id: teacherId, schoolId }).select('_id').lean();
+    if (!teacherInSchool) {
+      return {
+        debts: [],
+        totalHoursOwed: 0,
+        totalDebts: 0,
+        originalDebts: 0,
+        accumulatedDebts: 0
+      };
+    }
+  }
+
   const debts = await TeacherDebtRecord.find({
     teacherId,
     isPaid: false
@@ -308,7 +328,8 @@ export async function generateSaturdayScheduleFromDebts(
 
   // Buscar informações dos professores
   const teacherIds = Array.from(debtsByTeacher.keys());
-  const teachers = await Teacher.find({ _id: { $in: teacherIds } });
+  // SEGURANÇA (multi-tenant): só professores da própria escola
+  const teachers = await Teacher.find({ _id: { $in: teacherIds }, schoolId });
 
   const teacherMap = new Map(teachers.map(t => [t._id.toString(), t]));
 
@@ -343,8 +364,8 @@ export async function generateSaturdayScheduleFromDebts(
   // --- Fallback: se nenhum débito foi encontrado para os selecionados, usar TeacherSubject ---
   if (debtsByTeacher.size === 0 && selectedTeacherIds && selectedTeacherIds.length > 0) {
     console.log('⚠️ Nenhum débito encontrado — usando TeacherSubject como fallback');
-    const assignments = await TeacherSubject.find({ teacherId: { $in: selectedTeacherIds } });
-    const fallbackTeachers = await Teacher.find({ _id: { $in: selectedTeacherIds } });
+    const assignments = await TeacherSubject.find({ teacherId: { $in: selectedTeacherIds }, schoolId });
+    const fallbackTeachers = await Teacher.find({ _id: { $in: selectedTeacherIds }, schoolId });
     const fallbackTeacherMap = new Map(fallbackTeachers.map(t => [t._id.toString(), t]));
     const subjectIds = [...new Set(assignments.map(a => a.subjectId))];
     const classIds = [...new Set(assignments.map(a => a.classId).filter(Boolean))];

@@ -32,7 +32,7 @@ Acesse: https://criador-horario-aula.surge.sh
 
 **Login de teste:**
 - Email: escola@ceti.com
-- Senha: Ceti2025@
+- Senha: <senha-redigida>
 
 Os componentes curriculares devem aparecer normalmente.
 

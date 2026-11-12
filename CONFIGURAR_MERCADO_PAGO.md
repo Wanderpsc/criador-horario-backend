@@ -134,7 +134,7 @@ Enquanto o Mercado Pago não estiver configurado:
 # 1. Login como admin
 $admin = Invoke-RestMethod -Uri "http://localhost:5000/api/auth/login" -Method POST -ContentType "application/json" -Body (@{
     email = "wanderpsc@gmail.com"
-    password = "Wpsc2025@"
+    password = "<senha-redigida>"
 } | ConvertTo-Json)
 
 # 2. Listar escolas pendentes

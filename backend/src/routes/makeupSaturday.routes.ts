@@ -38,7 +38,7 @@ router.get('/', auth, async (req: Request, res: Response) => {
 // Buscar sábado de reposição específico
 router.get('/:id', auth, async (req: Request, res: Response) => {
   try {
-    const schoolId = (req as any).user?.schoolId;
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { id } = req.params;
 
     const makeupSaturday = await MakeupSaturday.findOne({
@@ -135,11 +135,8 @@ router.put('/:id/attendance', auth, async (req: Request, res: Response) => {
 
     console.log('✅ PUT /:id/attendance - Atualizando presença:', { id, teacherId, attended, schoolId });
 
-    // Buscar com ou sem schoolId dependendo se está disponível
-    const query: any = { _id: id };
-    if (schoolId) {
-      query.schoolId = schoolId;
-    }
+    // SEGURANÇA (multi-tenant): sempre filtrar pela escola do token
+    const query: any = { _id: id, schoolId };
 
     console.log('🔍 Query de busca:', query);
     const makeupSaturday = await MakeupSaturday.findOne(query);
@@ -181,7 +178,7 @@ router.put('/:id/attendance', auth, async (req: Request, res: Response) => {
 // Atualizar sábado de reposição (DEVE VIR DEPOIS DE /:id/attendance)
 router.put('/:id', auth, async (req: Request, res: Response) => {
   try {
-    const schoolId = (req as any).user?.schoolId;
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { id } = req.params;
     const { date, schedule } = req.body;
 
@@ -215,24 +212,15 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
   console.log('👤 User completo:', JSON.stringify((req as any).user));
   
   try {
-    const schoolId = (req as any).user?.schoolId;
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { id } = req.params;
 
     console.log('🏫 SchoolId extraído:', schoolId);
     console.log('🆔 ID recebido:', id);
-    console.log('🔍 User role:', (req as any).user?.role);
 
-    // TEMPORÁRIO: Permitir delete sem schoolId para debugging
-    if (!schoolId) {
-      console.warn('⚠️ School ID não encontrado, mas permitindo delete para debugging');
-    }
+    // SEGURANÇA (multi-tenant): sempre filtrar pela escola do token
+    const query: any = { _id: id, schoolId };
 
-    // Buscar com ou sem schoolId
-    const query: any = { _id: id };
-    if (schoolId) {
-      query.schoolId = schoolId;
-    }
-    
     console.log('🔍 Query de busca:', JSON.stringify(query));
     const makeupSaturday = await MakeupSaturday.findOne(query);
 
@@ -260,10 +248,11 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
 // Processar sábado após realização (dar baixa e acumular débitos)
 router.post('/:id/process', auth, async (req: Request, res: Response) => {
   try {
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { id } = req.params;
     console.log('🔄 Processando sábado:', id);
 
-    const result = await processSaturdayAfterRealization(id);
+    const result = await processSaturdayAfterRealization(id, schoolId);
 
     res.json({
       success: true,
@@ -283,10 +272,11 @@ router.post('/:id/process', auth, async (req: Request, res: Response) => {
 // Buscar débitos pendentes de um professor
 router.get('/teacher-debts/:teacherId', auth, async (req: Request, res: Response) => {
   try {
+    const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { teacherId } = req.params;
     console.log('🔍 Buscando débitos do professor:', teacherId);
 
-    const result = await getTeacherPendingDebts(teacherId);
+    const result = await getTeacherPendingDebts(teacherId, schoolId);
 
     res.json({
       success: true,
@@ -366,8 +356,7 @@ router.put('/:id/confirm-slots', auth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'confirmedSlots deve ser um array' });
     }
 
-    const query: any = { _id: id };
-    if (schoolId) query.schoolId = schoolId;
+    const query: any = { _id: id, schoolId };
 
     const makeupSaturday = await MakeupSaturday.findOne(query);
     if (!makeupSaturday) {
@@ -604,8 +593,7 @@ router.post('/:id/fix-retroactive', auth, async (req: Request, res: Response) =>
     const schoolId = (req as any).user?.schoolId || (req as any).user?.id;
     const { id } = req.params;
 
-    const query: any = { _id: id };
-    if (schoolId) query.schoolId = schoolId;
+    const query: any = { _id: id, schoolId };
 
     const makeupSaturday = await MakeupSaturday.findOne(query);
     if (!makeupSaturday) {

@@ -267,41 +267,7 @@ router.get('/', auth, async (req: AuthRequest, res) => {
   }
 });
 
-// DEBUG: Verificar dias únicos no horário (SEM AUTH para debug rápido)
-router.get('/debug-days/:scheduleId', async (req, res) => {
-  try {
-    const { scheduleId } = req.params;
-
-    console.log('🔍 [debug-days] Buscando dias únicos para scheduleId:', scheduleId);
-
-    const timetable = await GeneratedTimetable.findOne({ scheduleId });
-
-    if (!timetable) {
-      return res.status(404).json({ message: 'Horário não encontrado' });
-    }
-
-    const uniqueDays = [...new Set(timetable.slots.map((s: any) => s.day))];
-    const sampleSlots = timetable.slots.slice(0, 5).map((s: any) => ({
-      day: s.day,
-      dayType: typeof s.day,
-      period: s.period,
-      teacherId: s.teacherId
-    }));
-
-    console.log('🗓️ [debug-days] Dias únicos:', uniqueDays);
-    console.log('📋 [debug-days] Exemplo de slots:', sampleSlots);
-
-    res.json({
-      uniqueDays,
-      totalSlots: timetable.slots.length,
-      sampleSlots,
-      message: 'Use estes dias exatamente como aparecem no banco de dados'
-    });
-  } catch (error) {
-    console.error('❌ [debug-days] Erro:', error);
-    res.status(500).json({ message: 'Erro ao buscar dias' });
-  }
-});
+// (Rota de debug sem autenticação removida por segurança)
 
 // Salvar múltiplos registros de frequência (bulk)
 router.post('/bulk', auth, async (req: AuthRequest, res) => {
@@ -615,8 +581,8 @@ router.put('/class-status', auth, async (req: AuthRequest, res) => {
       
       console.log(`✅ [class-status] ${classesData.length} aulas processadas`);
       
-      // Buscar nome do professor
-      const teacher = await Teacher.findById(teacherId);
+      // Buscar nome do professor (apenas da escola logada)
+      const teacher = await Teacher.findOne({ _id: teacherId, schoolId });
       console.log(`👨‍🏫 [class-status] Professor: ${teacher?.name || 'Não encontrado'}`);
       
       if (!teacher) {
@@ -1356,14 +1322,8 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
       console.log('📚 Horários encontrados (sem calendário):', timetables.length);
       
       if (timetables.length === 0) {
-        // Tentar buscar SEM filtro para debug
-        const allTimetables = await GeneratedTimetable.find({}).limit(3);
-        console.log('🔍 Primeiros 3 horários no banco:', allTimetables.map((t: any) => ({
-          scheduleId: t.scheduleId,
-          title: t.title,
-          school: t.school || 'SEM CAMPO SCHOOL'
-        })));
-        
+        console.log('🔍 Nenhum horário encontrado para esta escola.');
+
         return res.json({
           date,
           dayOfWeek: targetDay,
@@ -1572,14 +1532,6 @@ router.get('/scheduled-classes/:date', auth, async (req: AuthRequest, res) => {
     } else {
       console.log('❌ NENHUM HORÁRIO ENCONTRADO! Query usada:', query);
       console.log('❌ schoolId procurado:', schoolId);
-      
-      // Tentar buscar SEM filtro de school para debug
-      const allTimetables = await GeneratedTimetable.find({}).limit(3);
-      console.log('🔍 Primeiros 3 horários no banco (sem filtro):', allTimetables.map((t: any) => ({
-        scheduleId: t.scheduleId,
-        title: t.title,
-        school: t.school || 'SEM CAMPO SCHOOL'
-      })));
     }
 
     // 4. BUSCAR TODOS OS PROFESSORES ATIVOS DA ESCOLA

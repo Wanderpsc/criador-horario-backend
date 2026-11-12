@@ -16,7 +16,7 @@
 
 const { MongoClient } = require('mongodb');
 
-const MONGO_URI = 'mongodb+srv://wanderpsc:Wpsc2026@cluster0.auovj2m.mongodb.net/school-timetable';
+const MONGO_URI = process.env.MONGODB_URI;
 
 async function run() {
   const client = new MongoClient(MONGO_URI);

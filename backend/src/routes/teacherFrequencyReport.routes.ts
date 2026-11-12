@@ -30,8 +30,8 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
       return res.status(400).json({ message: 'School ID não encontrado' });
     }
 
-    // Buscar professor
-    const teacher = await Teacher.findById(teacherId);
+    // Buscar professor (apenas da escola logada)
+    const teacher = await Teacher.findOne({ _id: teacherId, schoolId });
     if (!teacher) {
       return res.status(404).json({ message: 'Professor não encontrado' });
     }
@@ -58,7 +58,7 @@ router.get('/workload/:teacherId', auth, async (req: AuthRequest, res) => {
       timetables.flatMap((t: any) => t.slots?.map((s: any) => s.subjectId?.toString()).filter(Boolean) || [])
     )];
     const allSubjects = await Subject.find(timetableSubjectIds.length > 0 ? { _id: { $in: timetableSubjectIds } } : { schoolId });
-    const allClasses = await Class.find(timetableClassIds.length > 0 ? { _id: { $in: timetableClassIds } } : {});
+    const allClasses = await Class.find(timetableClassIds.length > 0 ? { _id: { $in: timetableClassIds } } : { userId: schoolId });
     const subjectMap = new Map(allSubjects.map((s: any) => [s._id.toString(), s]));
     const classMap = new Map(allClasses.map((c: any) => [c._id.toString(), c]));
 
@@ -190,7 +190,7 @@ router.get('/deficit-surplus', auth, async (req: AuthRequest, res) => {
       timetables.flatMap((t: any) => t.slots?.map((s: any) => s.subjectId?.toString()).filter(Boolean) || [])
     )];
     const allSubjects = await Subject.find(allSubjectIds.length > 0 ? { _id: { $in: allSubjectIds } } : { schoolId });
-    const allClasses = await Class.find(allClassIds.length > 0 ? { _id: { $in: allClassIds } } : {});
+    const allClasses = await Class.find(allClassIds.length > 0 ? { _id: { $in: allClassIds } } : { userId: schoolId });
     const subjectMap = new Map(allSubjects.map((s: any) => [s._id.toString(), s]));
     const classMap = new Map(allClasses.map((c: any) => [c._id.toString(), c]));
 

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const readline = require('readline');
 
-const uri = 'mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable';
+const uri = process.env.MONGODB_URI;
 
 const rl = readline.createInterface({
   input: process.stdin,

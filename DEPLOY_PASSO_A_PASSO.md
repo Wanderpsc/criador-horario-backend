@@ -64,7 +64,7 @@ Plan: Free
 ```
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 JWT_SECRET=wbpA05luZmNcJvaOikjLTQ69t4hGnVWRUgC2HBrM1Xz8x3f7
 FRONTEND_URL=https://criador-horario-aula.surge.sh
 ```

@@ -2,7 +2,7 @@
 
 ## Para verificar se o role está correto:
 
-1. **Faça login** com escola@ceti.com / Ceti@2026
+1. **Faça login** com escola@ceti.com / <senha-redigida>
 
 2. **Abra o Console do Desenvolvedor** (F12)
 

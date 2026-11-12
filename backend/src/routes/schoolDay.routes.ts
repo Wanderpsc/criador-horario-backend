@@ -1,19 +1,29 @@
 /**
  * Rotas para Dias Letivos
  * © 2025 Wander Pires Silva Coelho
+ *
+ * SEGURANÇA (multi-tenant): a escola é SEMPRE derivada do token de login
+ * (req.user.schoolId || req.user.id). O parâmetro :schoolId da URL e o
+ * schoolId do corpo são ignorados — impedindo que uma escola leia ou
+ * altere o calendário de outra.
  */
 
-import express, { Request, Response } from 'express';
+import express, { Response } from 'express';
 import SchoolDay, { ISchoolDay } from '../models/SchoolDay';
 import Schedule from '../models/Schedule';
-import { auth } from '../middleware/auth';
+import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
-// GET /api/schooldays/school/:schoolId - Obter todos os dias letivos de uma escola
-router.get('/school/:schoolId', auth, async (req: Request, res: Response) => {
+function tenantSchoolId(req: AuthRequest): string {
+  return String(req.user!.schoolId || req.user!.id);
+}
+
+// GET /api/schooldays/school/:schoolId - Obter todos os dias letivos da escola logada
+// (o :schoolId da URL é ignorado por segurança)
+router.get('/school/:schoolId', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = tenantSchoolId(req);
     const { startDate, endDate } = req.query;
 
     let query: any = { schoolId };
@@ -55,10 +65,10 @@ router.get('/school/:schoolId', auth, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/schooldays/school/:schoolId/statistics - Obter estatísticas
-router.get('/school/:schoolId/statistics', auth, async (req: Request, res: Response) => {
+// GET /api/schooldays/school/:schoolId/statistics - Obter estatísticas da escola logada
+router.get('/school/:schoolId/statistics', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = tenantSchoolId(req);
     const { startDate, endDate } = req.query;
 
     let query: any = { schoolId };
@@ -105,11 +115,11 @@ router.get('/school/:schoolId/statistics', auth, async (req: Request, res: Respo
   }
 });
 
-// GET /api/schooldays/:id - Obter um dia letivo específico
-router.get('/:id', auth, async (req: Request, res: Response) => {
+// GET /api/schooldays/:id - Obter um dia letivo específico (apenas da escola logada)
+router.get('/:id', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const schoolDay = await SchoolDay.findById(id);
+    const schoolDay = await SchoolDay.findOne({ _id: id, schoolId: tenantSchoolId(req) });
 
     if (!schoolDay) {
       return res.status(404).json({ message: 'Dia letivo não encontrado' });
@@ -136,14 +146,15 @@ router.get('/:id', auth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/schooldays - Criar um novo dia letivo
-router.post('/', auth, async (req: Request, res: Response) => {
+// POST /api/schooldays - Criar um novo dia letivo (sempre na escola logada)
+router.post('/', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId, date, dayType, scheduleId, notes, followWeekday } = req.body;
+    const { date, dayType, scheduleId, notes, followWeekday } = req.body;
+    const schoolId = tenantSchoolId(req);
 
     // Validar dados obrigatórios
-    if (!schoolId || !date || !dayType) {
-      return res.status(400).json({ message: 'schoolId, date e dayType são obrigatórios' });
+    if (!date || !dayType) {
+      return res.status(400).json({ message: 'date e dayType são obrigatórios' });
     }
 
     // Verificar se já existe um dia letivo para esta data
@@ -189,9 +200,8 @@ router.post('/', auth, async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Erro ao criar dia letivo:', error);
-    console.error('Request body:', req.body);
-    res.status(500).json({ 
-      message: 'Erro ao criar dia letivo', 
+    res.status(500).json({
+      message: 'Erro ao criar dia letivo',
       error: error.message,
       details: error.errors ? Object.keys(error.errors).map(key => ({
         field: key,
@@ -201,10 +211,15 @@ router.post('/', auth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/schooldays/bulk - Criar múltiplos dias letivos
-router.post('/bulk', auth, async (req: Request, res: Response) => {
+// POST /api/schooldays/bulk - Criar múltiplos dias letivos (sempre na escola logada)
+router.post('/bulk', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId, days } = req.body;
+    const { days } = req.body;
+    const schoolId = tenantSchoolId(req);
+
+    if (!Array.isArray(days)) {
+      return res.status(400).json({ message: 'days deve ser uma lista' });
+    }
 
     const schoolDays = await Promise.all(
       days.map(async (day: any) => {
@@ -242,13 +257,13 @@ router.post('/bulk', auth, async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/schooldays/:id - Atualizar um dia letivo
-router.put('/:id', auth, async (req: Request, res: Response) => {
+// PUT /api/schooldays/:id - Atualizar um dia letivo (apenas da escola logada)
+router.put('/:id', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { dayType, scheduleId, notes, followWeekday, isCompleted } = req.body;
 
-    const schoolDay = await SchoolDay.findById(id);
+    const schoolDay = await SchoolDay.findOne({ _id: id, schoolId: tenantSchoolId(req) });
 
     if (!schoolDay) {
       return res.status(404).json({ message: 'Dia letivo não encontrado' });
@@ -256,7 +271,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
 
     if (dayType !== undefined) schoolDay.dayType = dayType;
     if (isCompleted !== undefined) schoolDay.isCompleted = isCompleted;
-    
+
     // Tratar campos opcionais (converter strings vazias para undefined)
     if (scheduleId !== undefined) {
       schoolDay.scheduleId = (scheduleId && scheduleId.trim() !== '') ? scheduleId : undefined;
@@ -287,12 +302,12 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/schooldays/:id - Deletar um dia letivo
-router.delete('/:id', auth, async (req: Request, res: Response) => {
+// DELETE /api/schooldays/:id - Deletar um dia letivo (apenas da escola logada)
+router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const schoolDay = await SchoolDay.findByIdAndDelete(id);
+    const schoolDay = await SchoolDay.findOneAndDelete({ _id: id, schoolId: tenantSchoolId(req) });
 
     if (!schoolDay) {
       return res.status(404).json({ message: 'Dia letivo não encontrado' });

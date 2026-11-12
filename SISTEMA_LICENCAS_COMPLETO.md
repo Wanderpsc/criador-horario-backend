@@ -335,7 +335,7 @@ Agora o backend está 100% funcional. Para completar o sistema, você pode:
 # Login como admin
 curl -X POST https://criador-horario-backend.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@edusync-pro.com","password":"admin123"}'
+  -d '{"email":"admin@edusync-pro.com","password":"<senha-redigida>"}'
 
 # Listar escolas (use o token recebido)
 curl https://criador-horario-backend.onrender.com/api/admin/schools \

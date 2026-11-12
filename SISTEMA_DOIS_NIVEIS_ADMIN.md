@@ -5,7 +5,7 @@
 ### 1️⃣ **Super-Admin (Administrador do Sistema Geral)**
 - **Quem é:** Wander (dono do sistema)
 - **Email:** wanderpsc@gmail.com
-- **Senha:** Wpsc2025@
+- **Senha:** <senha-redigida>
 - **Rota de login:** `/login` (rota principal)
 - **Permissões:**
   - ✅ Gerenciar todas as escolas cadastradas
@@ -19,7 +19,7 @@
 - **Quem é:** Diretor/Coordenador da escola que comprou o sistema
 - **Exemplo - CETI:**
   - Email: escola@ceti.com
-  - Senha: Ceti@2026
+  - Senha: <senha-redigida>
   - Escola: CETI - Centro de Educação
 - **Rota de login:** `/school-user-login` ⚠️ **IMPORTANTE: Use esta rota!**
 - **Permissões:**
@@ -44,7 +44,7 @@
 
 2. **Credenciais:**
    - Email: `escola@ceti.com`
-   - Senha: `Ceti@2026`
+   - Senha: `<senha-redigida>`
 
 3. **Após o login:**
    - ✅ Você verá o dashboard da escola CETI
@@ -60,7 +60,7 @@
 
 2. **Credenciais:**
    - Email: `wanderpsc@gmail.com`
-   - Senha: `Wpsc2025@`
+   - Senha: `<senha-redigida>`
 
 ---
 

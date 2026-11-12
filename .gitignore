@@ -159,3 +159,19 @@ backups/
 
 # IMPORTANTE: backend/dist/ NÃO está aqui!
 # O Render precisa do código compilado
+
+# Backups com dados pessoais (LGPD) - nunca versionar
+backups-escolas/
+backup-*.json
+backend/backups/
+*.backup-*
+
+
+# Arquivos locais - nunca versionar
+*.docx
+~$*
+EduSync-PRO-Codigo.zip
+BACKUP_PWA_20261107/
+AddToHomeScreen_ANALISE.txt
+*.ts.backup-*
+

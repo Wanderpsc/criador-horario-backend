@@ -23,8 +23,9 @@ export const checkLicenseAndPayment = async (
   next: NextFunction
 ) => {
   try {
-    // Admin sempre tem acesso
-    if (req.user?.role === 'admin' || req.user?.role === 'super-admin') {
+    // Admin da plataforma sempre tem acesso (sub-admin de escola não é admin da plataforma)
+    if (req.user?.accountType === 'platform'
+      && (req.user?.role === 'admin' || req.user?.role === 'super-admin')) {
       return next();
     }
 
@@ -95,17 +96,20 @@ export const checkLicenseAndPayment = async (
 };
 
 /**
- * Middleware apenas para admin
+ * Middleware apenas para admin DA PLATAFORMA.
+ * Sub-admins de escola (SchoolUser com role 'admin') NÃO passam aqui.
  */
 export const requireAdmin = (
   req: any,
   res: Response,
   next: NextFunction
 ) => {
-  if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
+  const isPlatform = req.user?.accountType === 'platform'
+    && (req.user?.role === 'admin' || req.user?.role === 'super-admin');
+  if (!isPlatform) {
     return res.status(403).json({
       success: false,
-      message: 'Acesso negado: Apenas administradores'
+      message: 'Acesso negado: Apenas administradores do sistema'
     });
   }
   next();

@@ -7,7 +7,7 @@ const router = Router();
 // Listar logs de auditoria (apenas quem tem permissão)
 router.get('/', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const schoolId = req.user!.schoolId;
+    const schoolId = req.user!.schoolId || req.user!.id;
     
     // Query parameters para filtros
     const { 
@@ -62,7 +62,7 @@ router.get('/', auth, async (req: AuthRequest, res: Response) => {
 router.get('/user/:userId', auth, async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
-    const schoolId = req.user!.schoolId;
+    const schoolId = req.user!.schoolId || req.user!.id;
     
     const logs = await AuditLog.find({ userId, schoolId })
       .sort({ timestamp: -1 })
@@ -79,7 +79,7 @@ router.get('/user/:userId', auth, async (req: AuthRequest, res: Response) => {
 // Estatísticas de auditoria
 router.get('/stats', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const schoolId = req.user!.schoolId;
+    const schoolId = req.user!.schoolId || req.user!.id;
     const { startDate, endDate } = req.query;
 
     const query: any = { schoolId };
@@ -143,7 +143,7 @@ router.get('/stats', auth, async (req: AuthRequest, res: Response) => {
 // Exportar logs (CSV)
 router.get('/export', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const schoolId = req.user!.schoolId;
+    const schoolId = req.user!.schoolId || req.user!.id;
     const { startDate, endDate } = req.query;
 
     const query: any = { schoolId };

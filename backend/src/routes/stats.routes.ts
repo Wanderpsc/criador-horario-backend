@@ -43,11 +43,10 @@ router.get('/dashboard', auth, async (req: AuthRequest, res) => {
       Timetable.find({ 
         userId: { $in: scopedUserIds }
       }),
-      GeneratedTimetable.find({ 
+      GeneratedTimetable.find({
         $or: [
           { userId: { $in: scopedUserIds } },
-          { userId: { $exists: false } },
-          { userId: null }
+          { school: { $in: scopedUserIds } }
         ]
       }),
       EmergencySchedule.find({ 

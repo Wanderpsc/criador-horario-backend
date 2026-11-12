@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import Teacher from '../models/Teacher';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 import TeacherSubject from '../models/TeacherSubject';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -121,7 +121,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     const scopedUserIds = getScopedUserIds(req);
     const teacher = await Teacher.findOneAndUpdate(
       { _id: req.params.id, userId: { $in: scopedUserIds } },
-      req.body,
+      stripTenantKeys(req.body),
       { new: true, runValidators: true }
     );
     

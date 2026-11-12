@@ -103,7 +103,7 @@ Opções recomendadas (gratuitas):
 
 **Admin:**
 - Email: admin@edusync-pro.com
-- Senha: admin123
+- Senha: <senha-redigida>
 
 **MongoDB Atlas:**
 - Cluster: cluster0.auovj2m.mongodb.net

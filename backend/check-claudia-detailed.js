@@ -20,7 +20,7 @@ const Grade = mongoose.model('Grade', schemas.Grade);
 
 async function checkClaudia() {
   try {
-    await mongoose.connect('mongodb+srv://wanderpsc:Wander2211@cluster0.n6lso.mongodb.net/school-timetable');
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Conectado\n');
     
     const claudia = await Teacher.findOne({ name: /Claudia/i, isActive: true });

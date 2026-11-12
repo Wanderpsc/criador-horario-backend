@@ -11,96 +11,10 @@ import { sendPaymentConfirmationEmail } from '../services/email.service';
 
 const router = Router();
 
-/**
- * GET /api/admin/schools/public-test - Teste SEM autenticação
- */
-router.get('/public-test', async (req: any, res: Response) => {
-  try {
-    console.log('\n🔥🔥🔥 [PUBLIC-TEST] ROTA PÚBLICA ACESSADA! 🔥🔥🔥\n');
-    
-    const schools = await User.find({
-      $or: [
-        { role: 'school' },
-        { schoolName: { $exists: true, $ne: '' } }
-      ]
-    }).select('-password').limit(10);
-    
-    console.log(`[PUBLIC-TEST] Escolas encontradas: ${schools.length}`);
-    schools.forEach(s => console.log(`  - ${s.schoolName} (${s.email})`));
-    
-    return res.json({
-      success: true,
-      count: schools.length,
-      schools: schools
-    });
-  } catch (error: any) {
-    console.error('[PUBLIC-TEST] Erro:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
-});
-
+// SEGURANÇA: todas as rotas de admin exigem login de admin DA PLATAFORMA.
+// As antigas rotas de teste/debug sem autenticação foram removidas.
 router.use(authenticate);
 router.use(requireAdmin);
-
-/**
- * GET /api/admin/schools/test - Teste super simples SEM FILTROS
- */
-router.get('/test', async (req: any, res: Response) => {
-  try {
-    console.log('[TEST] Buscando TODOS os usuários sem filtro...');
-    
-    const all = await User.find({}).select('email schoolName role approvedByAdmin isActive').limit(20);
-    
-    console.log(`[TEST] Total retornado: ${all.length}`);
-    
-    return res.json({
-      success: true,
-      total: all.length,
-      users: all
-    });
-  } catch (error: any) {
-    console.error('[TEST] Erro:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-/**
- * GET /api/admin/schools/debug - Debug e corrigir roles
- */
-router.get('/debug', async (req: any, res: Response) => {
-  try {
-    // Buscar todas as escolas com schoolName
-    const allWithSchoolName = await User.find({
-      schoolName: { $exists: true, $ne: null }
-    }).select('-password');
-
-    const wrongRole = allWithSchoolName.filter(u => u.role !== 'school' && u.role !== 'admin');
-    
-    // Corrigir automaticamente
-    for (const user of wrongRole) {
-      user.role = 'school';
-      await user.save();
-    }
-
-    const schools = await User.find({ role: 'school' }).select('-password');
-
-    res.json({
-      success: true,
-      fixed: wrongRole.length,
-      total: schools.length,
-      schools: schools.map(s => ({
-        id: s._id,
-        email: s.email,
-        schoolName: s.schoolName,
-        role: s.role,
-        approvedByAdmin: s.approvedByAdmin,
-        isActive: s.isActive
-      }))
-    });
-  } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
 
 /**
  * GET /api/admin/schools - Listar todas as escolas

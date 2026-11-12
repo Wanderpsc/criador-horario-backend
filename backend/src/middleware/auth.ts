@@ -2,12 +2,22 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import SchoolUser from '../models/SchoolUser';
+import { getJwtSecret } from '../config/jwt';
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     userId?: string;
     role: string;
+    /**
+     * Origem da conta:
+     *  - 'platform'    → User com role admin/super-admin (admin do sistema)
+     *  - 'school'      → User com role school (conta principal da escola)
+     *  - 'school-user' → SchoolUser (funcionário/sub-admin DE UMA escola)
+     * Papéis 'admin' de SchoolUser NUNCA devem passar em verificações de
+     * admin da plataforma — usar isPlatformAdmin().
+     */
+    accountType: 'platform' | 'school' | 'school-user';
     schoolId?: string;
     permissions?: any;
     name?: string;
@@ -15,98 +25,82 @@ export interface AuthRequest extends Request {
   };
 }
 
+/** Admin do sistema (plataforma) — nunca um sub-admin de escola. */
+export const isPlatformAdmin = (user?: AuthRequest['user']): boolean =>
+  !!user
+  && user.accountType === 'platform'
+  && (user.role === 'admin' || user.role === 'super-admin');
+
+/**
+ * Remove do corpo da requisição as chaves de posse (tenant) que o cliente
+ * nunca pode alterar em uma atualização — impede mover registros para
+ * outra escola via mass assignment.
+ */
+export const stripTenantKeys = (body: any): any => {
+  if (!body || typeof body !== 'object') return body;
+  const { userId, schoolId, school, _id, ...rest } = body;
+  return rest;
+};
+
 export const auth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    console.log(`🔐 Auth middleware - ${req.method} ${req.path}`);
-    
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      console.log('❌ Token não fornecido');
       return res.status(401).json({ message: 'Acesso negado. Token não fornecido.' });
     }
 
-    console.log('🔑 Token recebido:', token.substring(0, 20) + '...');
-
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
-      console.log('🔓 Token decodificado:', decoded);
+      decoded = jwt.verify(token, getJwtSecret()) as any;
     } catch (jwtError: any) {
-      console.error('❌ Erro ao decodificar token:', jwtError.message);
       return res.status(401).json({ message: 'Token inválido.' });
     }
-    
+
     // Verificar se é SchoolUser ou User principal
     if (decoded.type === 'school-user') {
-      // Usuário do sistema de multi-usuários
-      console.log('👥 Autenticando SchoolUser:', decoded.userId);
-      
+      // Usuário do sistema de multi-usuários (pertence a UMA escola)
       const schoolUser = await SchoolUser.findById(decoded.userId);
-      
+
       if (!schoolUser || !schoolUser.isActive) {
-        console.log('❌ SchoolUser não encontrado ou inativo:', decoded.userId);
         return res.status(401).json({ message: 'Usuário não encontrado ou inativo.' });
       }
-      
-      console.log('✅ SchoolUser autenticado:', {
-        id: schoolUser._id,
-        name: schoolUser.name,
-        email: schoolUser.email,
-        role: schoolUser.role,
-        schoolId: schoolUser.schoolId
-      });
-      
+
       req.user = {
         id: schoolUser._id.toString(),
         userId: schoolUser._id.toString(),
         role: schoolUser.role,
+        accountType: 'school-user',
         schoolId: schoolUser.schoolId.toString(),
         permissions: schoolUser.permissions,
         name: schoolUser.name,
         email: schoolUser.email
       };
     } else {
-      // Usuário principal (escola)
-      console.log('🔍 Buscando usuário principal no banco:', decoded.id);
-      
+      // Usuário principal (escola ou admin da plataforma)
       const user = await User.findById(decoded.id);
-      
+
       if (!user) {
-        console.log('❌ Usuário não encontrado no banco:', decoded.id);
         return res.status(401).json({ message: 'Usuário não encontrado.' });
       }
-      
-      console.log('👤 Usuário encontrado:', { 
-        id: user._id, 
-        role: user.role, 
-        schoolName: user.schoolName,
-        email: user.email 
-      });
-      
+
       // Para usuários school, o schoolId é o próprio ID do usuário
       const schoolId = user.role === 'school' ? user._id.toString() : undefined;
-      console.log('🏫 SchoolId calculado:', schoolId);
-      
-      if (user.role === 'school' && !schoolId) {
-        console.error('⚠️ ALERTA: Role é school mas schoolId está undefined!');
-      }
-      
-      req.user = { 
-        id: decoded.id, 
+
+      req.user = {
+        id: decoded.id,
         userId: decoded.id,
         role: user.role, // ✅ Usar role do banco, não do token
+        accountType: user.role === 'school' ? 'school' : 'platform',
         schoolId,
         name: user.name,
         email: user.email
       };
     }
-    
-    console.log('✅ Auth middleware concluído - req.user:', req.user);
+
     next();
   } catch (error: any) {
     console.error('❌ Erro geral no middleware auth:', error.message);
-    console.error('Stack:', error.stack);
     res.status(401).json({ message: 'Token inválido.' });
   }
 };
@@ -114,15 +108,21 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
 // Alias para compatibilidade
 export const authenticate = auth;
 
+/** Apenas admin DA PLATAFORMA (nunca sub-admin de escola). */
 export const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ message: 'Acesso negado. Apenas administradores.' });
+  if (!isPlatformAdmin(req.user)) {
+    return res.status(403).json({ message: 'Acesso negado. Apenas administradores do sistema.' });
   }
   next();
 };
 
+/** Conta principal da escola ou sub-admin da escola (gestão interna da escola). */
 export const schoolAdminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'school' && req.user?.role !== 'admin') {
+  const user = req.user;
+  const allowed = user?.role === 'school'
+    || (user?.accountType === 'school-user' && user.role === 'admin')
+    || isPlatformAdmin(user);
+  if (!allowed) {
     return res.status(403).json({
       message: 'Acesso negado. Apenas a administração da escola pode gerenciar links e dispositivos de ponto.',
     });

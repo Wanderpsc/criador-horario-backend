@@ -262,7 +262,7 @@ Se quiser **ainda mais segurança**, migre para MongoDB Atlas:
 4. Copie string de conexão
 5. Cole no `backend/.env`:
    ```
-   MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/school-timetable
+   MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
    ```
 6. Reinicie backend
 

@@ -2,12 +2,15 @@ import express from 'express';
 import Subject from '../models/Subject';
 import Class from '../models/Class';
 import Grade from '../models/Grade';
+import { auth, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
-router.get('/verify', async (req, res) => {
+// SEGURANÇA: exige login e lista apenas as turmas da escola logada
+router.get('/verify', auth, async (req: AuthRequest, res) => {
   try {
-    const classes = await Class.find({ isActive: true })
+    const schoolId = String(req.user!.schoolId || req.user!.id);
+    const classes = await Class.find({ isActive: true, userId: schoolId })
       .populate('gradeId')
       .sort({ name: 1 });
     

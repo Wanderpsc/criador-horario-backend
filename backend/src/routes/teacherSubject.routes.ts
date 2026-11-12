@@ -146,22 +146,28 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-// Buscar disciplinas de um professor
+// Buscar disciplinas de um professor (apenas da escola logada)
 router.get('/teacher/:teacherId', async (req, res) => {
   try {
     const { teacherId } = req.params;
-    const associations = await TeacherSubject.find({ teacherId });
+    const associations = await TeacherSubject.find({
+      teacherId,
+      userId: { $in: getScopedUserIds(req) },
+    });
     res.json({ success: true, data: associations });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Buscar professores de uma disciplina
+// Buscar professores de uma disciplina (apenas da escola logada)
 router.get('/subject/:subjectId', async (req, res) => {
   try {
     const { subjectId } = req.params;
-    const associations = await TeacherSubject.find({ subjectId });
+    const associations = await TeacherSubject.find({
+      subjectId,
+      userId: { $in: getScopedUserIds(req) },
+    });
     res.json({ success: true, data: associations });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -181,13 +187,13 @@ router.post('/', async (req, res) => {
     const Teacher = require('../models/Teacher').default;
     const Class = require('../models/Class').default;
     
-    // Verificar se o professor existe
-    let teacher = await Teacher.findById(teacherId);
-    
+    // Verificar se o professor existe NA ESCOLA LOGADA (nunca em outra escola)
+    let teacher = await Teacher.findOne({ _id: teacherId, schoolId });
+
     // Se não existir, criar automaticamente
     if (!teacher) {
       console.log(`⚠️ Professor ${teacherId} não encontrado. Criando automaticamente...`);
-      
+
       teacher = new Teacher({
         _id: teacherId,
         name: 'Professor Importado', // Nome padrão - será atualizado depois
@@ -208,14 +214,14 @@ router.post('/', async (req, res) => {
     }
     
     // Verificar se o componente curricular existe
-    let subject = await Subject.findById(subjectId);
+    let subject = await Subject.findOne({ _id: subjectId, userId: { $in: getScopedUserIds(req) } });
     
     // Se não existir, criar automaticamente
     if (!subject) {
       console.log(`⚠️ Componente curricular ${subjectId} não encontrado. Criando automaticamente...`);
       
       // Buscar informações da turma para obter o gradeId
-      const classItem = classId ? await Class.findById(classId) : null;
+      const classItem = classId ? await Class.findOne({ _id: classId, userId: { $in: getScopedUserIds(req) } }) : null;
       
       subject = new Subject({
         _id: subjectId,
@@ -242,7 +248,7 @@ router.post('/', async (req, res) => {
       }
       
       if (classId) {
-        const classItem = await Class.findById(classId);
+        const classItem = await Class.findOne({ _id: classId, userId: { $in: getScopedUserIds(req) } });
         if (classItem?.gradeId && !subject.gradeIds?.includes(classItem.gradeId.toString())) {
           subject.gradeIds = subject.gradeIds || [];
           subject.gradeIds.push(classItem.gradeId);
@@ -294,13 +300,13 @@ router.post('/bulk', async (req, res) => {
     const Teacher = require('../models/Teacher').default;
     const Class = require('../models/Class').default;
     
-    // Verificar se o professor existe
-    let teacher = await Teacher.findById(teacherId);
-    
+    // Verificar se o professor existe NA ESCOLA LOGADA (nunca em outra escola)
+    let teacher = await Teacher.findOne({ _id: teacherId, schoolId });
+
     // Se não existir, criar automaticamente
     if (!teacher) {
       console.log(`⚠️ Professor ${teacherId} não encontrado. Criando automaticamente...`);
-      
+
       teacher = new Teacher({
         _id: teacherId,
         name: 'Professor Importado',
@@ -322,13 +328,13 @@ router.post('/bulk', async (req, res) => {
     
     // Processar cada subject para garantir que existe
     for (const subjectId of subjectIds) {
-      let subject = await Subject.findById(subjectId);
+      let subject = await Subject.findOne({ _id: subjectId, userId: { $in: getScopedUserIds(req) } });
       
       if (!subject) {
         console.log(`⚠️ Componente curricular ${subjectId} não encontrado. Criando automaticamente...`);
         
         // Buscar informações das turmas para obter os gradeIds
-        const classItems = classIds?.length ? await Class.find({ _id: { $in: classIds } }) : [];
+        const classItems = classIds?.length ? await Class.find({ _id: { $in: classIds }, userId: { $in: getScopedUserIds(req) } }) : [];
         const gradeIds = [...new Set(classItems.map((c: any) => c.gradeId?.toString()).filter(Boolean))];
         
         subject = new Subject({
@@ -357,7 +363,7 @@ router.post('/bulk', async (req, res) => {
               updated = true;
             }
             
-            const classItem = await Class.findById(classId);
+            const classItem = await Class.findOne({ _id: classId, userId: { $in: getScopedUserIds(req) } });
             if (classItem?.gradeId && !subject.gradeIds?.includes(classItem.gradeId.toString())) {
               subject.gradeIds = subject.gradeIds || [];
               subject.gradeIds.push(classItem.gradeId);
@@ -374,7 +380,7 @@ router.post('/bulk', async (req, res) => {
       // Atualizar as turmas com o subjectId
       if (classIds?.length) {
         for (const classId of classIds) {
-          const classItem = await Class.findById(classId);
+          const classItem = await Class.findOne({ _id: classId, userId: { $in: getScopedUserIds(req) } });
           if (classItem) {
             classItem.subjectIds = classItem.subjectIds || [];
             if (!classItem.subjectIds.includes(subjectId)) {

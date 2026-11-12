@@ -8,6 +8,7 @@ import express from 'express';
 import User from '../models/User';
 import Pricing from '../models/Pricing';
 import CreditTransaction from '../models/CreditTransaction';
+import { auth, isPlatformAdmin } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -52,9 +53,9 @@ router.post('/pricing/calculate', async (req: any, res) => {
  * GET /api/credits/balance
  * Consulta saldo de créditos do usuário
  */
-router.get('/credits/balance', async (req: any, res) => {
+router.get('/credits/balance', auth, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.schoolId || req.user.id;
     const user = await User.findById(userId);
 
     if (!user) {
@@ -75,9 +76,9 @@ router.get('/credits/balance', async (req: any, res) => {
  * GET /api/credits/transactions
  * Lista histórico de transações de créditos
  */
-router.get('/credits/transactions', async (req: any, res) => {
+router.get('/credits/transactions', auth, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.schoolId || req.user.id;
     const { page = 1, limit = 20 } = req.query;
 
     const transactions = await CreditTransaction.find({ userId })
@@ -100,61 +101,23 @@ router.get('/credits/transactions', async (req: any, res) => {
 
 /**
  * POST /api/credits/purchase
- * Comprar créditos (integração com gateway de pagamento)
+ * SEGURANÇA: desativado para o usuário final — permitia creditar saldo sem
+ * pagamento verificado. Créditos entram pelo fluxo de pagamento (webhook)
+ * ou manualmente pelo admin da plataforma em /admin/credits/add.
  */
-router.post('/credits/purchase', async (req: any, res) => {
-  try {
-    const userId = req.user.id;
-    const { amount, paymentMethod, transactionId } = req.body;
-
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: 'Valor inválido' });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Usuário não encontrado' });
-    }
-
-    // Atualizar saldo
-    const balanceBefore = user.credits;
-    user.credits += amount;
-    const balanceAfter = user.credits;
-
-    await user.save();
-
-    // Registrar transação
-    const transaction = new CreditTransaction({
-      userId,
-      type: 'purchase',
-      amount,
-      balanceBefore,
-      balanceAfter,
-      description: `Compra de ${amount} crédito(s)`,
-      paymentMethod,
-      transactionId
-    });
-
-    await transaction.save();
-
-    res.json({
-      success: true,
-      message: 'Créditos adicionados com sucesso',
-      newBalance: balanceAfter,
-      transaction
-    });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
+router.post('/credits/purchase', auth, async (req: any, res) => {
+  return res.status(410).json({
+    message: 'Compra direta de créditos foi desativada. Use o fluxo de pagamento do sistema ou contate o suporte.',
+  });
 });
 
 /**
  * POST /api/admin/credits/add (Admin only)
  * Adicionar créditos manualmente para um usuário
  */
-router.post('/admin/credits/add', async (req: any, res) => {
+router.post('/admin/credits/add', auth, async (req: any, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -202,9 +165,9 @@ router.post('/admin/credits/add', async (req: any, res) => {
  * POST /api/admin/pricing (Admin only)
  * Criar nova faixa de preço
  */
-router.post('/admin/pricing', async (req: any, res) => {
+router.post('/admin/pricing', auth, async (req: any, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -235,9 +198,9 @@ router.post('/admin/pricing', async (req: any, res) => {
  * PUT /api/admin/pricing/:id (Admin only)
  * Atualizar faixa de preço
  */
-router.put('/admin/pricing/:id', async (req: any, res) => {
+router.put('/admin/pricing/:id', auth, async (req: any, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 

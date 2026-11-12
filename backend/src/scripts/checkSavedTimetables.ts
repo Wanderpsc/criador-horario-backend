@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import GeneratedTimetable from '../models/GeneratedTimetable';
 
-const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable';
+const mongoUri = process.env.MONGODB_URI || '';
 
 async function checkTimetables() {
   try {

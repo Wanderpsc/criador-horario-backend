@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://wanderpsc:Wpsc2025%40@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGODB_URI;
 
 async function deleteOldEmergency() {
   try {

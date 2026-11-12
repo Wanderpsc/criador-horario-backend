@@ -227,6 +227,9 @@ router.get('/public/:token/teacher-classes/:teacherId', async (req, res) => {
     const link = await SubstituteLink.findOne({ token: req.params.token });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
+    if (link.expiresAt && link.expiresAt < new Date()) {
+      return res.status(410).json({ message: 'Este link expirou.' });
+    }
 
     const { classId } = req.query as { classId?: string };
 
@@ -301,6 +304,18 @@ router.get('/public/:token/debts/:teacherId', async (req, res) => {
     const link = await SubstituteLink.findOne({ token: req.params.token });
     if (!link) return res.status(404).json({ message: 'Link não encontrado.' });
     if (!link.isActive) return res.status(410).json({ message: 'Este link foi desativado.' });
+    if (link.expiresAt && link.expiresAt < new Date()) {
+      return res.status(410).json({ message: 'Este link expirou.' });
+    }
+
+    // SEGURANÇA (multi-tenant): o professor precisa pertencer à escola do link
+    const teacherInSchool = await Teacher.findOne({
+      _id: req.params.teacherId,
+      schoolId: link.schoolId,
+    }).select('_id').lean();
+    if (!teacherInSchool) {
+      return res.status(404).json({ message: 'Professor não encontrado nesta escola.' });
+    }
 
     const debts = await TeacherDebtRecord.find({
       teacherId: req.params.teacherId,
@@ -387,6 +402,16 @@ router.post('/public/:token/fill', async (req, res) => {
     let debtRecord: any = null;
     if (fillType === 'reposicao' && debtRecordId) {
       debtRecord = await TeacherDebtRecord.findById(debtRecordId);
+      // SEGURANÇA (multi-tenant): só abater débitos de professores DESTA escola
+      if (debtRecord) {
+        const debtOwner = await Teacher.findOne({
+          _id: debtRecord.teacherId,
+          schoolId: link.schoolId,
+        }).select('_id').lean();
+        if (!debtOwner) {
+          debtRecord = null;
+        }
+      }
       if (debtRecord) {
         debtRecord.hoursPaid = (debtRecord.hoursPaid || 0) + 1;
         if (debtRecord.hoursPaid >= debtRecord.hoursOwed) {

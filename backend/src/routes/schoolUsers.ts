@@ -1,10 +1,20 @@
 import { Router, Request, Response } from 'express';
 import SchoolUser, { defaultAdminPermissions, defaultUserPermissions } from '../models/SchoolUser';
+import User from '../models/User';
 import AuditLog from '../models/AuditLog';
 import jwt from 'jsonwebtoken';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, isPlatformAdmin } from '../middleware/auth';
+import { getJwtSecret } from '../config/jwt';
 
 const router = Router();
+
+const ALLOWED_SCHOOL_USER_ROLES = ['admin', 'user'];
+
+// Impede que um usuário de escola "sombreie" o login de uma conta principal
+async function emailBelongsToMainAccount(email: string): Promise<boolean> {
+  const mainAccount = await User.findOne({ email: email.toLowerCase() }).select('_id').lean();
+  return !!mainAccount;
+}
 
 // Login do School User
 router.post('/login', async (req: Request, res: Response) => {
@@ -17,19 +27,20 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'E-mail e senha são obrigatórios' });
     }
 
-    // Buscar usuário
-    const user = await SchoolUser.findOne({ email: email.toLowerCase(), isActive: true });
-    
-    if (!user) {
-      console.log('❌ Usuário não encontrado:', email);
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+    // E-mails são únicos por escola, então o mesmo e-mail pode existir em
+    // escolas diferentes: testar a senha em cada candidato para achar o certo.
+    const candidates = await SchoolUser.find({ email: email.toLowerCase(), isActive: true });
+
+    let user: typeof candidates[number] | null = null;
+    for (const candidate of candidates) {
+      if (await candidate.comparePassword(password)) {
+        user = candidate;
+        break;
+      }
     }
 
-    // Verificar senha
-    const isMatch = await user.comparePassword(password);
-    
-    if (!isMatch) {
-      console.log('❌ Senha incorreta para:', email);
+    if (!user) {
+      console.log('❌ Credenciais inválidas para:', email);
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -45,7 +56,7 @@ router.post('/login', async (req: Request, res: Response) => {
         role: user.role,
         type: 'school-user'
       },
-      process.env.JWT_SECRET || 'secret-key-default',
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -100,18 +111,38 @@ router.get('/session', auth, (req: AuthRequest, res: Response) => {
   });
 });
 
-// Criar primeiro usuário admin (seed - apenas se não existir nenhum admin)
-router.post('/seed-admin', async (req: Request, res: Response) => {
+// Criar primeiro usuário admin da escola.
+// SEGURANÇA: exige login. Só a conta principal da escola (role 'school')
+// pode criar o primeiro admin — e sempre para a PRÓPRIA escola.
+// Admin da plataforma pode criar informando o schoolId de uma escola existente.
+router.post('/seed-admin', auth, async (req: AuthRequest, res: Response) => {
   try {
-    const { schoolId, email, password, name } = req.body;
+    const { email, password, name } = req.body;
+
+    let schoolId: string | undefined;
+    if (req.user!.role === 'school') {
+      schoolId = req.user!.schoolId || req.user!.id;
+    } else if (isPlatformAdmin(req.user)) {
+      schoolId = String(req.body.schoolId || '');
+      const school = await User.findOne({ _id: schoolId, role: 'school' }).select('_id').lean();
+      if (!school) {
+        return res.status(400).json({ error: 'Escola não encontrada' });
+      }
+    } else {
+      return res.status(403).json({ error: 'Apenas a conta principal da escola pode criar o primeiro administrador' });
+    }
 
     if (!schoolId || !email || !password || !name) {
       return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
     }
 
+    if (await emailBelongsToMainAccount(email)) {
+      return res.status(400).json({ error: 'Este e-mail já pertence a uma conta principal. Use outro e-mail.' });
+    }
+
     // Verificar se já existe admin para esta escola
     const existingAdmin = await SchoolUser.findOne({ schoolId, role: 'admin' });
-    
+
     if (existingAdmin) {
       return res.status(400).json({ error: 'Já existe um administrador para esta escola' });
     }
@@ -171,8 +202,16 @@ router.post('/', auth, async (req: AuthRequest, res: Response) => {
     const creatorRole = req.user!.role;
 
     // Verificar se o criador é admin (SchoolUser) ou dono da escola (role: 'school')
-    if (creatorRole !== 'admin' && creatorRole !== 'school') {
+    if (!(creatorRole === 'admin' && req.user!.accountType === 'school-user') && creatorRole !== 'school') {
       return res.status(403).json({ error: 'Apenas administradores ou donos da escola podem criar usuários' });
+    }
+
+    if (role && !ALLOWED_SCHOOL_USER_ROLES.includes(role)) {
+      return res.status(400).json({ error: 'Papel inválido. Use "admin" ou "user".' });
+    }
+
+    if (await emailBelongsToMainAccount(email)) {
+      return res.status(400).json({ error: 'Este e-mail já pertence a uma conta principal. Use outro e-mail.' });
     }
 
     // Se for role 'school', buscar o ID da escola (creatorId é o ID do User, não SchoolUser)
@@ -276,6 +315,12 @@ router.put('/:id', auth, async (req: AuthRequest, res: Response) => {
     };
 
     // Atualizar campos
+    if (role && !ALLOWED_SCHOOL_USER_ROLES.includes(role)) {
+      return res.status(400).json({ error: 'Papel inválido. Use "admin" ou "user".' });
+    }
+    if (email && email.toLowerCase() !== user.email && await emailBelongsToMainAccount(email)) {
+      return res.status(400).json({ error: 'Este e-mail já pertence a uma conta principal. Use outro e-mail.' });
+    }
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase();
     if (role) user.role = role;

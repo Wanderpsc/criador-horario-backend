@@ -14,7 +14,7 @@ O sistema de criação de senhas e gerenciamento de usuários está **completame
 ### 2. Credenciais CETI Desembargador Amaral
 ```
 📧 Email: escola@ceti.com
-🔑 Senha: Ceti@2026
+🔑 Senha: <senha-redigida>
 ```
 
 ### 3. Acessar Gerenciamento de Usuários
@@ -118,7 +118,7 @@ Cada ação registra automaticamente:
    ```
    Nome: Maria da Silva
    Email: maria.silva@ceti.com
-   Senha: Maria@2026
+   Senha: <senha-redigida>
    Tipo: Usuário
    ```
 
@@ -131,7 +131,7 @@ Cada ação registra automaticamente:
 4. **Maria** agora pode:
    - Fazer login em https://criador-horario-aula.surge.sh/#/login
    - Email: maria.silva@ceti.com
-   - Senha: Maria@2026
+   - Senha: <senha-redigida>
    - Ver e cadastrar professores e turmas
    - Ver horários (mas não gerar novos)
 
@@ -221,7 +221,7 @@ Quando uma nova escola se cadastrar:
 
 **Teste agora:**
 1. Acesse https://criador-horario-aula.surge.sh/#/login
-2. Login: escola@ceti.com / Ceti@2026
+2. Login: escola@ceti.com / <senha-redigida>
 3. Vá em Settings
 4. Clique em "Novo Usuário"
 5. Crie seu primeiro funcionário! 🚀

@@ -27,7 +27,7 @@ O erro 500 ao fazer login indica que o backend está com problemas. Possíveis c
 2. Verifique se estas variáveis existem:
 
 ```env
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 JWT_SECRET=seu-jwt-secret-aqui
 NODE_ENV=production
 PORT=10000

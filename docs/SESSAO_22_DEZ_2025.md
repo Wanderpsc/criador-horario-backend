@@ -33,7 +33,7 @@
 ### Administrador (Wander)
 ```
 Email:    wanderpsc@gmail.com
-Senha:    Wpsc2025@
+Senha:    <senha-redigida>
 Função:   Administrador do Sistema
 Acesso:   Dashboard comercial, vendas, leads, escolas, usuários, licenças
 ```
@@ -41,7 +41,7 @@ Acesso:   Dashboard comercial, vendas, leads, escolas, usuários, licenças
 ### Cliente (CETI Desembargador Amaral)
 ```
 Email:    escola@ceti.com
-Senha:    Escola2025@
+Senha:    <senha-redigida>
 Função:   Cliente
 Escola:   CETI Desembargador Amaral
 Dados:    23 professores, 73 disciplinas, 10 turmas, 4 anos/séries
@@ -77,7 +77,7 @@ Dados:    23 professores, 73 disciplinas, 10 turmas, 4 anos/séries
 
 ### Banco de Dados
 - **MongoDB Atlas:** ✅ Conectado
-- **URI:** `mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable`
+- **URI:** `mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>`
 
 ---
 
@@ -189,7 +189,7 @@ npx ts-node src/data/createWanderUser.ts
 
 ```powershell
 # Backup (quando necessário)
-mongodump --uri="mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable" --out=backup
+mongodump --uri="mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>" --out=backup
 ```
 
 ---

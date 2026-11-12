@@ -18,7 +18,7 @@ O login no Surge está falhando porque o backend Render não tem as variáveis d
 Clique em **"Add Environment Variable"** e adicione cada uma:
 
 ```env
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2026@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 
 JWT_SECRET=wanderpsc2025horarioescolar_secret_key_change_in_production
 
@@ -34,7 +34,7 @@ FRONTEND_URL=https://wanderpsc.github.io/criador-horario-backend
 
 EMAIL_USER=wanderpsc@gmail.com
 
-EMAIL_PASSWORD=yvquefknpprdohwk
+EMAIL_PASSWORD=<senha-redigida>
 ```
 
 ### 5. Salve e Aguarde
@@ -45,7 +45,7 @@ EMAIL_PASSWORD=yvquefknpprdohwk
 Após o deploy, teste novamente:
 👉 https://edusync-pro.surge.sh
 - Email: `escola@ceti.com`
-- Senha: `Ceti@2026`
+- Senha: `<senha-redigida>`
 
 ---
 
@@ -78,7 +78,7 @@ Teste o login:
 ```bash
 curl -X POST https://criador-horario-backend-1.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"escola@ceti.com","password":"Ceti@2026"}'
+  -d '{"email":"escola@ceti.com","password":"<senha-redigida>"}'
 ```
 
 Deve retornar um token JWT.

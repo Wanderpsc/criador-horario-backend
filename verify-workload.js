@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const MONGODB_URI = 'mongodb+srv://wanderpsc:Wander2211@cluster0.n6lso.mongodb.net/school-timetable?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 // Schemas
 const subjectSchema = new mongoose.Schema({

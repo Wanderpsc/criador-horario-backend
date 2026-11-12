@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 export interface ITeacherDebtRecord extends mongoose.Document {
+  schoolId?: string;
   teacherId: string;
   classId: string;
   subjectId: string;
@@ -19,7 +20,13 @@ export interface ITeacherDebtRecord extends mongoose.Document {
 }
 
 const teacherDebtRecordSchema = new mongoose.Schema({
-  teacherId: { 
+  // Escola dona do registro (multi-tenant). Opcional por compatibilidade com
+  // registros antigos — consultas de rotas públicas validam a escola via Teacher.
+  schoolId: {
+    type: String,
+    index: true
+  },
+  teacherId: {
     type: String, 
     required: true,
     index: true 

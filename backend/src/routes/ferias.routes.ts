@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Ferias from '../models/Ferias';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 
 const router = express.Router();
 
@@ -57,7 +57,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
     const schoolId = req.user!.schoolId || req.user!.id;
     const ferias = await Ferias.findOneAndUpdate(
       { _id: req.params.id, schoolId },
-      { $set: req.body },
+      { $set: stripTenantKeys(req.body) },
       { new: true, runValidators: true }
     );
     if (!ferias) return res.status(404).json({ message: 'Registro não encontrado.' });

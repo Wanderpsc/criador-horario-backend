@@ -13,27 +13,43 @@ import MakeupSaturday from '../models/MakeupSaturday';
 
 const router = Router();
 
-// GET /api/public/timetable/:id - Buscar horário gerado por ID ou título (público, sem autenticação)
+// GET /api/public/timetable/:id - Buscar horário gerado por ID (público, sem autenticação)
+// SEGURANÇA: a busca principal é por _id/scheduleId (identificadores não adivinháveis).
+// A busca por título existe só por compatibilidade com painéis antigos e NUNCA
+// retorna resultado se o mesmo título existir em mais de uma escola.
 router.get('/timetable/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const mongoose = require('mongoose');
     const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
 
-    // Remover possível sufixo de data (ex: " (29/03/2026)") gerado pelo frontend
-    const titleWithoutDateSuffix = id.replace(/\s*\(\d{2}\/\d{2}\/\d{4}\)\s*$/, '').trim();
-
-    // Construir query baseado no tipo do id
-    const orConditions: any[] = [{ scheduleId: id }, { title: id }];
-    if (titleWithoutDateSuffix !== id) {
-      orConditions.push({ title: titleWithoutDateSuffix });
-    }
+    // 1) Buscar por identificadores (não adivinháveis)
+    const idConditions: any[] = [{ scheduleId: id }];
     if (isValidObjectId) {
-      orConditions.unshift({ _id: id });
+      idConditions.unshift({ _id: id });
     }
 
-    let timetables = await GeneratedTimetable.find({ $or: orConditions })
+    let timetables = await GeneratedTimetable.find({ $or: idConditions })
       .sort({ createdAt: -1 }).limit(50).lean();
+
+    // 2) Compatibilidade: busca por título (painéis antigos), apenas se o
+    //    título pertencer a UMA única escola — evita vazar dados entre escolas
+    if (!timetables.length) {
+      // Remover possível sufixo de data (ex: " (29/03/2026)") gerado pelo frontend
+      const titleWithoutDateSuffix = id.replace(/\s*\(\d{2}\/\d{2}\/\d{4}\)\s*$/, '').trim();
+      const titleConditions: any[] = [{ title: id }];
+      if (titleWithoutDateSuffix !== id) {
+        titleConditions.push({ title: titleWithoutDateSuffix });
+      }
+      const byTitle = await GeneratedTimetable.find({ $or: titleConditions })
+        .sort({ createdAt: -1 }).limit(50).lean();
+      const schoolKeys = new Set(
+        byTitle.map((tt: any) => String(tt.school || tt.userId || ''))
+      );
+      if (byTitle.length > 0 && schoolKeys.size === 1) {
+        timetables = byTitle;
+      }
+    }
 
     // Se encontrou por _id (1 documento), expandir para todos os irmãos pelo mesmo scheduleId
     if (isValidObjectId && timetables.length > 0) {

@@ -38,7 +38,7 @@ O MongoDB Atlas está funcionando, mas o **Render provavelmente não consegue se
 5. Ela deve ser parecida com:
 
 ```
-mongodb+srv://wanderpsc:<password>@cluster0.auovj2m.mongodb.net/?retryWrites=true&w=majority
+mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco><password>@cluster0.auovj2m.mongodb.net/?retryWrites=true&w=majority
 ```
 
 6. **Substitua `<password>` pela senha real**: `Wpsc2025`
@@ -46,7 +46,7 @@ mongodb+srv://wanderpsc:<password>@cluster0.auovj2m.mongodb.net/?retryWrites=tru
 
 String final deve ser:
 ```
-mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 ```
 
 ### Passo 4: Atualizar Variável no Render

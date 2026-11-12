@@ -13,7 +13,7 @@ const User = mongoose.model('User', userSchema);
 
 async function findCetiUser() {
   try {
-    const mongoUri = 'mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority';
+    const mongoUri = process.env.MONGODB_URI;
     
     console.log('🔌 Conectando ao MongoDB...');
     await mongoose.connect(mongoUri);

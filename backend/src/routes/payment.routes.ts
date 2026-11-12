@@ -2,7 +2,7 @@ import { Router, Response, Request } from 'express';
 import Payment from '../models/Payment';
 import User from '../models/User';
 import mercadoPagoService from '../services/mercadoPago.service';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, isPlatformAdmin } from '../middleware/auth';
 import { sendPaymentConfirmationEmail, sendPaymentNotificationToAdmin } from '../services/email.service';
 
 const router = Router();
@@ -583,7 +583,7 @@ router.get('/:id', auth, async (req: AuthRequest, res: Response) => {
     }
 
     // Verificar se o usuário tem permissão
-    if (payment.schoolId.toString() !== req.user?.id && req.user?.role !== 'admin') {
+    if (payment.schoolId.toString() !== (req.user?.schoolId || req.user?.id) && !isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -629,7 +629,7 @@ router.get('/school/:schoolId', auth, async (req: AuthRequest, res: Response) =>
     const { schoolId } = req.params;
 
     // Verificar permissão
-    if (schoolId !== req.user?.id && req.user?.role !== 'admin') {
+    if (schoolId !== (req.user?.schoolId || req.user?.id) && !isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -654,7 +654,7 @@ router.get('/school/:schoolId', auth, async (req: AuthRequest, res: Response) =>
  */
 router.get('/admin/all', auth, async (req: AuthRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -787,7 +787,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
  */
 router.put('/:id/approve', auth, async (req: AuthRequest, res: Response) => {
   try {
-    if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({ message: 'Acesso negado' });
     }
 
@@ -867,7 +867,7 @@ router.delete('/:id', auth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // Verificar se é admin
-    if (req.user?.role !== 'admin' && req.user?.role !== 'super-admin') {
+    if (!isPlatformAdmin(req.user)) {
       return res.status(403).json({ 
         message: 'Acesso negado. Apenas administradores podem excluir pagamentos.' 
       });

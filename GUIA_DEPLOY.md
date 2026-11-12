@@ -44,7 +44,7 @@ surge dist --domain criador-horario-aula.surge.sh
 ```
 NODE_ENV=production
 PORT=10000
-MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 JWT_SECRET=seu_jwt_secret_aqui_muito_seguro_123456789
 MERCADOPAGO_ACCESS_TOKEN=seu_token_mercadopago
 WHATSAPP_API_KEY=seu_token_whatsapp
@@ -81,7 +81,7 @@ cd "E:\1. Nova pasta\MEUS PROJETOS DE PROGRAMAÇÃO\CRIADOR DE HORÁRIO DE AULA\
 heroku create criador-horario-backend
 
 # Configurar variáveis
-heroku config:set MONGODB_URI="mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority"
+heroku config:set MONGODB_URI="mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>"
 heroku config:set JWT_SECRET="seu_jwt_secret"
 heroku config:set FRONTEND_URL="https://criador-horario-aula.surge.sh"
 
@@ -147,7 +147,7 @@ node_modules/
 
 **Login Admin:**
 - Email: admin@edusync-pro.com
-- Senha: admin123
+- Senha: <senha-redigida>
 
 ---
 

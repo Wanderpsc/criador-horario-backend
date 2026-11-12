@@ -225,7 +225,7 @@ if (user.role !== 'admin') {
 ```env
 MONGODB_URI=mongodb://localhost:27017/school-timetable
 # ou
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
 ```
 
 ### Diretório de Backups

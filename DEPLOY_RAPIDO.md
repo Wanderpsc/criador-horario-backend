@@ -41,7 +41,7 @@ surge dist --domain criador-horario-aula.surge.sh
    ```
    NODE_ENV=production
    PORT=10000
-   MONGODB_URI=mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
    JWT_SECRET=criar_um_secret_muito_seguro_aqui_123456789
    FRONTEND_URL=https://criador-horario-aula.surge.sh
    MERCADOPAGO_ACCESS_TOKEN=seu_token_aqui

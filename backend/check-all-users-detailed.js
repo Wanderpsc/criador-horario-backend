@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('./dist/models/User.js').default;
 
-const uri = 'mongodb+srv://wanderpsc:Wpsc2025@cluster0.auovj2m.mongodb.net/school-timetable';
+const uri = process.env.MONGODB_URI;
 
 mongoose.connect(uri)
   .then(async () => {

@@ -90,7 +90,7 @@ E:\MongoDB\bin\mongosh.exe
 6. Copie a connection string
 7. Cole no `backend/.env`:
    ```
-   MONGODB_URI=mongodb+srv://usuario:senha@cluster0.xxxxx.mongodb.net/school-timetable?retryWrites=true&w=majority
+   MONGODB_URI=mongodb+srv://<usuario>:<senha>@<cluster>.mongodb.net/<banco>
    ```
 
 ---

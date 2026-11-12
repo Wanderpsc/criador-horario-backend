@@ -6,7 +6,7 @@ import Subject from '../models/Subject';
 import User from '../models/User';
 import Pricing from '../models/Pricing';
 import CreditTransaction from '../models/CreditTransaction';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth, AuthRequest, stripTenantKeys } from '../middleware/auth';
 import { generateTimetable } from '../services/timetableGenerator';
 
 const router = express.Router();
@@ -172,7 +172,7 @@ router.put('/:id', auth, async (req: AuthRequest, res) => {
   try {
     const timetable = await Timetable.findOneAndUpdate(
       { _id: req.params.id, userId: req.user!.id },
-      req.body,
+      stripTenantKeys(req.body),
       { new: true, runValidators: true }
     );
     if (!timetable) {
