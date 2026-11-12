@@ -34,6 +34,11 @@ import mongoose from 'mongoose';
 import * as fs from 'fs';
 import * as path from 'path';
 import dotenv from 'dotenv';
+import * as dns from 'dns';
+
+// O resolvedor interno do Node às vezes falha na consulta SRV (ESERVFAIL)
+// mesmo com a internet funcionando — usar DNS público resolve.
+try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch { /* segue com o DNS padrão */ }
 
 // ─── Carregar variáveis de ambiente ────────────────────────────────────────
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -146,7 +151,8 @@ async function backupAllSchools() {
       Timetable.find({ userId: schoolId }).lean(),
       // GeneratedTimetable usa campo "school"
       GeneratedTimetable.find({ school: schoolId }).lean(),
-      EmergencySchedule.find({ schoolId }).lean(),
+      // EmergencySchedule usa campo "school"
+      EmergencySchedule.find({ school: schoolId }).lean(),
       SchoolDay.find({ schoolId }).lean(),
       Employee.find({ schoolId }).lean(),
       TeacherSubject.find({ schoolId }).lean(),
@@ -154,6 +160,31 @@ async function backupAllSchools() {
       mongoose.connection.collection('teacherattendances').find({ schoolId }).toArray(),
       PanelTicker.find({ schoolId }).lean(),
       MakeupSaturday.find({ schoolId }).lean(),
+    ]);
+
+    // ── Coleções do ponto eletrônico e RH (via collection direta) ────────
+    const [
+      ponto_funcionarios,
+      ferias,
+      atestados,
+      epis,
+      documentos_funcionarios,
+      pagamentos_aulas,
+      debitos_professores,
+      usuarios_escola,
+      links_ponto,
+    ] = await Promise.all([
+      mongoose.connection.collection('employeeattendances').find({ schoolId }).toArray(),
+      mongoose.connection.collection('ferias').find({ schoolId }).toArray(),
+      mongoose.connection.collection('medicalcertificates').find({ schoolId }).toArray(),
+      mongoose.connection.collection('epicontrols').find({ schoolId }).toArray(),
+      mongoose.connection.collection('employeedocuments').find({ schoolId }).toArray(),
+      mongoose.connection.collection('classpayments').find({ schoolId }).toArray(),
+      mongoose.connection.collection('teacherdebtrecords').find({ schoolId }).toArray(),
+      mongoose.connection.collection('schoolusers')
+        .find({ schoolId: school._id }, { projection: { password: 0 } }).toArray(),
+      mongoose.connection.collection('attendancelinks')
+        .find({ schoolId }, { projection: { deviceSecretHash: 0, enrollmentTokenHash: 0 } }).toArray(),
     ]);
 
     // ── Dados cadastrais da escola (sem senha) ─────────────────────────
@@ -174,6 +205,15 @@ async function backupAllSchools() {
     writeJSON(path.join(snapDir, 'frequencia.json'),         frequencia);
     writeJSON(path.join(snapDir, 'letreiro.json'),           letreiro);
     writeJSON(path.join(snapDir, 'sabados_reposicao.json'),  sabados_reposicao);
+    writeJSON(path.join(snapDir, 'ponto_funcionarios.json'), ponto_funcionarios);
+    writeJSON(path.join(snapDir, 'ferias.json'),             ferias);
+    writeJSON(path.join(snapDir, 'atestados.json'),          atestados);
+    writeJSON(path.join(snapDir, 'epis.json'),               epis);
+    writeJSON(path.join(snapDir, 'documentos_funcionarios.json'), documentos_funcionarios);
+    writeJSON(path.join(snapDir, 'pagamentos_aulas.json'),   pagamentos_aulas);
+    writeJSON(path.join(snapDir, 'debitos_professores.json'),debitos_professores);
+    writeJSON(path.join(snapDir, 'usuarios_escola.json'),    usuarios_escola);
+    writeJSON(path.join(snapDir, 'links_ponto.json'),        links_ponto);
 
     // ── Resumo da escola ───────────────────────────────────────────────
     const resumo = {
@@ -194,6 +234,15 @@ async function backupAllSchools() {
         carga_horaria:       countOrEmpty(carga_horaria),
         registros_frequencia:countOrEmpty(frequencia),
         sabados_reposicao:   countOrEmpty(sabados_reposicao),
+        ponto_funcionarios:  countOrEmpty(ponto_funcionarios),
+        ferias:              countOrEmpty(ferias),
+        atestados:           countOrEmpty(atestados),
+        epis:                countOrEmpty(epis),
+        documentos_funcionarios: countOrEmpty(documentos_funcionarios),
+        pagamentos_aulas:    countOrEmpty(pagamentos_aulas),
+        debitos_professores: countOrEmpty(debitos_professores),
+        usuarios_escola:     countOrEmpty(usuarios_escola),
+        links_ponto:         countOrEmpty(links_ponto),
       },
     };
 
