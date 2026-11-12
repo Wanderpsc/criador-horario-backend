@@ -283,7 +283,7 @@ export default function PontoPublicoGeral() {
 
   if (errorPeople) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 pb-28">
         <TechBackdrop />
         <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center border border-white/20">
           <XCircle className="w-14 h-14 text-red-500 mx-auto mb-4" />
@@ -297,7 +297,7 @@ export default function PontoPublicoGeral() {
   // ─── Step: selecionar pessoa ────────────────────────────────────────────────
   if (step === 'select') {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8">
+      <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8 pb-28 sm:pb-28">
         <TechBackdrop />
         <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
         <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl shadow-black/30 w-full max-w-md overflow-hidden border border-white/20">
@@ -446,7 +446,7 @@ export default function PontoPublicoGeral() {
         ].filter((item): item is { time: string; label: string } => Boolean(item.time));
 
     return (
-      <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8">
+      <div className="min-h-screen bg-slate-950 flex items-start justify-center px-3 py-5 sm:p-8 pb-28 sm:pb-28">
         <TechBackdrop />
         <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
         <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl shadow-black/30 w-full max-w-md overflow-hidden border border-white/20">
@@ -715,7 +715,7 @@ export default function PontoPublicoGeral() {
   const att2 = updatedAttendance;
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 pb-28">
       <TechBackdrop />
       <AddToHomeScreen label={`Ponto Eletrônico${schoolName ? ' · ' + schoolName : ''}`} />
       <div className="relative z-10 bg-white/95 backdrop-blur-xl rounded-[28px] shadow-2xl w-full max-w-sm text-center p-8 border border-white/20">

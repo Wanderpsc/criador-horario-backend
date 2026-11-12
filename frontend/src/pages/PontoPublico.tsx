@@ -115,6 +115,7 @@ export default function PontoPublico() {
 
   const [pageStatus, setPageStatus] = useState<'loading' | 'external-browser' | 'error' | 'ok'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [data, setData] = useState<PageData | null>(null);
   const [marking, setMarking] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -141,8 +142,13 @@ export default function PontoPublico() {
       setData(res.data);
       setPageStatus('ok');
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Erro ao carregar dados.';
-      setErrorMsg(msg);
+      if (!err.response) {
+        setErrorCode('NETWORK');
+        setErrorMsg('Não foi possível conectar ao servidor. Verifique a internet do celular e tente novamente.');
+      } else {
+        setErrorCode(err.response.data?.code || '');
+        setErrorMsg(err.response.data?.message || 'Erro ao carregar dados.');
+      }
       setPageStatus('error');
     }
   };
@@ -160,7 +166,13 @@ export default function PontoPublico() {
           await activateAttendanceDevice(API_URL, token, activationToken);
         } catch (error: any) {
           setPageStatus('error');
-          setErrorMsg(error.response?.data?.message || 'Não foi possível cadastrar este dispositivo.');
+          if (!error.response) {
+            setErrorCode('NETWORK');
+            setErrorMsg('Não foi possível conectar ao servidor para ativar o dispositivo. Verifique a internet e tente novamente.');
+          } else {
+            setErrorCode(error.response.data?.code || '');
+            setErrorMsg(error.response.data?.message || 'Não foi possível cadastrar este dispositivo.');
+          }
           return;
         }
       }
@@ -234,12 +246,34 @@ export default function PontoPublico() {
 
   // ── Erro ──────────────────────────────────────────────────────────────────
   if (pageStatus === 'error' || !data) {
+    const isDeviceError = errorCode === 'DEVICE_NOT_REGISTERED' || errorCode === 'DEVICE_NOT_AUTHORIZED';
+    const isNetworkError = errorCode === 'NETWORK';
+    const errorTitle = isNetworkError
+      ? 'Falha de conexão'
+      : isDeviceError
+      ? 'Dispositivo não autorizado'
+      : 'Link inválido';
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <XCircle className="mx-auto mb-4 text-red-500" size={48} />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Link inválido</h2>
+          {isNetworkError
+            ? <AlertCircle className="mx-auto mb-4 text-orange-500" size={48} />
+            : <XCircle className="mx-auto mb-4 text-red-500" size={48} />}
+          <h2 className="text-xl font-bold text-gray-800 mb-2">{errorTitle}</h2>
           <p className="text-gray-500">{errorMsg}</p>
+          {isDeviceError && (
+            <p className="mt-3 text-xs text-gray-400">
+              O link continua válido, mas só o celular cadastrado pode abrir este ponto.
+              Se este é o seu celular, peça à administração um novo link de ativação.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Tentar novamente
+          </button>
         </div>
       </div>
     );
@@ -262,7 +296,7 @@ export default function PontoPublico() {
         .filter((item): item is { time: string; label: string } => !!item.time);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-start justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 pb-32 flex items-start justify-center">
       <AddToHomeScreen label={`Ponto${data?.schoolName ? ' · ' + data.schoolName : ''}`} />
       <div className="w-full max-w-md">
         {/* Cabeçalho */}
@@ -421,12 +455,37 @@ export default function PontoPublico() {
                 </p>
               )}
 
-              {data.workSchedule?.entryTime && (
+              {data.workSchedule?.shiftMode === 'rotating' && data.workSchedule.rotatingEntryTime && (
                 <div className="flex justify-between bg-indigo-50 rounded-lg p-3 mb-3 text-sm">
-                  <span className="text-indigo-700">⏰ Horário previsto:</span>
-                  <span className="font-bold text-indigo-800">
-                    {data.workSchedule.entryTime} – {data.workSchedule.exitTime}
-                  </span>
+                  <span className="text-indigo-700">⏰ Entrada do plantão:</span>
+                  <span className="font-bold text-indigo-800">{data.workSchedule.rotatingEntryTime}</span>
+                </div>
+              )}
+
+              {data.workSchedule?.shiftMode !== 'rotating' && data.workSchedule?.entryTime && (
+                <div className="bg-indigo-50 rounded-lg p-3 mb-3 text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-indigo-700">⏰ 1º turno:</span>
+                    <span className="font-bold text-indigo-800">
+                      {data.workSchedule.entryTime} – {data.workSchedule.exitTime}
+                    </span>
+                  </div>
+                  {['split2', 'split3'].includes(data.workSchedule.shiftType || 'single') && data.workSchedule.shift2EntryTime && (
+                    <div className="flex justify-between">
+                      <span className="text-indigo-700">⏰ 2º turno:</span>
+                      <span className="font-bold text-indigo-800">
+                        {data.workSchedule.shift2EntryTime} – {data.workSchedule.shift2ExitTime}
+                      </span>
+                    </div>
+                  )}
+                  {data.workSchedule.shiftType === 'split3' && data.workSchedule.shift3EntryTime && (
+                    <div className="flex justify-between">
+                      <span className="text-indigo-700">⏰ 3º turno:</span>
+                      <span className="font-bold text-indigo-800">
+                        {data.workSchedule.shift3EntryTime} – {data.workSchedule.shift3ExitTime}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -442,42 +501,6 @@ export default function PontoPublico() {
                 const empAtt = att as any;
                 return (
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-xl">
-                      <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                        <LogIn size={16} className="text-green-600" /> Entrada
-                      </span>
-                      <span className="font-bold text-green-700">{empAtt.entryTime || '—'}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                      <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                        <LogOut size={16} className="text-gray-500" /> Saída
-                      </span>
-                      <span className="font-bold text-gray-700">{empAtt.exitTime || '—'}</span>
-                    </div>
-                    {empAtt.entryTime2 && (
-                      <>
-                        <div className="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-xl">
-                          <span className="text-sm font-medium text-gray-600">2ª entrada</span>
-                          <span className="font-bold text-green-700">{empAtt.entryTime2}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                          <span className="text-sm font-medium text-gray-600">2ª saída</span>
-                          <span className="font-bold text-gray-700">{empAtt.exitTime2 || '—'}</span>
-                        </div>
-                      </>
-                    )}
-                    {empAtt.entryTime3 && (
-                      <>
-                        <div className="flex justify-between items-center p-3 bg-green-50 border border-green-200 rounded-xl">
-                          <span className="text-sm font-medium text-gray-600">3ª entrada</span>
-                          <span className="font-bold text-green-700">{empAtt.entryTime3}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                          <span className="text-sm font-medium text-gray-600">3ª saída</span>
-                          <span className="font-bold text-gray-700">{empAtt.exitTime3 || '—'}</span>
-                        </div>
-                      </>
-                    )}
                     {empAtt.workedMinutes !== undefined && empAtt.workedMinutes > 0 && (
                       <div className="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-xl">
                         <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -553,52 +576,123 @@ export default function PontoPublico() {
               </>
             )}
 
-            {/* Botões entrada / saída */}
+            {/* Botões entrada / saída de todos os turnos */}
             {(() => {
               const state = data.punchState;
               if (!state) return null;
 
-              if (state.complete) {
-                return (
-                  <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center text-green-700 font-medium">
-                    <CheckCircle className="mx-auto mb-2" size={28} />
-                    {state.message}
-                  </div>
-                );
-              }
+              const ws = data.workSchedule;
+              const att = data.attendance as EmployeeAttendance | null;
+              const isRotating = ws?.shiftMode === 'rotating';
+              const shiftType = state.isExtraDay || isRotating ? 'single' : (ws?.shiftType || 'single');
+              const shifts: {
+                n: 1 | 2 | 3;
+                schedEntry?: string;
+                schedExit?: string;
+                entry?: string;
+                exit?: string;
+              }[] = [
+                {
+                  n: 1,
+                  schedEntry: isRotating ? ws?.rotatingEntryTime : ws?.entryTime,
+                  schedExit: isRotating ? undefined : ws?.exitTime,
+                  entry: att?.entryTime,
+                  exit: att?.exitTime,
+                },
+                ...(['split2', 'split3'].includes(shiftType)
+                  ? [{
+                      n: 2 as const,
+                      schedEntry: ws?.shift2EntryTime,
+                      schedExit: ws?.shift2ExitTime,
+                      entry: att?.entryTime2,
+                      exit: att?.exitTime2,
+                    }]
+                  : []),
+                ...(shiftType === 'split3'
+                  ? [{
+                      n: 3 as const,
+                      schedEntry: ws?.shift3EntryTime,
+                      schedExit: ws?.shift3ExitTime,
+                      entry: att?.entryTime3,
+                      exit: att?.exitTime3,
+                    }]
+                  : []),
+              ];
+              const multiShift = shifts.length > 1;
 
-              if (!state.allowedNow) {
-                return (
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center text-blue-800">
-                    <Clock className="mx-auto mb-2" size={28} />
-                    <p className="font-semibold">{state.message}</p>
-                    <p className="mt-1 text-xs">Os registros já enviados estão bloqueados e só podem ser corrigidos pela administração.</p>
-                  </div>
-                );
-              }
+              const renderCell = (shift: typeof shifts[number], action: 'entry' | 'exit') => {
+                const registered = action === 'entry' ? shift.entry : shift.exit;
+                const scheduled = action === 'entry' ? shift.schedEntry : shift.schedExit;
+                const isNext = !state.complete
+                  && state.nextAction === action
+                  && state.shiftNumber === shift.n;
+                const canMark = isNext && state.allowedNow && !marking && !!email.trim();
+                const Icon = action === 'entry' ? LogIn : LogOut;
+                const actionLabel = `${multiShift ? `${shift.n}ª ` : ''}${action === 'entry' ? 'Entrada' : 'Saída'}`;
 
-              if (state.nextAction === 'entry') {
+                let cellClass = 'rounded-2xl p-3 text-center border transition-colors ';
+                if (registered) {
+                  cellClass += 'bg-green-50 border-green-200 text-green-700';
+                } else if (isNext && state.allowedNow) {
+                  cellClass += action === 'entry'
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg active:scale-[0.98]'
+                    : 'bg-orange-500 border-orange-500 text-white shadow-lg active:scale-[0.98]';
+                } else if (isNext) {
+                  cellClass += 'bg-blue-50 border-blue-200 text-blue-700';
+                } else {
+                  cellClass += 'bg-gray-50 border-gray-200 text-gray-400';
+                }
+
                 return (
                   <button
-                    onClick={() => handleMark('entry')}
-                    disabled={marking || !email.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
+                    type="button"
+                    onClick={() => canMark && handleMark(action)}
+                    disabled={!canMark}
+                    className={cellClass}
                   >
-                    <LogIn size={22} />
-                    {marking ? 'Registrando...' : `Registrar ${state.shiftNumber}ª Entrada`}
+                    <Icon size={20} className="mx-auto mb-1" />
+                    <span className="block text-sm font-bold">{actionLabel}</span>
+                    <span className="block text-xs mt-0.5">
+                      {registered
+                        ? `✓ Registrada às ${registered}`
+                        : isNext && state.allowedNow
+                        ? (marking
+                            ? 'Registrando...'
+                            : email.trim()
+                            ? 'Toque para registrar'
+                            : 'Informe o e-mail acima')
+                        : isNext && state.availableAt
+                        ? `Libera às ${state.availableAt}`
+                        : scheduled
+                        ? `Previsto: ${scheduled}`
+                        : 'Aguardando'}
+                    </span>
                   </button>
                 );
-              }
+              };
 
               return (
-                <button
-                  onClick={() => handleMark('exit')}
-                  disabled={marking || !email.trim()}
-                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-4 rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-colors text-lg"
-                >
-                  <LogOut size={22} />
-                  {marking ? 'Registrando...' : `Registrar ${state.shiftNumber}ª Saída`}
-                </button>
+                <div className="space-y-3">
+                  {state.complete ? (
+                    <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center text-green-700 font-medium">
+                      <CheckCircle className="mx-auto mb-2" size={28} />
+                      {state.message}
+                    </div>
+                  ) : !state.allowedNow ? (
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center text-blue-800">
+                      <Clock className="mx-auto mb-2" size={28} />
+                      <p className="font-semibold">{state.message}</p>
+                      <p className="mt-1 text-xs">Os registros já enviados estão bloqueados e só podem ser corrigidos pela administração.</p>
+                    </div>
+                  ) : null}
+
+                  {shifts.map(shift => (
+                    <div key={shift.n} className="grid grid-cols-2 gap-3">
+                      {renderCell(shift, 'entry')}
+                      {renderCell(shift, 'exit')}
+                    </div>
+                  ))}
+                </div>
               );
             })()}
           </>

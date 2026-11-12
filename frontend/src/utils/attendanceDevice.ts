@@ -18,7 +18,26 @@ function openDatabase(): Promise<IDBDatabase> {
   });
 }
 
-export async function getAttendanceDeviceSecret(token: string): Promise<string | null> {
+const LOCAL_FALLBACK_PREFIX = 'edusync-attendance-device:';
+
+function readLocalFallbackSecret(token: string): string | null {
+  try {
+    return localStorage.getItem(`${LOCAL_FALLBACK_PREFIX}${token}`);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalFallbackSecret(token: string, secret: string): boolean {
+  try {
+    localStorage.setItem(`${LOCAL_FALLBACK_PREFIX}${token}`, secret);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readIndexedDbSecret(token: string): Promise<string | null> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(STORE_NAME, 'readonly');
@@ -29,7 +48,7 @@ export async function getAttendanceDeviceSecret(token: string): Promise<string |
   });
 }
 
-export async function saveAttendanceDeviceSecret(token: string, secret: string): Promise<void> {
+async function writeIndexedDbSecret(token: string, secret: string): Promise<void> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(STORE_NAME, 'readwrite');
@@ -42,9 +61,48 @@ export async function saveAttendanceDeviceSecret(token: string, secret: string):
   });
 }
 
+// O segredo fica gravado no IndexedDB E no localStorage: em alguns celulares
+// (modo privado, WebView, limpeza parcial de dados) um dos dois falha ou some,
+// e perder o segredo faz o ponto aparecer como "link inválido".
+export async function getAttendanceDeviceSecret(token: string): Promise<string | null> {
+  let secret: string | null = null;
+  try {
+    secret = await readIndexedDbSecret(token);
+  } catch (error) {
+    console.error('IndexedDB indisponível para ler o segredo do dispositivo.', error);
+  }
+  if (secret) {
+    writeLocalFallbackSecret(token, secret);
+    return secret;
+  }
+  const fallback = readLocalFallbackSecret(token);
+  if (fallback) {
+    try {
+      await writeIndexedDbSecret(token, fallback);
+    } catch {
+      // IndexedDB indisponível — o localStorage continua valendo
+    }
+  }
+  return fallback;
+}
+
+export async function saveAttendanceDeviceSecret(token: string, secret: string): Promise<void> {
+  const savedLocally = writeLocalFallbackSecret(token, secret);
+  try {
+    await writeIndexedDbSecret(token, secret);
+  } catch (error) {
+    console.error('IndexedDB indisponível para salvar o segredo do dispositivo.', error);
+    if (!savedLocally) throw error;
+  }
+}
+
 export async function getAttendanceDeviceHeaders(token: string): Promise<Record<string, string>> {
-  const secret = await getAttendanceDeviceSecret(token);
-  return secret ? { 'X-Attendance-Device': secret } : {};
+  try {
+    const secret = await getAttendanceDeviceSecret(token);
+    return secret ? { 'X-Attendance-Device': secret } : {};
+  } catch {
+    return {};
+  }
 }
 
 export function getActivationTokenFromHash(): string {
